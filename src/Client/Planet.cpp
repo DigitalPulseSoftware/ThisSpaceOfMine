@@ -132,8 +132,23 @@ namespace tsom
 
 		float gridHeight = gridIndex * m_tileSize + 1.f;
 
-		Nz::Boxf box(GetCenter() - Nz::Vector3f(gridHeight), Nz::Vector3f(gridHeight * 2.f));
-		Nz::Rayf ray(GetCenter() + outsideNormal * gridHeight * 2.f, -outsideNormal);
+		float distToCenter = std::max({
+			std::abs(position.x - GetCenter().x),
+			std::abs(position.y - GetCenter().y),
+			std::abs(position.z - GetCenter().z),
+		});
+
+		float innerReductionSize = std::max(m_tileSize + gridHeight - std::max(m_cornerRadius, 1.f), 0.f);
+		Nz::Boxf innerBox(GetCenter() - Nz::Vector3f(innerReductionSize), Nz::Vector3f(innerReductionSize * 2.f));
+
+		debugDrawer.DrawBox(innerBox, Nz::Color::Red());
+
+		Nz::Vector3f innerPos = Nz::Vector3f::Clamp(insidePos, innerBox.GetMinimum(), innerBox.GetMaximum());
+		Nz::Vector3f rayNormal = Nz::Vector3f::Normalize(insidePos - innerPos);
+
+		Nz::Boxf box(GetCenter() - Nz::Vector3f(gridHeight), Nz::Vector3f(gridHeight * 2.f + m_tileSize));
+		debugDrawer.DrawBox(box, Nz::Color::Gray());
+		Nz::Rayf ray(innerPos + rayNormal * gridHeight * 2.f, -rayNormal);
 
 		//debugDrawer.DrawBox(box, Nz::Color::Green());
 
@@ -164,8 +179,6 @@ namespace tsom
 		float xOffset = x * m_tileSize - grid.GetWidth() * m_tileSize * 0.5f;
 		float yHeight = m_tileSize;
 		float zOffset = y * m_tileSize - grid.GetHeight() * m_tileSize * 0.5f;
-
-		fmt::print("(debug) x: {}, y: {}, z: {}\n", xOffset, yHeight, zOffset);
 
 		debugDrawer.DrawLine(DeformPosition(transform * Nz::Vector3f(xOffset, yHeight, zOffset)),                           DeformPosition(transform * Nz::Vector3f(xOffset, yHeight, zOffset + m_tileSize)), Nz::Color::Green());
 		debugDrawer.DrawLine(DeformPosition(transform * Nz::Vector3f(xOffset, yHeight, zOffset + m_tileSize)),              DeformPosition(transform * Nz::Vector3f(xOffset + m_tileSize, yHeight, zOffset + m_tileSize)), Nz::Color::Green());
