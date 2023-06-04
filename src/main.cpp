@@ -12,10 +12,7 @@
 
 int main(int argc, char* argv[])
 {
-	Nz::Renderer::Config config;
-	config.preferredAPI = Nz::RenderAPI::OpenGL;
-
-	Nz::Application<Nz::Graphics, Nz::JoltPhysics3D, Nz::Widgets> app(argc, argv, config);
+	Nz::Application<Nz::Graphics, Nz::JoltPhysics3D, Nz::Widgets> app(argc, argv);
 
 	auto& filesystem = app.AddComponent<Nz::AppFilesystemComponent>();
 	filesystem.Mount("assets", Nz::Utf8Path("../Assets"));

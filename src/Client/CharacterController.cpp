@@ -56,23 +56,20 @@ namespace tsom
 			Nz::Vector3f characterPosition = character.GetPosition() + character.GetRotation() * Nz::Vector3f::Down() * 0.9f;
 
 			float distToCenter = std::max({
-				std::abs(characterPosition.x - center.x), std::abs(center.x - characterPosition.x),
-				std::abs(characterPosition.y - center.y), std::abs(center.y - characterPosition.y),
-				std::abs(characterPosition.z - center.z), std::abs(center.z - characterPosition.z),
+				std::abs(characterPosition.x - center.x),
+				std::abs(characterPosition.y - center.y),
+				std::abs(characterPosition.z - center.z),
 			});
 
 			float innerReductionSize = std::max(distToCenter - std::max(m_planet->GetCornerRadius(), 1.f), 0.f);
-			Nz::Boxf innerBox(center - Nz::Vector3f(innerReductionSize, innerReductionSize, innerReductionSize), Nz::Vector3f(innerReductionSize * 2.f));
+			Nz::Boxf innerBox(center - Nz::Vector3f(innerReductionSize), Nz::Vector3f(innerReductionSize * 2.f));
 
-			Nz::Vector3f innerPos;
-			innerPos.x = std::clamp(characterPosition.x, innerBox.GetMinimum().x, innerBox.GetMaximum().x);
-			innerPos.y = std::clamp(characterPosition.y, innerBox.GetMinimum().y, innerBox.GetMaximum().y);
-			innerPos.z = std::clamp(characterPosition.z, innerBox.GetMinimum().z, innerBox.GetMaximum().z);
+			Nz::Vector3f innerPos = Nz::Vector3f::Clamp(characterPosition, innerBox.GetMinimum(), innerBox.GetMaximum());
 
 			Nz::Vector3f up = Nz::Vector3f::Normalize(characterPosition - innerPos);
 			character.SetUp(up);
 
-			if (Nz::Vector3f previousUp = character.GetRotation() * Nz::Vector3f::Up(); previousUp != up)
+			if (Nz::Vector3f previousUp = character.GetRotation() * Nz::Vector3f::Up(); !previousUp.ApproxEqual(up, 0.001f))
 			{
 				fmt::print("previous up: {}.{}.{}\n", previousUp.x, previousUp.y, previousUp.z);
 				fmt::print("up: {}.{}.{}\n", up.x, up.y, up.z);

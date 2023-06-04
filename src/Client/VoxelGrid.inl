@@ -92,6 +92,11 @@ namespace tsom
 	{
 		return m_width;
 	}
+
+	inline void VoxelGrid::UpdateCell(std::size_t x, std::size_t y, VoxelCell cellType)
+	{
+		m_cells[y * m_width + x] = cellType;
+	}
 }
 
 #include <Nazara/Widgets/DebugOff.hpp>

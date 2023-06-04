@@ -7,6 +7,7 @@
 #ifndef TSOM_CLIENT_VOXELGRID_HPP
 #define TSOM_CLIENT_VOXELGRID_HPP
 
+#include <Client/Direction.hpp>
 #include <Nazara/Core/Color.hpp>
 #include <Nazara/Math/Matrix4.hpp>
 #include <NazaraUtils/EnumArray.hpp>
@@ -22,28 +23,18 @@ namespace Nz
 
 namespace tsom
 {
-	enum class Direction
-	{
-		Back,
-		Down,
-		Front,
-		Left,
-		Right,
-		Up,
-
-		Max = Up
-	};
-
 	enum class VoxelCell
 	{
 		Empty,
-		Full
+		Grass,
+		Dirt,
+		Stone
 	};
 
 	class VoxelGrid
 	{
 		public:
-			VoxelGrid(std::size_t width, std::size_t height);
+			VoxelGrid(std::size_t width, std::size_t height, VoxelCell defaultCell);
 			VoxelGrid(const VoxelGrid&) = delete;
 			VoxelGrid(VoxelGrid&&) = delete;
 			~VoxelGrid() = default;
@@ -56,6 +47,8 @@ namespace tsom
 			inline std::size_t GetHeight() const;
 			inline std::optional<VoxelCell> GetNeighborCell(std::size_t x, std::size_t y, int xOffset, int yOffset, int zOffset) const;
 			inline std::size_t GetWidth() const;
+
+			inline void UpdateCell(std::size_t x, std::size_t y, VoxelCell cellType);
 
 			VoxelGrid& operator=(const VoxelGrid&) = delete;
 			VoxelGrid& operator=(VoxelGrid&&) = delete;

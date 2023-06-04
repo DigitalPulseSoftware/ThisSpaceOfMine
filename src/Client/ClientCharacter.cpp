@@ -31,7 +31,7 @@ namespace tsom
 		characterComponent.SetImpl(m_controller);
 		characterComponent.DisableSleeping();
 
-		std::shared_ptr<Nz::Model> colliderModel;
+		/*std::shared_ptr<Nz::Model> colliderModel;
 		{
 			std::shared_ptr<Nz::MaterialInstance> colliderMat = Nz::Graphics::Instance()->GetDefaultMaterials().basicMaterial->Instantiate();
 			colliderMat->SetValueProperty("BaseColor", Nz::Color::Green());
@@ -50,7 +50,7 @@ namespace tsom
 
 			auto& gfx = m_entity.emplace<Nz::GraphicsComponent>();
 			gfx.AttachRenderable(std::move(colliderModel), 0x0000FFFF);
-		}
+		}*/
 	}
 
 	void ClientCharacter::DebugDraw(Nz::DebugDrawer& debugDrawer)

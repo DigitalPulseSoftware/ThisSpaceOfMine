@@ -13,7 +13,8 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
-#define FREEFLIGHT
+//#define FREEFLIGHT
+//#define THIRDPERSON
 
 namespace tsom
 {
@@ -33,9 +34,10 @@ namespace tsom
 			auto& cameraComponent = m_cameraEntity.emplace<Nz::CameraComponent>(&swapchain);
 			cameraComponent.UpdateClearColor(Nz::Color::Gray());
 			cameraComponent.UpdateRenderMask(0x0000FFFF);
+			cameraComponent.UpdateZNear(0.1f);
 		}
 
-		m_planet = std::make_unique<Planet>(40, 2.f, 10.f);
+		m_planet = std::make_unique<Planet>(40, 2.f, 15.f);
 		RebuildPlanet();
 
 		m_planetEntity.emplace<Nz::DisabledComponent>();
@@ -133,20 +135,14 @@ namespace tsom
 			switch (event.virtualKey)
 			{
 				case Nz::Keyboard::VKey::Add:
-					m_planet = std::make_unique<Planet>(m_planet->GetGridDimensions(), m_planet->GetTileSize(), m_planet->GetCornerRadius() + 1.f);
-#ifndef FREEFLIGHT
-					m_character->SetCurrentPlanet(m_planet.get());
-#endif
+					m_planet->UpdateCornerRadius(m_planet->GetCornerRadius() + 1.f);
 					fmt::print("Corner radius: {}\n", m_planet->GetCornerRadius());
 
 					RebuildPlanet();
 					break;
 
 				case Nz::Keyboard::VKey::Subtract:
-					m_planet = std::make_unique<Planet>(m_planet->GetGridDimensions(), m_planet->GetTileSize(), m_planet->GetCornerRadius() - 1.f);
-#ifndef FREEFLIGHT
-					m_character->SetCurrentPlanet(m_planet.get());
-#endif
+					m_planet->UpdateCornerRadius(m_planet->GetCornerRadius() - 1.f);
 					fmt::print("Corner radius: {}\n", m_planet->GetCornerRadius());
 
 					RebuildPlanet();
@@ -243,10 +239,6 @@ namespace tsom
 		Nz::JoltCharacterComponent& characterComponent = m_character->GetEntity().get<Nz::JoltCharacterComponent>();
 		Nz::NodeComponent& characterNode = m_character->GetEntity().get<Nz::NodeComponent>();
 
-		Nz::Quaternionf rotation = characterComponent.GetRotation();
-
-		cameraNode.SetPosition(characterNode.GetPosition() + rotation * (Nz::Vector3f::Up() * 3.f + Nz::Vector3f::Backward() * 2.f));
-
 		if (m_cameraRotation.yaw != 0.f)
 		{
 			Nz::Quaternionf newRotation = characterComponent.GetRotation() * Nz::Quaternionf(Nz::EulerAnglesf(0.f, m_cameraRotation.yaw, 0.f));
@@ -256,8 +248,58 @@ namespace tsom
 			m_cameraRotation.yaw = 0.f;
 		}
 
+		Nz::Quaternionf rotation = characterComponent.GetRotation();
+
+#ifdef THIRDPERSON
+		cameraNode.SetPosition(characterNode.GetPosition() + rotation * (Nz::Vector3f::Up() * 3.f + Nz::Vector3f::Backward() * 2.f));
+		cameraNode.SetRotation(rotation * Nz::Quaternionf(m_cameraRotation));
+#else
+		cameraNode.SetPosition(characterNode.GetPosition() + rotation * (Nz::Vector3f::Up() * 1.6f));
 		cameraNode.SetRotation(rotation * Nz::Quaternionf(m_cameraRotation));
 #endif
+
+#endif
+
+		// Raycast
+		{
+			auto& physSystem = m_world.GetSystem<Nz::JoltPhysics3DSystem>();
+			Nz::Vector3f closestHit, closestNormal;
+			if (physSystem.RaycastQuery(cameraNode.GetPosition(), cameraNode.GetPosition() + cameraNode.GetForward() * 5.f, [&](const Nz::JoltPhysics3DSystem::RaycastHit& hitInfo) -> std::optional<float>
+				{
+					if (hitInfo.hitEntity != m_planetEntity)
+						return std::nullopt;
+
+					closestHit = hitInfo.hitPosition;
+					closestNormal = hitInfo.hitNormal;
+					return hitInfo.fraction;
+				}))
+			{
+				debugDrawer.DrawLine(closestHit, closestHit + closestNormal * 0.2f, Nz::Color::Cyan());
+
+				auto [x, y, grid] = m_planet->ComputeGridCell(closestHit, closestNormal, debugDrawer);
+
+				if (grid)
+				{
+					if (Nz::Mouse::IsButtonPressed(Nz::Mouse::Right))
+					{
+						grid->UpdateCell(x, y, VoxelCell::Empty);
+						RebuildPlanet();
+					}
+					else if (Nz::Mouse::IsButtonPressed(Nz::Mouse::Left))
+					{
+						auto [x2, y2, grid] = m_planet->ComputeGridCell(closestHit + closestNormal * m_planet->GetTileSize(), closestNormal, debugDrawer);
+
+						grid->UpdateCell(x2, y2, VoxelCell::Dirt);
+						RebuildPlanet();
+					}
+				}
+
+
+				//fmt::print("{}\n", fmt::streamed(test));
+
+				//debugDrawer.DrawBox(Nz::Boxf(test - Nz::Vector2f(0.1f), Nz::Vector2f(0.2f)), Nz::Color::Green());
+			}
+		}
 
 		return true;
 	}
@@ -271,17 +313,19 @@ namespace tsom
 
 		m_planetEntity = m_world.CreateEntity();
 		{
-			Nz::TextureSamplerInfo planeSampler;
-			planeSampler.anisotropyLevel = 16;
-			planeSampler.wrapModeU = Nz::SamplerWrap::Repeat;
-			planeSampler.wrapModeV = Nz::SamplerWrap::Repeat;
+			Nz::TextureSamplerInfo blockSampler;
+			blockSampler.anisotropyLevel = 16;
+			blockSampler.magFilter = Nz::SamplerFilter::Nearest;
+			blockSampler.minFilter = Nz::SamplerFilter::Nearest;
+			blockSampler.wrapModeU = Nz::SamplerWrap::Repeat;
+			blockSampler.wrapModeV = Nz::SamplerWrap::Repeat;
 
 			std::shared_ptr<Nz::MaterialInstance> planeMat = Nz::Graphics::Instance()->GetDefaultMaterials().basicMaterial->Instantiate();
-			planeMat->SetTextureProperty("BaseColorMap", filesystem.Load<Nz::Texture>("assets/dev_grey.png"), planeSampler);
+			planeMat->SetTextureProperty("BaseColorMap", filesystem.Load<Nz::Texture>("assets/tileset.png"), blockSampler);
 			planeMat->UpdatePassesStates([&](Nz::RenderStates& states)
-				{
-					//states.primitiveMode = Nz::PrimitiveMode::LineList;
-				});
+			{
+				//states.primitiveMode = Nz::PrimitiveMode::LineList;
+			});
 
 			std::shared_ptr<Nz::GraphicalMesh> planetMesh;
 			{
