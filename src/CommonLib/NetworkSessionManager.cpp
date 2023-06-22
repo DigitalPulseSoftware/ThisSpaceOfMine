@@ -3,6 +3,7 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/NetworkSessionManager.hpp>
+#include <CommonLib/SessionHandler.hpp>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 #include <cassert>
@@ -18,8 +19,8 @@ namespace tsom
 			assert(data == 0);
 
 			fmt::print("Peer connected (outgoing: {}, peerIndex: {}, address: {}, data: {})\n", outgoingConnection, peerIndex, fmt::streamed(remoteAddress), data);
-			m_sessions[peerIndex].emplace(*this, peerIndex, remoteAddress);
-			m_sessions[peerIndex]->SetHandler(m_handlerFactory());
+			m_sessions[peerIndex].emplace(m_reactor, peerIndex, remoteAddress);
+			m_sessions[peerIndex]->SetHandler(m_handlerFactory(&m_sessions[peerIndex].value()));
 		};
 
 		auto DisconnectionHandler = [&](std::size_t peerIndex, [[maybe_unused]] Nz::UInt32 data)

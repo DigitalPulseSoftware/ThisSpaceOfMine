@@ -88,6 +88,7 @@ namespace tsom
 			// Setup entity position and attach it to the camera (position only, camera rotation does not impact skybox)
 			auto& skyboxNode = m_skyboxEntity.emplace<Nz::NodeComponent>();
 			skyboxNode.SetInheritRotation(false);
+			skyboxNode.SetParent(m_cameraEntity);
 		}
 	}
 

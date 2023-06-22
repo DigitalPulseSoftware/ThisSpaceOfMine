@@ -12,14 +12,22 @@ namespace tsom
 
 	void SessionHandler::HandlePacket(Nz::NetPacket&& netPacket)
 	{
+		const HandlerTable& handlerTable = *m_handlerTable;
+
 		Nz::UInt8 opcode;
 		netPacket >> opcode;
+
+		if (opcode >= handlerTable.size())
+		{
+			fmt::print("Received corrupted packet\n");
+			return;
+		}
 
 		(*m_handlerTable)[opcode](*this, std::move(netPacket));
 	}
 
-	void SessionHandler::OnUnexpectedPacket()
+	void SessionHandler::OnUnexpectedPacket(std::size_t packetIndex)
 	{
-		fmt::print("Received unexpected packet\n");
+		fmt::print("Received unexpected packet of type {}\n", PacketNames[packetIndex]);
 	}
 }

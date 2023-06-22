@@ -29,11 +29,21 @@ int GameMain(int argc, char* argv[])
 		{
 			fmt::print("Peer connected (outgoing: {}, peerIndex: {}, address: {}, data: {})\n", outgoingConnection, peerIndex, fmt::streamed(remoteAddress), data);
 
-			tsom::Packets::Test testPacket;
+			/*tsom::Packets::Test testPacket;
 			testPacket.str = "Mishaa est un gros nul";
 
 			Nz::NetPacket packet;
 			packet << Nz::UInt8(Nz::TypeListFind<tsom::PacketTypes, tsom::Packets::Test>);
+
+			tsom::PacketSerializer serializer(packet, true);
+			tsom::Packets::Serialize(serializer, testPacket);*/
+
+			tsom::Packets::NetworkStrings testPacket;
+			testPacket.startId = 0;
+			testPacket.strings.emplace_back("Mishaa est un gros nul");
+
+			Nz::NetPacket packet;
+			packet << Nz::UInt8(Nz::TypeListFind<tsom::PacketTypes, tsom::Packets::NetworkStrings>);
 
 			tsom::PacketSerializer serializer(packet, true);
 			tsom::Packets::Serialize(serializer, testPacket);
@@ -76,7 +86,7 @@ int GameMain(int argc, char* argv[])
 	entt::handle camera2D = world.CreateEntity();
 	{
 		camera2D.emplace<Nz::NodeComponent>();
-		camera2D.emplace<Nz::DisabledComponent>();
+		//camera2D.emplace<Nz::DisabledComponent>();
 
 		auto& cameraComponent = camera2D.emplace<Nz::CameraComponent>(&windowSwapchain, Nz::ProjectionType::Orthographic);
 		cameraComponent.UpdateClearColor(Nz::Color(0.f, 0.f, 0.f, 0.f));
@@ -89,11 +99,11 @@ int GameMain(int argc, char* argv[])
 
 	std::shared_ptr<Nz::State> gameState = std::make_shared<tsom::GameState>(app, world, windowSwapchain, window.GetEventHandler());
 
-	Nz::Mouse::SetRelativeMouseMode(true);
+	//Nz::Mouse::SetRelativeMouseMode(true);
 
-	//Nz::StateMachine fsm(std::make_shared<tsom::BackgroundState>(app, &canvas, world, windowSwapchain));
-	//fsm.PushState(std::make_shared<tsom::MenuState>(&canvas, world, std::move(gameState)));
-	Nz::StateMachine fsm(std::move(gameState));
+	Nz::StateMachine fsm(std::make_shared<tsom::BackgroundState>(app, &canvas, world, windowSwapchain));
+	fsm.PushState(std::make_shared<tsom::MenuState>(&canvas, world, std::move(gameState)));
+	//Nz::StateMachine fsm(std::move(gameState));
 	app.AddUpdaterFunc([&](Nz::Time time)
 	{
 		fsm.Update(time);

@@ -7,7 +7,12 @@
 
 namespace tsom
 {
-	PlayerSessionHandler::PlayerSessionHandler()
+	constexpr SessionHandler::SendAttributeTable m_packetFlags = SessionHandler::BuildAttributeTable({
+		{ PacketIndex<Packets::NetworkStrings>, { 0, Nz::ENetPacketFlag_Reliable } }
+	});
+
+	PlayerSessionHandler::PlayerSessionHandler(NetworkSession* session) :
+	SessionHandler(session)
 	{
 		SetupHandlerTable<PlayerSessionHandler>();
 	}

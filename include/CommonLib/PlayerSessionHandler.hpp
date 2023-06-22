@@ -16,7 +16,7 @@ namespace tsom
 	class TSOM_COMMONLIB_API PlayerSessionHandler : public SessionHandler
 	{
 		public:
-			PlayerSessionHandler();
+			PlayerSessionHandler(NetworkSession* session);
 			~PlayerSessionHandler() = default;
 
 			void HandlePacket(Packets::Test&& test);

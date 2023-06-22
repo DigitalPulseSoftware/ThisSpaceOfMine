@@ -28,6 +28,10 @@ namespace tsom
 
 	static constexpr std::size_t PacketCount = Nz::TypeListSize<PacketTypes>;
 
+	template<typename T> static constexpr std::size_t PacketIndex = Nz::TypeListFind<PacketTypes, T>;
+
+	extern std::array<std::string_view, PacketCount> PacketNames;
+
 	namespace Packets
 	{
 		namespace Helper
@@ -44,6 +48,7 @@ namespace tsom
 		{
 			std::string str;
 		};
+
 
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, NetworkStrings& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, Test& data);

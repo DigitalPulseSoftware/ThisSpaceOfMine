@@ -13,11 +13,16 @@ namespace tsom
 	{
 	}
 
+	void NetworkSessionManager::SendData(std::size_t peerId, Nz::UInt8 channelId, Nz::ENetPacketFlags flags, Nz::NetPacket&& packet)
+	{
+		m_reactor.SendData(peerId, channelId, flags, std::move(packet));
+	}
+
 	template<typename T>
 	void NetworkSessionManager::SetDefaultHandler()
 	{
 		static_assert(std::is_base_of_v<SessionHandler, T>);
 
-		m_handlerFactory = []() -> std::unique_ptr<SessionHandler> { return std::make_unique<T>(); };
+		m_handlerFactory = [](NetworkSession* session) -> std::unique_ptr<SessionHandler> { return std::make_unique<T>(session); };
 	}
 }

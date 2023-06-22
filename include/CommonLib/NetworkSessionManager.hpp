@@ -27,6 +27,8 @@ namespace tsom
 
 			void Poll();
 
+			inline void SendData(std::size_t peerId, Nz::UInt8 channelId, Nz::ENetPacketFlags flags, Nz::NetPacket&& packet);
+
 			template<typename T> void SetDefaultHandler();
 
 			NetworkSessionManager& operator=(const NetworkSessionManager&) = delete;
@@ -35,7 +37,7 @@ namespace tsom
 			static constexpr std::size_t MaxSessionPerManager = 4095;
 
 		private:
-			using HandlerFactory = std::unique_ptr<SessionHandler>(*)();
+			using HandlerFactory = std::unique_ptr<SessionHandler>(*)(NetworkSession* session);
 
 			std::vector<std::optional<NetworkSession>> m_sessions; //< TODO: Nz::SparseVector
 			HandlerFactory m_handlerFactory;

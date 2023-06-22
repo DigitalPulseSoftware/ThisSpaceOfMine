@@ -3,25 +3,21 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/NetworkSessionManager.hpp>
-#include <CommonLib/PlayerSessionHandler.hpp>
+#include <CommonLib/Protocol/Packets.hpp>
 
 namespace tsom
 {
-	inline NetworkSession::NetworkSession(NetworkSessionManager& owner, std::size_t peerId, const Nz::IpAddress& remoteAddres) :
-	m_peerId(peerId),
-	m_owner(owner),
-	m_remoteAddress(remoteAddres)
+	template<typename T>
+	void NetworkSession::SendPacket(Nz::UInt8 channelId, Nz::ENetPacketFlags flags, const T& packet)
 	{
-		m_sessionHandler = std::make_unique<PlayerSessionHandler>();
-	}
+		static_assert(PacketCount < 0xFF);
 
-	inline void tsom::NetworkSession::HandlePacket(Nz::NetPacket&& netPacket)
-	{
-		m_sessionHandler->HandlePacket(std::move(netPacket));
-	}
+		Nz::NetPacket netPacket;
+		netPacket << Nz::UInt8(PacketIndex<T>);
 
-	inline void NetworkSession::SetHandler(std::unique_ptr<SessionHandler>&& sessionHandler)
-	{
-		m_sessionHandler = std::move(sessionHandler);
+		PacketSerializer serializer(packet, true);
+		Packets::Serialize(serializer, netPacket);
+
+		m_reactor.SendData(m_peerId, channelId, flags, std::move(netPacket));
 	}
 }

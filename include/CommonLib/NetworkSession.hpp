@@ -8,8 +8,9 @@
 #define TSOM_COMMONLIB_NETWORKSESSION_HPP
 
 #include <CommonLib/Export.hpp>
-#include <CommonLib/SessionHandler.hpp>
+#include <CommonLib/NetworkReactor.hpp>
 #include <Nazara/Network/IpAddress.hpp>
+#include <Nazara/Network/ENetPacket.hpp>
 
 namespace Nz
 {
@@ -18,19 +19,21 @@ namespace Nz
 
 namespace tsom
 {
-	class NetworkSessionManager;
+	class SessionHandler;
 
 	class TSOM_COMMONLIB_API NetworkSession
 	{
 		public:
-			inline NetworkSession(NetworkSessionManager& owner, std::size_t peerId, const Nz::IpAddress& remoteAddres);
+			NetworkSession(NetworkReactor& reactor, std::size_t peerId, const Nz::IpAddress& remoteAddress);
 			NetworkSession(const NetworkSession&) = delete;
 			NetworkSession(NetworkSession&&) = delete;
-			~NetworkSession() = default;
+			~NetworkSession();
 
-			inline void HandlePacket(Nz::NetPacket&& netPacket);
+			void HandlePacket(Nz::NetPacket&& netPacket);
 
-			inline void SetHandler(std::unique_ptr<SessionHandler>&& sessionHandler);
+			template<typename T> void SendPacket(Nz::UInt8 channelId, Nz::ENetPacketFlags flags, const T& packet);
+
+			void SetHandler(std::unique_ptr<SessionHandler>&& sessionHandler);
 
 			NetworkSession& operator=(const NetworkSession&) = delete;
 			NetworkSession& operator=(NetworkSession&&) = delete;
@@ -38,7 +41,7 @@ namespace tsom
 		private:
 			std::size_t m_peerId;
 			std::unique_ptr<SessionHandler> m_sessionHandler;
-			NetworkSessionManager& m_owner;
+			NetworkReactor& m_reactor;
 			Nz::IpAddress m_remoteAddress;
 	};
 }

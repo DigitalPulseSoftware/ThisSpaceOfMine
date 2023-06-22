@@ -37,11 +37,41 @@ namespace tsom
 				{
 					return [](SessionHandler& sessionHandler, Nz::NetPacket&& packet)
 					{
-						static_cast<Handler&>(sessionHandler).OnUnexpectedPacket();
+						constexpr std::size_t packetIndex = Nz::TypeListFind<PacketTypes, PacketType>;
+						static_cast<Handler&>(sessionHandler).OnUnexpectedPacket(packetIndex);
 					};
 				}
 			}
 		};
+	}
+
+	inline SessionHandler::SessionHandler(NetworkSession* session) :
+	m_session(session)
+	{
+	}
+
+	template<typename T>
+	void SessionHandler::SendPacket(const T& packet)
+	{
+		const SendAttributes& sendAttributes = (*m_sendAttributes)[PacketIndex<T>];
+		if (sendAttributes.channelId == SendAttributes::InvalidChannel)
+			throw std::runtime_error("missing packet setup");
+
+		m_session->SendPacket(sendAttributes.channelId, sendAttributes.flags, packet);
+	}
+
+	constexpr auto SessionHandler::BuildAttributeTable(std::initializer_list<std::pair<std::size_t, SendAttributes>> initializers) -> SendAttributeTable
+	{
+		SendAttributeTable attributeTables;
+		for (auto&& [packetIndex, attributes] : initializers)
+			attributeTables[packetIndex] = attributes;
+
+		return attributeTables;
+	}
+
+	inline void SessionHandler::SetupAttributeTable(const SendAttributeTable& attributeTable)
+	{
+		m_sendAttributes = &attributeTable;
 	}
 
 	template<typename T>
@@ -55,7 +85,7 @@ namespace tsom
 	constexpr SessionHandler::HandlerTable SessionHandler::BuildHandlerTable()
 	{
 		HandlerTable handlerTable;
-#define TSOM_NETWORK_PACKET(Name) handlerTable[Nz::TypeListFind<PacketTypes, Packets::Name>] = Helper::HandlerBuilder<T, Packets::Name>{}();
+#define TSOM_NETWORK_PACKET(Name) handlerTable[PacketIndex<Packets::Name>] = Helper::HandlerBuilder<T, Packets::Name>{}();
 #include <CommonLib/Protocol/PacketList.hpp>
 
 		return handlerTable;

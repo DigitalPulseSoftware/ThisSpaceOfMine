@@ -4,6 +4,14 @@
 
 #include <CommonLib/Protocol/Packets.hpp>
 
+namespace tsom
+{
+	std::array<std::string_view, PacketCount> PacketNames = {
+#define TSOM_NETWORK_PACKET(Name) #Name,
+#include <CommonLib/Protocol/PacketList.hpp>
+	};
+}
+
 namespace tsom::Packets
 {
 	void Serialize(PacketSerializer& serializer, NetworkStrings& data)
