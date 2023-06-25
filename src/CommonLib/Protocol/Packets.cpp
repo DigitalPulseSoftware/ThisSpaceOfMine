@@ -14,6 +14,16 @@ namespace tsom
 
 namespace tsom::Packets
 {
+	void Serialize(PacketSerializer& serializer, AuthRequest& data)
+	{
+		serializer &= data.nickname;
+	}
+
+	void Serialize(PacketSerializer& serializer, AuthResponse& data)
+	{
+		serializer &= data.succeeded;
+	}
+
 	void Serialize(PacketSerializer& serializer, NetworkStrings& data)
 	{
 		serializer &= data.startId;
@@ -21,10 +31,5 @@ namespace tsom::Packets
 		serializer.SerializeArraySize(data.strings);
 		for (auto& string : data.strings)
 			serializer &= string;
-	}
-
-	void Serialize(PacketSerializer& serializer, Test& data)
-	{
-		serializer &= data.str;
 	}
 }

@@ -14,6 +14,7 @@
 #include <Nazara/Math/Quaternion.hpp>
 #include <Nazara/Math/Vector3.hpp>
 #include <entt/entt.hpp>
+#include <optional>
 
 namespace tsom
 {

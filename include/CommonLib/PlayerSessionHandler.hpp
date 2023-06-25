@@ -19,7 +19,7 @@ namespace tsom
 			PlayerSessionHandler(NetworkSession* session);
 			~PlayerSessionHandler() = default;
 
-			void HandlePacket(Packets::Test&& test);
+			void HandlePacket(Packets::AuthRequest&& authRequest);
 	};
 }
 

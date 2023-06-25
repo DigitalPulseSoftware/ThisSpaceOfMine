@@ -18,10 +18,12 @@ namespace Nz
 
 namespace tsom
 {
+	class ConnectionState;
+
 	class MenuState : public WidgetState
 	{
 		public:
-			MenuState(Nz::BaseWidget* parentWidget, Nz::EnttWorld& world, std::shared_ptr<Nz::State> gameState);
+			MenuState(std::shared_ptr<StateData> stateData, std::shared_ptr<Nz::State> gameState, std::shared_ptr<ConnectionState> connectionState);
 			~MenuState() = default;
 
 			/*void Enter(Nz::StateMachine& fsm) override;
@@ -31,8 +33,8 @@ namespace tsom
 		private:
 			void LayoutWidgets(const Nz::Vector2f& newSize) override;
 
+			std::shared_ptr<ConnectionState> m_connectionState;
 			std::shared_ptr<Nz::State> m_gameState;
-			std::shared_ptr<Nz::State> m_nextState;
 			Nz::BoxLayout* m_layout;
 			Nz::ButtonWidget* m_connectButton;
 			Nz::TextAreaWidget* m_loginArea;

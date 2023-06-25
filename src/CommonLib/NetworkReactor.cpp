@@ -217,12 +217,14 @@ namespace tsom
 				switch (event.type)
 				{
 					case Nz::ENetEventType::Disconnect:
+					case Nz::ENetEventType::DisconnectTimeout:
 					{
 						Nz::UInt16 peerId = event.peer->GetPeerId();
 						m_clients[peerId] = nullptr;
 
 						IncomingEvent::DisconnectEvent disconnectEvent;
 						disconnectEvent.data = event.data;
+						disconnectEvent.timeout = (event.type == Nz::ENetEventType::DisconnectTimeout);
 
 						IncomingEvent newEvent;
 						newEvent.peerId = m_idOffset + peerId;

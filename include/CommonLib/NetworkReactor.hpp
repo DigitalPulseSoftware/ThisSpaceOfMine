@@ -93,6 +93,7 @@ namespace tsom
 				struct DisconnectEvent
 				{
 					Nz::UInt32 data;
+					bool timeout;
 				};
 
 				struct PacketEvent

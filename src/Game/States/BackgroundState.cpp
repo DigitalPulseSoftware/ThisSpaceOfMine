@@ -16,12 +16,12 @@
 
 namespace tsom
 {
-	BackgroundState::BackgroundState(Nz::ApplicationBase& app, Nz::BaseWidget* parentWidget, Nz::EnttWorld& world, Nz::WindowSwapchain& swapchain) :
-	WidgetState(parentWidget, world)
+	BackgroundState::BackgroundState(std::shared_ptr<StateData> stateData, Nz::WindowSwapchain& swapchain) :
+	WidgetState(stateData)
 	{
-		auto& filesystem = app.GetComponent<Nz::AppFilesystemComponent>();
+		auto& filesystem = stateData->app->GetComponent<Nz::AppFilesystemComponent>();
 
-		m_camera = world.CreateEntity();
+		m_camera = stateData->world->CreateEntity();
 		{
 			std::random_device rd;
 			std::uniform_real_distribution<float> dis(-180.f, 180.f);

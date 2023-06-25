@@ -38,20 +38,25 @@ namespace tsom
 		{
 		}
 
+		struct AuthRequest
+		{
+			std::string nickname;
+		};
+
+		struct AuthResponse
+		{
+			bool succeeded;
+		};
+
 		struct NetworkStrings
 		{
 			CompressedUnsigned<Nz::UInt32> startId;
 			std::vector<std::string> strings;
 		};
 
-		struct Test
-		{
-			std::string str;
-		};
-
-
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, AuthRequest& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, AuthResponse& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, NetworkStrings& data);
-		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, Test& data);
 	}
 }
 

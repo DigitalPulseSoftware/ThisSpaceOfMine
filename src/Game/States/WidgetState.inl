@@ -16,7 +16,7 @@ namespace tsom
 	template<typename T, typename... Args>
 	T* WidgetState::CreateWidget(Args&&... args)
 	{
-		T* widget = m_parentWidget->Add<T>(std::forward<Args>(args)...);
+		T* widget = m_stateData->canvas->Add<T>(std::forward<Args>(args)...);
 
 		auto& entry = m_widgets.emplace_back();
 		entry.widget = widget;
@@ -29,7 +29,7 @@ namespace tsom
 
 	inline entt::handle WidgetState::CreateEntity()
 	{
-		entt::handle entity = m_world.CreateEntity();
+		entt::handle entity = m_stateData->world->CreateEntity();
 		if (!m_isVisible)
 			entity.emplace_or_replace<Nz::DisabledComponent>();
 
@@ -46,5 +46,15 @@ namespace tsom
 		m_widgets.erase(it);
 
 		widget->Destroy();
+	}
+
+	inline StateData& WidgetState::GetStateData()
+	{
+		return *m_stateData;
+	}
+
+	inline const StateData& WidgetState::GetStateData() const
+	{
+		return *m_stateData;
 	}
 }

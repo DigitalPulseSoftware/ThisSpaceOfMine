@@ -29,6 +29,11 @@ namespace tsom
 			NetworkSession(NetworkSession&&) = delete;
 			~NetworkSession();
 
+			void Disconnect();
+
+			inline std::size_t GetPeerId() const;
+			inline SessionHandler* GetSessionHandler();
+
 			void HandlePacket(Nz::NetPacket&& netPacket);
 
 			template<typename T> void SendPacket(Nz::UInt8 channelId, Nz::ENetPacketFlags flags, const T& packet);

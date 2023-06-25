@@ -17,7 +17,15 @@ namespace tsom
 
 	NetworkSession::~NetworkSession() = default;
 
-	void tsom::NetworkSession::HandlePacket(Nz::NetPacket&& netPacket)
+	void NetworkSession::Disconnect()
+	{
+		assert(m_peerId != NetworkReactor::InvalidPeerId);
+
+		m_reactor.DisconnectPeer(m_peerId);
+		m_peerId = NetworkReactor::InvalidPeerId;
+	}
+
+	void NetworkSession::HandlePacket(Nz::NetPacket&& netPacket)
 	{
 		m_sessionHandler->HandlePacket(std::move(netPacket));
 	}

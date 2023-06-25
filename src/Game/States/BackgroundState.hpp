@@ -22,7 +22,7 @@ namespace tsom
 	class BackgroundState : public WidgetState
 	{
 		public:
-			BackgroundState(Nz::ApplicationBase& app, Nz::BaseWidget* parentWidget, Nz::EnttWorld& world, Nz::WindowSwapchain& swapchain);
+			BackgroundState(std::shared_ptr<StateData> stateData, Nz::WindowSwapchain& swapchain);
 			~BackgroundState() = default;
 
 			/*void Enter(Nz::StateMachine& fsm) override;

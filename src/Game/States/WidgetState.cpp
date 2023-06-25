@@ -7,12 +7,11 @@
 
 namespace tsom
 {
-	WidgetState::WidgetState(Nz::BaseWidget* parentWidget, Nz::EnttWorld& world) :
-	m_parentWidget(parentWidget),
-	m_world(world),
+	WidgetState::WidgetState(std::shared_ptr<StateData> stateData) :
+	m_stateData(std::move(stateData)),
 	m_isVisible(false)
 	{
-		m_onWidgetResized.Connect(parentWidget->OnWidgetResized, [this](const Nz::BaseWidget*, const Nz::Vector2f& newSize)
+		m_onWidgetResized.Connect(m_stateData->canvas->OnWidgetResized, [this](const Nz::BaseWidget*, const Nz::Vector2f& newSize)
 		{
 			if (m_isVisible)
 				LayoutWidgets(newSize); 
@@ -53,12 +52,12 @@ namespace tsom
 				it = m_entities.erase(it);
 		}
 
-		LayoutWidgets(m_parentWidget->GetSize());
+		LayoutWidgets(m_stateData->canvas->GetSize());
 	}
 
 	void WidgetState::Leave(Nz::StateMachine& /*fsm*/)
 	{
-		/*m_isVisible = false;
+		m_isVisible = false;
 
 		for (WidgetEntry& entry : m_widgets)
 		{
@@ -76,7 +75,7 @@ namespace tsom
 			}
 			else
 				it = m_entities.erase(it);
-		}*/
+		}
 	}
 
 	bool WidgetState::Update(Nz::StateMachine& /*fsm*/, Nz::Time /*elapsedTime*/)

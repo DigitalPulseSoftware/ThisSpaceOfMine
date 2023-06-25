@@ -11,16 +11,19 @@
 #include <Nazara/Core/State.hpp>
 #include <Nazara/Renderer/RenderTarget.hpp>
 #include <Nazara/Widgets/BaseWidget.hpp>
+#include <Game/States/StateData.hpp>
 #include <functional>
 #include <memory>
 #include <vector>
 
 namespace tsom
 {
-	class WidgetState : public Nz::State
+	class StateData;
+
+	class WidgetState : public Nz::State, public std::enable_shared_from_this<WidgetState>
 	{
 		public:
-			WidgetState(Nz::BaseWidget* parentWidget, Nz::EnttWorld& world);
+			WidgetState(std::shared_ptr<StateData> stateData);
 			~WidgetState();
 
 		protected:
@@ -28,6 +31,9 @@ namespace tsom
 			inline entt::handle CreateEntity();
 			template<typename T, typename... Args> T* CreateWidget(Args&&... args);
 			inline void DestroyWidget(Nz::BaseWidget* widget);
+
+			inline StateData& GetStateData();
+			inline const StateData& GetStateData() const;
 
 			void Enter(Nz::StateMachine& fsm) override;
 			void Leave(Nz::StateMachine& fsm) override;
@@ -44,11 +50,10 @@ namespace tsom
 				bool wasVisible = true;
 			};
 
+			std::shared_ptr<StateData> m_stateData;
 			std::vector<std::function<void()>> m_cleanupFunctions;
 			std::vector<WidgetEntry> m_widgets;
 			std::vector<entt::handle> m_entities;
-			Nz::BaseWidget* m_parentWidget;
-			Nz::EnttWorld& m_world;
 			bool m_isVisible;
 	};
 }

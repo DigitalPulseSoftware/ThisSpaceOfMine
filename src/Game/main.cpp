@@ -10,8 +10,10 @@
 #include <CommonLib/NetworkReactor.hpp>
 #include <CommonLib/Protocol/Packets.hpp>
 #include <Game/States/BackgroundState.hpp>
+#include <Game/States/ConnectionState.hpp>
 #include <Game/States/GameState.hpp>
 #include <Game/States/MenuState.hpp>
+#include <Game/States/StateData.hpp>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
@@ -101,8 +103,16 @@ int GameMain(int argc, char* argv[])
 
 	//Nz::Mouse::SetRelativeMouseMode(true);
 
-	Nz::StateMachine fsm(std::make_shared<tsom::BackgroundState>(app, &canvas, world, windowSwapchain));
-	fsm.PushState(std::make_shared<tsom::MenuState>(&canvas, world, std::move(gameState)));
+	std::shared_ptr<tsom::StateData> stateData = std::make_shared<tsom::StateData>();
+	stateData->app = &app;
+	stateData->canvas = &canvas;
+	stateData->world = &world;
+
+	std::shared_ptr<tsom::ConnectionState> connectionState = std::make_shared<tsom::ConnectionState>(stateData);
+
+	Nz::StateMachine fsm(connectionState);
+	fsm.PushState(std::make_shared<tsom::BackgroundState>(stateData, windowSwapchain));
+	fsm.PushState(std::make_shared<tsom::MenuState>(stateData, std::move(gameState), connectionState));
 	//Nz::StateMachine fsm(std::move(gameState));
 	app.AddUpdaterFunc([&](Nz::Time time)
 	{

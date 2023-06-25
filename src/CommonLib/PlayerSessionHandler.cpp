@@ -7,18 +7,24 @@
 
 namespace tsom
 {
-	constexpr SessionHandler::SendAttributeTable m_packetFlags = SessionHandler::BuildAttributeTable({
-		{ PacketIndex<Packets::NetworkStrings>, { 0, Nz::ENetPacketFlag_Reliable } }
+	constexpr SessionHandler::SendAttributeTable m_packetAttributes = SessionHandler::BuildAttributeTable({
+		{ PacketIndex<Packets::AuthResponse>, { 0, Nz::ENetPacketFlag_Reliable } }
 	});
 
 	PlayerSessionHandler::PlayerSessionHandler(NetworkSession* session) :
 	SessionHandler(session)
 	{
 		SetupHandlerTable<PlayerSessionHandler>();
+		SetupAttributeTable(m_packetAttributes);
 	}
 
-	void PlayerSessionHandler::HandlePacket(Packets::Test&& test)
+	void PlayerSessionHandler::HandlePacket(Packets::AuthRequest&& authRequest)
 	{
-		fmt::print("Received Test: {}\n", test.str);
+		fmt::print("auth request from {}\n", authRequest.nickname);
+
+		Packets::AuthResponse response;
+		response.succeeded = true;
+
+		SendPacket(response);
 	}
 }

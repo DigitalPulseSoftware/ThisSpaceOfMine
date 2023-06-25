@@ -4,9 +4,20 @@
 
 #include <CommonLib/NetworkSessionManager.hpp>
 #include <CommonLib/Protocol/Packets.hpp>
+#include "NetworkSession.hpp"
 
 namespace tsom
 {
+	inline std::size_t NetworkSession::GetPeerId() const
+	{
+		return m_peerId;
+	}
+
+	inline SessionHandler* NetworkSession::GetSessionHandler()
+	{
+		return m_sessionHandler.get();
+	}
+
 	template<typename T>
 	void NetworkSession::SendPacket(Nz::UInt8 channelId, Nz::ENetPacketFlags flags, const T& packet)
 	{
@@ -15,8 +26,10 @@ namespace tsom
 		Nz::NetPacket netPacket;
 		netPacket << Nz::UInt8(PacketIndex<T>);
 
-		PacketSerializer serializer(packet, true);
-		Packets::Serialize(serializer, netPacket);
+		PacketSerializer serializer(netPacket, true);
+		Packets::Serialize(serializer, const_cast<T&>(packet));
+
+		netPacket.FlushBits();
 
 		m_reactor.SendData(m_peerId, channelId, flags, std::move(netPacket));
 	}
