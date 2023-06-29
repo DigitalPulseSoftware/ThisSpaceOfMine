@@ -18,11 +18,11 @@ namespace tsom
 		m_reactor.SendData(peerId, channelId, flags, std::move(packet));
 	}
 
-	template<typename T>
-	void NetworkSessionManager::SetDefaultHandler()
+	template<typename T, typename... Args>
+	void NetworkSessionManager::SetDefaultHandler(Args&&... args)
 	{
 		static_assert(std::is_base_of_v<SessionHandler, T>);
 
-		m_handlerFactory = [](NetworkSession* session) -> std::unique_ptr<SessionHandler> { return std::make_unique<T>(session); };
+		m_handlerFactory = [=](NetworkSession* session) -> std::unique_ptr<SessionHandler> { return std::make_unique<T>(std::forward<Args>(args)..., session); };
 	}
 }

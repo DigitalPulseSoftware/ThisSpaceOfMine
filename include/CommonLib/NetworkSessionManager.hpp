@@ -11,6 +11,7 @@
 #include <CommonLib/NetworkReactor.hpp>
 #include <CommonLib/NetworkSession.hpp>
 #include <NazaraUtils/FunctionRef.hpp>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -29,7 +30,7 @@ namespace tsom
 
 			inline void SendData(std::size_t peerId, Nz::UInt8 channelId, Nz::ENetPacketFlags flags, Nz::NetPacket&& packet);
 
-			template<typename T> void SetDefaultHandler();
+			template<typename T, typename... Args> void SetDefaultHandler(Args&&... args);
 
 			NetworkSessionManager& operator=(const NetworkSessionManager&) = delete;
 			NetworkSessionManager& operator=(NetworkSessionManager&&) = delete;
@@ -37,7 +38,7 @@ namespace tsom
 			static constexpr std::size_t MaxSessionPerManager = 4095;
 
 		private:
-			using HandlerFactory = std::unique_ptr<SessionHandler>(*)(NetworkSession* session);
+			using HandlerFactory = std::function<std::unique_ptr<SessionHandler>(NetworkSession* session)>;
 
 			std::vector<std::optional<NetworkSession>> m_sessions; //< TODO: Nz::SparseVector
 			HandlerFactory m_handlerFactory;

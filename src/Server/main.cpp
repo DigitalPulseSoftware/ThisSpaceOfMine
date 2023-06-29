@@ -1,7 +1,7 @@
 #include <Nazara/Core.hpp>
 #include <Nazara/Network/Network.hpp>
-#include <CommonLib/PlayerSessionHandler.hpp>
 #include <CommonLib/ServerWorldAppComponent.hpp>
+#include <CommonLib/Session/InitialSessionHandler.hpp>
 #include <Main/Main.hpp>
 
 int ServerMain(int argc, char* argv[])
@@ -12,7 +12,7 @@ int ServerMain(int argc, char* argv[])
 
 	auto& world = worldAppComponent.AddWorld();
 	auto& sessionManager = world.AddSessionManager(29536);
-	sessionManager.SetDefaultHandler<tsom::PlayerSessionHandler>();
+	sessionManager.SetDefaultHandler<tsom::InitialSessionHandler>(std::ref(world));
 
 	return app.Run();
 }

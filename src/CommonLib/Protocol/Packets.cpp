@@ -10,26 +10,44 @@ namespace tsom
 #define TSOM_NETWORK_PACKET(Name) #Name,
 #include <CommonLib/Protocol/PacketList.hpp>
 	};
-}
 
-namespace tsom::Packets
-{
-	void Serialize(PacketSerializer& serializer, AuthRequest& data)
+	namespace Packets
 	{
-		serializer &= data.nickname;
-	}
+		namespace Helper
+		{
+			void Serialize(PacketSerializer& serializer, PlayerInputs& data)
+			{
+				serializer &= data.jump;
+				serializer &= data.moveBackward;
+				serializer &= data.moveForward;
+				serializer &= data.moveLeft;
+				serializer &= data.moveRight;
+				serializer &= data.sprint;
+			}
+		}
 
-	void Serialize(PacketSerializer& serializer, AuthResponse& data)
-	{
-		serializer &= data.succeeded;
-	}
+		void Serialize(PacketSerializer& serializer, AuthRequest& data)
+		{
+			serializer &= data.nickname;
+		}
 
-	void Serialize(PacketSerializer& serializer, NetworkStrings& data)
-	{
-		serializer &= data.startId;
+		void Serialize(PacketSerializer& serializer, AuthResponse& data)
+		{
+			serializer &= data.succeeded;
+		}
 
-		serializer.SerializeArraySize(data.strings);
-		for (auto& string : data.strings)
-			serializer &= string;
+		void Serialize(PacketSerializer& serializer, NetworkStrings& data)
+		{
+			serializer &= data.startId;
+
+			serializer.SerializeArraySize(data.strings);
+			for (auto& string : data.strings)
+				serializer &= string;
+		}
+
+		void Serialize(PacketSerializer& serializer, UpdatePlayerInputs& data)
+		{
+			Helper::Serialize(serializer, data.inputs);
+		}
 	}
 }

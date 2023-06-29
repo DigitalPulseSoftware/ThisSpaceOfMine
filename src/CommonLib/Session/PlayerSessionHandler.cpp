@@ -2,24 +2,23 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
-#include <ClientLib/ClientSessionHandler.hpp>
+#include <CommonLib/Session/PlayerSessionHandler.hpp>
 #include <fmt/format.h>
 
 namespace tsom
 {
 	constexpr SessionHandler::SendAttributeTable m_packetAttributes = SessionHandler::BuildAttributeTable({
-		{ PacketIndex<Packets::AuthRequest>, { 0, Nz::ENetPacketFlag_Reliable } }
 	});
 
-	ClientSessionHandler::ClientSessionHandler(NetworkSession* session) :
-	SessionHandler(session)
+	PlayerSessionHandler::PlayerSessionHandler(NetworkSession* session, ServerPlayer* player) :
+	SessionHandler(session),
+	m_player(player)
 	{
 		SetupHandlerTable(this);
 		SetupAttributeTable(m_packetAttributes);
 	}
 
-	void ClientSessionHandler::HandlePacket(Packets::AuthResponse&& authResponse)
+	void PlayerSessionHandler::HandlePacket(Packets::UpdatePlayerInputs&& playerInputs)
 	{
-		fmt::print("Auth response");
 	}
 }

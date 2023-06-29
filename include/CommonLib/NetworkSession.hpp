@@ -39,6 +39,7 @@ namespace tsom
 			template<typename T> void SendPacket(Nz::UInt8 channelId, Nz::ENetPacketFlags flags, const T& packet);
 
 			void SetHandler(std::unique_ptr<SessionHandler>&& sessionHandler);
+			template<typename T, typename... Args> void SetupHandler(Args&&... args);
 
 			NetworkSession& operator=(const NetworkSession&) = delete;
 			NetworkSession& operator=(NetworkSession&&) = delete;

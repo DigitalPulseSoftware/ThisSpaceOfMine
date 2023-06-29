@@ -9,4 +9,9 @@ namespace tsom
 	{
 		return *m_sessionManagers.emplace_back(std::make_unique<NetworkSessionManager>(std::forward<Args>(args)...));
 	}
+
+	inline Nz::EnttWorld& ServerWorld::GetWorld()
+	{
+		return m_world;
+	}
 }

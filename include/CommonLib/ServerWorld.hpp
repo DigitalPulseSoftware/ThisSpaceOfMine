@@ -9,6 +9,9 @@
 
 #include <CommonLib/Export.hpp>
 #include <CommonLib/NetworkSessionManager.hpp>
+#include <CommonLib/ServerPlayer.hpp>
+#include <NazaraUtils/MemoryPool.hpp>
+#include <Nazara/Core/EnttWorld.hpp>
 #include <memory>
 #include <vector>
 
@@ -24,6 +27,10 @@ namespace tsom
 
 			template<typename... Args> NetworkSessionManager& AddSessionManager(Args&&... args);
 
+			ServerPlayer* CreatePlayer(NetworkSession* session, std::string nickname);
+
+			inline Nz::EnttWorld& GetWorld();
+
 			void Update(Nz::Time elapsedTime);
 
 			ServerWorld& operator=(const ServerWorld&) = delete;
@@ -31,6 +38,8 @@ namespace tsom
 
 		private:
 			std::vector<std::unique_ptr<NetworkSessionManager>> m_sessionManagers;
+			Nz::EnttWorld m_world;
+			Nz::MemoryPool<ServerPlayer> m_players;
 	};
 }
 

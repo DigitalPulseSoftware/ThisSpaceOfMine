@@ -50,6 +50,11 @@ namespace tsom
 	{
 	}
 
+	inline NetworkSession* SessionHandler::GetSession() const
+	{
+		return m_session;
+	}
+
 	template<typename T>
 	void SessionHandler::SendPacket(const T& packet)
 	{
@@ -75,7 +80,7 @@ namespace tsom
 	}
 
 	template<typename T>
-	void SessionHandler::SetupHandlerTable()
+	void SessionHandler::SetupHandlerTable([[maybe_unused]] T*)
 	{
 		static constexpr HandlerTable handlerTable = BuildHandlerTable<T>();
 		m_handlerTable = &handlerTable;

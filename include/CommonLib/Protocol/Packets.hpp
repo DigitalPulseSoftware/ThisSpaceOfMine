@@ -9,6 +9,7 @@
 
 #include <NazaraUtils/TypeList.hpp>
 #include <CommonLib/Export.hpp>
+#include <CommonLib/PlayerInputs.hpp>
 #include <CommonLib/Protocol/CompressedInteger.hpp>
 #include <CommonLib/Protocol/PacketSerializer.hpp>
 
@@ -36,6 +37,7 @@ namespace tsom
 	{
 		namespace Helper
 		{
+			TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, PlayerInputs& data);
 		}
 
 		struct AuthRequest
@@ -54,9 +56,15 @@ namespace tsom
 			std::vector<std::string> strings;
 		};
 
+		struct UpdatePlayerInputs
+		{
+			PlayerInputs inputs;
+		};
+
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, AuthRequest& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, AuthResponse& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, NetworkStrings& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, UpdatePlayerInputs& data);
 	}
 }
 

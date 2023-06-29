@@ -4,7 +4,6 @@
 
 #include <CommonLib/NetworkSessionManager.hpp>
 #include <CommonLib/Protocol/Packets.hpp>
-#include "NetworkSession.hpp"
 
 namespace tsom
 {
@@ -32,5 +31,11 @@ namespace tsom
 		netPacket.FlushBits();
 
 		m_reactor.SendData(m_peerId, channelId, flags, std::move(netPacket));
+	}
+
+	template<typename T, typename ...Args>
+	void NetworkSession::SetupHandler(Args&& ...args)
+	{
+		SetHandler(std::make_unique<T>(this, std::forward<Args>(args)...));
 	}
 }

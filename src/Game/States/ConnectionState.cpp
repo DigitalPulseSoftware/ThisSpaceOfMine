@@ -28,7 +28,7 @@ namespace tsom
 
 		std::size_t peerId = m_reactor.ConnectTo(serverAddress);
 		m_serverSession.emplace(m_reactor, peerId, serverAddress);
-		m_serverSession->SetHandler(std::make_unique<ClientSessionHandler>(&m_serverSession.value()));
+		m_serverSession->SetupHandler<ClientSessionHandler>();
 
 		GetStateData().networkSession = &m_serverSession.value();
 
@@ -108,6 +108,7 @@ namespace tsom
 			m_nextStateTimer -= elapsedTime;
 			if (m_nextStateTimer <= Nz::Time::Zero())
 			{
+				fsm.PopStatesUntil(shared_from_this());
 				fsm.PushState(m_nextState);
 				m_nextState = nullptr;
 

@@ -38,7 +38,7 @@ namespace tsom
 			cameraComponent.UpdateZNear(0.1f);
 		}
 
-		m_planet = std::make_unique<ClientPlanet>(40, 2.f, 0.f);
+		m_planet = std::make_unique<ClientPlanet>(40, 2.f, 16.f);
 		RebuildPlanet();
 
 		m_planetEntity.emplace<Nz::DisabledComponent>();

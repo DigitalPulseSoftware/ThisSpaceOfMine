@@ -35,6 +35,8 @@ namespace tsom
 			SessionHandler(SessionHandler&&) = delete;
 			virtual ~SessionHandler();
 
+			inline NetworkSession* GetSession() const;
+
 			void HandlePacket(Nz::NetPacket&& netPacket);
 
 			virtual void OnUnexpectedPacket(std::size_t packetIndex);
@@ -56,7 +58,7 @@ namespace tsom
 
 		protected:
 			inline void SetupAttributeTable(const SendAttributeTable& attributeTable);
-			template<typename T> void SetupHandlerTable();
+			template<typename T> void SetupHandlerTable([[maybe_unused]] T*);
 
 		private:
 			template<typename T> static constexpr HandlerTable BuildHandlerTable();
