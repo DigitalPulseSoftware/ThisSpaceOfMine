@@ -22,7 +22,6 @@ namespace tsom
 		assert(m_peerId != NetworkReactor::InvalidPeerId);
 
 		m_reactor.DisconnectPeer(m_peerId);
-		m_peerId = NetworkReactor::InvalidPeerId;
 	}
 
 	void NetworkSession::HandlePacket(Nz::NetPacket&& netPacket)

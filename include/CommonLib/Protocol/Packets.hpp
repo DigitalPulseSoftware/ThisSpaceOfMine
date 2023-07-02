@@ -8,6 +8,8 @@
 #define TSOM_COMMONLIB_NETWORK_PACKETS_HPP
 
 #include <NazaraUtils/TypeList.hpp>
+#include <Nazara/Math/Quaternion.hpp>
+#include <Nazara/Math/Vector3.hpp>
 #include <CommonLib/Export.hpp>
 #include <CommonLib/PlayerInputs.hpp>
 #include <CommonLib/Protocol/CompressedInteger.hpp>
@@ -37,6 +39,21 @@ namespace tsom
 	{
 		namespace Helper
 		{
+			using EntityId = Nz::UInt16;
+
+			struct EntityState
+			{
+				Nz::Quaternionf rotation;
+				Nz::Vector3f position;
+			};
+
+			struct PlayerEntityData
+			{
+				std::string nickname;
+			};
+
+			TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntityState& data);
+			TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, PlayerEntityData& data);
 			TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, PlayerInputs& data);
 		}
 
@@ -48,6 +65,36 @@ namespace tsom
 		struct AuthResponse
 		{
 			bool succeeded;
+		};
+
+		struct EntitiesCreation
+		{
+			struct EntityData
+			{
+				Helper::EntityId entityId;
+				Helper::EntityState initialStates;
+				std::variant<
+					Helper::PlayerEntityData
+				> data;
+			};
+
+			std::vector<EntityData> entities;
+		};
+
+		struct EntitiesDelete
+		{
+			std::vector<Helper::EntityId> entities;
+		};
+
+		struct EntitiesStateUpdate
+		{
+			struct EntityData
+			{
+				Helper::EntityId entityId;
+				Helper::EntityState newStates;
+			};
+
+			std::vector<EntityData> entities;
 		};
 
 		struct NetworkStrings
@@ -63,6 +110,9 @@ namespace tsom
 
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, AuthRequest& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, AuthResponse& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntitiesCreation& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntitiesDelete& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntitiesStateUpdate& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, NetworkStrings& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, UpdatePlayerInputs& data);
 	}

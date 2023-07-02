@@ -16,7 +16,7 @@
 
 namespace tsom
 {
-	BackgroundState::BackgroundState(std::shared_ptr<StateData> stateData, Nz::WindowSwapchain& swapchain) :
+	BackgroundState::BackgroundState(std::shared_ptr<StateData> stateData) :
 	WidgetState(stateData)
 	{
 		auto& filesystem = stateData->app->GetComponent<Nz::AppFilesystemComponent>();
@@ -29,7 +29,7 @@ namespace tsom
 			auto& cameraNode = m_camera.emplace<Nz::NodeComponent>();
 			cameraNode.SetRotation(Nz::EulerAnglesf(dis(rd), dis(rd), dis(rd)));
 
-			auto& cameraComponent = m_camera.emplace<Nz::CameraComponent>(&swapchain, Nz::ProjectionType::Perspective);
+			auto& cameraComponent = m_camera.emplace<Nz::CameraComponent>(GetStateData().swapchain, Nz::ProjectionType::Perspective);
 			cameraComponent.UpdateFOV(Nz::DegreeAnglef(45.f));
 			cameraComponent.UpdateRenderMask(0x0000FFFF);
 			cameraComponent.UpdateRenderOrder(-1);

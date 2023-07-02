@@ -3,6 +3,7 @@
 // For conditions of distribution and use, see copyright notice in Config.hpp
 
 #include <Game/States/ConnectionState.hpp>
+#include <Game/States/BackgroundState.hpp>
 #include <ClientLib/ClientSessionHandler.hpp>
 #include <CommonLib/SessionHandler.hpp>
 #include <Nazara/Core/StateMachine.hpp>
@@ -17,6 +18,7 @@ namespace tsom
 	m_reactor(0, Nz::NetProtocol::Any, 0, 2),
 	m_connectingLabel(nullptr)
 	{
+		m_connectingLabel = CreateWidget<Nz::LabelWidget>();
 	}
 
 	void ConnectionState::Connect(const Nz::IpAddress& serverAddress, std::shared_ptr<Nz::State> previousState, std::shared_ptr<Nz::State> nextState)
@@ -32,7 +34,6 @@ namespace tsom
 
 		GetStateData().networkSession = &m_serverSession.value();
 
-		m_connectingLabel = CreateWidget<Nz::LabelWidget>();
 		m_connectingLabel->UpdateText(Nz::SimpleTextDrawer::Draw("Connecting to " + serverAddress.ToString() + "...", 48));
 		m_connectingLabel->Center();
 	}
@@ -45,17 +46,12 @@ namespace tsom
 			GetStateData().networkSession = nullptr;
 		}
 
-		if (m_connectingLabel)
-		{
-			DestroyWidget(m_connectingLabel);
-			m_connectingLabel = nullptr;
-		}
+		m_connectingLabel->Hide();
 	}
 
 	void ConnectionState::LayoutWidgets(const Nz::Vector2f& newSize)
 	{
-		if (m_connectingLabel)
-			m_connectingLabel->Center();
+		m_connectingLabel->Center();
 	}
 
 	bool ConnectionState::Update(Nz::StateMachine& fsm, Nz::Time elapsedTime)
@@ -65,25 +61,25 @@ namespace tsom
 			if (!m_serverSession || m_serverSession->GetPeerId() != peerIndex)
 				return;
 
-			if (m_connectingLabel)
-			{
-				m_connectingLabel->UpdateText(Nz::SimpleTextDrawer::Draw("Authenticating...", 48));
-				m_connectingLabel->Center();
+			m_connectingLabel->UpdateText(Nz::SimpleTextDrawer::Draw("Authenticating...", 48));
+			m_connectingLabel->Center();
 
-				Packets::AuthRequest request;
-				request.nickname = "SirLynix";
+			Packets::AuthRequest request;
+			request.nickname = "SirLynix";
 
-				m_serverSession->GetSessionHandler()->SendPacket(request);
+			m_serverSession->SendPacket(request);
 
-				m_nextState = m_connectedState;
-				m_nextStateTimer = Nz::Time::Milliseconds(500);
-			}
+			m_nextState = m_connectedState;
+			m_nextStateTimer = Nz::Time::Milliseconds(500);
 		};
 
 		auto DisconnectionHandler = [&](std::size_t peerIndex, [[maybe_unused]] Nz::UInt32 data)
 		{
 			if (!m_serverSession || m_serverSession->GetPeerId() != peerIndex)
 				return;
+
+			m_connectingLabel->UpdateText(Nz::SimpleTextDrawer::Draw("Connection lost.", 48, Nz::TextStyle_Regular, Nz::Color::Red()));
+			m_connectingLabel->Center();
 
 			fmt::print("Disconnected from server\n");
 
@@ -109,14 +105,12 @@ namespace tsom
 			if (m_nextStateTimer <= Nz::Time::Zero())
 			{
 				fsm.PopStatesUntil(shared_from_this());
+				if (m_nextState == m_previousState)
+					fsm.PushState(std::make_shared<BackgroundState>(GetStateDataPtr()));
 				fsm.PushState(m_nextState);
 				m_nextState = nullptr;
 
-				if (m_connectingLabel)
-				{
-					DestroyWidget(m_connectingLabel);
-					m_connectingLabel = nullptr;
-				}
+				m_connectingLabel->Hide();
 			}
 		}
 

@@ -9,6 +9,7 @@
 
 #include <CommonLib/Export.hpp>
 #include <Nazara/Core/ByteStream.hpp>
+#include <variant>
 #include <vector>
 
 namespace tsom
@@ -26,6 +27,7 @@ namespace tsom
 			inline void Write(const void* ptr, std::size_t size);
 
 			template<typename DataType> void Serialize(DataType& data);
+			template<typename F, typename... Types> void Serialize(std::variant<Types...>& variant, F&& functor);
 			template<typename DataType> void Serialize(std::vector<DataType>& dataVec);
 			template<typename DataType> void Serialize(const DataType& data) const;
 			template<typename PacketType, typename DataType> void Serialize(DataType& data);

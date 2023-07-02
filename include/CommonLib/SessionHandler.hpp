@@ -8,7 +8,6 @@
 #define TSOM_COMMONLIB_SESSIONHANDLER_HPP
 
 #include <CommonLib/Export.hpp>
-#include <CommonLib/NetworkSession.hpp>
 #include <CommonLib/Protocol/Packets.hpp>
 #include <Nazara/Network/ENetPacket.hpp>
 #include <array>
@@ -35,13 +34,12 @@ namespace tsom
 			SessionHandler(SessionHandler&&) = delete;
 			virtual ~SessionHandler();
 
+			template<typename T> const SendAttributes& GetPacketAttributes();
 			inline NetworkSession* GetSession() const;
 
 			void HandlePacket(Nz::NetPacket&& netPacket);
 
 			virtual void OnUnexpectedPacket(std::size_t packetIndex);
-
-			template<typename T> void SendPacket(const T& packet);
 
 			SessionHandler& operator=(const SessionHandler&) = delete;
 			SessionHandler& operator=(SessionHandler&&) = delete;

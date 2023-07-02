@@ -3,12 +3,47 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/Protocol/PacketSerializer.hpp>
+#include <NazaraUtils/TypeList.hpp>
 #include <CommonLib/Protocol/CompressedInteger.hpp>
 #include <cassert>
 #include <stdexcept>
 
 namespace tsom
 {
+	namespace Detail
+	{
+		template<typename T>
+		struct RuntimeToTemplateInteger;
+
+		template<std::size_t N, std::size_t... Indices>
+		struct RuntimeToTemplateInteger<std::integer_sequence<std::size_t, N, Indices...>>
+		{
+			template<template<std::size_t> typename T, typename... Args>
+			static void Select(std::size_t index, Args&&... args)
+			{
+				if (index == N)
+					T<N>{}(std::forward<Args>(args)...);
+				else if constexpr (sizeof...(Indices) > 0)
+					RuntimeToTemplateInteger<std::integer_sequence<std::size_t, Indices...>>::template Select<T>(index, std::forward<Args>(args)...);
+			}
+		};
+
+		template<std::size_t N>
+		struct VariantSerializeByIndex
+		{
+			template<typename F, typename... Args>
+			void operator()(std::variant<Args...>& variant, bool isWriting, F&& func)
+			{
+				using T = std::variant_alternative_t<N, std::variant<Args...>>;
+
+				if (isWriting)
+					func(std::get<T>(variant));
+				else
+					func(variant.template emplace<T>());
+			}
+		};
+	}
+
 	inline PacketSerializer::PacketSerializer(Nz::ByteStream& packetBuffer, bool isWriting) :
 	m_buffer(packetBuffer),
 	m_isWriting(isWriting)
@@ -39,6 +74,24 @@ namespace tsom
 			m_buffer >> data;
 		else
 			m_buffer << data;
+	}
+
+	template<typename F, typename... Types>
+	void PacketSerializer::Serialize(std::variant<Types...>& variant, F&& functor)
+	{
+		Nz::UInt8 index;
+		if (!IsWriting())
+			Serialize(index);
+		else
+		{
+			index = Nz::SafeCast<Nz::UInt8>(variant.index());
+			Serialize(index);
+		}
+
+		using Sequence = std::make_integer_sequence<std::size_t, sizeof...(Types)>;
+		using TemplateInt = Detail::RuntimeToTemplateInteger<Sequence>;
+
+		TemplateInt::template Select<Detail::VariantSerializeByIndex>(index, variant, IsWriting(), functor);
 	}
 
 	template<typename DataType>

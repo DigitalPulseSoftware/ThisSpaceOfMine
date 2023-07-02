@@ -20,7 +20,7 @@ namespace tsom
 	class TSOM_COMMONLIB_API ServerWorld
 	{
 		public:
-			ServerWorld() = default;
+			ServerWorld();
 			ServerWorld(const ServerWorld&) = delete;
 			ServerWorld(ServerWorld&&) = delete;
 			~ServerWorld() = default;
@@ -28,6 +28,9 @@ namespace tsom
 			template<typename... Args> NetworkSessionManager& AddSessionManager(Args&&... args);
 
 			ServerPlayer* CreatePlayer(NetworkSession* session, std::string nickname);
+
+			template<typename F> void ForEachPlayer(F&& functor);
+			template<typename F> void ForEachPlayer(F&& functor) const;
 
 			inline Nz::EnttWorld& GetWorld();
 

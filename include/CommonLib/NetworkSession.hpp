@@ -9,6 +9,7 @@
 
 #include <CommonLib/Export.hpp>
 #include <CommonLib/NetworkReactor.hpp>
+#include <CommonLib/SessionHandler.hpp>
 #include <Nazara/Network/IpAddress.hpp>
 #include <Nazara/Network/ENetPacket.hpp>
 
@@ -19,8 +20,6 @@ namespace Nz
 
 namespace tsom
 {
-	class SessionHandler;
-
 	class TSOM_COMMONLIB_API NetworkSession
 	{
 		public:
@@ -34,9 +33,11 @@ namespace tsom
 			inline std::size_t GetPeerId() const;
 			inline SessionHandler* GetSessionHandler();
 
+			inline bool IsConnected() const;
+
 			void HandlePacket(Nz::NetPacket&& netPacket);
 
-			template<typename T> void SendPacket(Nz::UInt8 channelId, Nz::ENetPacketFlags flags, const T& packet);
+			template<typename T> void SendPacket(const T& packet);
 
 			void SetHandler(std::unique_ptr<SessionHandler>&& sessionHandler);
 			template<typename T, typename... Args> void SetupHandler(Args&&... args);

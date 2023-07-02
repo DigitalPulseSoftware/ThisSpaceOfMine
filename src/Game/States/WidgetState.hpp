@@ -34,6 +34,7 @@ namespace tsom
 
 			inline StateData& GetStateData();
 			inline const StateData& GetStateData() const;
+			inline std::shared_ptr<StateData>& GetStateDataPtr();
 
 			void Enter(Nz::StateMachine& fsm) override;
 			void Leave(Nz::StateMachine& fsm) override;

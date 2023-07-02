@@ -99,19 +99,20 @@ int GameMain(int argc, char* argv[])
 	Nz::Canvas canvas(world.GetRegistry(), window.GetEventHandler(), window.GetCursorController().CreateHandle(), 0xFFFF0000);
 	canvas.Resize(Nz::Vector2f(window.GetSize()));
 
-	std::shared_ptr<Nz::State> gameState = std::make_shared<tsom::GameState>(app, world, windowSwapchain, window.GetEventHandler());
-
-	//Nz::Mouse::SetRelativeMouseMode(true);
-
 	std::shared_ptr<tsom::StateData> stateData = std::make_shared<tsom::StateData>();
 	stateData->app = &app;
 	stateData->canvas = &canvas;
+	stateData->swapchain = &windowSwapchain;
 	stateData->world = &world;
+
+	std::shared_ptr<Nz::State> gameState = std::make_shared<tsom::GameState>(stateData, window.GetEventHandler());
+
+	//Nz::Mouse::SetRelativeMouseMode(true);
 
 	std::shared_ptr<tsom::ConnectionState> connectionState = std::make_shared<tsom::ConnectionState>(stateData);
 
 	Nz::StateMachine fsm(connectionState);
-	fsm.PushState(std::make_shared<tsom::BackgroundState>(stateData, windowSwapchain));
+	fsm.PushState(std::make_shared<tsom::BackgroundState>(stateData));
 	fsm.PushState(std::make_shared<tsom::MenuState>(stateData, std::move(gameState), connectionState));
 	//Nz::StateMachine fsm(std::move(gameState));
 	app.AddUpdaterFunc([&](Nz::Time time)

@@ -7,6 +7,11 @@
 
 namespace tsom
 {
+	ServerWorld::ServerWorld() :
+	m_players(256)
+	{
+	}
+
 	ServerPlayer* ServerWorld::CreatePlayer(NetworkSession* session, std::string nickname)
 	{
 		std::size_t playerIndex;

@@ -9,7 +9,6 @@
 
 #include <Nazara/Core/State.hpp>
 #include <Nazara/Math/EulerAngles.hpp>
-#include <ClientLib/ClientCharacter.hpp>
 #include <ClientLib/ClientPlanet.hpp>
 #include <entt/entt.hpp>
 #include <array>
@@ -30,10 +29,12 @@ namespace Nz
 
 namespace tsom
 {
+	struct StateData;
+
 	class GameState : public Nz::State
 	{
 		public:
-			GameState(Nz::ApplicationBase& app, Nz::EnttWorld& world, Nz::WindowSwapchain& swapchain, Nz::WindowEventHandler& eventHandler);
+			GameState(std::shared_ptr<StateData> stateData, Nz::WindowEventHandler& eventHandler);
 			~GameState();
 
 			void Enter(Nz::StateMachine& fsm) override;
@@ -43,13 +44,11 @@ namespace tsom
 		private:
 			void RebuildPlanet();
 
-			std::optional<ClientCharacter> m_character;
+			std::shared_ptr<StateData> m_stateData;
 			std::unique_ptr<ClientPlanet> m_planet;
 			entt::handle m_cameraEntity;
 			entt::handle m_planetEntity;
 			entt::handle m_skyboxEntity;
-			Nz::ApplicationBase& m_app;
-			Nz::EnttWorld& m_world;
 			Nz::EulerAnglesf m_cameraRotation;
 			Nz::WindowEventHandler& m_eventHandler;
 	};

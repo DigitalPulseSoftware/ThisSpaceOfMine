@@ -3,7 +3,9 @@
 // For conditions of distribution and use, see copyright notice in Config.hpp
 
 #include <Game/States/GameState.hpp>
+#include <Game/States/StateData.hpp>
 #include <CommonLib/PlayerInputs.hpp>
+#include <CommonLib/NetworkSession.hpp>
 #include <Nazara/Core.hpp>
 #include <Nazara/Graphics.hpp>
 #include <Nazara/Graphics/PropertyHandler/TexturePropertyHandler.hpp>
@@ -14,25 +16,24 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
-//#define FREEFLIGHT
+#define FREEFLIGHT
 //#define THIRDPERSON
 
 namespace tsom
 {
-	GameState::GameState(Nz::ApplicationBase& app, Nz::EnttWorld& world, Nz::WindowSwapchain& swapchain, Nz::WindowEventHandler& eventHandler) :
-	m_app(app),
-	m_world(world),
+	GameState::GameState(std::shared_ptr<StateData> stateData, Nz::WindowEventHandler& eventHandler) :
+	m_stateData(std::move(stateData)),
 	m_eventHandler(eventHandler)
 	{
-		auto& filesystem = app.GetComponent<Nz::AppFilesystemComponent>();
+		auto& filesystem = m_stateData->app->GetComponent<Nz::AppFilesystemComponent>();
 
-		m_cameraEntity = world.CreateEntity();
+		m_cameraEntity = m_stateData->world->CreateEntity();
 		{
 			m_cameraEntity.emplace<Nz::DisabledComponent>();
 
 			auto& cameraNode = m_cameraEntity.emplace<Nz::NodeComponent>();
 
-			auto& cameraComponent = m_cameraEntity.emplace<Nz::CameraComponent>(&swapchain);
+			auto& cameraComponent = m_cameraEntity.emplace<Nz::CameraComponent>(m_stateData->swapchain);
 			cameraComponent.UpdateClearColor(Nz::Color::Gray());
 			cameraComponent.UpdateRenderMask(0x0000FFFF);
 			cameraComponent.UpdateZNear(0.1f);
@@ -43,7 +44,7 @@ namespace tsom
 
 		m_planetEntity.emplace<Nz::DisabledComponent>();
 
-		m_skyboxEntity = world.CreateEntity();
+		m_skyboxEntity = m_stateData->world->CreateEntity();
 		{
 			m_skyboxEntity.emplace<Nz::DisabledComponent>();
 
@@ -99,7 +100,7 @@ namespace tsom
 	void GameState::Enter(Nz::StateMachine& /*fsm*/)
 	{
 #ifndef FREEFLIGHT
-		m_character.emplace(m_world, Nz::Vector3f::Up() * (m_planet->GetGridDimensions() * m_planet->GetTileSize() + 1.f), Nz::Quaternionf::Identity());
+		m_character.emplace(*m_stateData->world, Nz::Vector3f::Up() * (m_planet->GetGridDimensions() * m_planet->GetTileSize() + 1.f), Nz::Quaternionf::Identity());
 		m_character->SetCurrentPlanet(m_planet.get());
 
 		auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
@@ -198,8 +199,6 @@ namespace tsom
 
 	void GameState::Leave(Nz::StateMachine& /*fsm*/)
 	{
-		m_character.reset();
-
 		m_cameraEntity.emplace<Nz::DisabledComponent>();
 		m_planetEntity.emplace<Nz::DisabledComponent>();
 		m_skyboxEntity.emplace<Nz::DisabledComponent>();
@@ -207,7 +206,7 @@ namespace tsom
 
 	bool GameState::Update(Nz::StateMachine& /*fsm*/, Nz::Time elapsedTime)
 	{
-		auto& debugDrawer = m_world.GetSystem<Nz::RenderSystem>().GetFramePipeline().GetDebugDrawer();
+		auto& debugDrawer = m_stateData->world->GetSystem<Nz::RenderSystem>().GetFramePipeline().GetDebugDrawer();
 		//debugDrawer.DrawLine(Nz::Vector3f::Zero(), Nz::Vector3f::Forward() * 20.f, Nz::Color::Green());
 		//debugDrawer.DrawLine(Nz::Vector3f::Zero(), Nz::Vector3f::Left() * 20.f, Nz::Color::Green());
 		//debugDrawer.DrawLine(Nz::Vector3f::Left() * 20.f, Nz::Vector3f::Left() * 20.f + Nz::Vector3f::Forward() * 10.f, Nz::Color::Green());
@@ -244,6 +243,9 @@ namespace tsom
 		inputs.moveRight = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::D);
 		inputs.sprint = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::LShift);
 
+		if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::F1) && m_stateData->networkSession->IsConnected())
+			m_stateData->networkSession->Disconnect();
+
 		m_character->SetLastInputs(inputs);
 
 		m_character->DebugDraw(debugDrawer);
@@ -274,7 +276,7 @@ namespace tsom
 
 		// Raycast
 		{
-			auto& physSystem = m_world.GetSystem<Nz::JoltPhysics3DSystem>();
+			auto& physSystem = m_stateData->world->GetSystem<Nz::JoltPhysics3DSystem>();
 			Nz::Vector3f closestHit, closestNormal;
 			if (physSystem.RaycastQuery(cameraNode.GetPosition(), cameraNode.GetPosition() + cameraNode.GetForward() * 5.f, [&](const Nz::JoltPhysics3DSystem::RaycastHit& hitInfo) -> std::optional<float>
 				{
@@ -318,12 +320,12 @@ namespace tsom
 
 	void GameState::RebuildPlanet()
 	{
-		auto& filesystem = m_app.GetComponent<Nz::AppFilesystemComponent>();
+		auto& filesystem = m_stateData->app->GetComponent<Nz::AppFilesystemComponent>();
 
 		if (m_planetEntity)
 			m_planetEntity.destroy();
 
-		m_planetEntity = m_world.CreateEntity();
+		m_planetEntity = m_stateData->world->CreateEntity();
 		{
 			Nz::TextureSamplerInfo blockSampler;
 			blockSampler.anisotropyLevel = 16;
@@ -363,7 +365,7 @@ namespace tsom
 				fmt::print("built collider in {}\n", fmt::streamed(colliderClock.GetElapsedTime()));
 			}
 
-			auto& physicsSystem = m_world.GetSystem<Nz::JoltPhysics3DSystem>();
+			auto& physicsSystem = m_stateData->world->GetSystem<Nz::JoltPhysics3DSystem>();
 
 			auto& planetBody = m_planetEntity.emplace<Nz::JoltRigidBody3DComponent>(physicsSystem.CreateRigidBody(settings));
 

@@ -15,6 +15,17 @@ namespace tsom
 	{
 		namespace Helper
 		{
+			void Serialize(PacketSerializer& serializer, EntityState& data)
+			{
+				serializer &= data.position;
+				serializer &= data.rotation;
+			}
+
+			void Serialize(PacketSerializer& serializer, PlayerEntityData& data)
+			{
+				serializer &= data.nickname;
+			}
+
 			void Serialize(PacketSerializer& serializer, PlayerInputs& data)
 			{
 				serializer &= data.jump;
@@ -34,6 +45,38 @@ namespace tsom
 		void Serialize(PacketSerializer& serializer, AuthResponse& data)
 		{
 			serializer &= data.succeeded;
+		}
+
+		void Serialize(PacketSerializer& serializer, EntitiesCreation& data)
+		{
+			serializer.SerializeArraySize(data.entities);
+			for (auto& entity : data.entities)
+			{
+				serializer &= entity.entityId;
+				Helper::Serialize(serializer, entity.initialStates);
+
+				serializer.Serialize(entity.data, [&](auto&& data)
+				{
+					Helper::Serialize(serializer, data);
+				});
+			}
+		}
+
+		void Serialize(PacketSerializer& serializer, EntitiesDelete& data)
+		{
+			serializer.SerializeArraySize(data.entities);
+			for (auto& entityId : data.entities)
+				serializer &= entityId;
+		}
+
+		void Serialize(PacketSerializer& serializer, EntitiesStateUpdate& data)
+		{
+			serializer.SerializeArraySize(data.entities);
+			for (auto& entity : data.entities)
+			{
+				serializer &= entity.entityId;
+				Helper::Serialize(serializer, entity.newStates);
+			}
 		}
 
 		void Serialize(PacketSerializer& serializer, NetworkStrings& data)

@@ -50,19 +50,19 @@ namespace tsom
 	{
 	}
 
-	inline NetworkSession* SessionHandler::GetSession() const
-	{
-		return m_session;
-	}
-
 	template<typename T>
-	void SessionHandler::SendPacket(const T& packet)
+	auto SessionHandler::GetPacketAttributes() -> const SendAttributes&
 	{
 		const SendAttributes& sendAttributes = (*m_sendAttributes)[PacketIndex<T>];
 		if (sendAttributes.channelId == SendAttributes::InvalidChannel)
 			throw std::runtime_error("missing packet setup");
 
-		m_session->SendPacket(sendAttributes.channelId, sendAttributes.flags, packet);
+		return sendAttributes;
+	}
+
+	inline NetworkSession* SessionHandler::GetSession() const
+	{
+		return m_session;
 	}
 
 	constexpr auto SessionHandler::BuildAttributeTable(std::initializer_list<std::pair<std::size_t, SendAttributes>> initializers) -> SendAttributeTable

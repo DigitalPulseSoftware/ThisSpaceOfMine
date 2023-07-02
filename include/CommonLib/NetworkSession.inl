@@ -4,6 +4,7 @@
 
 #include <CommonLib/NetworkSessionManager.hpp>
 #include <CommonLib/Protocol/Packets.hpp>
+#include "NetworkSession.hpp"
 
 namespace tsom
 {
@@ -17,10 +18,17 @@ namespace tsom
 		return m_sessionHandler.get();
 	}
 
+	inline bool NetworkSession::IsConnected() const
+	{
+		return m_peerId != NetworkReactor::InvalidPeerId;
+	}
+
 	template<typename T>
-	void NetworkSession::SendPacket(Nz::UInt8 channelId, Nz::ENetPacketFlags flags, const T& packet)
+	void NetworkSession::SendPacket(const T& packet)
 	{
 		static_assert(PacketCount < 0xFF);
+
+		const SessionHandler::SendAttributes& sendAttributes = m_sessionHandler->GetPacketAttributes<T>();
 
 		Nz::NetPacket netPacket;
 		netPacket << Nz::UInt8(PacketIndex<T>);
@@ -30,7 +38,7 @@ namespace tsom
 
 		netPacket.FlushBits();
 
-		m_reactor.SendData(m_peerId, channelId, flags, std::move(netPacket));
+		m_reactor.SendData(m_peerId, sendAttributes.channelId, sendAttributes.flags, std::move(netPacket));
 	}
 
 	template<typename T, typename ...Args>

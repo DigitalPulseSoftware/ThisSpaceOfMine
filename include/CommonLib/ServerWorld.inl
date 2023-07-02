@@ -4,10 +4,22 @@
 
 namespace tsom
 {
-	template<typename ...Args>
+	template<typename... Args>
 	NetworkSessionManager& ServerWorld::AddSessionManager(Args&& ...args)
 	{
 		return *m_sessionManagers.emplace_back(std::make_unique<NetworkSessionManager>(std::forward<Args>(args)...));
+	}
+
+	template<typename F> void ServerWorld::ForEachPlayer(F&& functor)
+	{
+		for (ServerPlayer& serverPlayer : m_players)
+			functor(serverPlayer);
+	}
+
+	template<typename F> void ServerWorld::ForEachPlayer(F&& functor) const
+	{
+		for (const ServerPlayer& serverPlayer : m_players)
+			functor(serverPlayer);
 	}
 
 	inline Nz::EnttWorld& ServerWorld::GetWorld()

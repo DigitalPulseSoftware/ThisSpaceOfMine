@@ -29,7 +29,7 @@ namespace tsom
 		Packets::AuthResponse response;
 		response.succeeded = true;
 
-		SendPacket(response);
+		GetSession()->SendPacket(response);
 
 		ServerPlayer* player = m_world.CreatePlayer(GetSession(), std::move(authRequest.nickname));
 		GetSession()->SetupHandler<PlayerSessionHandler>(std::move(player));

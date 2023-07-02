@@ -4,8 +4,4 @@
 
 namespace tsom
 {
-	inline entt::handle ClientCharacter::GetEntity() const
-	{
-		return m_entity;
-	}
 }

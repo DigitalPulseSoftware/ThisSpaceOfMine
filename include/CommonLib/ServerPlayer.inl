@@ -8,7 +8,18 @@ namespace tsom
 	m_playerIndex(playerIndex),
 	m_nickname(std::move(nickname)),
 	m_session(session),
+	m_visibilityHandler(m_session),
 	m_world(world)
 	{
+	}
+
+	inline SessionVisibilityHandler& ServerPlayer::GetVisibilityHandler()
+	{
+		return m_visibilityHandler;
+	}
+
+	inline const SessionVisibilityHandler& ServerPlayer::GetVisibilityHandler() const
+	{
+		return m_visibilityHandler;
 	}
 }

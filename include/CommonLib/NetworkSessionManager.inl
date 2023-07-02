@@ -23,6 +23,6 @@ namespace tsom
 	{
 		static_assert(std::is_base_of_v<SessionHandler, T>);
 
-		m_handlerFactory = [=](NetworkSession* session) -> std::unique_ptr<SessionHandler> { return std::make_unique<T>(std::forward<Args>(args)..., session); };
+		m_handlerFactory = [=](NetworkSession* session) mutable -> std::unique_ptr<SessionHandler> { return std::make_unique<T>(std::forward<Args>(args)..., session); };
 	}
 }

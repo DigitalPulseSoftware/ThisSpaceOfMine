@@ -57,4 +57,9 @@ namespace tsom
 	{
 		return *m_stateData;
 	}
+
+	inline std::shared_ptr<StateData>& WidgetState::GetStateDataPtr()
+	{
+		return m_stateData;
+	}
 }

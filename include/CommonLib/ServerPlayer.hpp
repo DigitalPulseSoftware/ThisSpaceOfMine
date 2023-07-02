@@ -8,6 +8,7 @@
 #define TSOM_COMMONLIB_SERVERPLAYER_HPP
 
 #include <CommonLib/Export.hpp>
+#include <CommonLib/SessionVisibilityHandler.hpp>
 #include <entt/entt.hpp>
 #include <string>
 
@@ -24,6 +25,9 @@ namespace tsom
 			ServerPlayer(ServerPlayer&&) = delete;
 			~ServerPlayer() = default;
 
+			inline SessionVisibilityHandler& GetVisibilityHandler();
+			inline const SessionVisibilityHandler& GetVisibilityHandler() const;
+
 			void Respawn();
 
 			ServerPlayer& operator=(const ServerPlayer&) = delete;
@@ -34,6 +38,7 @@ namespace tsom
 			std::string m_nickname;
 			entt::handle m_controlledEntity;
 			NetworkSession* m_session;
+			SessionVisibilityHandler m_visibilityHandler;
 			ServerWorld& m_world;
 	};
 }
