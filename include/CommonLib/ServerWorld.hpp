@@ -8,9 +8,11 @@
 #define TSOM_COMMONLIB_SERVERWORLD_HPP
 
 #include <CommonLib/Export.hpp>
+#include <CommonLib/Planet.hpp>
 #include <CommonLib/NetworkSessionManager.hpp>
 #include <CommonLib/ServerPlayer.hpp>
 #include <NazaraUtils/MemoryPool.hpp>
+#include <Nazara/Core/Clock.hpp>
 #include <Nazara/Core/EnttWorld.hpp>
 #include <memory>
 #include <vector>
@@ -32,6 +34,8 @@ namespace tsom
 			template<typename F> void ForEachPlayer(F&& functor);
 			template<typename F> void ForEachPlayer(F&& functor) const;
 
+			inline Planet& GetPlanet();
+			inline const Planet& GetPlanet() const;
 			inline Nz::EnttWorld& GetWorld();
 
 			void Update(Nz::Time elapsedTime);
@@ -40,9 +44,15 @@ namespace tsom
 			ServerWorld& operator=(ServerWorld&&) = delete;
 
 		private:
+			void NetworkTick();
+			void OnTick(Nz::Time elapsedTime);
+
+			std::unique_ptr<Planet> m_planet;
 			std::vector<std::unique_ptr<NetworkSessionManager>> m_sessionManagers;
 			Nz::EnttWorld m_world;
 			Nz::MemoryPool<ServerPlayer> m_players;
+			Nz::Time m_tickAccumulator;
+			Nz::Time m_tickDuration;
 	};
 }
 

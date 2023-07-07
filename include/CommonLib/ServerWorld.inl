@@ -1,3 +1,4 @@
+#include "ServerWorld.hpp"
 // Copyright (C) 2023 Jérôme Leclercq
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
@@ -20,6 +21,16 @@ namespace tsom
 	{
 		for (const ServerPlayer& serverPlayer : m_players)
 			functor(serverPlayer);
+	}
+
+	inline Planet& ServerWorld::GetPlanet()
+	{
+		return *m_planet;
+	}
+
+	inline const Planet& ServerWorld::GetPlanet() const
+	{
+		return *m_planet;
 	}
 
 	inline Nz::EnttWorld& ServerWorld::GetWorld()

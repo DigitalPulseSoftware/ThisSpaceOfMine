@@ -12,12 +12,12 @@
 
 namespace tsom
 {
-	NetworkedEntitiesSystem::NetworkedEntitiesSystem(ServerWorld& world, entt::registry& registry) :
+	NetworkedEntitiesSystem::NetworkedEntitiesSystem(entt::registry& registry, ServerWorld& world) :
 	m_networkedConstructObserver(registry, entt::collector.group<Nz::NodeComponent, NetworkedComponent>(entt::exclude<Nz::DisabledComponent>)),
 	m_registry(registry),
 	m_world(world)
 	{
-		m_networkedDestroyConnection = m_registry.on_construct<Nz::DisabledComponent>().connect<&NetworkedEntitiesSystem::OnNetworkedDestroy>(this);
+		m_disabledConstructConnection = m_registry.on_construct<Nz::DisabledComponent>().connect<&NetworkedEntitiesSystem::OnNetworkedDestroy>(this);
 		m_networkedDestroyConnection = m_registry.on_destroy<NetworkedComponent>().connect<&NetworkedEntitiesSystem::OnNetworkedDestroy>(this);
 		m_nodeDestroyConnection = m_registry.on_destroy<Nz::NodeComponent>().connect<&NetworkedEntitiesSystem::OnNetworkedDestroy>(this);
 	}
@@ -34,13 +34,15 @@ namespace tsom
 	{
 		m_networkedConstructObserver.each([&](entt::entity entity)
 		{
-			if (m_registry.try_get<Nz::JoltCharacterComponent>(entity) || m_registry.try_get<Nz::JoltRigidBody3DComponent>(entity))
+			bool isMoving = m_registry.try_get<Nz::JoltCharacterComponent>(entity) || m_registry.try_get<Nz::JoltRigidBody3DComponent>(entity);
+			if (isMoving)
 				m_movingEntities.insert(entity);
 
-
+			ForEachVisibility([&](SessionVisibilityHandler& visibility)
+			{
+				visibility.CreateEntity(entt::handle(m_registry, entity), isMoving);
+			});
 		});
-
-
 	}
 
 	void NetworkedEntitiesSystem::OnNetworkedDestroy([[maybe_unused]] entt::registry& registry, entt::entity entity)
@@ -48,5 +50,10 @@ namespace tsom
 		assert(&m_registry == &registry);
 
 		m_movingEntities.erase(entity);
+
+		ForEachVisibility([&](SessionVisibilityHandler& visibility)
+		{
+			visibility.DestroyEntity(entt::handle(m_registry, entity));
+		});
 	}
 }

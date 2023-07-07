@@ -33,5 +33,7 @@ namespace tsom
 
 		ServerPlayer* player = m_world.CreatePlayer(GetSession(), std::move(authRequest.nickname));
 		GetSession()->SetupHandler<PlayerSessionHandler>(std::move(player));
+
+		player->Respawn();
 	}
 }

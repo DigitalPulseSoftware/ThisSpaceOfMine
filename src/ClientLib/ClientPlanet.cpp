@@ -115,7 +115,7 @@ namespace tsom
 		float x = std::floor(grid.GetWidth() * 0.5f + hitPoint.x / m_tileSize);
 		float y = std::floor(grid.GetHeight() * 0.5f + hitPoint.z / m_tileSize);
 
-		fmt::print("x: {}, y: {}\n", x, y);
+		//fmt::print("x: {}, y: {}\n", x, y);
 
 		float xOffset = x * m_tileSize - grid.GetWidth() * m_tileSize * 0.5f;
 		float yHeight = m_tileSize;

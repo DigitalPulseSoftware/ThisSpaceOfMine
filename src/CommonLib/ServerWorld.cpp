@@ -3,13 +3,21 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/ServerWorld.hpp>
+#include <CommonLib/NetworkedEntitiesSystem.hpp>
+#include <Nazara/JoltPhysics3D/Systems/JoltPhysics3DSystem.hpp>
 #include <memory>
 
 namespace tsom
 {
 	ServerWorld::ServerWorld() :
-	m_players(256)
+	m_players(256),
+	m_tickAccumulator(Nz::Time::Zero()),
+	m_tickDuration(Nz::Time::TickDuration(30))
 	{
+		m_planet = std::make_unique<Planet>(40, 2.f, 16.f);
+
+		m_world.AddSystem<NetworkedEntitiesSystem>(*this);
+		m_world.AddSystem<Nz::JoltPhysics3DSystem>();
 	}
 
 	ServerPlayer* ServerWorld::CreatePlayer(NetworkSession* session, std::string nickname)
@@ -25,8 +33,28 @@ namespace tsom
 
 	void ServerWorld::Update(Nz::Time elapsedTime)
 	{
+		m_tickAccumulator += elapsedTime;
+		while (m_tickAccumulator >= m_tickDuration)
+		{
+			OnTick(m_tickDuration);
+			m_tickAccumulator -= m_tickDuration;
+		}
+	}
+
+	void ServerWorld::NetworkTick()
+	{
 		for (auto&& sessionManagerPtr : m_sessionManagers)
 			sessionManagerPtr->Poll();
+
+		ForEachPlayer([&](ServerPlayer& serverPlayer)
+		{
+			serverPlayer.GetVisibilityHandler().Dispatch();
+		});
+	}
+
+	void ServerWorld::OnTick(Nz::Time elapsedTime)
+	{
+		NetworkTick();
 
 		m_world.Update(elapsedTime);
 	}

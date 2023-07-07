@@ -52,9 +52,9 @@ namespace tsom
 
 			if (Nz::Vector3f previousUp = character.GetRotation() * Nz::Vector3f::Up(); !previousUp.ApproxEqual(up, 0.001f))
 			{
-				fmt::print("previous up: {}.{}.{}\n", previousUp.x, previousUp.y, previousUp.z);
+				/*fmt::print("previous up: {}.{}.{}\n", previousUp.x, previousUp.y, previousUp.z);
 				fmt::print("up: {}.{}.{}\n", up.x, up.y, up.z);
-				fmt::print("--\n");
+				fmt::print("--\n");*/
 
 				Nz::Quaternionf currentRotation = character.GetRotation();
 				Nz::Quaternionf referenceRotation = (m_rotationInProgress) ? m_rotationInProgress->toRotation : currentRotation;

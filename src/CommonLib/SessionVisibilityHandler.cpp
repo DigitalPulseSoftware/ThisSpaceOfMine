@@ -35,6 +35,8 @@ namespace tsom
 				deletePacket.entities.push_back(entityId);
 
 				m_freeEntityIds.Set(entityId, true);
+
+				m_entityToNetworkId.erase(handle);
 			}
 
 			m_networkSession->SendPacket(deletePacket);
@@ -47,19 +49,21 @@ namespace tsom
 
 			for (const entt::handle& handle : m_createdEntities)
 			{
-				std::size_t freeId = m_freeEntityIds.FindFirst();
-				if (freeId == m_freeEntityIds.npos)
+				std::size_t networkId = m_freeEntityIds.FindFirst();
+				if (networkId == m_freeEntityIds.npos)
 				{
-					freeId = m_freeEntityIds.GetSize();
-					m_freeEntityIds.Resize(freeId + FreeIdGrowRate, true);
+					networkId = m_freeEntityIds.GetSize();
+					m_freeEntityIds.Resize(networkId + FreeIdGrowRate, true);
 				}
 
-				m_freeEntityIds.Set(freeId, false);
+				m_freeEntityIds.Set(networkId, false);
+
+				m_entityToNetworkId[handle] = networkId;
 
 				auto& entityNode = handle.get<Nz::NodeComponent>();
 
 				auto& entityData = creationPacket.entities.emplace_back();
-				entityData.entityId = Nz::SafeCast<Nz::UInt32>(freeId);
+				entityData.entityId = Nz::SafeCast<Nz::UInt32>(networkId);
 				entityData.initialStates.position = entityNode.GetPosition();
 				entityData.initialStates.rotation = entityNode.GetRotation();
 			}

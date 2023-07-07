@@ -10,16 +10,30 @@
 #include <ClientLib/Export.hpp>
 #include <CommonLib/SessionHandler.hpp>
 #include <CommonLib/Protocol/Packets.hpp>
+#include <entt/entt.hpp>
+#include <unordered_map>
+
+namespace Nz
+{
+	class EnttWorld;
+}
 
 namespace tsom
 {
 	class TSOM_CLIENTLIB_API ClientSessionHandler : public SessionHandler
 	{
 		public:
-			ClientSessionHandler(NetworkSession* session);
+			ClientSessionHandler(NetworkSession* session, Nz::EnttWorld& world);
 			~ClientSessionHandler() = default;
 
 			void HandlePacket(Packets::AuthResponse&& authResponse);
+			void HandlePacket(Packets::EntitiesCreation&& entitiesCreation);
+			void HandlePacket(Packets::EntitiesDelete&& entitiesDelete);
+			void HandlePacket(Packets::EntitiesStateUpdate&& stateUpdate);
+
+		private:
+			std::unordered_map<Nz::UInt32, entt::handle> m_networkIdToEntity;
+			Nz::EnttWorld& m_world;
 	};
 }
 

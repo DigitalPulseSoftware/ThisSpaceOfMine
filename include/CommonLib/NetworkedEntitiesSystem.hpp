@@ -26,7 +26,7 @@ namespace tsom
 			static constexpr Nz::Int64 ExecutionOrder = 10'000'000;
 			using Components = Nz::TypeList<class NetworkedComponent>;
 
-			NetworkedEntitiesSystem(ServerWorld& world, entt::registry& registry);
+			NetworkedEntitiesSystem(entt::registry& registry, ServerWorld& world);
 			NetworkedEntitiesSystem(const NetworkedEntitiesSystem&) = delete;
 			NetworkedEntitiesSystem(NetworkedEntitiesSystem&&) = delete;
 			~NetworkedEntitiesSystem() = default;

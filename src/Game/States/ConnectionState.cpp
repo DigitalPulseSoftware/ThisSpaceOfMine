@@ -30,7 +30,7 @@ namespace tsom
 
 		std::size_t peerId = m_reactor.ConnectTo(serverAddress);
 		m_serverSession.emplace(m_reactor, peerId, serverAddress);
-		m_serverSession->SetupHandler<ClientSessionHandler>();
+		m_serverSession->SetupHandler<ClientSessionHandler>(*GetStateData().world);
 
 		GetStateData().networkSession = &m_serverSession.value();
 
