@@ -9,24 +9,37 @@
 
 #include <CommonLib/Export.hpp>
 #include <CommonLib/SessionVisibilityHandler.hpp>
+#include <Nazara/Core/HandledObject.hpp>
+#include <Nazara/Core/ObjectHandle.hpp>
 #include <entt/entt.hpp>
 #include <string>
 
 namespace tsom
 {
+	class CharacterController;
 	class NetworkSession;
-	class ServerWorld;
+	class ServerPlayer;
+	class ServerInstance;
 
-	class TSOM_COMMONLIB_API ServerPlayer
+	using ServerPlayerHandle = Nz::ObjectHandle<ServerPlayer>;
+
+	class TSOM_COMMONLIB_API ServerPlayer : public Nz::HandledObject<ServerPlayer>
 	{
 		public:
-			inline ServerPlayer(ServerWorld& world, std::size_t playerIndex, NetworkSession* session, std::string nickname);
+			inline ServerPlayer(ServerInstance& instance, std::size_t playerIndex, NetworkSession* session, std::string nickname);
 			ServerPlayer(const ServerPlayer&) = delete;
 			ServerPlayer(ServerPlayer&&) = delete;
 			~ServerPlayer() = default;
 
+			void Destroy();
+
+			inline const std::string& GetNickname() const;
+			inline ServerInstance& GetServerInstance();
+			inline const ServerInstance& GetServerInstance() const;
 			inline SessionVisibilityHandler& GetVisibilityHandler();
 			inline const SessionVisibilityHandler& GetVisibilityHandler() const;
+
+			void HandleInputs(const PlayerInputs& inputs);
 
 			void Respawn();
 
@@ -35,11 +48,12 @@ namespace tsom
 
 		private:
 			std::size_t m_playerIndex;
+			std::shared_ptr<CharacterController> m_controller;
 			std::string m_nickname;
 			entt::handle m_controlledEntity;
 			NetworkSession* m_session;
 			SessionVisibilityHandler m_visibilityHandler;
-			ServerWorld& m_world;
+			ServerInstance& m_instance;
 	};
 }
 

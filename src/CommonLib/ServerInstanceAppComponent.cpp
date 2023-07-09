@@ -2,11 +2,13 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
+#include <CommonLib/ServerInstanceAppComponent.hpp>
+
 namespace tsom
 {
-	template<typename... Args>
-	ServerWorld& ServerWorldAppComponent::AddWorld(Args&& ...args)
+	void ServerInstanceAppComponent::Update(Nz::Time elapsedTime)
 	{
-		return *m_worlds.emplace_back(std::make_unique<ServerWorld>(std::forward<Args>(args)...));
+		for (auto& worldPtr : m_instances)
+			worldPtr->Update(elapsedTime);
 	}
 }

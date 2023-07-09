@@ -47,13 +47,13 @@ namespace tsom
 				Nz::Vector3f position;
 			};
 
-			struct PlayerEntityData
+			struct PlayerControlledData
 			{
 				std::string nickname;
 			};
 
 			TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntityState& data);
-			TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, PlayerEntityData& data);
+			TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, PlayerControlledData& data);
 			TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, PlayerInputs& data);
 		}
 
@@ -73,9 +73,7 @@ namespace tsom
 			{
 				Helper::EntityId entityId;
 				Helper::EntityState initialStates;
-				std::variant<
-					Helper::PlayerEntityData
-				> data;
+				std::optional<Helper::PlayerControlledData> playerControlled;
 			};
 
 			std::vector<EntityData> entities;

@@ -155,3 +155,5 @@ DocProject/Help/*.hhp
 DocProject/Help/Html2
 DocProject/Help/html
 src/CommonLib/VersionData.hpp
+project.autoversion.d
+*.dmp

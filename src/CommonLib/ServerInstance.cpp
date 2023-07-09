@@ -2,25 +2,44 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
-#include <CommonLib/ServerWorld.hpp>
+#include <CommonLib/ServerInstance.hpp>
 #include <CommonLib/NetworkedEntitiesSystem.hpp>
 #include <Nazara/JoltPhysics3D/Systems/JoltPhysics3DSystem.hpp>
+#include <Nazara/Utility/Components.hpp>
+#include <fmt/format.h>
+#include <fmt/std.h>
 #include <memory>
 
 namespace tsom
 {
-	ServerWorld::ServerWorld() :
+	ServerInstance::ServerInstance() :
 	m_players(256),
 	m_tickAccumulator(Nz::Time::Zero()),
 	m_tickDuration(Nz::Time::TickDuration(30))
 	{
+		m_world.AddSystem<NetworkedEntitiesSystem>(*this);
+		auto& physicsSystem = m_world.AddSystem<Nz::JoltPhysics3DSystem>();
+		physicsSystem.GetPhysWorld().SetStepSize(m_tickDuration);
+
 		m_planet = std::make_unique<Planet>(40, 2.f, 16.f);
 
-		m_world.AddSystem<NetworkedEntitiesSystem>(*this);
-		m_world.AddSystem<Nz::JoltPhysics3DSystem>();
+		
+		m_planetEntity = m_world.CreateEntity();
+		{
+			m_planetEntity.emplace<Nz::NodeComponent>();
+
+			Nz::JoltRigidBody3D::StaticSettings settings;
+			{
+				Nz::HighPrecisionClock colliderClock;
+				settings.geom = m_planet->BuildCollider();
+				fmt::print("built collider in {}\n", fmt::streamed(colliderClock.GetElapsedTime()));
+			}
+
+			auto& planetBody = m_planetEntity.emplace<Nz::JoltRigidBody3DComponent>(physicsSystem.CreateRigidBody(settings));
+		}
 	}
 
-	ServerPlayer* ServerWorld::CreatePlayer(NetworkSession* session, std::string nickname)
+	ServerPlayer* ServerInstance::CreatePlayer(NetworkSession* session, std::string nickname)
 	{
 		std::size_t playerIndex;
 
@@ -31,7 +50,12 @@ namespace tsom
 		return player;
 	}
 
-	void ServerWorld::Update(Nz::Time elapsedTime)
+	void ServerInstance::DestroyPlayer(std::size_t playerIndex)
+	{
+		m_players.Free(playerIndex);
+	}
+
+	void ServerInstance::Update(Nz::Time elapsedTime)
 	{
 		m_tickAccumulator += elapsedTime;
 		while (m_tickAccumulator >= m_tickDuration)
@@ -41,7 +65,7 @@ namespace tsom
 		}
 	}
 
-	void ServerWorld::NetworkTick()
+	void ServerInstance::OnNetworkTick()
 	{
 		for (auto&& sessionManagerPtr : m_sessionManagers)
 			sessionManagerPtr->Poll();
@@ -52,9 +76,9 @@ namespace tsom
 		});
 	}
 
-	void ServerWorld::OnTick(Nz::Time elapsedTime)
+	void ServerInstance::OnTick(Nz::Time elapsedTime)
 	{
-		NetworkTick();
+		OnNetworkTick();
 
 		m_world.Update(elapsedTime);
 	}

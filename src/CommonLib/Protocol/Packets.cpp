@@ -21,7 +21,7 @@ namespace tsom
 				serializer &= data.rotation;
 			}
 
-			void Serialize(PacketSerializer& serializer, PlayerEntityData& data)
+			void Serialize(PacketSerializer& serializer, PlayerControlledData& data)
 			{
 				serializer &= data.nickname;
 			}
@@ -55,10 +55,10 @@ namespace tsom
 				serializer &= entity.entityId;
 				Helper::Serialize(serializer, entity.initialStates);
 
-				serializer.Serialize(entity.data, [&](auto&& data)
-				{
-					Helper::Serialize(serializer, data);
-				});
+				serializer.SerializePresence(entity.playerControlled);
+
+				if (entity.playerControlled)
+					Helper::Serialize(serializer, *entity.playerControlled);
 			}
 		}
 

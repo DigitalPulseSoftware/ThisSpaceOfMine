@@ -3,17 +3,24 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ClientLib/ClientSessionHandler.hpp>
+#include <CommonLib/Components/EntityOwnerComponent.hpp>
 #include <Nazara/Core/EnttWorld.hpp>
+#include <Nazara/Graphics/Graphics.hpp>
+#include <Nazara/Graphics/MaterialInstance.hpp>
+#include <Nazara/Graphics/Model.hpp>
 #include <Nazara/Graphics/TextSprite.hpp>
 #include <Nazara/Graphics/Components/GraphicsComponent.hpp>
+#include <Nazara/JoltPhysics3D/JoltCollider3D.hpp>
+#include <Nazara/JoltPhysics3D/Components/JoltRigidBody3DComponent.hpp>
 #include <Nazara/Utility/SimpleTextDrawer.hpp>
 #include <Nazara/Utility/Components/NodeComponent.hpp>
 #include <fmt/format.h>
 
 namespace tsom
 {
-	constexpr SessionHandler::SendAttributeTable m_packetAttributes = SessionHandler::BuildAttributeTable({
-		{ PacketIndex<Packets::AuthRequest>, { 0, Nz::ENetPacketFlag_Reliable } }
+	constexpr SessionHandler::SendAttributeTable s_packetAttributes = SessionHandler::BuildAttributeTable({
+		{ PacketIndex<Packets::AuthRequest>,        { 0, Nz::ENetPacketFlag_Reliable } },
+		{ PacketIndex<Packets::UpdatePlayerInputs>, { 1, 0 } }
 	});
 
 	ClientSessionHandler::ClientSessionHandler(NetworkSession* session, Nz::EnttWorld& world) :
@@ -21,7 +28,7 @@ namespace tsom
 	m_world(world)
 	{
 		SetupHandlerTable(this);
-		SetupAttributeTable(m_packetAttributes);
+		SetupAttributeTable(s_packetAttributes);
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::AuthResponse&& authResponse)
@@ -36,12 +43,16 @@ namespace tsom
 			entt::handle entity = m_world.CreateEntity();
 			entity.emplace<Nz::NodeComponent>(entityData.initialStates.position, entityData.initialStates.rotation);
 
-			std::shared_ptr<Nz::TextSprite> textSprite = std::make_shared<Nz::TextSprite>();
-			textSprite->Update(Nz::SimpleTextDrawer::Draw("Entity #" + std::to_string(entityData.entityId), 48), 0.01f);
-
-			entity.emplace<Nz::GraphicsComponent>(std::move(textSprite));
+			if (entityData.playerControlled)
+				SetupEntity(entity, std::move(entityData.playerControlled.value()));
 
 			m_networkIdToEntity[entityData.entityId] = entity;
+
+			if (entityData.playerControlled)
+			{
+				m_playerControlledEntity = entity;
+				OnControlledEntityChanged(entity);
+			}
 
 			fmt::print("Create {}\n", entityData.entityId);
 		}
@@ -51,8 +62,12 @@ namespace tsom
 	{
 		for (auto entityId : entitiesDelete.entities)
 		{
-			m_networkIdToEntity[entityId].destroy();
+			entt::handle entity = m_networkIdToEntity[entityId];
 
+			if (m_playerControlledEntity == entity)
+				OnControlledEntityChanged({});
+
+			entity.destroy();
 			fmt::print("Delete {}\n", entityId);
 		}
 	}
@@ -66,5 +81,45 @@ namespace tsom
 			auto& entityNode = m_networkIdToEntity[entityData.entityId].get<Nz::NodeComponent>();
 			entityNode.SetTransform(entityData.newStates.position, entityData.newStates.rotation);
 		}
+	}
+
+	void ClientSessionHandler::SetupEntity(entt::handle entity, Packets::Helper::PlayerControlledData&& entityData)
+	{
+		auto collider = std::make_shared<Nz::JoltCapsuleCollider3D>(1.8f, 0.4f);
+
+		std::shared_ptr<Nz::Model> colliderModel;
+		{
+			std::shared_ptr<Nz::MaterialInstance> colliderMat = Nz::Graphics::Instance()->GetDefaultMaterials().basicMaterial->Instantiate();
+			colliderMat->SetValueProperty("BaseColor", Nz::Color::Green());
+			colliderMat->UpdatePassesStates([](Nz::RenderStates& states)
+			{
+				states.primitiveMode = Nz::PrimitiveMode::LineList;
+				return true;
+			});
+
+			std::shared_ptr<Nz::Mesh> colliderMesh = Nz::Mesh::Build(collider->GenerateDebugMesh());
+			std::shared_ptr<Nz::GraphicalMesh> colliderGraphicalMesh = Nz::GraphicalMesh::BuildFromMesh(*colliderMesh);
+
+			colliderModel = std::make_shared<Nz::Model>(colliderGraphicalMesh);
+			for (std::size_t i = 0; i < colliderModel->GetSubMeshCount(); ++i)
+				colliderModel->SetMaterial(i, colliderMat);
+
+			auto& gfx = entity.emplace<Nz::GraphicsComponent>();
+			gfx.AttachRenderable(std::move(colliderModel), 0x0000FFFF);
+		}
+
+		entt::handle textEntity = m_world.CreateEntity();
+		{
+			auto& textNode = textEntity.emplace<Nz::NodeComponent>();
+			textNode.SetParent(entity);
+			textNode.SetInheritRotation(false);
+
+			std::shared_ptr<Nz::TextSprite> textSprite = std::make_shared<Nz::TextSprite>();
+			textSprite->Update(Nz::SimpleTextDrawer::Draw(entityData.nickname, 48), 0.01f);
+
+			textEntity.emplace<Nz::GraphicsComponent>(std::move(textSprite));
+		}
+
+		entity.get_or_emplace<EntityOwnerComponent>().Register(textEntity);
 	}
 }

@@ -9,11 +9,12 @@
 
 namespace tsom
 {
-	void SessionVisibilityHandler::CreateEntity(entt::handle entity, bool isMoving)
+	void SessionVisibilityHandler::CreateEntity(entt::handle entity, CreateEntityData entityData)
 	{
-		m_createdEntities.emplace(entity);
-		if (isMoving)
+		if (entityData.isMoving)
 			m_movingEntities.emplace(entity);
+
+		m_createdEntities.emplace(entity, std::move(entityData));
 	}
 
 	void SessionVisibilityHandler::DestroyEntity(entt::handle entity)
@@ -47,7 +48,7 @@ namespace tsom
 		{
 			Packets::EntitiesCreation creationPacket;
 
-			for (const entt::handle& handle : m_createdEntities)
+			for (auto&& [handle, data] : m_createdEntities)
 			{
 				std::size_t networkId = m_freeEntityIds.FindFirst();
 				if (networkId == m_freeEntityIds.npos)
@@ -60,12 +61,11 @@ namespace tsom
 
 				m_entityToNetworkId[handle] = networkId;
 
-				auto& entityNode = handle.get<Nz::NodeComponent>();
-
 				auto& entityData = creationPacket.entities.emplace_back();
 				entityData.entityId = Nz::SafeCast<Nz::UInt32>(networkId);
-				entityData.initialStates.position = entityNode.GetPosition();
-				entityData.initialStates.rotation = entityNode.GetRotation();
+				entityData.initialStates.position = data.initialPosition;
+				entityData.initialStates.rotation = data.initialRotation;
+				entityData.playerControlled = data.playerControlledData;
 			}
 
 			m_networkSession->SendPacket(creationPacket);

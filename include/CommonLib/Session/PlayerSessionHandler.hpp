@@ -18,7 +18,7 @@ namespace tsom
 	{
 		public:
 			PlayerSessionHandler(NetworkSession* session, ServerPlayer* player);
-			~PlayerSessionHandler() = default;
+			~PlayerSessionHandler();
 
 			void HandlePacket(Packets::UpdatePlayerInputs&& playerInputs);
 

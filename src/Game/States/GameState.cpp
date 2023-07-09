@@ -16,14 +16,16 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
-#define FREEFLIGHT
+//#define FREEFLIGHT
 //#define THIRDPERSON
 
 namespace tsom
 {
 	GameState::GameState(std::shared_ptr<StateData> stateData, Nz::WindowEventHandler& eventHandler) :
 	m_stateData(std::move(stateData)),
-	m_eventHandler(eventHandler)
+	m_eventHandler(eventHandler),
+	m_tickAccumulator(Nz::Time::Zero()),
+	m_tickDuration(Nz::Time::TickDuration(30))
 	{
 		auto& filesystem = m_stateData->app->GetComponent<Nz::AppFilesystemComponent>();
 
@@ -99,18 +101,16 @@ namespace tsom
 
 	void GameState::Enter(Nz::StateMachine& /*fsm*/)
 	{
-#ifndef FREEFLIGHT
-		m_character.emplace(*m_stateData->world, Nz::Vector3f::Up() * (m_planet->GetGridDimensions() * m_planet->GetTileSize() + 1.f), Nz::Quaternionf::Identity());
-		m_character->SetCurrentPlanet(m_planet.get());
-
-		auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
-		cameraNode.SetRotation(Nz::EulerAnglesf(-30.f, 0.f, 0.f));
-		cameraNode.SetPosition(Nz::Vector3f::Up() * 3.f + Nz::Vector3f::Backward() * 2.f);
-		//cameraNode.SetParent(m_character->GetEntity());
-#else
+#ifdef FREEFLIGHT
 		auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
 		cameraNode.SetPosition(Nz::Vector3f::Up() * (m_planet->GetGridDimensions() * m_planet->GetTileSize() * 0.5f + 1.f));
 #endif
+
+		m_controlledEntity = m_stateData->sessionHandler->GetControlledEntity();
+		m_onControlledEntityChanged.Connect(m_stateData->sessionHandler->OnControlledEntityChanged, [&](entt::handle entity)
+		{
+			m_controlledEntity = entity;
+		});
 
 		m_cameraEntity.erase<Nz::DisabledComponent>();
 		m_planetEntity.erase<Nz::DisabledComponent>();
@@ -153,9 +153,6 @@ namespace tsom
 
 				case Nz::Keyboard::VKey::Divide:
 					m_planet = std::make_unique<ClientPlanet>(m_planet->GetGridDimensions() - 1, m_planet->GetTileSize(), m_planet->GetCornerRadius());
-#ifndef FREEFLIGHT
-					m_character->SetCurrentPlanet(m_planet.get());
-#endif
 					fmt::print("Dimensions size: {}\n", m_planet->GetGridDimensions());
 
 					RebuildPlanet();
@@ -163,9 +160,6 @@ namespace tsom
 
 				case Nz::Keyboard::VKey::Multiply:
 					m_planet = std::make_unique<ClientPlanet>(m_planet->GetGridDimensions() + 1, m_planet->GetTileSize(), m_planet->GetCornerRadius());
-#ifndef FREEFLIGHT
-					m_character->SetCurrentPlanet(m_planet.get());
-#endif
 					fmt::print("Dimensions size: {}\n", m_planet->GetGridDimensions());
 
 					RebuildPlanet();
@@ -206,6 +200,13 @@ namespace tsom
 
 	bool GameState::Update(Nz::StateMachine& /*fsm*/, Nz::Time elapsedTime)
 	{
+		m_tickAccumulator += elapsedTime;
+		while (m_tickAccumulator >= m_tickDuration)
+		{
+			OnTick(m_tickDuration);
+			m_tickAccumulator -= m_tickDuration;
+		}
+
 		auto& debugDrawer = m_stateData->world->GetSystem<Nz::RenderSystem>().GetFramePipeline().GetDebugDrawer();
 		//debugDrawer.DrawLine(Nz::Vector3f::Zero(), Nz::Vector3f::Forward() * 20.f, Nz::Color::Green());
 		//debugDrawer.DrawLine(Nz::Vector3f::Zero(), Nz::Vector3f::Left() * 20.f, Nz::Color::Green());
@@ -235,41 +236,32 @@ namespace tsom
 		if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::D))
 			cameraNode.Move(Nz::Vector3f::Right() * cameraSpeed * updateTime, Nz::CoordSys::Local);
 #else
-		PlayerInputs inputs;
-		inputs.jump = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::Space);
-		inputs.moveForward = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::W);
-		inputs.moveBackward = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::S);
-		inputs.moveLeft = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::A);
-		inputs.moveRight = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::D);
-		inputs.sprint = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::LShift);
-
 		if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::F1) && m_stateData->networkSession->IsConnected())
 			m_stateData->networkSession->Disconnect();
 
-		m_character->SetLastInputs(inputs);
-
-		m_character->DebugDraw(debugDrawer);
-
-		Nz::JoltCharacterComponent& characterComponent = m_character->GetEntity().get<Nz::JoltCharacterComponent>();
-		Nz::NodeComponent& characterNode = m_character->GetEntity().get<Nz::NodeComponent>();
-
-		if (m_cameraRotation.yaw != 0.f)
-		{
-			Nz::Quaternionf newRotation = characterComponent.GetRotation() * Nz::Quaternionf(Nz::EulerAnglesf(0.f, m_cameraRotation.yaw, 0.f));
-			newRotation.Normalize();
-
-			characterComponent.SetRotation(newRotation);
-			m_cameraRotation.yaw = 0.f;
-		}
-
-		Nz::Quaternionf rotation = characterComponent.GetRotation();
 
 #ifdef THIRDPERSON
 		cameraNode.SetPosition(characterNode.GetPosition() + rotation * (Nz::Vector3f::Up() * 3.f + Nz::Vector3f::Backward() * 2.f));
 		cameraNode.SetRotation(rotation * Nz::Quaternionf(m_cameraRotation));
 #else
-		cameraNode.SetPosition(characterNode.GetPosition() + rotation * (Nz::Vector3f::Up() * 1.6f));
-		cameraNode.SetRotation(rotation * Nz::Quaternionf(m_cameraRotation));
+		if (m_controlledEntity)
+		{
+			Nz::NodeComponent& characterNode = m_controlledEntity.get<Nz::NodeComponent>();
+
+			/*if (m_cameraRotation.yaw != 0.f)
+			{
+				Nz::Quaternionf newRotation = characterComponent.GetRotation() * Nz::Quaternionf(Nz::EulerAnglesf(0.f, m_cameraRotation.yaw, 0.f));
+				newRotation.Normalize();
+
+				characterComponent.SetRotation(newRotation);
+				m_cameraRotation.yaw = 0.f;
+			}
+
+			Nz::Quaternionf rotation = characterComponent.GetRotation();*/
+
+			cameraNode.SetPosition(characterNode.GetPosition() + characterNode.GetRotation() * (Nz::Vector3f::Up() * 1.6f));
+			cameraNode.SetRotation(characterNode.GetRotation() * Nz::Quaternionf(m_cameraRotation));
+		}
 #endif
 
 #endif
@@ -316,6 +308,11 @@ namespace tsom
 		}
 
 		return true;
+	}
+
+	void GameState::OnTick(Nz::Time elapsedTime)
+	{
+		SendInputs();
 	}
 
 	void GameState::RebuildPlanet()
@@ -391,5 +388,18 @@ namespace tsom
 			}
 #endif
 		}
+	}
+
+	void GameState::SendInputs()
+	{
+		Packets::UpdatePlayerInputs inputPacket;
+		inputPacket.inputs.jump = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::Space);
+		inputPacket.inputs.moveForward = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::W);
+		inputPacket.inputs.moveBackward = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::S);
+		inputPacket.inputs.moveLeft = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::A);
+		inputPacket.inputs.moveRight = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::D);
+		inputPacket.inputs.sprint = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::LShift);
+
+		m_stateData->networkSession->SendPacket(inputPacket);
 	}
 }

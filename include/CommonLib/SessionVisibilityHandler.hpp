@@ -21,18 +21,28 @@ namespace tsom
 	class TSOM_COMMONLIB_API SessionVisibilityHandler
 	{
 		public:
+			struct CreateEntityData;
+
 			inline SessionVisibilityHandler(NetworkSession* networkSession);
 			SessionVisibilityHandler(const SessionVisibilityHandler&) = delete;
 			SessionVisibilityHandler(SessionVisibilityHandler&&) = delete;
 			~SessionVisibilityHandler() = default;
 
-			void CreateEntity(entt::handle entity, bool isMoving);
+			void CreateEntity(entt::handle entity, CreateEntityData entityData);
 			void DestroyEntity(entt::handle entity);
 
 			void Dispatch();
 
 			SessionVisibilityHandler& operator=(const SessionVisibilityHandler&) = delete;
 			SessionVisibilityHandler& operator=(SessionVisibilityHandler&&) = delete;
+
+			struct CreateEntityData
+			{
+				Nz::Quaternionf initialRotation;
+				Nz::Vector3f initialPosition;
+				std::optional<Packets::Helper::PlayerControlledData> playerControlledData;
+				bool isMoving;
+			};
 
 		private:
 			static constexpr std::size_t FreeIdGrowRate = 512;
@@ -43,7 +53,7 @@ namespace tsom
 			};
 
 			tsl::hopscotch_map<entt::handle, Nz::UInt32, HandlerHasher> m_entityToNetworkId;
-			tsl::hopscotch_set<entt::handle, HandlerHasher> m_createdEntities;
+			tsl::hopscotch_map<entt::handle, CreateEntityData, HandlerHasher> m_createdEntities;
 			tsl::hopscotch_set<entt::handle, HandlerHasher> m_deletedEntities;
 			tsl::hopscotch_set<entt::handle, HandlerHasher> m_movingEntities;
 			Nz::Bitset<Nz::UInt64> m_freeEntityIds;

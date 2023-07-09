@@ -8,8 +8,10 @@
 #define TSOM_CLIENT_WIDGETSTATE_HPP
 
 #include <Nazara/Core/State.hpp>
+#include <Nazara/Core/Time.hpp>
 #include <Nazara/Math/EulerAngles.hpp>
 #include <ClientLib/ClientPlanet.hpp>
+#include <ClientLib/ClientSessionHandler.hpp>
 #include <entt/entt.hpp>
 #include <array>
 #include <functional>
@@ -42,15 +44,24 @@ namespace tsom
 			bool Update(Nz::StateMachine& fsm, Nz::Time elapsedTime) override;
 
 		private:
+			void OnTick(Nz::Time elapsedTime);
+
 			void RebuildPlanet();
+
+			void SendInputs();
+
+			NazaraSlot(ClientSessionHandler, OnControlledEntityChanged, m_onControlledEntityChanged);
 
 			std::shared_ptr<StateData> m_stateData;
 			std::unique_ptr<ClientPlanet> m_planet;
 			entt::handle m_cameraEntity;
+			entt::handle m_controlledEntity;
 			entt::handle m_planetEntity;
 			entt::handle m_skyboxEntity;
-			Nz::EulerAnglesf m_cameraRotation;
 			Nz::WindowEventHandler& m_eventHandler;
+			Nz::EulerAnglesf m_cameraRotation;
+			Nz::Time m_tickAccumulator;
+			Nz::Time m_tickDuration;
 	};
 }
 

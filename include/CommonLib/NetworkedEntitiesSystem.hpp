@@ -17,7 +17,7 @@
 namespace tsom
 {
 	class SessionVisibilityHandler;
-	class ServerWorld;
+	class ServerInstance;
 
 	class TSOM_COMMONLIB_API NetworkedEntitiesSystem
 	{
@@ -26,7 +26,7 @@ namespace tsom
 			static constexpr Nz::Int64 ExecutionOrder = 10'000'000;
 			using Components = Nz::TypeList<class NetworkedComponent>;
 
-			NetworkedEntitiesSystem(entt::registry& registry, ServerWorld& world);
+			NetworkedEntitiesSystem(entt::registry& registry, ServerInstance& instance);
 			NetworkedEntitiesSystem(const NetworkedEntitiesSystem&) = delete;
 			NetworkedEntitiesSystem(NetworkedEntitiesSystem&&) = delete;
 			~NetworkedEntitiesSystem() = default;
@@ -47,7 +47,7 @@ namespace tsom
 			entt::scoped_connection m_networkedDestroyConnection;
 			entt::scoped_connection m_nodeDestroyConnection;
 			entt::registry& m_registry;
-			ServerWorld& m_world;
+			ServerInstance& m_instance;
 	};
 }
 

@@ -4,22 +4,22 @@
 
 #include <CommonLib/Session/InitialSessionHandler.hpp>
 #include <CommonLib/ServerPlayer.hpp>
-#include <CommonLib/ServerWorld.hpp>
+#include <CommonLib/ServerInstance.hpp>
 #include <CommonLib/Session/PlayerSessionHandler.hpp>
 #include <fmt/format.h>
 
 namespace tsom
 {
-	constexpr SessionHandler::SendAttributeTable m_packetAttributes = SessionHandler::BuildAttributeTable({
+	constexpr SessionHandler::SendAttributeTable s_packetAttributes = SessionHandler::BuildAttributeTable({
 		{ PacketIndex<Packets::AuthResponse>, { 0, Nz::ENetPacketFlag_Reliable } }
 	});
 
-	InitialSessionHandler::InitialSessionHandler(ServerWorld& world, NetworkSession* session) :
+	InitialSessionHandler::InitialSessionHandler(ServerInstance& instance, NetworkSession* session) :
 	SessionHandler(session),
-	m_world(world)
+	m_instance(instance)
 	{
 		SetupHandlerTable(this);
-		SetupAttributeTable(m_packetAttributes);
+		SetupAttributeTable(s_packetAttributes);
 	}
 
 	void InitialSessionHandler::HandlePacket(Packets::AuthRequest&& authRequest)
@@ -31,8 +31,8 @@ namespace tsom
 
 		GetSession()->SendPacket(response);
 
-		ServerPlayer* player = m_world.CreatePlayer(GetSession(), std::move(authRequest.nickname));
-		GetSession()->SetupHandler<PlayerSessionHandler>(std::move(player));
+		ServerPlayer* player = m_instance.CreatePlayer(GetSession(), std::move(authRequest.nickname));
+		GetSession()->SetupHandler<PlayerSessionHandler>(player);
 
 		player->Respawn();
 	}

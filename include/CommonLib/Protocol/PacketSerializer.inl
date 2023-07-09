@@ -50,6 +50,11 @@ namespace tsom
 	{
 	}
 
+	inline Nz::ByteStream& PacketSerializer::GetStream()
+	{
+		return m_buffer;
+	}
+
 	inline void PacketSerializer::Read(void* ptr, std::size_t size)
 	{
 		if (m_buffer.Read(ptr, size) != size)
@@ -74,6 +79,13 @@ namespace tsom
 			m_buffer >> data;
 		else
 			m_buffer << data;
+	}
+
+	template<typename DataType>
+	void PacketSerializer::Serialize(std::optional<DataType>& opt)
+	{
+		if (opt.has_value())
+			Serialize(opt.value());
 	}
 
 	template<typename F, typename... Types>
@@ -152,6 +164,18 @@ namespace tsom
 
 		CompressedUnsigned<Nz::UInt32> arraySize(Nz::UInt32(array.size()));
 		Serialize(arraySize);
+	}
+
+	template<typename DataType>
+	void PacketSerializer::SerializePresence(std::optional<DataType>& dataOpt)
+	{
+		bool hasValue;
+		if (IsWriting())
+			hasValue = dataOpt.has_value();
+
+		Serialize(hasValue);
+		if (!IsWriting() && hasValue)
+			dataOpt.emplace();
 	}
 
 	template<typename E, typename UT>

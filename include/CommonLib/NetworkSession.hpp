@@ -39,8 +39,8 @@ namespace tsom
 
 			template<typename T> void SendPacket(const T& packet);
 
-			void SetHandler(std::unique_ptr<SessionHandler>&& sessionHandler);
-			template<typename T, typename... Args> void SetupHandler(Args&&... args);
+			SessionHandler& SetHandler(std::unique_ptr<SessionHandler>&& sessionHandler);
+			template<typename T, typename... Args> T& SetupHandler(Args&&... args);
 
 			NetworkSession& operator=(const NetworkSession&) = delete;
 			NetworkSession& operator=(NetworkSession&&) = delete;

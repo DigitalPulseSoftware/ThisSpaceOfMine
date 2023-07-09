@@ -19,6 +19,7 @@ namespace Nz
 
 namespace tsom
 {
+	class ClientSessionHandler;
 	class NetworkSession;
 
 	struct StateData : std::enable_shared_from_this<StateData>
@@ -27,6 +28,7 @@ namespace tsom
 		Nz::BaseWidget* canvas;
 		Nz::EnttWorld* world;
 		Nz::WindowSwapchain* swapchain;
+		ClientSessionHandler* sessionHandler = nullptr;
 		NetworkSession* networkSession = nullptr;
 	};
 }

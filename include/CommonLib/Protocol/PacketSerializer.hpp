@@ -9,6 +9,7 @@
 
 #include <CommonLib/Export.hpp>
 #include <Nazara/Core/ByteStream.hpp>
+#include <optional>
 #include <variant>
 #include <vector>
 
@@ -20,6 +21,8 @@ namespace tsom
 			inline PacketSerializer(Nz::ByteStream& packetBuffer, bool isWriting);
 			~PacketSerializer() = default;
 
+			inline Nz::ByteStream& GetStream();
+
 			inline void Read(void* ptr, std::size_t size);
 
 			inline bool IsWriting() const;
@@ -27,6 +30,7 @@ namespace tsom
 			inline void Write(const void* ptr, std::size_t size);
 
 			template<typename DataType> void Serialize(DataType& data);
+			template<typename DataType> void Serialize(std::optional<DataType>& opt);
 			template<typename F, typename... Types> void Serialize(std::variant<Types...>& variant, F&& functor);
 			template<typename DataType> void Serialize(std::vector<DataType>& dataVec);
 			template<typename DataType> void Serialize(const DataType& data) const;
@@ -35,6 +39,8 @@ namespace tsom
 
 			template<typename T> void SerializeArraySize(T& array);
 			template<typename T> void SerializeArraySize(const T& array);
+
+			template<typename DataType> void SerializePresence(std::optional<DataType>& dataOpt);
 
 			template<typename E, typename UT = std::underlying_type_t<E>> void SerializeEnum(E& enumValue);
 

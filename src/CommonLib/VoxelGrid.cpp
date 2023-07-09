@@ -19,7 +19,7 @@ namespace tsom
 			std::size_t x = m_width / 2;
 			std::size_t y = m_height / 2;
 
-			m_cells[y * m_width + x] = VoxelCell::Empty;
+			//m_cells[y * m_width + x] = VoxelCell::Empty;
 #if 0
 			std::random_device rd;
 			std::uniform_int_distribution<std::size_t> disX(0, width - 1);

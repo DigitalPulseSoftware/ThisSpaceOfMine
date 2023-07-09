@@ -30,9 +30,11 @@ namespace tsom
 
 		std::size_t peerId = m_reactor.ConnectTo(serverAddress);
 		m_serverSession.emplace(m_reactor, peerId, serverAddress);
-		m_serverSession->SetupHandler<ClientSessionHandler>(*GetStateData().world);
+		ClientSessionHandler& sessionHandler = m_serverSession->SetupHandler<ClientSessionHandler>(*GetStateData().world);
 
-		GetStateData().networkSession = &m_serverSession.value();
+		auto& stateData = GetStateData();
+		stateData.networkSession = &m_serverSession.value();
+		stateData.sessionHandler = &sessionHandler;
 
 		m_connectingLabel->UpdateText(Nz::SimpleTextDrawer::Draw("Connecting to " + serverAddress.ToString() + "...", 48));
 		m_connectingLabel->Center();
@@ -43,7 +45,10 @@ namespace tsom
 		if (m_serverSession)
 		{
 			m_serverSession->Disconnect();
-			GetStateData().networkSession = nullptr;
+
+			auto& stateData = GetStateData();
+			stateData.networkSession = nullptr;
+			stateData.sessionHandler = nullptr;
 		}
 
 		m_connectingLabel->Hide();

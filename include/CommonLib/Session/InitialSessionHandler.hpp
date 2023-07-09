@@ -13,18 +13,18 @@
 
 namespace tsom
 {
-	class ServerWorld;
+	class ServerInstance;
 
 	class TSOM_COMMONLIB_API InitialSessionHandler : public SessionHandler
 	{
 		public:
-			InitialSessionHandler(ServerWorld& world, NetworkSession* session);
+			InitialSessionHandler(ServerInstance& instance, NetworkSession* session);
 			~InitialSessionHandler() = default;
 
 			void HandlePacket(Packets::AuthRequest&& authRequest);
 
 		private:
-			ServerWorld& m_world;
+			ServerInstance& m_instance;
 	};
 }
 

@@ -6,4 +6,8 @@
 
 namespace tsom
 {
+	entt::handle ClientSessionHandler::GetControlledEntity() const
+	{
+		return m_playerControlledEntity;
+	}
 }

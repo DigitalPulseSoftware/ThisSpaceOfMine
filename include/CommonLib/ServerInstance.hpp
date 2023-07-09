@@ -4,8 +4,8 @@
 
 #pragma once
 
-#ifndef TSOM_COMMONLIB_SERVERWORLD_HPP
-#define TSOM_COMMONLIB_SERVERWORLD_HPP
+#ifndef TSOM_COMMONLIB_SERVERINSTANCE_HPP
+#define TSOM_COMMONLIB_SERVERINSTANCE_HPP
 
 #include <CommonLib/Export.hpp>
 #include <CommonLib/Planet.hpp>
@@ -19,17 +19,18 @@
 
 namespace tsom
 {
-	class TSOM_COMMONLIB_API ServerWorld
+	class TSOM_COMMONLIB_API ServerInstance
 	{
 		public:
-			ServerWorld();
-			ServerWorld(const ServerWorld&) = delete;
-			ServerWorld(ServerWorld&&) = delete;
-			~ServerWorld() = default;
+			ServerInstance();
+			ServerInstance(const ServerInstance&) = delete;
+			ServerInstance(ServerInstance&&) = delete;
+			~ServerInstance() = default;
 
 			template<typename... Args> NetworkSessionManager& AddSessionManager(Args&&... args);
 
 			ServerPlayer* CreatePlayer(NetworkSession* session, std::string nickname);
+			void DestroyPlayer(std::size_t playerIndex);
 
 			template<typename F> void ForEachPlayer(F&& functor);
 			template<typename F> void ForEachPlayer(F&& functor) const;
@@ -40,13 +41,14 @@ namespace tsom
 
 			void Update(Nz::Time elapsedTime);
 
-			ServerWorld& operator=(const ServerWorld&) = delete;
-			ServerWorld& operator=(ServerWorld&&) = delete;
+			ServerInstance& operator=(const ServerInstance&) = delete;
+			ServerInstance& operator=(ServerInstance&&) = delete;
 
 		private:
-			void NetworkTick();
+			void OnNetworkTick();
 			void OnTick(Nz::Time elapsedTime);
 
+			entt::handle m_planetEntity;
 			std::unique_ptr<Planet> m_planet;
 			std::vector<std::unique_ptr<NetworkSessionManager>> m_sessionManagers;
 			Nz::EnttWorld m_world;
@@ -56,6 +58,6 @@ namespace tsom
 	};
 }
 
-#include <CommonLib/ServerWorld.inl>
+#include <CommonLib/ServerInstance.inl>
 
 #endif

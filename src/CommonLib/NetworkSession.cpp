@@ -29,8 +29,9 @@ namespace tsom
 		m_sessionHandler->HandlePacket(std::move(netPacket));
 	}
 
-	void NetworkSession::SetHandler(std::unique_ptr<SessionHandler>&& sessionHandler)
+	SessionHandler& NetworkSession::SetHandler(std::unique_ptr<SessionHandler>&& sessionHandler)
 	{
 		m_sessionHandler = std::move(sessionHandler);
+		return *m_sessionHandler;
 	}
 }

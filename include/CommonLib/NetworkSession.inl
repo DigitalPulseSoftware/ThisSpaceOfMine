@@ -42,8 +42,8 @@ namespace tsom
 	}
 
 	template<typename T, typename ...Args>
-	void NetworkSession::SetupHandler(Args&& ...args)
+	T& NetworkSession::SetupHandler(Args&& ...args)
 	{
-		SetHandler(std::make_unique<T>(this, std::forward<Args>(args)...));
+		return static_cast<T&>(SetHandler(std::make_unique<T>(this, std::forward<Args>(args)...)));
 	}
 }
