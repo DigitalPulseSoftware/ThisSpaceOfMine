@@ -14,6 +14,7 @@
 #include <Nazara/JoltPhysics3D/Components/JoltRigidBody3DComponent.hpp>
 #include <Nazara/Utility/SimpleTextDrawer.hpp>
 #include <Nazara/Utility/Components/NodeComponent.hpp>
+#include <fmt/color.h>
 #include <fmt/format.h>
 
 namespace tsom
@@ -55,7 +56,7 @@ namespace tsom
 				OnControlledEntityChanged(entity);
 			}
 
-			fmt::print("Create {}\n", entityData.entityId);
+			fmt::print("Create entity {}\n", entityData.entityId);
 		}
 	}
 
@@ -69,7 +70,7 @@ namespace tsom
 				OnControlledEntityChanged({});
 
 			entity.destroy();
-			fmt::print("Delete {}\n", entityId);
+			fmt::print("Delete entity {}\n", entityId);
 		}
 	}
 
@@ -77,11 +78,29 @@ namespace tsom
 	{
 		for (auto& entityData : stateUpdate.entities)
 		{
-			fmt::print("New position of entity #{} = {};{};{}\n", entityData.entityId, entityData.newStates.position.x, entityData.newStates.position.y, entityData.newStates.position.z);
-
 			auto& entityNode = m_networkIdToEntity[entityData.entityId].get<Nz::NodeComponent>();
 			entityNode.SetTransform(entityData.newStates.position, entityData.newStates.rotation);
 		}
+	}
+
+	void ClientSessionHandler::HandlePacket(Packets::PlayerLeave&& playerLeave)
+	{
+		if (playerLeave.index >= m_players.size())
+		{
+			fmt::print(fg(fmt::color::red), "PlayerLeave with unknown player index {}\n", playerLeave.index);
+			return;
+		}
+
+		m_players[playerLeave.index].reset();
+	}
+
+	void ClientSessionHandler::HandlePacket(Packets::PlayerJoin&& playerJoin)
+	{
+		if (playerJoin.index >= m_players.size())
+			m_players.resize(playerJoin.index + 1);
+
+		auto& playerInfo = m_players[playerJoin.index].emplace();
+		playerInfo.nickname = std::move(playerJoin.nickname);
 	}
 
 	void ClientSessionHandler::SetupEntity(entt::handle entity, Packets::Helper::PlayerControlledData&& entityData)
@@ -116,7 +135,10 @@ namespace tsom
 			textNode.SetInheritRotation(false);
 
 			std::shared_ptr<Nz::TextSprite> textSprite = std::make_shared<Nz::TextSprite>();
-			textSprite->Update(Nz::SimpleTextDrawer::Draw("Player #" + std::to_string(entityData.controllingPlayerId), 48), 0.01f);
+			if (const PlayerInfo* playerInfo = FetchPlayerInfo(entityData.controllingPlayerId))
+				textSprite->Update(Nz::SimpleTextDrawer::Draw(playerInfo->nickname, 48), 0.01f);
+			else
+				textSprite->Update(Nz::SimpleTextDrawer::Draw("<disconnected>", 48), 0.01f);
 
 			textNode.SetPosition(-textSprite->GetAABB().width * 0.5f, 1.5f, 0.f);
 

@@ -11,6 +11,7 @@
 #include <CommonLib/Planet.hpp>
 #include <CommonLib/NetworkSessionManager.hpp>
 #include <CommonLib/ServerPlayer.hpp>
+#include <NazaraUtils/Bitset.hpp>
 #include <NazaraUtils/MemoryPool.hpp>
 #include <Nazara/Core/Clock.hpp>
 #include <Nazara/Core/EnttWorld.hpp>
@@ -25,12 +26,12 @@ namespace tsom
 			ServerInstance();
 			ServerInstance(const ServerInstance&) = delete;
 			ServerInstance(ServerInstance&&) = delete;
-			~ServerInstance() = default;
+			~ServerInstance();
 
 			template<typename... Args> NetworkSessionManager& AddSessionManager(Args&&... args);
 
 			ServerPlayer* CreatePlayer(NetworkSession* session, std::string nickname);
-			void DestroyPlayer(std::size_t playerIndex);
+			void DestroyPlayer(PlayerIndex playerIndex);
 
 			template<typename F> void ForEachPlayer(F&& functor);
 			template<typename F> void ForEachPlayer(F&& functor) const;
@@ -51,6 +52,8 @@ namespace tsom
 			entt::handle m_planetEntity;
 			std::unique_ptr<Planet> m_planet;
 			std::vector<std::unique_ptr<NetworkSessionManager>> m_sessionManagers;
+			Nz::Bitset<> m_disconnectedPlayers;
+			Nz::Bitset<> m_newPlayers;
 			Nz::EnttWorld m_world;
 			Nz::MemoryPool<ServerPlayer> m_players;
 			Nz::Time m_tickAccumulator;

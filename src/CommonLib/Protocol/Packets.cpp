@@ -91,6 +91,17 @@ namespace tsom
 				serializer &= string;
 		}
 
+		void Serialize(PacketSerializer& serializer, PlayerJoin& data)
+		{
+			serializer &= data.index;
+			serializer &= data.nickname;
+		}
+
+		void Serialize(PacketSerializer& serializer, PlayerLeave& data)
+		{
+			serializer &= data.index;
+		}
+
 		void Serialize(PacketSerializer& serializer, UpdatePlayerInputs& data)
 		{
 			Helper::Serialize(serializer, data.inputs);

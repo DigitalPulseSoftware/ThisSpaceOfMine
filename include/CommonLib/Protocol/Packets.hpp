@@ -103,6 +103,17 @@ namespace tsom
 			std::vector<std::string> strings;
 		};
 
+		struct PlayerJoin
+		{
+			PlayerIndex index;
+			std::string nickname;
+		};
+
+		struct PlayerLeave
+		{
+			PlayerIndex index;
+		};
+
 		struct UpdatePlayerInputs
 		{
 			PlayerInputs inputs;
@@ -114,6 +125,8 @@ namespace tsom
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntitiesDelete& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntitiesStateUpdate& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, NetworkStrings& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, PlayerJoin& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, PlayerLeave& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, UpdatePlayerInputs& data);
 	}
 }

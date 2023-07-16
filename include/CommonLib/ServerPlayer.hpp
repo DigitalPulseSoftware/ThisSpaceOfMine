@@ -38,6 +38,8 @@ namespace tsom
 			inline PlayerIndex GetPlayerIndex() const;
 			inline ServerInstance& GetServerInstance();
 			inline const ServerInstance& GetServerInstance() const;
+			inline NetworkSession* GetSession();
+			inline const NetworkSession* GetSession() const;
 			inline SessionVisibilityHandler& GetVisibilityHandler();
 			inline const SessionVisibilityHandler& GetVisibilityHandler() const;
 

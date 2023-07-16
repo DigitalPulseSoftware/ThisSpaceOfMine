@@ -58,9 +58,8 @@ int GameMain(int argc, char* argv[])
 	stateData->app = &app;
 	stateData->canvas = &canvas;
 	stateData->swapchain = &windowSwapchain;
+	stateData->window = &window;
 	stateData->world = &world;
-
-	std::shared_ptr<Nz::State> gameState = std::make_shared<tsom::GameState>(stateData, window.GetEventHandler());
 
 	//Nz::Mouse::SetRelativeMouseMode(true);
 
@@ -68,7 +67,7 @@ int GameMain(int argc, char* argv[])
 
 	Nz::StateMachine fsm(connectionState);
 	fsm.PushState(std::make_shared<tsom::BackgroundState>(stateData));
-	fsm.PushState(std::make_shared<tsom::MenuState>(stateData, std::move(gameState), connectionState));
+	fsm.PushState(std::make_shared<tsom::MenuState>(stateData, connectionState));
 	//Nz::StateMachine fsm(std::move(gameState));
 	app.AddUpdaterFunc([&](Nz::Time time)
 	{

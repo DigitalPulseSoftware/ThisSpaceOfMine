@@ -10,7 +10,9 @@ namespace tsom
 	constexpr SessionHandler::SendAttributeTable s_packetAttributes = SessionHandler::BuildAttributeTable({
 		{ PacketIndex<Packets::EntitiesCreation>,    { 1, Nz::ENetPacketFlag_Reliable } },
 		{ PacketIndex<Packets::EntitiesDelete>,      { 1, Nz::ENetPacketFlag_Reliable } },
-		{ PacketIndex<Packets::EntitiesStateUpdate>, { 1, 0 } }
+		{ PacketIndex<Packets::EntitiesStateUpdate>, { 1, 0 } },
+		{ PacketIndex<Packets::PlayerJoin>,          { 0, Nz::ENetPacketFlag_Reliable } },
+		{ PacketIndex<Packets::PlayerLeave>,         { 0, Nz::ENetPacketFlag_Reliable } }
 	});
 
 	PlayerSessionHandler::PlayerSessionHandler(NetworkSession* session, ServerPlayer* player) :

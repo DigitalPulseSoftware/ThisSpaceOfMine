@@ -34,6 +34,16 @@ namespace tsom
 		return m_instance;
 	}
 
+	inline NetworkSession* ServerPlayer::GetSession()
+	{
+		return m_session;
+	}
+
+	inline const NetworkSession* ServerPlayer::GetSession() const
+	{
+		return m_session;
+	}
+
 	inline SessionVisibilityHandler& ServerPlayer::GetVisibilityHandler()
 	{
 		return m_visibilityHandler;

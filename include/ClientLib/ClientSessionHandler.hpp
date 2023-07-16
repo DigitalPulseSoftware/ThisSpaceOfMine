@@ -33,16 +33,27 @@ namespace tsom
 			void HandlePacket(Packets::EntitiesCreation&& entitiesCreation);
 			void HandlePacket(Packets::EntitiesDelete&& entitiesDelete);
 			void HandlePacket(Packets::EntitiesStateUpdate&& stateUpdate);
+			void HandlePacket(Packets::PlayerLeave&& playerLeave);
+			void HandlePacket(Packets::PlayerJoin&& playerJoin);
 
 			NazaraSignal(OnControlledEntityChanged, entt::handle /*newEntity*/);
 
 			static constexpr Nz::UInt32 InvalidEntity = 0xFFFFFFFF;
 
 		private:
+			struct PlayerInfo;
+
+			inline const PlayerInfo* FetchPlayerInfo(PlayerIndex playerIndex) const;
 			void SetupEntity(entt::handle entity, Packets::Helper::PlayerControlledData&& entityData);
+
+			struct PlayerInfo
+			{
+				std::string nickname;
+			};
 
 			entt::handle m_playerControlledEntity;
 			std::unordered_map<Nz::UInt32, entt::handle> m_networkIdToEntity;
+			std::vector<std::optional<PlayerInfo>> m_players; //< FIXME: Nz::SparseVector
 			Nz::EnttWorld& m_world;
 			Nz::UInt16 m_ownPlayerIndex;
 	};
