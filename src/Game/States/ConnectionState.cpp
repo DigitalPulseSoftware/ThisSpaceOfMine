@@ -21,12 +21,13 @@ namespace tsom
 		m_connectingLabel = CreateWidget<Nz::LabelWidget>();
 	}
 
-	void ConnectionState::Connect(const Nz::IpAddress& serverAddress, std::shared_ptr<Nz::State> previousState, std::shared_ptr<Nz::State> nextState)
+	void ConnectionState::Connect(const Nz::IpAddress& serverAddress, std::string nickname, std::shared_ptr<Nz::State> previousState, std::shared_ptr<Nz::State> nextState)
 	{
 		Disconnect();
 
 		m_previousState = std::move(previousState);
 		m_connectedState = std::move(nextState);
+		m_nickname = std::move(nickname);
 
 		std::size_t peerId = m_reactor.ConnectTo(serverAddress);
 		m_serverSession.emplace(m_reactor, peerId, serverAddress);
@@ -70,7 +71,7 @@ namespace tsom
 			m_connectingLabel->Center();
 
 			Packets::AuthRequest request;
-			request.nickname = "SirLynix";
+			request.nickname = m_nickname;
 
 			m_serverSession->SendPacket(request);
 

@@ -4,6 +4,7 @@
 
 #include <Game/States/MenuState.hpp>
 #include <Game/States/ConnectionState.hpp>
+#include <Game/States/GameState.hpp>
 #include <Nazara/Core/StateMachine.hpp>
 #include <Nazara/Network/IpAddress.hpp>
 #include <Nazara/Utility/SimpleTextDrawer.hpp>
@@ -11,10 +12,9 @@
 
 namespace tsom
 {
-	MenuState::MenuState(std::shared_ptr<StateData> stateData, std::shared_ptr<Nz::State> gameState, std::shared_ptr<ConnectionState> connectionState) :
+	MenuState::MenuState(std::shared_ptr<StateData> stateData, std::shared_ptr<ConnectionState> connectionState) :
 	WidgetState(stateData),
-	m_connectionState(std::move(connectionState)),
-	m_gameState(std::move(gameState))
+	m_connectionState(connectionState)
 	{
 		m_layout = CreateWidget<Nz::BoxLayout>(Nz::BoxLayoutOrientation::TopToBottom);
 
@@ -31,19 +31,25 @@ namespace tsom
 		m_connectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Connect", 36, Nz::TextStyle_Regular, Nz::Color(0.13f)));
 		m_connectButton->OnButtonTrigger.Connect([this](const Nz::ButtonWidget*)
 		{
+			std::shared_ptr<Nz::State> gameState = std::make_shared<GameState>(GetStateDataPtr());
+
 			Nz::IpAddress local = Nz::IpAddress::LoopbackIpV6;
 			local.SetPort(29536);
 
-			m_connectionState->Connect(local, shared_from_this(), m_gameState);
+			if (auto connectionState = m_connectionState.lock())
+				connectionState->Connect(local, m_loginArea->GetText(), shared_from_this(), gameState);
 		});
 	}
 
 	bool MenuState::Update(Nz::StateMachine& fsm, Nz::Time /*elapsedTime*/)
 	{
-		if (m_connectionState->HasSession())
+		if (auto connectionState = m_connectionState.lock())
 		{
-			fsm.PopStatesUntil(shared_from_this());
-			fsm.PopState();
+			if (connectionState->HasSession())
+			{
+				fsm.PopStatesUntil(shared_from_this());
+				fsm.PopState();
+			}
 		}
 
 		return true;

@@ -14,6 +14,7 @@ namespace Nz
 	class ApplicationBase;
 	class BaseWidget;
 	class EnttWorld;
+	class Window;
 	class WindowSwapchain;
 }
 
@@ -27,6 +28,7 @@ namespace tsom
 		Nz::ApplicationBase* app;
 		Nz::BaseWidget* canvas;
 		Nz::EnttWorld* world;
+		Nz::Window* window;
 		Nz::WindowSwapchain* swapchain;
 		ClientSessionHandler* sessionHandler = nullptr;
 		NetworkSession* networkSession = nullptr;

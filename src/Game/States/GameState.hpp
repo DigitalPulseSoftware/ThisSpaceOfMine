@@ -19,16 +19,6 @@
 #include <optional>
 #include <vector>
 
-namespace Nz
-{
-	class ApplicationBase;
-	class EnttWorld;
-	class JoltConvexHullCollider3D;
-	class StaticMesh;
-	class WindowEventHandler;
-	class WindowSwapchain;
-}
-
 namespace tsom
 {
 	struct StateData;
@@ -36,7 +26,7 @@ namespace tsom
 	class GameState : public Nz::State
 	{
 		public:
-			GameState(std::shared_ptr<StateData> stateData, Nz::WindowEventHandler& eventHandler);
+			GameState(std::shared_ptr<StateData> stateData);
 			~GameState();
 
 			void Enter(Nz::StateMachine& fsm) override;
@@ -58,7 +48,6 @@ namespace tsom
 			entt::handle m_controlledEntity;
 			entt::handle m_planetEntity;
 			entt::handle m_skyboxEntity;
-			Nz::WindowEventHandler& m_eventHandler;
 			Nz::EulerAnglesf m_cameraRotation;
 			Nz::Quaternionf m_upCorrection;
 			Nz::Time m_tickAccumulator;

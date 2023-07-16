@@ -11,6 +11,7 @@
 #include <Nazara/Graphics/PropertyHandler/TexturePropertyHandler.hpp>
 #include <Nazara/Graphics/PropertyHandler/UniformValuePropertyHandler.hpp>
 #include <Nazara/JoltPhysics3D.hpp>
+#include <Nazara/Platform/Window.hpp>
 #include <Nazara/Platform/WindowEventHandler.hpp>
 #include <Nazara/Utility.hpp>
 #include <fmt/format.h>
@@ -21,9 +22,8 @@
 
 namespace tsom
 {
-	GameState::GameState(std::shared_ptr<StateData> stateData, Nz::WindowEventHandler& eventHandler) :
+	GameState::GameState(std::shared_ptr<StateData> stateData) :
 	m_stateData(std::move(stateData)),
-	m_eventHandler(eventHandler),
 	m_upCorrection(Nz::Quaternionf::Identity()),
 	m_tickAccumulator(Nz::Time::Zero()),
 	m_tickDuration(Nz::Time::TickDuration(30))
@@ -117,8 +117,10 @@ namespace tsom
 		m_planetEntity.erase<Nz::DisabledComponent>();
 		m_skyboxEntity.erase<Nz::DisabledComponent>();
 
+		Nz::WindowEventHandler& eventHandler = m_stateData->window->GetEventHandler();
+
 		m_cameraRotation = Nz::EulerAnglesf(-30.f, 0.f, 0.f);
-		m_eventHandler.OnMouseMoved.Connect([&](const Nz::WindowEventHandler*, const Nz::WindowEvent::MouseMoveEvent& event)
+		eventHandler.OnMouseMoved.Connect([&](const Nz::WindowEventHandler*, const Nz::WindowEvent::MouseMoveEvent& event)
 		{
 			// Gestion de la caméra free-fly (Rotation)
 			float sensitivity = 0.3f; // Sensibilité de la souris
@@ -134,7 +136,7 @@ namespace tsom
 			//playerRotNode.SetRotation(camAngles);
 		});
 
-		m_eventHandler.OnKeyPressed.Connect([&](const Nz::WindowEventHandler*, const Nz::WindowEvent::KeyEvent& event)
+		eventHandler.OnKeyPressed.Connect([&](const Nz::WindowEventHandler*, const Nz::WindowEvent::KeyEvent& event)
 		{
 			switch (event.virtualKey)
 			{
@@ -172,7 +174,7 @@ namespace tsom
 		});
 
 #ifdef FREEFLIGHT
-		m_eventHandler.OnMouseMoved.Connect([&, camAngles = Nz::EulerAnglesf(0.f, 0.f, 0.f)](const Nz::WindowEventHandler*, const Nz::WindowEvent::MouseMoveEvent& event) mutable
+		eventHandler.OnMouseMoved.Connect([&, camAngles = Nz::EulerAnglesf(0.f, 0.f, 0.f)](const Nz::WindowEventHandler*, const Nz::WindowEvent::MouseMoveEvent& event) mutable
 		{
 			// Gestion de la caméra free-fly (Rotation)
 			float sensitivity = 0.3f; // Sensibilité de la souris
