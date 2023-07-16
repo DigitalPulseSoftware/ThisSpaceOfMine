@@ -8,6 +8,7 @@
 #define TSOM_COMMONLIB_NETWORKEDENTITIESYSTEM_HPP
 
 #include <CommonLib/Export.hpp>
+#include <CommonLib/SessionVisibilityHandler.hpp>
 #include <NazaraUtils/FunctionRef.hpp>
 #include <NazaraUtils/TypeList.hpp>
 #include <Nazara/Core/Time.hpp>
@@ -16,7 +17,6 @@
 
 namespace tsom
 {
-	class SessionVisibilityHandler;
 	class ServerInstance;
 
 	class TSOM_COMMONLIB_API NetworkedEntitiesSystem
@@ -31,6 +31,8 @@ namespace tsom
 			NetworkedEntitiesSystem(NetworkedEntitiesSystem&&) = delete;
 			~NetworkedEntitiesSystem() = default;
 
+			void CreateAllEntities(SessionVisibilityHandler& visibility) const;
+
 			void ForEachVisibility(const Nz::FunctionRef<void(SessionVisibilityHandler& visibility)>& functor);
 
 			void Update(Nz::Time elapsedTime);
@@ -39,6 +41,7 @@ namespace tsom
 			NetworkedEntitiesSystem& operator=(NetworkedEntitiesSystem&&) = delete;
 
 		private:
+			SessionVisibilityHandler::CreateEntityData BuildCreateEntityData(entt::entity entity) const;
 			void OnNetworkedDestroy(entt::registry& registry, entt::entity entity);
 
 			tsl::hopscotch_set<entt::entity> m_movingEntities;

@@ -3,6 +3,7 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/Session/InitialSessionHandler.hpp>
+#include <CommonLib/NetworkedEntitiesSystem.hpp>
 #include <CommonLib/ServerPlayer.hpp>
 #include <CommonLib/ServerInstance.hpp>
 #include <CommonLib/Session/PlayerSessionHandler.hpp>
@@ -26,12 +27,16 @@ namespace tsom
 	{
 		fmt::print("auth request from {}\n", authRequest.nickname);
 
+		ServerPlayer* player = m_instance.CreatePlayer(GetSession(), std::move(authRequest.nickname));
+
 		Packets::AuthResponse response;
 		response.succeeded = true;
 
 		GetSession()->SendPacket(response);
 
-		ServerPlayer* player = m_instance.CreatePlayer(GetSession(), std::move(authRequest.nickname));
+		auto& networkedEntities = m_instance.GetWorld().GetSystem<NetworkedEntitiesSystem>();
+		networkedEntities.CreateAllEntities(player->GetVisibilityHandler());
+
 		GetSession()->SetupHandler<PlayerSessionHandler>(player);
 
 		player->Respawn();
