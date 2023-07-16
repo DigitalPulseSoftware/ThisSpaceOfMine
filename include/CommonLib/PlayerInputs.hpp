@@ -7,6 +7,8 @@
 #ifndef TSOM_COMMONLIB_PLAYERINPUTS_HPP
 #define TSOM_COMMONLIB_PLAYERINPUTS_HPP
 
+#include <Nazara/Math/Quaternion.hpp>
+
 namespace tsom
 {
 	struct PlayerInputs
@@ -17,6 +19,7 @@ namespace tsom
 		bool moveLeft = false;
 		bool moveRight = false;
 		bool sprint = false;
+		Nz::Quaternionf orientation = Nz::Quaternionf::Identity();
 	};
 }
 

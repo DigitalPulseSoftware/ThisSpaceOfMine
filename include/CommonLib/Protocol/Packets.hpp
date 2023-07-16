@@ -11,6 +11,7 @@
 #include <Nazara/Math/Quaternion.hpp>
 #include <Nazara/Math/Vector3.hpp>
 #include <CommonLib/Export.hpp>
+#include <CommonLib/PlayerIndex.hpp>
 #include <CommonLib/PlayerInputs.hpp>
 #include <CommonLib/Protocol/CompressedInteger.hpp>
 #include <CommonLib/Protocol/PacketSerializer.hpp>
@@ -49,7 +50,7 @@ namespace tsom
 
 			struct PlayerControlledData
 			{
-				std::string nickname;
+				PlayerIndex controllingPlayerId;
 			};
 
 			TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntityState& data);
@@ -65,6 +66,7 @@ namespace tsom
 		struct AuthResponse
 		{
 			bool succeeded;
+			PlayerIndex ownPlayerIndex;
 		};
 
 		struct EntitiesCreation

@@ -44,6 +44,7 @@ namespace tsom
 			entt::handle m_playerControlledEntity;
 			std::unordered_map<Nz::UInt32, entt::handle> m_networkIdToEntity;
 			Nz::EnttWorld& m_world;
+			Nz::UInt16 m_ownPlayerIndex;
 	};
 }
 

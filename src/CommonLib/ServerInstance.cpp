@@ -20,6 +20,7 @@ namespace tsom
 		m_world.AddSystem<NetworkedEntitiesSystem>(*this);
 		auto& physicsSystem = m_world.AddSystem<Nz::JoltPhysics3DSystem>();
 		physicsSystem.GetPhysWorld().SetStepSize(m_tickDuration);
+		physicsSystem.GetPhysWorld().SetGravity(Nz::Vector3f::Zero());
 
 		m_planet = std::make_unique<Planet>(40, 2.f, 16.f);
 

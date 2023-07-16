@@ -5,7 +5,7 @@
 
 namespace tsom
 {
-	inline ServerPlayer::ServerPlayer(ServerInstance& instance, std::size_t playerIndex, NetworkSession* session, std::string nickname) :
+	inline ServerPlayer::ServerPlayer(ServerInstance& instance, PlayerIndex playerIndex, NetworkSession* session, std::string nickname) :
 	m_playerIndex(playerIndex),
 	m_nickname(std::move(nickname)),
 	m_session(session),
@@ -17,6 +17,11 @@ namespace tsom
 	inline const std::string& ServerPlayer::GetNickname() const
 	{
 		return m_nickname;
+	}
+
+	inline PlayerIndex ServerPlayer::GetPlayerIndex() const
+	{
+		return m_playerIndex;
 	}
 
 	inline ServerInstance& ServerPlayer::GetServerInstance()

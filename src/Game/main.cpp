@@ -21,51 +21,6 @@ int GameMain(int argc, char* argv[])
 {
 	Nz::Application<Nz::Graphics, Nz::JoltPhysics3D, Nz::Network, Nz::Widgets> app(argc, argv);
 
-	tsom::NetworkReactor reactor(0, Nz::NetProtocol::Any, 0, 1);
-
-	reactor.ConnectTo(Nz::IpAddress("[::1]:29536"));
-
-	app.AddUpdaterFunc([&]
-	{
-		auto ConnectionHandler = [&]([[maybe_unused]] bool outgoingConnection, std::size_t peerIndex, const Nz::IpAddress& remoteAddress, [[maybe_unused]] Nz::UInt32 data)
-		{
-			fmt::print("Peer connected (outgoing: {}, peerIndex: {}, address: {}, data: {})\n", outgoingConnection, peerIndex, fmt::streamed(remoteAddress), data);
-
-			/*tsom::Packets::Test testPacket;
-			testPacket.str = "Mishaa est un gros nul";
-
-			Nz::NetPacket packet;
-			packet << Nz::UInt8(Nz::TypeListFind<tsom::PacketTypes, tsom::Packets::Test>);
-
-			tsom::PacketSerializer serializer(packet, true);
-			tsom::Packets::Serialize(serializer, testPacket);*/
-
-			tsom::Packets::NetworkStrings testPacket;
-			testPacket.startId = 0;
-			testPacket.strings.emplace_back("Mishaa est un gros nul");
-
-			Nz::NetPacket packet;
-			packet << Nz::UInt8(Nz::TypeListFind<tsom::PacketTypes, tsom::Packets::NetworkStrings>);
-
-			tsom::PacketSerializer serializer(packet, true);
-			tsom::Packets::Serialize(serializer, testPacket);
-
-			reactor.SendData(peerIndex, 0, Nz::ENetPacketFlag_Reliable, std::move(packet));
-		};
-
-		auto DisconnectionHandler = [&](std::size_t peerIndex, [[maybe_unused]] Nz::UInt32 data)
-		{
-			fmt::print("Peer disconnected (peerIndex: {}, data: {})\n", peerIndex, data);
-		};
-
-		auto PacketHandler = [&](std::size_t peerIndex, Nz::NetPacket&& packet)
-		{
-			fmt::print("Received packet\n", peerIndex);
-		};
-
-		reactor.Poll(ConnectionHandler, DisconnectionHandler, PacketHandler);
-	});
-
 	auto& filesystem = app.AddComponent<Nz::AppFilesystemComponent>();
 	filesystem.Mount("assets", Nz::Utf8Path("../Assets"));
 

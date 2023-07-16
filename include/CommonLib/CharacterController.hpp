@@ -39,19 +39,6 @@ namespace tsom
 			CharacterController& operator=(CharacterController&&) = delete;
 
 		private:
-			struct RotationInProgress
-			{
-				Nz::Quaternionf fromRotation;
-				Nz::Quaternionf toRotation;
-				float progress = 0.f;
-			};
-
-			float m_totalElapsedTime = 0.f;
-			std::optional<RotationInProgress> m_rotationInProgress;
-			Nz::Boxf m_planetCube;
-			Nz::Quaternionf m_cameraRotation;
-			Nz::Quaternionf m_correctionRotation;
-			Nz::Quaternionf m_referenceRotation;
 			Nz::Vector3f m_feetPosition;
 			Nz::Vector3f m_groundPos;
 			PlayerInputs m_lastInputs;

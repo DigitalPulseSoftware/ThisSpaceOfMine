@@ -31,6 +31,7 @@ namespace tsom
 
 		Packets::AuthResponse response;
 		response.succeeded = true;
+		response.ownPlayerIndex = player->GetPlayerIndex();
 
 		GetSession()->SendPacket(response);
 

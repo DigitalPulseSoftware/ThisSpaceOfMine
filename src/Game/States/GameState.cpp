@@ -24,6 +24,7 @@ namespace tsom
 	GameState::GameState(std::shared_ptr<StateData> stateData, Nz::WindowEventHandler& eventHandler) :
 	m_stateData(std::move(stateData)),
 	m_eventHandler(eventHandler),
+	m_upCorrection(Nz::Quaternionf::Identity()),
 	m_tickAccumulator(Nz::Time::Zero()),
 	m_tickDuration(Nz::Time::TickDuration(30))
 	{
@@ -260,7 +261,8 @@ namespace tsom
 			Nz::Quaternionf rotation = characterComponent.GetRotation();*/
 
 			cameraNode.SetPosition(characterNode.GetPosition() + characterNode.GetRotation() * (Nz::Vector3f::Up() * 1.6f));
-			cameraNode.SetRotation(characterNode.GetRotation() * Nz::Quaternionf(m_cameraRotation));
+			//cameraNode.SetRotation(characterNode.GetRotation());
+			cameraNode.SetRotation(m_upCorrection * Nz::Quaternionf(m_cameraRotation));
 		}
 #endif
 
@@ -399,6 +401,18 @@ namespace tsom
 		inputPacket.inputs.moveLeft = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::A);
 		inputPacket.inputs.moveRight = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::D);
 		inputPacket.inputs.sprint = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::LShift);
+
+		m_controlledEntity = m_stateData->sessionHandler->GetControlledEntity();
+		auto& playerNode = m_controlledEntity.get<Nz::NodeComponent>();
+
+		Nz::Vector3f playerUp = playerNode.GetUp();
+		if (Nz::Vector3f previousUp = m_upCorrection * Nz::Vector3f::Up(); !previousUp.ApproxEqual(playerUp, 0.001f))
+		{
+			m_upCorrection = Nz::Quaternionf::RotationBetween(previousUp, playerUp) * m_upCorrection;
+			m_upCorrection.Normalize();
+		}
+
+		inputPacket.inputs.orientation = m_upCorrection * Nz::Quaternionf(m_cameraRotation);
 
 		m_stateData->networkSession->SendPacket(inputPacket);
 	}

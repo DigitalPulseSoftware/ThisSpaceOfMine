@@ -34,6 +34,7 @@ namespace tsom
 	void ClientSessionHandler::HandlePacket(Packets::AuthResponse&& authResponse)
 	{
 		fmt::print("Auth response\n");
+		m_ownPlayerIndex = authResponse.ownPlayerIndex;
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::EntitiesCreation&& entitiesCreation)
@@ -48,7 +49,7 @@ namespace tsom
 
 			m_networkIdToEntity[entityData.entityId] = entity;
 
-			if (entityData.playerControlled)
+			if (entityData.playerControlled && entityData.playerControlled->controllingPlayerId == m_ownPlayerIndex)
 			{
 				m_playerControlledEntity = entity;
 				OnControlledEntityChanged(entity);
@@ -115,7 +116,9 @@ namespace tsom
 			textNode.SetInheritRotation(false);
 
 			std::shared_ptr<Nz::TextSprite> textSprite = std::make_shared<Nz::TextSprite>();
-			textSprite->Update(Nz::SimpleTextDrawer::Draw(entityData.nickname, 48), 0.01f);
+			textSprite->Update(Nz::SimpleTextDrawer::Draw("Player #" + std::to_string(entityData.controllingPlayerId), 48), 0.01f);
+
+			textNode.SetPosition(-textSprite->GetAABB().width * 0.5f, 1.5f, 0.f);
 
 			textEntity.emplace<Nz::GraphicsComponent>(std::move(textSprite));
 		}

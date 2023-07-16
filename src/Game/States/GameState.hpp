@@ -60,6 +60,7 @@ namespace tsom
 			entt::handle m_skyboxEntity;
 			Nz::WindowEventHandler& m_eventHandler;
 			Nz::EulerAnglesf m_cameraRotation;
+			Nz::Quaternionf m_upCorrection;
 			Nz::Time m_tickAccumulator;
 			Nz::Time m_tickDuration;
 	};

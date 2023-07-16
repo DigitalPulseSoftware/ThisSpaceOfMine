@@ -8,6 +8,7 @@
 #define TSOM_COMMONLIB_SERVERPLAYER_HPP
 
 #include <CommonLib/Export.hpp>
+#include <CommonLib/PlayerIndex.hpp>
 #include <CommonLib/SessionVisibilityHandler.hpp>
 #include <Nazara/Core/HandledObject.hpp>
 #include <Nazara/Core/ObjectHandle.hpp>
@@ -26,7 +27,7 @@ namespace tsom
 	class TSOM_COMMONLIB_API ServerPlayer : public Nz::HandledObject<ServerPlayer>
 	{
 		public:
-			inline ServerPlayer(ServerInstance& instance, std::size_t playerIndex, NetworkSession* session, std::string nickname);
+			inline ServerPlayer(ServerInstance& instance, PlayerIndex playerIndex, NetworkSession* session, std::string nickname);
 			ServerPlayer(const ServerPlayer&) = delete;
 			ServerPlayer(ServerPlayer&&) = delete;
 			~ServerPlayer() = default;
@@ -34,6 +35,7 @@ namespace tsom
 			void Destroy();
 
 			inline const std::string& GetNickname() const;
+			inline PlayerIndex GetPlayerIndex() const;
 			inline ServerInstance& GetServerInstance();
 			inline const ServerInstance& GetServerInstance() const;
 			inline SessionVisibilityHandler& GetVisibilityHandler();
@@ -47,7 +49,7 @@ namespace tsom
 			ServerPlayer& operator=(ServerPlayer&&) = delete;
 
 		private:
-			std::size_t m_playerIndex;
+			PlayerIndex m_playerIndex;
 			std::shared_ptr<CharacterController> m_controller;
 			std::string m_nickname;
 			entt::handle m_controlledEntity;

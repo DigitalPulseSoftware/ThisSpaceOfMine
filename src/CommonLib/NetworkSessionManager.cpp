@@ -36,7 +36,6 @@ namespace tsom
 		{
 			assert(m_sessions[peerIndex].has_value());
 
-			fmt::print("Received packet\n", peerIndex);
 			m_sessions[peerIndex]->HandlePacket(std::move(packet));
 		};
 

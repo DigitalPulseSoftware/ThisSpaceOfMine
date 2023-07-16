@@ -23,7 +23,7 @@ namespace tsom
 
 			void Serialize(PacketSerializer& serializer, PlayerControlledData& data)
 			{
-				serializer &= data.nickname;
+				serializer &= data.controllingPlayerId;
 			}
 
 			void Serialize(PacketSerializer& serializer, PlayerInputs& data)
@@ -34,6 +34,8 @@ namespace tsom
 				serializer &= data.moveLeft;
 				serializer &= data.moveRight;
 				serializer &= data.sprint;
+
+				serializer &= data.orientation;
 			}
 		}
 
@@ -45,6 +47,7 @@ namespace tsom
 		void Serialize(PacketSerializer& serializer, AuthResponse& data)
 		{
 			serializer &= data.succeeded;
+			serializer &= data.ownPlayerIndex;
 		}
 
 		void Serialize(PacketSerializer& serializer, EntitiesCreation& data)
