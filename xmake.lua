@@ -25,6 +25,7 @@ set_version("0.0.1")
 set_languages("cxx20")
 set_rundir(".")
 add_includedirs("include", "src")
+set_targetdir("./bin/$(plat)_$(arch)_$(mode)")
 
 if is_plat("windows") then
 	set_runtimes(is_mode("debug") and "MDd" or "MD")
