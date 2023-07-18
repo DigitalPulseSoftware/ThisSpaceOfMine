@@ -4,10 +4,10 @@
 
 #include <CommonLib/Planet.hpp>
 #include <CommonLib/Direction.hpp>
-#include <Nazara/Graphics/GraphicalMesh.hpp>
-#include <Nazara/Renderer/DebugDrawer.hpp>
+#include <CommonLib/Utility/SignedDistanceFunctions.hpp>
 #include <Nazara/Math/Ray.hpp>
 #include <Nazara/JoltPhysics3D/JoltCollider3D.hpp>
+#include <Nazara/Utility/VertexStruct.hpp>
 #include <fmt/format.h>
 #include <random>
 
@@ -67,6 +67,103 @@ namespace tsom
 			vert.position = DeformPosition(vert.position);
 		}
 	}
+	
+	auto Planet::ComputeGridCell(const Nz::Vector3f& position) -> std::optional<GridCellIntersection>
+	{
+		Nz::Vector3f outsideNormal = Nz::Vector3f::Normalize(position - GetCenter());
+
+		// Compute direction
+		Direction closestDir;
+		float closestDirDot = -1.f;
+		for (auto&& [direction, normal] : s_dirNormals.iter_kv())
+		{
+			if (float dot = normal.DotProduct(outsideNormal); dot >= closestDirDot)
+			{
+				closestDir = direction;
+				closestDirDot = dot;
+			}
+		}
+
+		// Compute height
+		auto& gridVec = m_grids[closestDir];
+		std::size_t gridIndex = 0;
+		for (; gridIndex < gridVec.size(); ++gridIndex)
+		{
+			float height = gridIndex * m_tileSize + 1.f;
+			float dist = sdRoundBox(position, Nz::Vector3f(height), m_cornerRadius);
+			if (dist - m_tileSize * 0.1f <= m_tileSize)
+				break;
+		}
+
+		if (gridIndex >= gridVec.size())
+		{
+			fmt::print("grid out of bounds (dist: {})\n", sdRoundBox(position, Nz::Vector3f((gridVec.size() - 1) * m_tileSize + 1.f), m_cornerRadius));
+			return std::nullopt;
+		}
+
+		VoxelGrid& grid = *gridVec[gridIndex];
+
+		float gridHeight = gridIndex * m_tileSize + 1.f;
+
+		float distToCenter = std::max({
+			std::abs(position.x - GetCenter().x),
+			std::abs(position.y - GetCenter().y),
+			std::abs(position.z - GetCenter().z),
+		});
+
+		float innerReductionSize = std::max(m_tileSize + gridHeight - std::max(m_cornerRadius, 1.f), 0.f);
+		Nz::Boxf innerBox(GetCenter() - Nz::Vector3f(innerReductionSize), Nz::Vector3f(innerReductionSize * 2.f));
+
+		//debugDrawer.DrawBox(innerBox, Nz::Color::Red());
+
+		Nz::Vector3f innerPos = Nz::Vector3f::Clamp(position, innerBox.GetMinimum(), innerBox.GetMaximum());
+		Nz::Vector3f rayNormal = Nz::Vector3f::Normalize(position - innerPos);
+
+		Nz::Boxf box(GetCenter() - Nz::Vector3f(gridHeight), Nz::Vector3f(gridHeight * 2.f + m_tileSize));
+		//debugDrawer.DrawBox(box, Nz::Color::Gray());
+		Nz::Rayf ray(innerPos + rayNormal * gridHeight * 2.f, -rayNormal);
+
+		//debugDrawer.DrawBox(box, Nz::Color::Green());
+
+		//debugDrawer.DrawLine(position, position + outsideNormal, Nz::Color::Blue());
+
+		float closest, furthest;
+		if (!ray.Intersect(box, &closest, &furthest))
+		{
+			fmt::print("ray intersection failed\n");
+			return std::nullopt;
+		}
+
+		//debugDrawer.DrawLine(ray.origin, ray.GetPoint(closest), Nz::Color::Magenta());
+
+		//debugDrawer.DrawLine(ray.origin, ray.GetPoint(closest), Nz::Color::Red());
+
+		Nz::Quaternionf rotation = Nz::Quaternionf::RotationBetween(Nz::Vector3f::Up(), s_dirNormals[closestDir]);
+
+		Nz::Matrix4f transform = Nz::Matrix4f::Transform(rotation * Nz::Vector3f::Up() * gridHeight, rotation);
+		Nz::Matrix4f transformInverse = Nz::Matrix4f::TransformInverse(rotation * Nz::Vector3f::Up() * gridHeight, rotation);
+
+		Nz::Vector3f hitPoint = transformInverse * (ray.GetPoint(closest) - GetCenter());
+		float x = std::floor(grid.GetWidth() * 0.5f + hitPoint.x / m_tileSize);
+		float y = std::floor(grid.GetHeight() * 0.5f + hitPoint.z / m_tileSize);
+
+		//fmt::print("x: {}, y: {}\n", x, y);
+
+		float xOffset = x * m_tileSize - grid.GetWidth() * m_tileSize * 0.5f;
+		float yHeight = m_tileSize;
+		float zOffset = y * m_tileSize - grid.GetHeight() * m_tileSize * 0.5f;
+
+		int xGrid = std::clamp(static_cast<int>(x), 0, static_cast<int>(grid.GetWidth()));
+		int yGrid = std::clamp(static_cast<int>(y), 0, static_cast<int>(grid.GetHeight()));
+
+		return GridCellIntersection{
+			&grid,
+			closestDir,
+			Nz::SafeCast<std::size_t>(xGrid),
+			Nz::SafeCast<std::size_t>(yGrid),
+			gridHeight
+		};
+	}
 
 	Nz::Vector3f Planet::DeformPosition(const Nz::Vector3f& position)
 	{
@@ -98,15 +195,15 @@ namespace tsom
 			std::size_t gridSize = 1;
 			for (std::size_t i = 0; i < m_gridDimensions; ++i)
 			{
-				VoxelCell cell;
+				VoxelBlock cell;
 				if (i >= maxHeight)
-					cell = VoxelCell::Empty;
+					cell = VoxelBlock::Empty;
 				else if (i == maxHeight - 1)
-					cell = VoxelCell::Grass;
+					cell = VoxelBlock::Grass;
 				else if (i >= maxHeight - 3)
-					cell = VoxelCell::Dirt;
+					cell = VoxelBlock::Dirt;
 				else
-					cell = VoxelCell::Stone;
+					cell = VoxelBlock::Stone;
 
 				gridVec.emplace_back(std::make_unique<VoxelGrid>(gridSize, gridSize, cell));
 				gridSize += 2;

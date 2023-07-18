@@ -58,7 +58,7 @@ namespace tsom
 		return corners;
 	}
 
-	inline VoxelCell VoxelGrid::GetCellContent(std::size_t x, std::size_t y) const
+	inline VoxelBlock VoxelGrid::GetCellContent(std::size_t x, std::size_t y) const
 	{
 		return m_cells[y * m_width + x];
 	}
@@ -68,7 +68,7 @@ namespace tsom
 		return m_height;
 	}
 
-	inline std::optional<VoxelCell> VoxelGrid::GetNeighborCell(std::size_t x, std::size_t y, int xOffset, int yOffset, int zOffset) const
+	inline std::optional<VoxelBlock> VoxelGrid::GetNeighborCell(std::size_t x, std::size_t y, int xOffset, int yOffset, int zOffset) const
 	{
 		const VoxelGrid* currentGrid = this;
 		if (xOffset < 0)
@@ -139,7 +139,7 @@ namespace tsom
 		return m_width;
 	}
 
-	inline void VoxelGrid::UpdateCell(std::size_t x, std::size_t y, VoxelCell cellType)
+	inline void VoxelGrid::UpdateCell(std::size_t x, std::size_t y, VoxelBlock cellType)
 	{
 		m_cells[y * m_width + x] = cellType;
 	}

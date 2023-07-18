@@ -82,6 +82,11 @@ namespace tsom
 			}
 		}
 
+		void Serialize(PacketSerializer& serializer, MineBlock& data)
+		{
+			serializer &= data.position;
+		}
+
 		void Serialize(PacketSerializer& serializer, NetworkStrings& data)
 		{
 			serializer &= data.startId;
@@ -89,6 +94,12 @@ namespace tsom
 			serializer.SerializeArraySize(data.strings);
 			for (auto& string : data.strings)
 				serializer &= string;
+		}
+
+		void Serialize(PacketSerializer& serializer, PlaceBlock& data)
+		{
+			serializer &= data.position;
+			serializer &= data.newContent;
 		}
 
 		void Serialize(PacketSerializer& serializer, PlayerJoin& data)
@@ -105,6 +116,16 @@ namespace tsom
 		void Serialize(PacketSerializer& serializer, UpdatePlayerInputs& data)
 		{
 			Helper::Serialize(serializer, data.inputs);
+		}
+
+		void Serialize(PacketSerializer& serializer, VoxelGridUpdate& data)
+		{
+			serializer.SerializeArraySize(data.updates);
+			for (auto& update : data.updates)
+			{
+				serializer &= update.position;
+				serializer &= update.newContent;
+			}
 		}
 	}
 }

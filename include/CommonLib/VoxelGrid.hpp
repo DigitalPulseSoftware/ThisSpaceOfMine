@@ -8,6 +8,7 @@
 #define TSOM_COMMONLIB_VOXELGRID_HPP
 
 #include <CommonLib/Direction.hpp>
+#include <CommonLib/VoxelBlock.hpp>
 #include <Nazara/Core/Color.hpp>
 #include <Nazara/Math/Matrix4.hpp>
 #include <NazaraUtils/EnumArray.hpp>
@@ -23,18 +24,10 @@ namespace Nz
 
 namespace tsom
 {
-	enum class VoxelCell
-	{
-		Empty,
-		Grass,
-		Dirt,
-		Stone
-	};
-
 	class VoxelGrid
 	{
 		public:
-			VoxelGrid(std::size_t width, std::size_t height, VoxelCell defaultCell);
+			VoxelGrid(std::size_t width, std::size_t height, VoxelBlock defaultCell);
 			VoxelGrid(const VoxelGrid&) = delete;
 			VoxelGrid(VoxelGrid&&) = delete;
 			~VoxelGrid() = default;
@@ -45,12 +38,12 @@ namespace tsom
 
 			inline Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> ComputeVoxelCorners(std::size_t x, std::size_t y, float cellSize) const;
 
-			inline VoxelCell GetCellContent(std::size_t x, std::size_t y) const;
+			inline VoxelBlock GetCellContent(std::size_t x, std::size_t y) const;
 			inline std::size_t GetHeight() const;
-			inline std::optional<VoxelCell> GetNeighborCell(std::size_t x, std::size_t y, int xOffset, int yOffset, int zOffset) const;
+			inline std::optional<VoxelBlock> GetNeighborCell(std::size_t x, std::size_t y, int xOffset, int yOffset, int zOffset) const;
 			inline std::size_t GetWidth() const;
 
-			inline void UpdateCell(std::size_t x, std::size_t y, VoxelCell cellType);
+			inline void UpdateCell(std::size_t x, std::size_t y, VoxelBlock cellType);
 
 			VoxelGrid& operator=(const VoxelGrid&) = delete;
 			VoxelGrid& operator=(VoxelGrid&&) = delete;
@@ -65,7 +58,7 @@ namespace tsom
 			Nz::EnumArray<Direction, NeighborGrid> m_neighborGrids;
 			std::size_t m_height;
 			std::size_t m_width;
-			std::vector<VoxelCell> m_cells;
+			std::vector<VoxelBlock> m_cells;
 	};
 }
 

@@ -41,6 +41,7 @@ namespace tsom
 			void SendInputs();
 
 			NazaraSlot(ClientSessionHandler, OnControlledEntityChanged, m_onControlledEntityChanged);
+			NazaraSlot(ClientSessionHandler, OnVoxelGridUpdate, m_onVoxelGridUpdated);
 
 			std::shared_ptr<StateData> m_stateData;
 			std::unique_ptr<ClientPlanet> m_planet;

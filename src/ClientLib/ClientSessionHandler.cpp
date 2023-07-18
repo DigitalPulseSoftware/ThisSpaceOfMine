@@ -21,12 +21,15 @@ namespace tsom
 {
 	constexpr SessionHandler::SendAttributeTable s_packetAttributes = SessionHandler::BuildAttributeTable({
 		{ PacketIndex<Packets::AuthRequest>,        { 0, Nz::ENetPacketFlag_Reliable } },
+		{ PacketIndex<Packets::MineBlock>,          { 1, Nz::ENetPacketFlag_Reliable } },
+		{ PacketIndex<Packets::PlaceBlock>,         { 1, Nz::ENetPacketFlag_Reliable } },
 		{ PacketIndex<Packets::UpdatePlayerInputs>, { 1, 0 } }
 	});
 
 	ClientSessionHandler::ClientSessionHandler(NetworkSession* session, Nz::EnttWorld& world) :
 	SessionHandler(session),
-	m_world(world)
+	m_world(world),
+	m_ownPlayerIndex(InvalidPlayerIndex)
 	{
 		SetupHandlerTable(this);
 		SetupAttributeTable(s_packetAttributes);
@@ -101,6 +104,11 @@ namespace tsom
 
 		auto& playerInfo = m_players[playerJoin.index].emplace();
 		playerInfo.nickname = std::move(playerJoin.nickname);
+	}
+
+	void ClientSessionHandler::HandlePacket(Packets::VoxelGridUpdate&& stateUpdate)
+	{
+		OnVoxelGridUpdate(stateUpdate);
 	}
 
 	void ClientSessionHandler::SetupEntity(entt::handle entity, Packets::Helper::PlayerControlledData&& entityData)

@@ -97,10 +97,21 @@ namespace tsom
 			std::vector<EntityData> entities;
 		};
 
+		struct MineBlock
+		{
+			Nz::Vector3f position;
+		};
+
 		struct NetworkStrings
 		{
 			CompressedUnsigned<Nz::UInt32> startId;
 			std::vector<std::string> strings;
+		};
+
+		struct PlaceBlock
+		{
+			Nz::Vector3f position;
+			Nz::UInt8 newContent;
 		};
 
 		struct PlayerJoin
@@ -119,15 +130,29 @@ namespace tsom
 			PlayerInputs inputs;
 		};
 
+		struct VoxelGridUpdate
+		{
+			struct BlockUpdate
+			{
+				Nz::Vector3f position;
+				Nz::UInt8 newContent;
+			};
+
+			std::vector<BlockUpdate> updates;
+		};
+
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, AuthRequest& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, AuthResponse& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntitiesCreation& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntitiesDelete& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntitiesStateUpdate& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, MineBlock& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, NetworkStrings& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, PlaceBlock& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, PlayerJoin& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, PlayerLeave& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, UpdatePlayerInputs& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, VoxelGridUpdate& data);
 	}
 }
 

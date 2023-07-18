@@ -11,6 +11,7 @@
 #include <CommonLib/Planet.hpp>
 #include <CommonLib/NetworkSessionManager.hpp>
 #include <CommonLib/ServerPlayer.hpp>
+#include <CommonLib/VoxelBlock.hpp>
 #include <NazaraUtils/Bitset.hpp>
 #include <NazaraUtils/MemoryPool.hpp>
 #include <Nazara/Core/Clock.hpp>
@@ -42,6 +43,9 @@ namespace tsom
 
 			void Update(Nz::Time elapsedTime);
 
+			// TEMP
+			void UpdatePlanetBlock(const Nz::Vector3f& position, VoxelBlock newBlock);
+
 			ServerInstance& operator=(const ServerInstance&) = delete;
 			ServerInstance& operator=(ServerInstance&&) = delete;
 
@@ -58,6 +62,14 @@ namespace tsom
 			Nz::MemoryPool<ServerPlayer> m_players;
 			Nz::Time m_tickAccumulator;
 			Nz::Time m_tickDuration;
+
+			// TEMP
+			struct BlockUpdate
+			{
+				Nz::Vector3f position;
+				VoxelBlock newBlock;
+			};
+			std::vector<BlockUpdate> m_voxelGridUpdates;
 	};
 }
 

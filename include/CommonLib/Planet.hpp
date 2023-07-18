@@ -26,12 +26,25 @@ namespace tsom
 	class TSOM_COMMONLIB_API Planet
 	{
 		public:
+			struct GridCellIntersection
+			{
+				VoxelGrid* targetGrid;
+				Direction direction;
+				std::size_t cellX;
+				std::size_t cellY;
+				float gridHeight;
+			};
+
 			Planet(std::size_t gridDims, float tileSize, float cornerRadius);
 			Planet(const Planet&) = delete;
 			Planet(Planet&&) = delete;
 			~Planet() = default;
 
 			std::shared_ptr<Nz::JoltCollider3D> BuildCollider();
+
+			std::optional<GridCellIntersection> ComputeGridCell(const Nz::Vector3f& position);
+
+			Nz::Vector3f DeformPosition(const Nz::Vector3f& position);
 
 			inline Nz::Vector3f GetCenter() const;
 			inline float GetCornerRadius() const;
@@ -45,7 +58,6 @@ namespace tsom
 
 		protected:
 			void BuildMesh(std::vector<Nz::UInt32>& indices, std::vector<Nz::VertexStruct_XYZ_Color_UV>& vertices);
-			Nz::Vector3f DeformPosition(const Nz::Vector3f& position);
 			void RebuildGrid();
 
 			Nz::EnumArray<Direction, std::vector<std::unique_ptr<VoxelGrid>>> m_grids;

@@ -4,16 +4,18 @@
 
 #pragma once
 
-#ifndef TSOM_COMMONLIB_PLAYERID_HPP
-#define TSOM_COMMONLIB_PLAYERID_HPP
-
-#include <NazaraUtils/Prerequisites.hpp>
+#ifndef TSOM_COMMONLIB_UTILITY_VOXELBLOCK_HPP
+#define TSOM_COMMONLIB_UTILITY_VOXELBLOCK_HPP
 
 namespace tsom
 {
-	using PlayerIndex = Nz::UInt16;
-
-	constexpr PlayerIndex InvalidPlayerIndex = 0xFFFF;
+	enum class VoxelBlock
+	{
+		Empty,
+		Grass,
+		Dirt,
+		Stone
+	};
 }
 
-#endif // TSOM_COMMONLIB_PLAYERID_HPP
+#endif // TSOM_COMMONLIB_UTILITY_VOXELBLOCK_HPP

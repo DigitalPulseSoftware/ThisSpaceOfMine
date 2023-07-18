@@ -20,6 +20,8 @@ namespace tsom
 			PlayerSessionHandler(NetworkSession* session, ServerPlayer* player);
 			~PlayerSessionHandler();
 
+			void HandlePacket(Packets::MineBlock&& mineBlock);
+			void HandlePacket(Packets::PlaceBlock&& placeBlock);
 			void HandlePacket(Packets::UpdatePlayerInputs&& playerInputs);
 
 		private:

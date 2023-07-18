@@ -76,6 +76,14 @@ namespace tsom
 		}
 	}
 
+	void ServerInstance::UpdatePlanetBlock(const Nz::Vector3f& position, VoxelBlock newBlock)
+	{
+		m_voxelGridUpdates.push_back({
+			position,
+			newBlock
+		});
+	}
+
 	void ServerInstance::OnNetworkTick()
 	{
 		// Handle disconnected players
@@ -121,6 +129,42 @@ namespace tsom
 	void ServerInstance::OnTick(Nz::Time elapsedTime)
 	{
 		OnNetworkTick();
+
+		if (!m_voxelGridUpdates.empty())
+		{
+			Packets::VoxelGridUpdate voxelGridUpdatePacket;
+
+			for (auto&& [pos, block] : m_voxelGridUpdates)
+			{
+				if (auto intersectionData = m_planet->ComputeGridCell(pos))
+				{
+					intersectionData->targetGrid->UpdateCell(intersectionData->cellX, intersectionData->cellY, block);
+
+					voxelGridUpdatePacket.updates.push_back({
+						pos,
+						Nz::SafeCast<Nz::UInt8>(block)
+					});
+				}
+			}
+
+
+			std::shared_ptr<Nz::JoltCollider3D> geom;
+			{
+				Nz::HighPrecisionClock colliderClock;
+				geom = m_planet->BuildCollider();
+				fmt::print("built collider in {}\n", fmt::streamed(colliderClock.GetElapsedTime()));
+			}
+
+			auto& planetBody = m_planetEntity.get<Nz::JoltRigidBody3DComponent>();
+			planetBody.SetGeom(geom, false);
+
+			ForEachPlayer([&](ServerPlayer& serverPlayer)
+			{
+				serverPlayer.GetSession()->SendPacket(voxelGridUpdatePacket);
+			});
+
+			m_voxelGridUpdates.clear();
+		}
 
 		m_world.Update(elapsedTime);
 	}

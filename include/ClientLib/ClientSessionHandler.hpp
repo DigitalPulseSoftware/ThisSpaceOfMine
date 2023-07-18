@@ -35,8 +35,10 @@ namespace tsom
 			void HandlePacket(Packets::EntitiesStateUpdate&& stateUpdate);
 			void HandlePacket(Packets::PlayerLeave&& playerLeave);
 			void HandlePacket(Packets::PlayerJoin&& playerJoin);
+			void HandlePacket(Packets::VoxelGridUpdate&& stateUpdate);
 
 			NazaraSignal(OnControlledEntityChanged, entt::handle /*newEntity*/);
+			NazaraSignal(OnVoxelGridUpdate, const Packets::VoxelGridUpdate& /*gridUpdate*/);
 
 			static constexpr Nz::UInt32 InvalidEntity = 0xFFFFFFFF;
 

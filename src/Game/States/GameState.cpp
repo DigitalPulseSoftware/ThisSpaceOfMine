@@ -113,6 +113,19 @@ namespace tsom
 			m_controlledEntity = entity;
 		});
 
+		m_onVoxelGridUpdated.Connect(m_stateData->sessionHandler->OnVoxelGridUpdate, [&](const Packets::VoxelGridUpdate& voxelGrid)
+		{
+			for (auto&& [pos, blockIndex] : voxelGrid.updates)
+			{
+				if (auto intersectionData = m_planet->ComputeGridCell(pos))
+				{
+					intersectionData->targetGrid->UpdateCell(intersectionData->cellX, intersectionData->cellY, Nz::SafeCast<VoxelBlock>(blockIndex));
+				}
+			}
+
+			RebuildPlanet();
+		});
+
 		m_cameraEntity.erase<Nz::DisabledComponent>();
 		m_planetEntity.erase<Nz::DisabledComponent>();
 		m_skyboxEntity.erase<Nz::DisabledComponent>();
@@ -170,6 +183,56 @@ namespace tsom
 
 				default:
 					break;
+			}
+		});
+
+		eventHandler.OnMouseButtonReleased.Connect([&](const Nz::WindowEventHandler*, const Nz::WindowEvent::MouseButtonEvent& event)
+		{
+			if (event.button != Nz::Mouse::Left && event.button != Nz::Mouse::Right)
+				return;
+
+			Nz::Vector3f closestHit, closestNormal;
+			auto filter = [&](const Nz::JoltPhysics3DSystem::RaycastHit& hitInfo) -> std::optional<float>
+			{
+				if (hitInfo.hitEntity != m_planetEntity)
+					return std::nullopt;
+
+				closestHit = hitInfo.hitPosition;
+				closestNormal = hitInfo.hitNormal;
+				return hitInfo.fraction;
+			};
+
+			auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
+
+			auto& physSystem = m_stateData->world->GetSystem<Nz::JoltPhysics3DSystem>();
+			if (physSystem.RaycastQuery(cameraNode.GetPosition(), cameraNode.GetPosition() + cameraNode.GetForward() * 5.f, filter))
+			{
+				if (event.button == Nz::Mouse::Left)
+				{
+					Nz::Vector3f position = closestHit - closestNormal * m_planet->GetTileSize() * 0.25f;
+					if (auto intersectionData = m_planet->ComputeGridCell(position))
+					{
+						// Mine
+						Packets::MineBlock mineBlock;
+						mineBlock.position = position;
+
+						m_stateData->networkSession->SendPacket(mineBlock);
+					}
+				}
+				else
+				{
+					// Place
+					Nz::Vector3f position = closestHit + closestNormal * m_planet->GetTileSize() * 0.25f;
+					if (auto intersectionData = m_planet->ComputeGridCell(position))
+					{
+						// Mine
+						Packets::PlaceBlock placeBlock;
+						placeBlock.position = position;
+						placeBlock.newContent = Nz::SafeCast<Nz::UInt8>(VoxelBlock::Dirt);
+
+						m_stateData->networkSession->SendPacket(placeBlock);
+					}
+				}
 			}
 		});
 
@@ -286,28 +349,35 @@ namespace tsom
 			{
 				debugDrawer.DrawLine(closestHit, closestHit + closestNormal * 0.2f, Nz::Color::Cyan());
 
-				auto [x, y, grid] = m_planet->ComputeGridCell(closestHit, closestNormal, debugDrawer);
-
-				if (grid)
+				if (auto intersectionData = m_planet->ComputeGridCell(closestHit - closestNormal * m_planet->GetTileSize() * 0.25f))
 				{
-					if (Nz::Mouse::IsButtonPressed(Nz::Mouse::Right))
-					{
-						grid->UpdateCell(x, y, VoxelCell::Empty);
-						RebuildPlanet();
-					}
-					else if (Nz::Mouse::IsButtonPressed(Nz::Mouse::Left))
-					{
-						auto [x2, y2, grid] = m_planet->ComputeGridCell(closestHit + closestNormal * m_planet->GetTileSize() * 0.5f, closestNormal, debugDrawer);
+					auto cornerPos = intersectionData->targetGrid->ComputeVoxelCorners(intersectionData->cellX, intersectionData->cellY, m_planet->GetTileSize());
 
-						grid->UpdateCell(x2, y2, VoxelCell::Dirt);
-						RebuildPlanet();
-					}
+					Nz::Quaternionf rotation = Nz::Quaternionf::RotationBetween(Nz::Vector3f::Up(), s_dirNormals[intersectionData->direction]);
+					Nz::Matrix4f transform = Nz::Matrix4f::Transform(rotation * Nz::Vector3f::Up() * intersectionData->gridHeight, rotation);
+
+					constexpr Nz::EnumArray<Direction, std::array<Nz::BoxCorner, 4>> directionToCorners = {
+						// Back
+						std::array{ Nz::BoxCorner::NearLeftTop, Nz::BoxCorner::NearRightTop, Nz::BoxCorner::NearRightBottom, Nz::BoxCorner::NearLeftBottom },
+						// Down
+						std::array{ Nz::BoxCorner::NearLeftBottom, Nz::BoxCorner::FarLeftBottom, Nz::BoxCorner::FarRightBottom, Nz::BoxCorner::NearRightBottom },
+						// Front
+						std::array{ Nz::BoxCorner::FarLeftTop, Nz::BoxCorner::FarRightTop, Nz::BoxCorner::FarRightBottom, Nz::BoxCorner::FarLeftBottom },
+						// Left
+						std::array{ Nz::BoxCorner::FarLeftTop, Nz::BoxCorner::NearLeftTop, Nz::BoxCorner::NearLeftBottom, Nz::BoxCorner::FarLeftBottom },
+						// Right
+						std::array{ Nz::BoxCorner::FarRightTop, Nz::BoxCorner::NearRightTop, Nz::BoxCorner::NearRightBottom, Nz::BoxCorner::FarRightBottom },
+						// Up
+						std::array{ Nz::BoxCorner::NearLeftTop, Nz::BoxCorner::FarLeftTop, Nz::BoxCorner::FarRightTop, Nz::BoxCorner::NearRightTop }
+					};
+
+					auto& corners = directionToCorners[intersectionData->direction];
+
+					debugDrawer.DrawLine(m_planet->DeformPosition(transform * cornerPos[corners[0]]), m_planet->DeformPosition(transform * cornerPos[corners[1]]), Nz::Color::Green());
+					debugDrawer.DrawLine(m_planet->DeformPosition(transform * cornerPos[corners[1]]), m_planet->DeformPosition(transform * cornerPos[corners[2]]), Nz::Color::Green());
+					debugDrawer.DrawLine(m_planet->DeformPosition(transform * cornerPos[corners[2]]), m_planet->DeformPosition(transform * cornerPos[corners[3]]), Nz::Color::Green());
+					debugDrawer.DrawLine(m_planet->DeformPosition(transform * cornerPos[corners[3]]), m_planet->DeformPosition(transform * cornerPos[corners[0]]), Nz::Color::Green());
 				}
-
-
-				//fmt::print("{}\n", fmt::streamed(test));
-
-				//debugDrawer.DrawBox(Nz::Boxf(test - Nz::Vector2f(0.1f), Nz::Vector2f(0.2f)), Nz::Color::Green());
 			}
 		}
 

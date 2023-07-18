@@ -29,8 +29,6 @@ namespace tsom
 
 			std::shared_ptr<Nz::GraphicalMesh> BuildGfxMesh();
 
-			std::tuple<std::size_t, std::size_t, VoxelGrid*> ComputeGridCell(const Nz::Vector3f& position, const Nz::Vector3f& normal, Nz::DebugDrawer& debugDrawer);
-
 			ClientPlanet& operator=(const ClientPlanet&) = delete;
 			ClientPlanet& operator=(ClientPlanet&&) = delete;
 	};
