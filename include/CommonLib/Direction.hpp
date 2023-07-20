@@ -43,6 +43,10 @@ namespace tsom
 		Nz::Color(1.f, 1.f, 0.9f),   //< Right
 		Nz::Color(0.9f, 1.f, 0.9f),  //< Up
 	};
+
+	constexpr Direction DirectionFromNormal(const Nz::Vector3f& outsideNormal);
 }
+
+#include <CommonLib/Direction.inl>
 
 #endif // TSOM_COMMONLIB_UTILITY_DIRECTION_HPP

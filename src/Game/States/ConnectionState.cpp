@@ -4,6 +4,7 @@
 
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/BackgroundState.hpp>
+#include <Game/States/GameState.hpp>
 #include <ClientLib/ClientSessionHandler.hpp>
 #include <CommonLib/SessionHandler.hpp>
 #include <Nazara/Core/StateMachine.hpp>
@@ -21,12 +22,11 @@ namespace tsom
 		m_connectingLabel = CreateWidget<Nz::LabelWidget>();
 	}
 
-	void ConnectionState::Connect(const Nz::IpAddress& serverAddress, std::string nickname, std::shared_ptr<Nz::State> previousState, std::shared_ptr<Nz::State> nextState)
+	void ConnectionState::Connect(const Nz::IpAddress& serverAddress, std::string nickname, std::shared_ptr<Nz::State> previousState)
 	{
 		Disconnect();
 
 		m_previousState = std::move(previousState);
-		m_connectedState = std::move(nextState);
 		m_nickname = std::move(nickname);
 
 		std::size_t peerId = m_reactor.ConnectTo(serverAddress);
@@ -39,6 +39,8 @@ namespace tsom
 
 		m_connectingLabel->UpdateText(Nz::SimpleTextDrawer::Draw("Connecting to " + serverAddress.ToString() + "...", 48));
 		m_connectingLabel->Center();
+
+		m_connectedState = std::make_shared<GameState>(GetStateDataPtr());
 	}
 
 	void ConnectionState::Disconnect()

@@ -140,7 +140,7 @@ namespace tsom
 		{
 			auto& textNode = textEntity.emplace<Nz::NodeComponent>();
 			textNode.SetParent(entity);
-			textNode.SetInheritRotation(false);
+			//textNode.SetInheritRotation(false);
 
 			std::shared_ptr<Nz::TextSprite> textSprite = std::make_shared<Nz::TextSprite>();
 			if (const PlayerInfo* playerInfo = FetchPlayerInfo(entityData.controllingPlayerId))

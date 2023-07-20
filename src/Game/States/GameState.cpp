@@ -94,19 +94,7 @@ namespace tsom
 			skyboxNode.SetInheritRotation(false);
 			skyboxNode.SetParent(m_cameraEntity);
 		}
-	}
-
-	GameState::~GameState()
-	{
-	}
-
-	void GameState::Enter(Nz::StateMachine& /*fsm*/)
-	{
-#ifdef FREEFLIGHT
-		auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
-		cameraNode.SetPosition(Nz::Vector3f::Up() * (m_planet->GetGridDimensions() * m_planet->GetTileSize() * 0.5f + 1.f));
-#endif
-
+		
 		m_controlledEntity = m_stateData->sessionHandler->GetControlledEntity();
 		m_onControlledEntityChanged.Connect(m_stateData->sessionHandler->OnControlledEntityChanged, [&](entt::handle entity)
 		{
@@ -125,6 +113,18 @@ namespace tsom
 
 			RebuildPlanet();
 		});
+	}
+
+	GameState::~GameState()
+	{
+	}
+
+	void GameState::Enter(Nz::StateMachine& /*fsm*/)
+	{
+#ifdef FREEFLIGHT
+		auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
+		cameraNode.SetPosition(Nz::Vector3f::Up() * (m_planet->GetGridDimensions() * m_planet->GetTileSize() * 0.5f + 1.f));
+#endif
 
 		m_cameraEntity.erase<Nz::DisabledComponent>();
 		m_planetEntity.erase<Nz::DisabledComponent>();
@@ -336,24 +336,24 @@ namespace tsom
 		// Raycast
 		{
 			auto& physSystem = m_stateData->world->GetSystem<Nz::JoltPhysics3DSystem>();
-			Nz::Vector3f closestHit, closestNormal;
+			Nz::Vector3f hitPos, hitNormal;
 			if (physSystem.RaycastQuery(cameraNode.GetPosition(), cameraNode.GetPosition() + cameraNode.GetForward() * 5.f, [&](const Nz::JoltPhysics3DSystem::RaycastHit& hitInfo) -> std::optional<float>
 				{
 					if (hitInfo.hitEntity != m_planetEntity)
 						return std::nullopt;
 
-					closestHit = hitInfo.hitPosition;
-					closestNormal = hitInfo.hitNormal;
+					hitPos = hitInfo.hitPosition;
+					hitNormal = hitInfo.hitNormal;
 					return hitInfo.fraction;
 				}))
 			{
-				debugDrawer.DrawLine(closestHit, closestHit + closestNormal * 0.2f, Nz::Color::Cyan());
+				debugDrawer.DrawLine(hitPos, hitPos + hitNormal * 0.2f, Nz::Color::Cyan());
 
-				if (auto intersectionData = m_planet->ComputeGridCell(closestHit - closestNormal * m_planet->GetTileSize() * 0.25f))
+				if (auto intersectionData = m_planet->ComputeGridCell(hitPos - hitNormal * m_planet->GetTileSize() * 0.25f))
 				{
 					auto cornerPos = intersectionData->targetGrid->ComputeVoxelCorners(intersectionData->cellX, intersectionData->cellY, m_planet->GetTileSize());
 
-					Nz::Quaternionf rotation = Nz::Quaternionf::RotationBetween(Nz::Vector3f::Up(), s_dirNormals[intersectionData->direction]);
+					Nz::Quaternionf rotation = Nz::Quaternionf::RotationBetween(Nz::Vector3f::Up(), s_dirNormals[intersectionData->gridDirection]);
 					Nz::Matrix4f transform = Nz::Matrix4f::Transform(rotation * Nz::Vector3f::Up() * intersectionData->gridHeight, rotation);
 
 					constexpr Nz::EnumArray<Direction, std::array<Nz::BoxCorner, 4>> directionToCorners = {
@@ -371,7 +371,7 @@ namespace tsom
 						std::array{ Nz::BoxCorner::NearLeftTop, Nz::BoxCorner::FarLeftTop, Nz::BoxCorner::FarRightTop, Nz::BoxCorner::NearRightTop }
 					};
 
-					auto& corners = directionToCorners[intersectionData->direction];
+					auto& corners = directionToCorners[DirectionFromNormal(hitNormal)];
 
 					debugDrawer.DrawLine(m_planet->DeformPosition(transform * cornerPos[corners[0]]), m_planet->DeformPosition(transform * cornerPos[corners[1]]), Nz::Color::Green());
 					debugDrawer.DrawLine(m_planet->DeformPosition(transform * cornerPos[corners[1]]), m_planet->DeformPosition(transform * cornerPos[corners[2]]), Nz::Color::Green());
@@ -474,17 +474,22 @@ namespace tsom
 		inputPacket.inputs.moveRight = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::D);
 		inputPacket.inputs.sprint = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::LShift);
 
-		m_controlledEntity = m_stateData->sessionHandler->GetControlledEntity();
-		auto& playerNode = m_controlledEntity.get<Nz::NodeComponent>();
-
-		Nz::Vector3f playerUp = playerNode.GetUp();
-		if (Nz::Vector3f previousUp = m_upCorrection * Nz::Vector3f::Up(); !previousUp.ApproxEqual(playerUp, 0.001f))
+		if (m_controlledEntity)
 		{
-			m_upCorrection = Nz::Quaternionf::RotationBetween(previousUp, playerUp) * m_upCorrection;
-			m_upCorrection.Normalize();
-		}
+			m_controlledEntity = m_stateData->sessionHandler->GetControlledEntity();
+			auto& playerNode = m_controlledEntity.get<Nz::NodeComponent>();
 
-		inputPacket.inputs.orientation = m_upCorrection * Nz::Quaternionf(m_cameraRotation);
+			Nz::Vector3f playerUp = playerNode.GetUp();
+			if (Nz::Vector3f previousUp = m_upCorrection * Nz::Vector3f::Up(); !previousUp.ApproxEqual(playerUp, 0.001f))
+			{
+				m_upCorrection = Nz::Quaternionf::RotationBetween(previousUp, playerUp) * m_upCorrection;
+				m_upCorrection.Normalize();
+			}
+
+			inputPacket.inputs.orientation = m_upCorrection * Nz::Quaternionf(m_cameraRotation);
+		}
+		else
+			inputPacket.inputs.orientation = Nz::Quaternionf::Identity();
 
 		m_stateData->networkSession->SendPacket(inputPacket);
 	}

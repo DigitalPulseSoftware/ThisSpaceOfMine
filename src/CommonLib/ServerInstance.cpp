@@ -86,6 +86,9 @@ namespace tsom
 
 	void ServerInstance::OnNetworkTick()
 	{
+		for (auto&& sessionManagerPtr : m_sessionManagers)
+			sessionManagerPtr->Poll();
+
 		// Handle disconnected players
 		for (std::size_t playerIndex = m_disconnectedPlayers.FindFirst(); playerIndex != m_disconnectedPlayers.npos; playerIndex = m_disconnectedPlayers.FindNext(playerIndex))
 		{
@@ -105,20 +108,56 @@ namespace tsom
 		{
 			ServerPlayer* player = m_players.RetrieveFromIndex(playerIndex);
 
+			// Send a packet to existing players telling them someone just arrived
 			Packets::PlayerJoin playerJoined;
 			playerJoined.index = Nz::SafeCast<PlayerIndex>(playerIndex);
 			playerJoined.nickname = player->GetNickname();
 
 			ForEachPlayer([&](ServerPlayer& serverPlayer)
 			{
+				// Don't send this to player connecting
+				if (m_newPlayers.UnboundedTest(serverPlayer.GetPlayerIndex()))
+					return;
+
 				if (NetworkSession* session = serverPlayer.GetSession())
 					session->SendPacket(playerJoined);
 			});
+
+			// Send a packet to the new player containing all existing players
+			if (NetworkSession* session = player->GetSession())
+			{
+				ForEachPlayer([&](ServerPlayer& serverPlayer)
+				{
+					Packets::PlayerJoin playerJoined;
+					playerJoined.index = Nz::SafeCast<PlayerIndex>(serverPlayer.GetPlayerIndex());
+					playerJoined.nickname = serverPlayer.GetNickname();
+
+					session->SendPacket(playerJoined);
+				});
+
+				// Send planet (TEMP)
+				if (m_voxelGridUpdateLastSize > 0)
+				{
+					Packets::VoxelGridUpdate voxelGridUpdatePacket;
+
+					for (std::size_t i = 0; i < m_voxelGridUpdates.size(); ++i)
+					{
+						auto&& [pos, block] = m_voxelGridUpdates[i];
+						if (auto intersectionData = m_planet->ComputeGridCell(pos))
+						{
+							voxelGridUpdatePacket.updates.push_back({
+								pos,
+								Nz::SafeCast<Nz::UInt8>(block)
+								});
+						}
+					}
+
+					session->SendPacket(voxelGridUpdatePacket);
+				}
+			}
+
 		}
 		m_newPlayers.Clear();
-
-		for (auto&& sessionManagerPtr : m_sessionManagers)
-			sessionManagerPtr->Poll();
 
 		ForEachPlayer([&](ServerPlayer& serverPlayer)
 		{
@@ -130,12 +169,13 @@ namespace tsom
 	{
 		OnNetworkTick();
 
-		if (!m_voxelGridUpdates.empty())
+		if (m_voxelGridUpdates.size() > m_voxelGridUpdateLastSize)
 		{
 			Packets::VoxelGridUpdate voxelGridUpdatePacket;
 
-			for (auto&& [pos, block] : m_voxelGridUpdates)
+			for (std::size_t i = m_voxelGridUpdateLastSize; i < m_voxelGridUpdates.size(); ++i)
 			{
+				auto&& [pos, block] = m_voxelGridUpdates[i];
 				if (auto intersectionData = m_planet->ComputeGridCell(pos))
 				{
 					intersectionData->targetGrid->UpdateCell(intersectionData->cellX, intersectionData->cellY, block);
@@ -146,6 +186,8 @@ namespace tsom
 					});
 				}
 			}
+
+			m_voxelGridUpdateLastSize = m_voxelGridUpdates.size();
 
 
 			std::shared_ptr<Nz::JoltCollider3D> geom;
@@ -162,8 +204,6 @@ namespace tsom
 			{
 				serverPlayer.GetSession()->SendPacket(voxelGridUpdatePacket);
 			});
-
-			m_voxelGridUpdates.clear();
 		}
 
 		m_world.Update(elapsedTime);

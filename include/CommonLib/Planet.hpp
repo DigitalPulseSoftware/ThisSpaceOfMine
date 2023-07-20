@@ -28,10 +28,10 @@ namespace tsom
 		public:
 			struct GridCellIntersection
 			{
-				VoxelGrid* targetGrid;
-				Direction direction;
 				std::size_t cellX;
 				std::size_t cellY;
+				Direction gridDirection;
+				VoxelGrid* targetGrid;
 				float gridHeight;
 			};
 

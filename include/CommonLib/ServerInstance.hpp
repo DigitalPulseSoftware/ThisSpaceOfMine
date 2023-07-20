@@ -69,6 +69,7 @@ namespace tsom
 				Nz::Vector3f position;
 				VoxelBlock newBlock;
 			};
+			std::size_t m_voxelGridUpdateLastSize = 0;
 			std::vector<BlockUpdate> m_voxelGridUpdates;
 	};
 }

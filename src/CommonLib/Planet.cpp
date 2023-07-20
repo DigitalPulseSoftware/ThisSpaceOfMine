@@ -157,10 +157,10 @@ namespace tsom
 		int yGrid = std::clamp(static_cast<int>(y), 0, static_cast<int>(grid.GetHeight()));
 
 		return GridCellIntersection{
-			&grid,
-			closestDir,
 			Nz::SafeCast<std::size_t>(xGrid),
 			Nz::SafeCast<std::size_t>(yGrid),
+			closestDir,
+			&grid,
 			gridHeight
 		};
 	}

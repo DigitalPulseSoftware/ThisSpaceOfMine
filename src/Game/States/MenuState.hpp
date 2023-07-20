@@ -36,6 +36,7 @@ namespace tsom
 			std::weak_ptr<ConnectionState> m_connectionState;
 			Nz::BoxLayout* m_layout;
 			Nz::ButtonWidget* m_connectButton;
+			Nz::TextAreaWidget* m_serverAddressArea;
 			Nz::TextAreaWidget* m_loginArea;
 	};
 }

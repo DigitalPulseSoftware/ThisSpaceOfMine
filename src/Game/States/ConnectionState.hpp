@@ -29,7 +29,7 @@ namespace tsom
 			ConnectionState(std::shared_ptr<StateData> stateData);
 			~ConnectionState() = default;
 
-			void Connect(const Nz::IpAddress& serverAddress, std::string nickname, std::shared_ptr<Nz::State> previousState, std::shared_ptr<Nz::State> nextState);
+			void Connect(const Nz::IpAddress& serverAddress, std::string nickname, std::shared_ptr<Nz::State> previousState);
 			void Disconnect();
 
 			inline bool HasSession() const;

@@ -61,7 +61,7 @@ int GameMain(int argc, char* argv[])
 	stateData->window = &window;
 	stateData->world = &world;
 
-	//Nz::Mouse::SetRelativeMouseMode(true);
+	Nz::Mouse::SetRelativeMouseMode(true);
 
 	std::shared_ptr<tsom::ConnectionState> connectionState = std::make_shared<tsom::ConnectionState>(stateData);
 
