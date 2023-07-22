@@ -1,0 +1,99 @@
+name: Build & Push binaries
+
+permissions:
+  contents: write
+
+on:
+  pull_request:
+  push:
+      paths-ignore:
+        - '.gitignore'
+        - 'LICENSE'
+        - 'README.md'
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        mode: [debug, releasedbg]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: "Set OUTPUT_FOLDER variable (Windows)"
+      if: ${{ runner.os == 'Windows' }}
+      run: echo "OUTPUT_FOLDER=windows_x64_${{ matrix.mode }}" >> $GITHUB_ENV
+      shell: bash
+
+    - name: "Set OUTPUT_FOLDER variable (Linux)"
+      if: ${{ runner.os == 'Linux' }}
+      run: echo "OUTPUT_FOLDER=linux_x86_64_${{ matrix.mode }}" >> $GITHUB_ENV
+      shell: bash
+
+    - name: "Set OUTPUT_FOLDER variable (MacOS)"
+      if: ${{ runner.os == 'macOS' }}
+      run: echo "OUTPUT_FOLDER=macosx_x86_64_${{ matrix.mode }}" >> $GITHUB_ENV
+      shell: bash
+
+    - if: ${{ runner.os == 'Linux' }} 
+      name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get -y install unzip gcc g++ build-essential
+
+    - name: Setup xmake
+      uses: xmake-io/github-action-setup-xmake@v1
+      with:
+        xmake-version: latest
+        actions-cache-folder: '.xmake-cache'
+
+    - name: Configure xmake and install dependencies
+      run: xmake config --mode=${{ matrix.mode }} --yes
+
+    - name: Build
+      run: xmake
+
+    - name: Install
+      run: |
+        mkdir dest/
+        xmake install -vo dest/
+        if [ "$RUNNER_OS" == "Linux" ]; then
+          cp ./dest/lib/*.so ./dest/bin/
+        elif [ "$RUNNER_OS" == "macOS" ]; then
+          cp ./dest/lib/*.dylib ./dest/bin/
+        fi
+        rm -rf dest/include/
+        rm -rf dest/lib/
+      shell: bash
+
+    - uses: vimtor/action-zip@v1
+      with:
+        files: dest/
+        dest: ${{ env.OUTPUT_FOLDER }}.zip
+
+    - name: Upload binaries to release (Branch)
+      uses: svenstaro/upload-release-action@v2
+      if: ${{ (github.ref == 'refs/heads/main') && github.event_name == 'push' }}
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: ${{ env.OUTPUT_FOLDER }}.zip
+        asset_name: ${{ env.OUTPUT_FOLDER }}.zip
+        tag: "0.0.0-prerelease"
+        overwrite: true
+        body: "Branch main"
+
+    - name: Upload binaries to release (Tag)
+      uses: svenstaro/upload-release-action@v2
+      if: startsWith(github.event.ref, 'refs/tags/')
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: ${{ env.OUTPUT_FOLDER }}.zip
+        asset_name: ${{ env.OUTPUT_FOLDER }}.zip
+        tag: ${{ github.ref }}
+        overwrite: true
+        body: ${{ github.ref }}
