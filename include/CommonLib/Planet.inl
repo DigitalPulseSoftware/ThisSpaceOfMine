@@ -9,6 +9,16 @@ namespace tsom
 		return Nz::Vector3f::Zero();
 	}
 
+	inline Chunk& Planet::GetChunk()
+	{
+		return *m_chunk;
+	}
+
+	inline const Chunk& Planet::GetChunk() const
+	{
+		return *m_chunk;
+	}
+
 	inline float Planet::GetCornerRadius() const
 	{
 		return m_cornerRadius;

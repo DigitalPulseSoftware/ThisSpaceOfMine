@@ -178,7 +178,7 @@ namespace tsom
 				auto&& [pos, block] = m_voxelGridUpdates[i];
 				if (auto intersectionData = m_planet->ComputeGridCell(pos))
 				{
-					intersectionData->targetGrid->UpdateCell(intersectionData->cellX, intersectionData->cellY, block);
+					m_planet->GetChunk().UpdateCell(intersectionData->x, intersectionData->y, intersectionData->z, block);
 
 					voxelGridUpdatePacket.updates.push_back({
 						pos,

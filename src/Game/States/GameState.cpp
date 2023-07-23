@@ -107,7 +107,7 @@ namespace tsom
 			{
 				if (auto intersectionData = m_planet->ComputeGridCell(pos))
 				{
-					intersectionData->targetGrid->UpdateCell(intersectionData->cellX, intersectionData->cellY, Nz::SafeCast<VoxelBlock>(blockIndex));
+					m_planet->GetChunk().UpdateCell(intersectionData->x, intersectionData->y, intersectionData->z, Nz::SafeCast<VoxelBlock>(blockIndex));
 				}
 			}
 
@@ -121,6 +121,8 @@ namespace tsom
 
 	void GameState::Enter(Nz::StateMachine& /*fsm*/)
 	{
+		Nz::Mouse::SetRelativeMouseMode(true);
+
 #ifdef FREEFLIGHT
 		auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
 		cameraNode.SetPosition(Nz::Vector3f::Up() * (m_planet->GetGridDimensions() * m_planet->GetTileSize() * 0.5f + 1.f));
@@ -259,6 +261,8 @@ namespace tsom
 
 	void GameState::Leave(Nz::StateMachine& /*fsm*/)
 	{
+		Nz::Mouse::SetRelativeMouseMode(false);
+
 		m_cameraEntity.emplace<Nz::DisabledComponent>();
 		m_planetEntity.emplace<Nz::DisabledComponent>();
 		m_skyboxEntity.emplace<Nz::DisabledComponent>();
@@ -351,10 +355,7 @@ namespace tsom
 
 				if (auto intersectionData = m_planet->ComputeGridCell(hitPos - hitNormal * m_planet->GetTileSize() * 0.25f))
 				{
-					auto cornerPos = intersectionData->targetGrid->ComputeVoxelCorners(intersectionData->cellX, intersectionData->cellY, m_planet->GetTileSize());
-
-					Nz::Quaternionf rotation = Nz::Quaternionf::RotationBetween(Nz::Vector3f::Up(), s_dirNormals[intersectionData->gridDirection]);
-					Nz::Matrix4f transform = Nz::Matrix4f::Transform(rotation * Nz::Vector3f::Up() * intersectionData->gridHeight, rotation);
+					auto cornerPos = m_planet->GetChunk().ComputeVoxelCorners(intersectionData->x, intersectionData->y, intersectionData->z);
 
 					constexpr Nz::EnumArray<Direction, std::array<Nz::BoxCorner, 4>> directionToCorners = {
 						// Back
@@ -373,10 +374,10 @@ namespace tsom
 
 					auto& corners = directionToCorners[DirectionFromNormal(hitNormal)];
 
-					debugDrawer.DrawLine(m_planet->DeformPosition(transform * cornerPos[corners[0]]), m_planet->DeformPosition(transform * cornerPos[corners[1]]), Nz::Color::Green());
-					debugDrawer.DrawLine(m_planet->DeformPosition(transform * cornerPos[corners[1]]), m_planet->DeformPosition(transform * cornerPos[corners[2]]), Nz::Color::Green());
-					debugDrawer.DrawLine(m_planet->DeformPosition(transform * cornerPos[corners[2]]), m_planet->DeformPosition(transform * cornerPos[corners[3]]), Nz::Color::Green());
-					debugDrawer.DrawLine(m_planet->DeformPosition(transform * cornerPos[corners[3]]), m_planet->DeformPosition(transform * cornerPos[corners[0]]), Nz::Color::Green());
+					debugDrawer.DrawLine(cornerPos[corners[0]], cornerPos[corners[1]], Nz::Color::Green());
+					debugDrawer.DrawLine(cornerPos[corners[1]], cornerPos[corners[2]], Nz::Color::Green());
+					debugDrawer.DrawLine(cornerPos[corners[2]], cornerPos[corners[3]], Nz::Color::Green());
+					debugDrawer.DrawLine(cornerPos[corners[3]], cornerPos[corners[0]], Nz::Color::Green());
 				}
 			}
 		}

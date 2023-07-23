@@ -7,10 +7,11 @@
 #ifndef TSOM_COMMONLIB_PLANET_HPP
 #define TSOM_COMMONLIB_PLANET_HPP
 
+#include <CommonLib/DeformedChunk.hpp>
 #include <CommonLib/Direction.hpp>
 #include <CommonLib/Export.hpp>
-#include <CommonLib/VoxelGrid.hpp>
 #include <NazaraUtils/EnumArray.hpp>
+#include <Nazara/Utility/VertexStruct.hpp>
 #include <memory>
 #include <tuple>
 #include <vector>
@@ -26,15 +27,6 @@ namespace tsom
 	class TSOM_COMMONLIB_API Planet
 	{
 		public:
-			struct GridCellIntersection
-			{
-				std::size_t cellX;
-				std::size_t cellY;
-				Direction gridDirection;
-				VoxelGrid* targetGrid;
-				float gridHeight;
-			};
-
 			Planet(std::size_t gridDims, float tileSize, float cornerRadius);
 			Planet(const Planet&) = delete;
 			Planet(Planet&&) = delete;
@@ -42,11 +34,11 @@ namespace tsom
 
 			std::shared_ptr<Nz::JoltCollider3D> BuildCollider();
 
-			std::optional<GridCellIntersection> ComputeGridCell(const Nz::Vector3f& position);
-
-			Nz::Vector3f DeformPosition(const Nz::Vector3f& position);
+			std::optional<Nz::Vector3ui> ComputeGridCell(const Nz::Vector3f& position) const;
 
 			inline Nz::Vector3f GetCenter() const;
+			inline Chunk& GetChunk();
+			inline const Chunk& GetChunk() const;
 			inline float GetCornerRadius() const;
 			inline std::size_t GetGridDimensions() const;
 			inline float GetTileSize() const;
@@ -60,8 +52,8 @@ namespace tsom
 			void BuildMesh(std::vector<Nz::UInt32>& indices, std::vector<Nz::VertexStruct_XYZ_Color_UV>& vertices);
 			void RebuildGrid();
 
-			Nz::EnumArray<Direction, std::vector<std::unique_ptr<VoxelGrid>>> m_grids;
 			std::size_t m_gridDimensions;
+			std::unique_ptr<DeformedChunk> m_chunk;
 			float m_tileSize;
 			float m_cornerRadius;
 	};

@@ -28,7 +28,7 @@ namespace tsom
 
 		m_serverAddressArea = addressLayout->Add<Nz::TextAreaWidget>();
 		m_serverAddressArea->SetCharacterSize(24);
-		m_serverAddressArea->SetText("malcolm.digitalpulse.software");
+		m_serverAddressArea->SetText("localhost");
 		m_serverAddressArea->SetTextColor(Nz::Color::Black());
 
 		Nz::BoxLayout* loginLayout = m_layout->Add<Nz::BoxLayout>(Nz::BoxLayoutOrientation::LeftToRight);
@@ -38,6 +38,7 @@ namespace tsom
 
 		m_loginArea = loginLayout->Add<Nz::TextAreaWidget>();
 		m_loginArea->SetCharacterSize(24);
+		m_loginArea->SetText("SirLynix");
 		m_loginArea->SetTextColor(Nz::Color::Black());
 
 		m_connectButton = m_layout->Add<Nz::ButtonWidget>();
