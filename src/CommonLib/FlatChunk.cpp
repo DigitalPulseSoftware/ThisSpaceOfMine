@@ -5,14 +5,15 @@
 #include <CommonLib/FlatChunk.hpp>
 #include <Nazara/JoltPhysics3D/JoltCollider3D.hpp>
 #include <Nazara/Utility/VertexStruct.hpp>
+#include <fmt/format.h>
 
 namespace tsom
 {
-	std::shared_ptr<Nz::JoltCollider3D> FlatChunk::BuildCollider(const Nz::Matrix4f& transformMatrix) const
+	std::shared_ptr<Nz::JoltCollider3D> FlatChunk::BuildCollider() const
 	{
 		std::vector<Nz::UInt32> indices;
 		std::vector<Nz::VertexStruct_XYZ_Color_UV> vertices;
-		BuildMesh(transformMatrix, Nz::Color::White(), indices, vertices);
+		BuildMesh(Nz::Matrix4f::Identity(), indices, vertices);
 
 		return std::make_shared<Nz::JoltMeshCollider3D>(Nz::SparsePtr<Nz::Vector3f>(&vertices[0].position, sizeof(vertices[0])), vertices.size(), indices.data(), indices.size());
 	}
@@ -24,17 +25,17 @@ namespace tsom
 			return std::nullopt;
 
 		Nz::Vector3ui pos(indices.x, indices.z, indices.y);
-		if (pos.x >= m_width || pos.y >= m_height || pos.z >= m_depth)
+		if (pos.x >= m_size.x || pos.y >= m_size.y || pos.z >= m_size.z)
 			return std::nullopt;
 
 		return pos;
 	}
 
-	Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> FlatChunk::ComputeVoxelCorners(std::size_t x, std::size_t y, std::size_t z) const
+	Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> FlatChunk::ComputeVoxelCorners(const Nz::Vector3ui& indices) const
 	{
-		float fX = x * m_cellSize;
-		float fY = y * m_cellSize;
-		float fZ = z * m_cellSize;
+		float fX = indices.x * m_cellSize;
+		float fY = indices.y * m_cellSize;
+		float fZ = indices.z * m_cellSize;
 
 		Nz::Boxf box(fX, fZ, fY, m_cellSize, m_cellSize, m_cellSize);
 		Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> corners {

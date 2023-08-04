@@ -8,24 +8,17 @@
 #include <Nazara/Math/Ray.hpp>
 #include <Nazara/Utility/VertexStruct.hpp>
 #include <fmt/format.h>
+#include <fmt/std.h>
 
 namespace tsom
 {
-	std::shared_ptr<Nz::JoltCollider3D> DeformedChunk::BuildCollider(const Nz::Matrix4f& transformMatrix) const
+	std::shared_ptr<Nz::JoltCollider3D> DeformedChunk::BuildCollider() const
 	{
 		std::vector<Nz::UInt32> indices;
 		std::vector<Nz::VertexStruct_XYZ_Color_UV> vertices;
-		BuildMesh(transformMatrix, Nz::Color::White(), indices, vertices);
+		BuildMesh(Nz::Matrix4f::Identity(), indices, vertices);
 
 		return std::make_shared<Nz::JoltMeshCollider3D>(Nz::SparsePtr<Nz::Vector3f>(&vertices[0].position, sizeof(vertices[0])), vertices.size(), indices.data(), indices.size());
-	}
-
-	void DeformedChunk::BuildMesh(const Nz::Matrix4f& transformMatrix, const Nz::Color& color, std::vector<Nz::UInt32>& indices, std::vector<Nz::VertexStruct_XYZ_Color_UV>& vertices) const
-	{
-		Chunk::BuildMesh(transformMatrix, color, indices, vertices);
-
-		for (auto& vertex : vertices)
-			vertex.position = DeformPosition(vertex.position);
 	}
 
 	std::optional<Nz::Vector3ui> DeformedChunk::ComputeCoordinates(const Nz::Vector3f& position) const
@@ -37,7 +30,7 @@ namespace tsom
 
 		// Compute height
 		std::size_t z = 0;
-		for (; z < m_depth; ++z)
+		for (; z < m_size.z; ++z)
 		{
 			float depth = z * m_cellSize;
 			float dist = sdRoundBox(position, Nz::Vector3f(depth), m_deformationRadius);
@@ -45,9 +38,9 @@ namespace tsom
 				break;
 		}
 
-		if (z >= m_depth)
+		if (z >= m_size.z)
 		{
-			fmt::print("grid out of bounds (dist: {})\n", sdRoundBox(position, Nz::Vector3f((m_depth - 1) * m_cellSize), m_deformationRadius));
+			fmt::print("grid out of bounds (dist: {})\n", sdRoundBox(position, Nz::Vector3f((m_size.z - 1) * m_cellSize), m_deformationRadius));
 			return std::nullopt;
 		}
 
@@ -91,23 +84,25 @@ namespace tsom
 		Nz::Matrix4f transform = Nz::Matrix4f::Transform(rotation * Nz::Vector3f::Up() * gridHeight, rotation);
 		Nz::Matrix4f transformInverse = Nz::Matrix4f::TransformInverse(rotation * Nz::Vector3f::Up() * gridHeight, rotation);
 
-		Nz::Vector3f hitPoint = transformInverse * (ray.GetPoint(closest) - m_deformationCenter);
+		Nz::Vector3f hitPoint = ray.GetPoint(closest);
+		hitPoint += { 0.5f * m_size.x * m_cellSize, 0.5f * m_size.y * m_cellSize, 0.5f * m_size.z * m_cellSize };
+
 		Nz::Vector3f indices = hitPoint / m_cellSize;
 		if (indices.x < 0.f || indices.y < 0.f || indices.z < 0.f)
 			return std::nullopt;
 
 		Nz::Vector3ui pos(indices.x, indices.z, indices.y);
-		if (pos.x >= m_width || pos.y >= m_height || pos.z >= m_depth)
+		if (pos.x >= m_size.x || pos.y >= m_size.y || pos.z >= m_size.z)
 			return std::nullopt;
 
 		return pos;
 	}
 
-	Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> DeformedChunk::ComputeVoxelCorners(std::size_t x, std::size_t y, std::size_t z) const
+	Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> DeformedChunk::ComputeVoxelCorners(const Nz::Vector3ui& indices) const
 	{
-		float fX = x * m_cellSize;
-		float fY = y * m_cellSize;
-		float fZ = z * m_cellSize;
+		float fX = indices.x * m_cellSize - m_size.x * 0.5f * m_cellSize;
+		float fY = indices.y * m_cellSize - m_size.y * 0.5f * m_cellSize;
+		float fZ = indices.z * m_cellSize - m_size.z * 0.5f * m_cellSize;
 
 		Nz::Boxf box(fX, fZ, fY, m_cellSize, m_cellSize, m_cellSize);
 		Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> corners {
@@ -121,32 +116,8 @@ namespace tsom
 			box.GetCorner(Nz::BoxCorner::NearRightTop)
 		};
 
-		if (x == 0)
-		{
-			corners[Nz::BoxCorner::NearLeftTop].x -= m_cellSize;
-			corners[Nz::BoxCorner::FarLeftTop].x -= m_cellSize;
-		}
-
-		if (x == m_width - 1)
-		{
-			corners[Nz::BoxCorner::NearRightTop].x += m_cellSize;
-			corners[Nz::BoxCorner::FarRightTop].x += m_cellSize;
-		}
-
-		if (y == 0)
-		{
-			corners[Nz::BoxCorner::FarLeftTop].z -= m_cellSize;
-			corners[Nz::BoxCorner::FarRightTop].z -= m_cellSize;
-		}
-
-		if (y == m_height - 1)
-		{
-			corners[Nz::BoxCorner::NearLeftTop].z += m_cellSize;
-			corners[Nz::BoxCorner::NearRightTop].z += m_cellSize;
-		}
-
-		for (Nz::Vector3f& corner : corners)
-			corner = DeformPosition(corner);
+		for (auto& position : corners)
+			position = DeformPosition(position);
 
 		return corners;
 	}

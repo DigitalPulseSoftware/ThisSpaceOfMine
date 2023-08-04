@@ -19,9 +19,9 @@ namespace tsom
 			FlatChunk(FlatChunk&&) = delete;
 			~FlatChunk() = default;
 
-			std::shared_ptr<Nz::JoltCollider3D> BuildCollider(const Nz::Matrix4f& transformMatrix) const override;
+			std::shared_ptr<Nz::JoltCollider3D> BuildCollider() const override;
 			std::optional<Nz::Vector3ui> ComputeCoordinates(const Nz::Vector3f& position) const override;
-			Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> ComputeVoxelCorners(std::size_t x, std::size_t y, std::size_t z) const override;
+			Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> ComputeVoxelCorners(const Nz::Vector3ui& indices) const override;
 
 			FlatChunk& operator=(const FlatChunk&) = delete;
 			FlatChunk& operator=(FlatChunk&&) = delete;

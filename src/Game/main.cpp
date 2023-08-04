@@ -63,7 +63,8 @@ int GameMain(int argc, char* argv[])
 
 	std::shared_ptr<tsom::ConnectionState> connectionState = std::make_shared<tsom::ConnectionState>(stateData);
 
-	Nz::StateMachine fsm(connectionState);
+	Nz::StateMachine fsm;
+	fsm.PushState(connectionState);
 	fsm.PushState(std::make_shared<tsom::BackgroundState>(stateData));
 	fsm.PushState(std::make_shared<tsom::MenuState>(stateData, connectionState));
 	//Nz::StateMachine fsm(std::move(gameState));

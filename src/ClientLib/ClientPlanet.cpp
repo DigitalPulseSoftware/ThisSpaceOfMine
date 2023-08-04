@@ -7,8 +7,8 @@
 
 namespace tsom
 {
-	ClientPlanet::ClientPlanet(std::size_t gridDims, float tileSize, float cornerRadius) :
-	Planet(gridDims, tileSize, cornerRadius)
+	ClientPlanet::ClientPlanet(const Nz::Vector3ui& gridSize, float tileSize, float cornerRadius) :
+	Planet(gridSize, tileSize, cornerRadius)
 	{
 	}
 

@@ -9,14 +9,87 @@ namespace tsom
 		return Nz::Vector3f::Zero();
 	}
 
-	inline Chunk& Planet::GetChunk()
+	inline Chunk& Planet::GetChunk(const Nz::Vector3ui& indices)
 	{
-		return *m_chunk;
+		assert(indices.x < m_chunkCount.x);
+		assert(indices.y < m_chunkCount.y);
+		assert(indices.z < m_chunkCount.z);
+		return *m_chunks[m_chunkCount.z * (m_chunkCount.y * indices.z + indices.y) + indices.x];
 	}
 
-	inline const Chunk& Planet::GetChunk() const
+	inline const Chunk& Planet::GetChunk(const Nz::Vector3ui& indices) const
 	{
-		return *m_chunk;
+		assert(indices.x < m_chunkCount.x);
+		assert(indices.y < m_chunkCount.y);
+		assert(indices.z < m_chunkCount.z);
+		return *m_chunks[m_chunkCount.z * (m_chunkCount.y * indices.z + indices.y) + indices.x];
+	}
+
+	inline Chunk& Planet::GetChunkByIndices(const Nz::Vector3ui& gridPosition, Nz::Vector3ui* innerPos)
+	{
+		if (innerPos)
+			*innerPos = Nz::Vector3ui(gridPosition.x % ChunkSize, gridPosition.y % ChunkSize, gridPosition.z % ChunkSize);
+
+		return GetChunk(gridPosition / ChunkSize);
+	}
+
+	inline const Chunk& Planet::GetChunkByIndices(const Nz::Vector3ui& gridPosition, Nz::Vector3ui* innerPos) const
+	{
+		if (innerPos)
+			*innerPos = Nz::Vector3ui(gridPosition.x % ChunkSize, gridPosition.y % ChunkSize, gridPosition.z % ChunkSize);
+
+		return GetChunk(gridPosition / ChunkSize);
+	}
+
+	inline Chunk* Planet::GetChunkByPosition(const Nz::Vector3f& position, Nz::Vector3f* localPos)
+	{
+		Nz::Vector3f recenterOffset = 0.5f * Nz::Vector3f(m_gridSize) * m_tileSize;
+		Nz::Vector3f offsetPos = position + recenterOffset;
+		Nz::Vector3f chunkSize(ChunkSize * m_tileSize);
+
+		Nz::Vector3f indices = offsetPos / Nz::Vector3f(ChunkSize * m_tileSize);
+		if (indices.x < 0.f || indices.y < 0.f || indices.z < 0.f)
+			return nullptr;
+
+		Nz::Vector3ui pos(indices.x, indices.z, indices.y);
+		if (pos.x >= m_chunkCount.x || pos.y >= m_chunkCount.y || pos.z >= m_chunkCount.z)
+			return nullptr;
+
+		if (localPos)
+			*localPos = { std::fmod(offsetPos.x, chunkSize.x), std::fmod(offsetPos.y, chunkSize.y), std::fmod(offsetPos.z, chunkSize.z) };
+
+		return &GetChunk(pos);
+	}
+
+	inline const Chunk* Planet::GetChunkByPosition(const Nz::Vector3f& position, Nz::Vector3f* localPos) const
+	{
+		Nz::Vector3f recenterOffset = 0.5f * Nz::Vector3f(m_gridSize) * m_tileSize;
+		Nz::Vector3f offsetPos = position + recenterOffset;
+		Nz::Vector3f chunkSize(ChunkSize * m_tileSize);
+
+		Nz::Vector3f indices = offsetPos / Nz::Vector3f(ChunkSize * m_tileSize);
+		if (indices.x < 0.f || indices.y < 0.f || indices.z < 0.f)
+			return nullptr;
+
+		Nz::Vector3ui pos(indices.x, indices.z, indices.y);
+		if (pos.x >= m_chunkCount.x || pos.y >= m_chunkCount.y || pos.z >= m_chunkCount.z)
+			return nullptr;
+
+		if (localPos)
+			*localPos = { std::fmod(offsetPos.x, chunkSize.x), std::fmod(offsetPos.y, chunkSize.y), std::fmod(offsetPos.z, chunkSize.z) };
+
+		return &GetChunk(pos);
+	}
+
+	inline Nz::Vector3f Planet::GetChunkOffset(const Nz::Vector3ui& indices) const
+	{
+		// Recenter
+		Nz::Vector3f offset = -0.5f * Nz::Vector3f(m_gridSize) * m_tileSize - GetCenter() * 0.5f;
+
+		// Chunk offset
+		offset += Nz::Vector3f(indices.x, indices.z, indices.y) * ChunkSize * m_tileSize;
+
+		return offset;
 	}
 
 	inline float Planet::GetCornerRadius() const
@@ -24,9 +97,9 @@ namespace tsom
 		return m_cornerRadius;
 	}
 
-	inline std::size_t Planet::GetGridDimensions() const
+	inline Nz::Vector3ui Planet::GetGridDimensions() const
 	{
-		return m_gridDimensions;
+		return m_gridSize;
 	}
 
 	inline float Planet::GetTileSize() const

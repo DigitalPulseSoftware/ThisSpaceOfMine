@@ -6,11 +6,13 @@
 #include <Game/States/StateData.hpp>
 #include <CommonLib/PlayerInputs.hpp>
 #include <CommonLib/NetworkSession.hpp>
+#include <CommonLib/Utility/SignedDistanceFunctions.hpp>
 #include <Nazara/Core.hpp>
 #include <Nazara/Graphics.hpp>
 #include <Nazara/Graphics/PropertyHandler/TexturePropertyHandler.hpp>
 #include <Nazara/Graphics/PropertyHandler/UniformValuePropertyHandler.hpp>
 #include <Nazara/JoltPhysics3D.hpp>
+#include <Nazara/Math/Ray.hpp>
 #include <Nazara/Platform/Window.hpp>
 #include <Nazara/Platform/WindowEventHandler.hpp>
 #include <Nazara/Utility.hpp>
@@ -42,7 +44,7 @@ namespace tsom
 			cameraComponent.UpdateZNear(0.1f);
 		}
 
-		m_planet = std::make_unique<ClientPlanet>(40, 2.f, 16.f);
+		m_planet = std::make_unique<ClientPlanet>(Nz::Vector3ui(80), 2.f, 2.f);
 		RebuildPlanet();
 
 		m_planetEntity.emplace<Nz::DisabledComponent>();
@@ -107,7 +109,7 @@ namespace tsom
 			{
 				if (auto intersectionData = m_planet->ComputeGridCell(pos))
 				{
-					m_planet->GetChunk().UpdateCell(intersectionData->x, intersectionData->y, intersectionData->z, Nz::SafeCast<VoxelBlock>(blockIndex));
+					//m_planet->GetChunk().UpdateCell(intersectionData->x, intersectionData->y, intersectionData->z, Nz::SafeCast<VoxelBlock>(blockIndex));
 				}
 			}
 
@@ -125,7 +127,7 @@ namespace tsom
 
 #ifdef FREEFLIGHT
 		auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
-		cameraNode.SetPosition(Nz::Vector3f::Up() * (m_planet->GetGridDimensions() * m_planet->GetTileSize() * 0.5f + 1.f));
+		cameraNode.SetPosition(Nz::Vector3f::Up() * (m_planet->GetGridDimensions().z * m_planet->GetTileSize() * 0.5f + 1.f));
 #endif
 
 		m_cameraEntity.erase<Nz::DisabledComponent>();
@@ -169,7 +171,7 @@ namespace tsom
 					RebuildPlanet();
 					break;
 
-				case Nz::Keyboard::VKey::Divide:
+				/*case Nz::Keyboard::VKey::Divide:
 					m_planet = std::make_unique<ClientPlanet>(m_planet->GetGridDimensions() - 1, m_planet->GetTileSize(), m_planet->GetCornerRadius());
 					fmt::print("Dimensions size: {}\n", m_planet->GetGridDimensions());
 
@@ -181,7 +183,7 @@ namespace tsom
 					fmt::print("Dimensions size: {}\n", m_planet->GetGridDimensions());
 
 					RebuildPlanet();
-					break;
+					break;*/
 
 				default:
 					break;
@@ -341,7 +343,7 @@ namespace tsom
 		{
 			auto& physSystem = m_stateData->world->GetSystem<Nz::JoltPhysics3DSystem>();
 			Nz::Vector3f hitPos, hitNormal;
-			if (physSystem.RaycastQuery(cameraNode.GetPosition(), cameraNode.GetPosition() + cameraNode.GetForward() * 5.f, [&](const Nz::JoltPhysics3DSystem::RaycastHit& hitInfo) -> std::optional<float>
+			if (physSystem.RaycastQuery(cameraNode.GetPosition(), cameraNode.GetPosition() + cameraNode.GetForward() * 10.f, [&](const Nz::JoltPhysics3DSystem::RaycastHit& hitInfo) -> std::optional<float>
 				{
 					if (hitInfo.hitEntity != m_planetEntity)
 						return std::nullopt;
@@ -353,31 +355,37 @@ namespace tsom
 			{
 				debugDrawer.DrawLine(hitPos, hitPos + hitNormal * 0.2f, Nz::Color::Cyan());
 
-				if (auto intersectionData = m_planet->ComputeGridCell(hitPos - hitNormal * m_planet->GetTileSize() * 0.25f))
+				Nz::Vector3f localPos;
+				if (const Chunk* chunk = m_planet->GetChunkByPosition(hitPos - hitNormal * m_planet->GetTileSize() * 0.25f, &localPos))
 				{
-					auto cornerPos = m_planet->GetChunk().ComputeVoxelCorners(intersectionData->x, intersectionData->y, intersectionData->z);
+					auto coordinates = chunk->ComputeCoordinates(localPos);
+					if (coordinates)
+					{
+						auto cornerPos = chunk->ComputeVoxelCorners(*coordinates);
+						Nz::Vector3f offset = m_planet->GetChunkOffset(chunk->GetIndices());
 
-					constexpr Nz::EnumArray<Direction, std::array<Nz::BoxCorner, 4>> directionToCorners = {
-						// Back
-						std::array{ Nz::BoxCorner::NearLeftTop, Nz::BoxCorner::NearRightTop, Nz::BoxCorner::NearRightBottom, Nz::BoxCorner::NearLeftBottom },
-						// Down
-						std::array{ Nz::BoxCorner::NearLeftBottom, Nz::BoxCorner::FarLeftBottom, Nz::BoxCorner::FarRightBottom, Nz::BoxCorner::NearRightBottom },
-						// Front
-						std::array{ Nz::BoxCorner::FarLeftTop, Nz::BoxCorner::FarRightTop, Nz::BoxCorner::FarRightBottom, Nz::BoxCorner::FarLeftBottom },
-						// Left
-						std::array{ Nz::BoxCorner::FarLeftTop, Nz::BoxCorner::NearLeftTop, Nz::BoxCorner::NearLeftBottom, Nz::BoxCorner::FarLeftBottom },
-						// Right
-						std::array{ Nz::BoxCorner::FarRightTop, Nz::BoxCorner::NearRightTop, Nz::BoxCorner::NearRightBottom, Nz::BoxCorner::FarRightBottom },
-						// Up
-						std::array{ Nz::BoxCorner::NearLeftTop, Nz::BoxCorner::FarLeftTop, Nz::BoxCorner::FarRightTop, Nz::BoxCorner::NearRightTop }
-					};
+						constexpr Nz::EnumArray<Direction, std::array<Nz::BoxCorner, 4>> directionToCorners = {
+							// Back
+							std::array{ Nz::BoxCorner::NearLeftTop, Nz::BoxCorner::NearRightTop, Nz::BoxCorner::NearRightBottom, Nz::BoxCorner::NearLeftBottom },
+							// Down
+							std::array{ Nz::BoxCorner::NearLeftBottom, Nz::BoxCorner::FarLeftBottom, Nz::BoxCorner::FarRightBottom, Nz::BoxCorner::NearRightBottom },
+							// Front
+							std::array{ Nz::BoxCorner::FarLeftTop, Nz::BoxCorner::FarRightTop, Nz::BoxCorner::FarRightBottom, Nz::BoxCorner::FarLeftBottom },
+							// Left
+							std::array{ Nz::BoxCorner::FarLeftTop, Nz::BoxCorner::NearLeftTop, Nz::BoxCorner::NearLeftBottom, Nz::BoxCorner::FarLeftBottom },
+							// Right
+							std::array{ Nz::BoxCorner::FarRightTop, Nz::BoxCorner::NearRightTop, Nz::BoxCorner::NearRightBottom, Nz::BoxCorner::FarRightBottom },
+							// Up
+							std::array{ Nz::BoxCorner::NearLeftTop, Nz::BoxCorner::FarLeftTop, Nz::BoxCorner::FarRightTop, Nz::BoxCorner::NearRightTop }
+						};
 
-					auto& corners = directionToCorners[DirectionFromNormal(hitNormal)];
+						auto& corners = directionToCorners[DirectionFromNormal(hitNormal)];
 
-					debugDrawer.DrawLine(cornerPos[corners[0]], cornerPos[corners[1]], Nz::Color::Green());
-					debugDrawer.DrawLine(cornerPos[corners[1]], cornerPos[corners[2]], Nz::Color::Green());
-					debugDrawer.DrawLine(cornerPos[corners[2]], cornerPos[corners[3]], Nz::Color::Green());
-					debugDrawer.DrawLine(cornerPos[corners[3]], cornerPos[corners[0]], Nz::Color::Green());
+						debugDrawer.DrawLine(offset + cornerPos[corners[0]], offset + cornerPos[corners[1]], Nz::Color::Green());
+						debugDrawer.DrawLine(offset + cornerPos[corners[1]], offset + cornerPos[corners[2]], Nz::Color::Green());
+						debugDrawer.DrawLine(offset + cornerPos[corners[2]], offset + cornerPos[corners[3]], Nz::Color::Green());
+						debugDrawer.DrawLine(offset + cornerPos[corners[3]], offset + cornerPos[corners[0]], Nz::Color::Green());
+					}
 				}
 			}
 		}
@@ -410,6 +418,7 @@ namespace tsom
 			planeMat->SetTextureProperty("BaseColorMap", filesystem.Load<Nz::Texture>("assets/tileset.png"), blockSampler);
 			planeMat->UpdatePassesStates([&](Nz::RenderStates& states)
 			{
+				states.faceCulling = Nz::FaceCulling::None;
 				//states.primitiveMode = Nz::PrimitiveMode::LineList;
 			});
 
@@ -439,7 +448,7 @@ namespace tsom
 
 			auto& physicsSystem = m_stateData->world->GetSystem<Nz::JoltPhysics3DSystem>();
 
-			auto& planetBody = m_planetEntity.emplace<Nz::JoltRigidBody3DComponent>(physicsSystem.CreateRigidBody(settings));
+			auto& planetBody = m_planetEntity.emplace<Nz::JoltRigidBody3DComponent>(settings);
 
 #if 0
 			std::shared_ptr<Nz::Model> colliderModel;

@@ -4,8 +4,8 @@
 
 namespace tsom
 {
-	inline DeformedChunk::DeformedChunk(std::size_t width, std::size_t height, std::size_t depth, float cellSize, const Nz::Vector3f& deformationCenter, float deformationRadius) :
-	Chunk(width, height, depth, cellSize),
+	inline DeformedChunk::DeformedChunk(const Nz::Vector3ui& indices, const Nz::Vector3ui& size, float cellSize, const Nz::Vector3f& deformationCenter, float deformationRadius) :
+	Chunk(indices, size, cellSize),
 	m_deformationCenter(deformationCenter),
 	m_deformationRadius(deformationRadius)
 	{

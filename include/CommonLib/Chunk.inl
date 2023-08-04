@@ -6,118 +6,112 @@
 
 namespace tsom
 {
-	inline Chunk::Chunk(std::size_t width, std::size_t height, std::size_t depth, float cellSize) :
-	m_depth(depth),
-	m_height(height),
-	m_width(width),
-	m_cells(width * height * depth, VoxelBlock::Empty),
+	inline Chunk::Chunk(const Nz::Vector3ui& indices, const Nz::Vector3ui& size, float cellSize) :
+	m_cells(size.x * size.y * size.z, VoxelBlock::Empty),
+	m_indices(indices),
+	m_size(size),
 	m_cellSize(cellSize)
 	{
 	}
 
-	inline VoxelBlock Chunk::GetCellContent(std::size_t x, std::size_t y, std::size_t z) const
+	inline VoxelBlock Chunk::GetCellContent(const Nz::Vector3ui& indices) const
 	{
-		return m_cells[m_width * (m_height * z + y) + x];
+		return m_cells[m_size.x * (m_size.y * indices.z + indices.y) + indices.x];
 	}
 
-	inline std::size_t tsom::Chunk::GetDepth() const
-	{
-		return m_depth;
-	}
-
-	inline std::size_t Chunk::GetHeight() const
-	{
-		return m_height;
-	}
-
-	inline std::optional<VoxelBlock> Chunk::GetNeighborCell(std::size_t x, std::size_t y, std::size_t z, int xOffset, int yOffset, int zOffset) const
+	inline std::optional<VoxelBlock> Chunk::GetNeighborCell(Nz::Vector3ui indices, const Nz::Vector3i& offsets) const
 	{
 		const Chunk* currentChunk = this;
-		if (xOffset < 0)
+		if (offsets.x < 0)
 		{
-			unsigned int offset = std::abs(xOffset);
-			if (offset > x)
+			unsigned int offset = std::abs(offsets.x);
+			if (offset > indices.x)
 				return {};
 
-			x -= offset;
+			indices.x -= offset;
 		}
 		else
 		{
-			x += xOffset;
-			if (x >= m_width)
+			indices.x += offsets.x;
+			if (indices.x >= m_size.x)
 				return {};
 		}
 
-		if (yOffset < 0)
+		if (offsets.y < 0)
 		{
-			unsigned int offset = std::abs(yOffset);
-			if (offset > y)
+			unsigned int offset = std::abs(offsets.y);
+			if (offset > indices.y)
 				return {};
 
-			y -= offset;
+			indices.y -= offset;
 		}
 		else
 		{
-			y += yOffset;
-			if (y >= m_height)
+			indices.y += offsets.y;
+			if (indices.y >= m_size.y)
 				return {};
 		}
 
-		if (zOffset < 0)
+		if (offsets.z < 0)
 		{
-			unsigned int offset = std::abs(zOffset);
-			if (offset > z)
+			unsigned int offset = std::abs(offsets.z);
+			if (offset > indices.z)
 				return {};
 
-			z -= offset;
+			indices.z -= offset;
 		}
 		else
 		{
-			z += zOffset;
-			if (z >= m_height)
+			indices.z += offsets.z;
+			if (indices.z >= m_size.z)
 				return {};
 		}
 
-		/*while (zOffset > 0)
+		/*while (offsets.z > 0)
 		{
 			const NeighborGrid& neighborGrid = m_neighborGrids[Direction::Up];
 			if (!neighborGrid.grid)
 				return {};
 
 			currentChunk = neighborGrid.grid;
-			x += neighborGrid.offset.x;
-			y += neighborGrid.offset.y;
+			x += neighborGrid.offsets.x;
+			y += neighborGrid.offsets.y;
 			if (x >= currentChunk->GetWidth() || y >= currentChunk->GetHeight())
 				return {};
 
-			zOffset--;
+			offsets.z--;
 		}
 
-		while (zOffset < 0)
+		while (offsets.z < 0)
 		{
 			const NeighborGrid& neighborGrid = m_neighborGrids[Direction::Down];
 			if (!neighborGrid.grid)
 				return {};
 
 			currentChunk = neighborGrid.grid;
-			x += neighborGrid.offset.x;
-			y += neighborGrid.offset.y;
+			x += neighborGrid.offsets.x;
+			y += neighborGrid.offsets.y;
 			if (x >= currentChunk->GetWidth() || y >= currentChunk->GetHeight())
 				return {};
 
-			zOffset++;
+			offsets.z++;
 		}*/
 
-		return currentChunk->GetCellContent(x, y, z);
+		return currentChunk->GetCellContent(indices);
 	}
 
-	inline std::size_t Chunk::GetWidth() const
+	inline const Nz::Vector3ui& Chunk::GetIndices() const
 	{
-		return m_width;
+		return m_indices;
+	}
+	
+	inline const Nz::Vector3ui& Chunk::GetSize() const
+	{
+		return m_size;
 	}
 
-	inline void Chunk::UpdateCell(std::size_t x, std::size_t y, std::size_t z, VoxelBlock cellType)
+	inline void Chunk::UpdateCell(const Nz::Vector3ui& indices, VoxelBlock cellType)
 	{
-		m_cells[m_width * (m_height * z + y) + x] = cellType;
+		m_cells[m_size.x * (m_size.y * indices.z + indices.y) + indices.x] = cellType;
 	}
 }

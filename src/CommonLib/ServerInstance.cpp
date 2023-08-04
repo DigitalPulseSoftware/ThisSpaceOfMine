@@ -22,7 +22,7 @@ namespace tsom
 		physicsSystem.GetPhysWorld().SetStepSize(m_tickDuration);
 		physicsSystem.GetPhysWorld().SetGravity(Nz::Vector3f::Zero());
 
-		m_planet = std::make_unique<Planet>(40, 2.f, 16.f);
+		m_planet = std::make_unique<Planet>(Nz::Vector3ui(80), 2.f, 2.f);
 
 		m_planetEntity = m_world.CreateEntity();
 		{
@@ -35,7 +35,7 @@ namespace tsom
 				fmt::print("built collider in {}\n", fmt::streamed(colliderClock.GetElapsedTime()));
 			}
 
-			auto& planetBody = m_planetEntity.emplace<Nz::JoltRigidBody3DComponent>(physicsSystem.CreateRigidBody(settings));
+			m_planetEntity.emplace<Nz::JoltRigidBody3DComponent>(settings);
 		}
 	}
 
@@ -178,7 +178,7 @@ namespace tsom
 				auto&& [pos, block] = m_voxelGridUpdates[i];
 				if (auto intersectionData = m_planet->ComputeGridCell(pos))
 				{
-					m_planet->GetChunk().UpdateCell(intersectionData->x, intersectionData->y, intersectionData->z, block);
+					//m_planet->GetChunk().UpdateCell(intersectionData->x, intersectionData->y, intersectionData->z, block);
 
 					voxelGridUpdatePacket.updates.push_back({
 						pos,

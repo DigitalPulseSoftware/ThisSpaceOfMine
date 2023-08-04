@@ -14,16 +14,15 @@ namespace tsom
 	class DeformedChunk : public Chunk
 	{
 		public:
-			inline DeformedChunk(std::size_t width, std::size_t height, std::size_t depth, float cellSize, const Nz::Vector3f& deformationCenter, float deformationRadius);
+			inline DeformedChunk(const Nz::Vector3ui& indices, const Nz::Vector3ui& size, float cellSize, const Nz::Vector3f& deformationCenter, float deformationRadius);
 			DeformedChunk(const DeformedChunk&) = delete;
 			DeformedChunk(DeformedChunk&&) = delete;
 			~DeformedChunk() = default;
 
-			std::shared_ptr<Nz::JoltCollider3D> BuildCollider(const Nz::Matrix4f& transformMatrix) const override;
-			void BuildMesh(const Nz::Matrix4f& transformMatrix, const Nz::Color& color, std::vector<Nz::UInt32>& indices, std::vector<Nz::VertexStruct_XYZ_Color_UV>& vertices) const override;
+			std::shared_ptr<Nz::JoltCollider3D> BuildCollider() const override;
 
 			std::optional<Nz::Vector3ui> ComputeCoordinates(const Nz::Vector3f& position) const override;
-			Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> ComputeVoxelCorners(std::size_t x, std::size_t y, std::size_t z) const override;
+			Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> ComputeVoxelCorners(const Nz::Vector3ui& indices) const override;
 
 			Nz::Vector3f DeformPosition(const Nz::Vector3f& position) const;
 

@@ -8,7 +8,7 @@
 
 namespace tsom
 {
-	void Chunk::BuildMesh(const Nz::Matrix4f& transformMatrix, const Nz::Color& color, std::vector<Nz::UInt32>& indices, std::vector<Nz::VertexStruct_XYZ_Color_UV>& vertices) const
+	void Chunk::BuildMesh(const Nz::Matrix4f& transformMatrix, std::vector<Nz::UInt32>& indices, std::vector<Nz::VertexStruct_XYZ_Color_UV>& vertices) const
 	{
 		std::random_device rd;
 		std::bernoulli_distribution dis(0.9);
@@ -56,7 +56,7 @@ namespace tsom
 
 			std::size_t n = vertices.size();
 			for (std::size_t i = 0; i < 4; ++i)
-				vertices.push_back({ transformMatrix * pos[i], color, uvs[i] });
+				vertices.push_back({ transformMatrix * pos[i], Nz::Color::White(), uvs[i]});
 
 			if (reverseWinding)
 			{
@@ -80,40 +80,40 @@ namespace tsom
 			}
 		};
 
-		for (std::size_t z = 0; z < m_depth; ++z)
+		for (unsigned int z = 0; z < m_size.z; ++z)
 		{
-			for (std::size_t y = 0; y < m_height; ++y)
+			for (unsigned int y = 0; y < m_size.y; ++y)
 			{
-				for (std::size_t x = 0; x < m_width; ++x)
+				for (unsigned int x = 0; x < m_size.x; ++x)
 				{
-					VoxelBlock cell = GetCellContent(x, y, z);
+					VoxelBlock cell = GetCellContent({ x, y, z });
 					if (cell == VoxelBlock::Empty)
 						continue;
 
-					Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> corners = ComputeVoxelCorners(x, y, z);
+					Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> corners = ComputeVoxelCorners({ x, y, z });
 
 					// Up
-					if (auto neighborOpt = GetNeighborCell(x, y, z, 0, 0, 1); !neighborOpt || neighborOpt == VoxelBlock::Empty)
+					if (auto neighborOpt = GetNeighborCell({ x, y, z }, { 0, 0, 1 }); !neighborOpt || neighborOpt == VoxelBlock::Empty)
 						DrawFace(Direction::Up, cell, { corners[Nz::BoxCorner::NearLeftTop], corners[Nz::BoxCorner::FarLeftTop], corners[Nz::BoxCorner::NearRightTop], corners[Nz::BoxCorner::FarRightTop] }, false);
 
 					// Down
-					if (auto neighborOpt = GetNeighborCell(x, y, z, 0, 0, -1); !neighborOpt || neighborOpt == VoxelBlock::Empty)
+					if (auto neighborOpt = GetNeighborCell({ x, y, z }, { 0, 0, -1 }); !neighborOpt || neighborOpt == VoxelBlock::Empty)
 						DrawFace(Direction::Down, cell, { corners[Nz::BoxCorner::NearLeftBottom], corners[Nz::BoxCorner::FarLeftBottom], corners[Nz::BoxCorner::NearRightBottom], corners[Nz::BoxCorner::FarRightBottom] }, true);
 
 					// Front
-					if (auto neighborOpt = GetNeighborCell(x, y, z, 0, -1, 0); !neighborOpt || neighborOpt == VoxelBlock::Empty)
+					if (auto neighborOpt = GetNeighborCell({ x, y, z }, { 0, -1, 0 }); !neighborOpt || neighborOpt == VoxelBlock::Empty)
 						DrawFace(Direction::Front, cell, { corners[Nz::BoxCorner::FarLeftTop], corners[Nz::BoxCorner::FarRightTop], corners[Nz::BoxCorner::FarLeftBottom], corners[Nz::BoxCorner::FarRightBottom] }, true);
 
 					// Back
-					if (auto neighborOpt = GetNeighborCell(x, y, z, 0, 1, 0); !neighborOpt || neighborOpt == VoxelBlock::Empty)
+					if (auto neighborOpt = GetNeighborCell({ x, y, z }, { 0, 1, 0 }); !neighborOpt || neighborOpt == VoxelBlock::Empty)
 						DrawFace(Direction::Back, cell, { corners[Nz::BoxCorner::NearLeftTop], corners[Nz::BoxCorner::NearRightTop], corners[Nz::BoxCorner::NearLeftBottom], corners[Nz::BoxCorner::NearRightBottom] }, false);
 
 					// Left
-					if (auto neighborOpt = GetNeighborCell(x, y, z, -1, 0, 0); !neighborOpt || neighborOpt == VoxelBlock::Empty)
+					if (auto neighborOpt = GetNeighborCell({ x, y, z }, { -1, 0, 0 }); !neighborOpt || neighborOpt == VoxelBlock::Empty)
 						DrawFace(Direction::Left, cell, { corners[Nz::BoxCorner::FarLeftTop], corners[Nz::BoxCorner::NearLeftTop], corners[Nz::BoxCorner::FarLeftBottom], corners[Nz::BoxCorner::NearLeftBottom] }, false);
 
 					// Right
-					if (auto neighborOpt = GetNeighborCell(x, y, z, 1, 0, 0); !neighborOpt || neighborOpt == VoxelBlock::Empty)
+					if (auto neighborOpt = GetNeighborCell({ x, y, z }, { 1, 0, 0 }); !neighborOpt || neighborOpt == VoxelBlock::Empty)
 						DrawFace(Direction::Right, cell, { corners[Nz::BoxCorner::FarRightTop], corners[Nz::BoxCorner::NearRightTop], corners[Nz::BoxCorner::FarRightBottom], corners[Nz::BoxCorner::NearRightBottom] }, true);
 				}
 			}

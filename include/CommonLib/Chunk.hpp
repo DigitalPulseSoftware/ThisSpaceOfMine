@@ -27,33 +27,31 @@ namespace tsom
 	class Chunk
 	{
 		public:
-			inline Chunk(std::size_t width, std::size_t height, std::size_t depth, float cellSize);
+			inline Chunk(const Nz::Vector3ui& indices, const Nz::Vector3ui& size, float cellSize);
 			Chunk(const Chunk&) = delete;
 			Chunk(Chunk&&) = delete;
 			~Chunk() = default;
 
-			virtual std::shared_ptr<Nz::JoltCollider3D> BuildCollider(const Nz::Matrix4f& transformMatrix) const = 0;
-			virtual void BuildMesh(const Nz::Matrix4f& transformMatrix, const Nz::Color& color, std::vector<Nz::UInt32>& indices, std::vector<Nz::VertexStruct_XYZ_Color_UV>& vertices) const;
+			virtual std::shared_ptr<Nz::JoltCollider3D> BuildCollider() const = 0;
+			virtual void BuildMesh(const Nz::Matrix4f& transformMatrix, std::vector<Nz::UInt32>& indices, std::vector<Nz::VertexStruct_XYZ_Color_UV>& vertices) const;
 
 			virtual std::optional<Nz::Vector3ui> ComputeCoordinates(const Nz::Vector3f& position) const = 0;
-			virtual Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> ComputeVoxelCorners(std::size_t x, std::size_t y, std::size_t z) const = 0;
+			virtual Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> ComputeVoxelCorners(const Nz::Vector3ui& indices) const = 0;
 
-			inline VoxelBlock GetCellContent(std::size_t x, std::size_t y, std::size_t z) const;
-			inline std::size_t GetDepth() const;
-			inline std::size_t GetHeight() const;
-			inline std::optional<VoxelBlock> GetNeighborCell(std::size_t x, std::size_t y, std::size_t z, int xOffset, int yOffset, int zOffset) const;
-			inline std::size_t GetWidth() const;
+			inline VoxelBlock GetCellContent(const Nz::Vector3ui& indices) const;
+			inline const Nz::Vector3ui& GetIndices() const;
+			inline std::optional<VoxelBlock> GetNeighborCell(Nz::Vector3ui indices, const Nz::Vector3i& offsets) const;
+			inline const Nz::Vector3ui& GetSize() const;
 
-			inline void UpdateCell(std::size_t x, std::size_t y, std::size_t z, VoxelBlock cellType);
+			inline void UpdateCell(const Nz::Vector3ui& indices, VoxelBlock cellType);
 
 			Chunk& operator=(const Chunk&) = delete;
 			Chunk& operator=(Chunk&&) = delete;
 
 		protected:
-			std::size_t m_depth;
-			std::size_t m_height;
-			std::size_t m_width;
 			std::vector<VoxelBlock> m_cells;
+			Nz::Vector3ui m_indices;
+			Nz::Vector3ui m_size;
 			float m_cellSize;
 	};
 }

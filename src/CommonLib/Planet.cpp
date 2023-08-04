@@ -3,6 +3,8 @@
 // For conditions of distribution and use, see copyright notice in Config.hpp
 
 #include <CommonLib/Planet.hpp>
+#include <CommonLib/DeformedChunk.hpp>
+#include <CommonLib/FlatChunk.hpp>
 #include <CommonLib/Utility/SignedDistanceFunctions.hpp>
 #include <Nazara/Math/Ray.hpp>
 #include <Nazara/JoltPhysics3D/JoltCollider3D.hpp>
@@ -12,29 +14,67 @@
 
 namespace tsom
 {
-	Planet::Planet(std::size_t gridDims, float tileSize, float cornerRadius) :
-	m_gridDimensions(gridDims),
+	Planet::Planet(const Nz::Vector3ui& gridSize, float tileSize, float cornerRadius) :
+	m_gridSize(gridSize),
 	m_cornerRadius(cornerRadius),
 	m_tileSize(tileSize)
 	{
 		RebuildGrid();
 	}
-	
+
 	std::shared_ptr<Nz::JoltCollider3D> Planet::BuildCollider()
 	{
-		return m_chunk->BuildCollider(Nz::Matrix4f::Translate(Nz::Vector3f(m_gridDimensions * 0.5f * m_tileSize)));
+		std::vector<Nz::JoltCompoundCollider3D::ChildCollider> colliders;
+
+		for (unsigned int z = 0; z < m_chunkCount.z; ++z)
+		{
+			for (unsigned int y = 0; y < m_chunkCount.y; ++y)
+			{
+				for (unsigned int x = 0; x < m_chunkCount.x; ++x)
+				{
+					auto& colliderEntry = colliders.emplace_back();
+
+					auto& chunk = *m_chunks[m_chunkCount.x * (z * m_chunkCount.y + y) + x];
+					colliderEntry.collider = chunk.BuildCollider();
+					colliderEntry.offset = GetChunkOffset({ x, y, z });
+				}
+			}
+		}
+
+		return std::make_shared<Nz::JoltCompoundCollider3D>(std::move(colliders));
 	}
 
 	std::optional<Nz::Vector3ui> Planet::ComputeGridCell(const Nz::Vector3f& position) const
 	{
-		return m_chunk->ComputeCoordinates(position);
+		Nz::Vector3f recenterOffset = 0.5f * Nz::Vector3f(m_chunkCount) * ChunkSize * m_tileSize;
+		Nz::Vector3f indices = position + recenterOffset;
+		indices /= Nz::Vector3f(ChunkSize * m_tileSize);
+
+		if (indices.x < 0.f || indices.y < 0.f || indices.z < 0.f)
+			return std::nullopt;
+
+		Nz::Vector3ui pos(indices.x, indices.z, indices.y);
+		if (pos.x >= m_chunkCount.x || pos.y >= m_chunkCount.y || pos.z >= m_chunkCount.z)
+			return std::nullopt;
+
+		return m_chunks[m_chunkCount.z * (m_chunkCount.y * pos.z + pos.y) + pos.x]->ComputeCoordinates(position);
 	}
 
 	void Planet::BuildMesh(std::vector<Nz::UInt32>& indices, std::vector<Nz::VertexStruct_XYZ_Color_UV>& vertices)
 	{
-		m_chunk->BuildMesh(Nz::Matrix4f::Translate(Nz::Vector3f(m_gridDimensions * 0.5f * m_tileSize)), Nz::Color::White(), indices, vertices);
+		for (unsigned int z = 0; z < m_chunkCount.z; ++z)
+		{
+			for (unsigned int y = 0; y < m_chunkCount.y; ++y)
+			{
+				for (unsigned int x = 0; x < m_chunkCount.x; ++x)
+				{
+					auto& chunk = *m_chunks[m_chunkCount.x * (z * m_chunkCount.y + y) + x];
+					chunk.BuildMesh(Nz::Matrix4f::Translate(GetChunkOffset({ x, y, z })), indices, vertices);
+				}
+			}
+		}
 
-		float maxHeight = m_gridDimensions / 2 * m_tileSize;
+		float maxHeight = m_gridSize.y / 2 * m_tileSize;
 
 		Nz::Vector3f center = GetCenter();
 		for (Nz::VertexStruct_XYZ_Color_UV& vert : vertices)
@@ -53,19 +93,40 @@ namespace tsom
 	{
 		constexpr std::size_t freeSpace = 10;
 
-		m_chunk = std::make_unique<DeformedChunk>(m_gridDimensions, m_gridDimensions, m_gridDimensions, m_tileSize, Nz::Vector3f::Zero(), m_cornerRadius);
-		for (std::size_t z = 0; z < m_gridDimensions; ++z)
+		m_chunkCount = Nz::Vector3ui((m_gridSize + Nz::Vector3ui(ChunkSize - 1)) / ChunkSize);
+		m_chunks.resize(m_chunkCount.x * m_chunkCount.y * m_chunkCount.z);
+		for (unsigned int z = 0; z < m_chunkCount.z; ++z)
 		{
-			for (std::size_t y = 0; y < m_gridDimensions; ++y)
+			for (unsigned int y = 0; y < m_chunkCount.y; ++y)
 			{
-				for (std::size_t x = 0; x < m_gridDimensions; ++x)
+				for (unsigned int x = 0; x < m_chunkCount.x; ++x)
+					m_chunks[z * m_chunkCount.y * m_chunkCount.x + y * m_chunkCount.x + x] = std::make_unique<FlatChunk>(Nz::Vector3ui{ x, y, z }, Nz::Vector3ui{ ChunkSize }, m_tileSize);
+			}
+		}
+
+		for (unsigned int z = 0; z < m_gridSize.z; ++z)
+		{
+			for (unsigned int y = 0; y < m_gridSize.y; ++y)
+			{
+				for (unsigned int x = 0; x < m_gridSize.x; ++x)
 				{
-					if (x < freeSpace || x >= m_gridDimensions - freeSpace ||
-						y < freeSpace || y >= m_gridDimensions - freeSpace ||
-						z < freeSpace || z >= m_gridDimensions - freeSpace)
+					if (x < freeSpace || x >= m_gridSize.x - freeSpace ||
+						y < freeSpace || y >= m_gridSize.y - freeSpace ||
+						z < freeSpace || z >= m_gridSize.z - freeSpace)
 						continue;
 
-					m_chunk->UpdateCell(x, y, z, VoxelBlock::Grass);
+					unsigned int depth = z - freeSpace;
+					VoxelBlock blockType;
+					if (depth == 0)
+						blockType = VoxelBlock::Grass;
+					else if (depth <= 3)
+						blockType = VoxelBlock::Dirt;
+					else
+						blockType = VoxelBlock::Stone;
+
+					Nz::Vector3ui innerCoordinates;
+					Chunk& chunk = GetChunkByIndices({ x, y, z }, &innerCoordinates);
+					chunk.UpdateCell(innerCoordinates, VoxelBlock::Grass);
 				}
 			}
 		}
