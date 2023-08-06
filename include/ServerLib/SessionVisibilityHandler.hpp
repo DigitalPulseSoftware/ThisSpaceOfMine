@@ -4,11 +4,12 @@
 
 #pragma once
 
-#ifndef TSOM_COMMONLIB_SESSIONVISIBILITYHANDLER_HPP
-#define TSOM_COMMONLIB_SESSIONVISIBILITYHANDLER_HPP
+#ifndef TSOM_SERVERLIB_SESSIONVISIBILITYHANDLER_HPP
+#define TSOM_SERVERLIB_SESSIONVISIBILITYHANDLER_HPP
 
 #include <CommonLib/Chunk.hpp>
 #include <CommonLib/Protocol/Packets.hpp>
+#include <ServerLib/Export.hpp>
 #include <NazaraUtils/Bitset.hpp>
 #include <entt/entt.hpp>
 #include <tsl/hopscotch_map.h>
@@ -18,7 +19,7 @@ namespace tsom
 {
 	class NetworkSession;
 
-	class TSOM_COMMONLIB_API SessionVisibilityHandler
+	class TSOM_SERVERLIB_API SessionVisibilityHandler
 	{
 		public:
 			struct CreateEntityData;
@@ -84,6 +85,6 @@ namespace tsom
 	};
 }
 
-#include <CommonLib/SessionVisibilityHandler.inl>
+#include <ServerLib/SessionVisibilityHandler.inl>
 
 #endif

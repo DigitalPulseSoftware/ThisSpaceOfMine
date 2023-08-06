@@ -4,18 +4,18 @@
 
 #pragma once
 
-#ifndef TSOM_COMMONLIB_SERVERINSTANCEAPPCOMPONENT_HPP
-#define TSOM_COMMONLIB_SERVERINSTANCEAPPCOMPONENT_HPP
+#ifndef TSOM_SERVERLIB_SERVERINSTANCEAPPCOMPONENT_HPP
+#define TSOM_SERVERLIB_SERVERINSTANCEAPPCOMPONENT_HPP
 
-#include <CommonLib/Export.hpp>
-#include <CommonLib/ServerInstance.hpp>
+#include <ServerLib/Export.hpp>
+#include <ServerLib/ServerInstance.hpp>
 #include <Nazara/Core/ApplicationComponent.hpp>
 #include <memory>
 #include <vector>
 
 namespace tsom
 {
-	class TSOM_COMMONLIB_API ServerInstanceAppComponent : public Nz::ApplicationComponent
+	class TSOM_SERVERLIB_API ServerInstanceAppComponent : public Nz::ApplicationComponent
 	{
 		public:
 			using ApplicationComponent::ApplicationComponent;
@@ -35,6 +35,6 @@ namespace tsom
 	};
 }
 
-#include <CommonLib/ServerInstanceAppComponent.inl>
+#include <ServerLib/ServerInstanceAppComponent.inl>
 
 #endif

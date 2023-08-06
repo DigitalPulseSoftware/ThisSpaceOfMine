@@ -2,8 +2,8 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
-#include <CommonLib/Session/PlayerSessionHandler.hpp>
-#include <CommonLib/ServerInstance.hpp>
+#include <ServerLib/Session/PlayerSessionHandler.hpp>
+#include <ServerLib/ServerInstance.hpp>
 #include <CommonLib/VoxelBlock.hpp>
 #include <fmt/format.h>
 

@@ -4,17 +4,8 @@
 
 #pragma once
 
-#ifndef TSOM_COMMONLIB_COMPONENTS_NETWORKEDCOMPONENT_HPP
-#define TSOM_COMMONLIB_COMPONENTS_NETWORKEDCOMPONENT_HPP
-
-#include <CommonLib/Export.hpp>
-#include <CommonLib/PlayerInputs.hpp>
-#include <Nazara/JoltPhysics3D/JoltCharacter.hpp>
-#include <Nazara/Math/Box.hpp>
-#include <Nazara/Math/Quaternion.hpp>
-#include <Nazara/Math/Vector3.hpp>
-#include <entt/entt.hpp>
-#include <optional>
+#ifndef TSOM_SERVERLIB_COMPONENTS_NETWORKEDCOMPONENT_HPP
+#define TSOM_SERVERLIB_COMPONENTS_NETWORKEDCOMPONENT_HPP
 
 namespace tsom
 {
@@ -32,6 +23,6 @@ namespace tsom
 	};
 }
 
-#include <CommonLib/Components/NetworkedComponent.inl>
+#include <ServerLib/Components/NetworkedComponent.inl>
 
-#endif // TSOM_COMMONLIB_COMPONENTS_NETWORKEDCOMPONENT_HPP
+#endif // TSOM_SERVERLIB_COMPONENTS_NETWORKEDCOMPONENT_HPP

@@ -4,10 +4,10 @@
 
 #pragma once
 
-#ifndef TSOM_COMMONLIB_SESSION_INITIALSESSIONHANDLER_HPP
-#define TSOM_COMMONLIB_SESSION_INITIALSESSIONHANDLER_HPP
+#ifndef TSOM_SERVERLIB_SESSION_INITIALSESSIONHANDLER_HPP
+#define TSOM_SERVERLIB_SESSION_INITIALSESSIONHANDLER_HPP
 
-#include <CommonLib/Export.hpp>
+#include <ServerLib/Export.hpp>
 #include <CommonLib/SessionHandler.hpp>
 #include <CommonLib/Protocol/Packets.hpp>
 
@@ -15,7 +15,7 @@ namespace tsom
 {
 	class ServerInstance;
 
-	class TSOM_COMMONLIB_API InitialSessionHandler : public SessionHandler
+	class TSOM_SERVERLIB_API InitialSessionHandler : public SessionHandler
 	{
 		public:
 			InitialSessionHandler(ServerInstance& instance, NetworkSession* session);
@@ -28,6 +28,6 @@ namespace tsom
 	};
 }
 
-#include <CommonLib/Session/InitialSessionHandler.inl>
+#include <ServerLib/Session/InitialSessionHandler.inl>
 
 #endif

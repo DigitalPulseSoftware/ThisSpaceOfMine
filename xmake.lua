@@ -2,6 +2,7 @@
 -- Should the CommonLib be compiled statically? (takes more space)
 option("commonlib_static", { default = false, defines = "TSOM_COMMONLIB_STATIC"})
 option("clientlib_static", { default = false, defines = "TSOM_CLIENTLIB_STATIC"})
+option("serverlib_static", { default = false,  defines = "TSOM_SERVERLIB_STATIC"})
 
 add_repositories("nazara-repo https://github.com/NazaraEngine/xmake-repo.git")
 add_requires("nazaraengine", { configs = { debug = is_mode("debug"), with_symbols = true }})
@@ -109,6 +110,22 @@ const char* BuildDate = "%s";
 
 end)
 
+target("ServerLib", function ()
+	set_group("Common")
+	set_basename("TSOMServer")
+	add_headerfiles("include/(ServerLib/**.hpp)", "include/(ServerLib/**.inl)")
+	add_headerfiles("src/ServerLib/**.hpp", "src/ServerLib/**.inl", { install = false })
+	add_files("src/ServerLib/**.cpp")
+	add_deps("CommonLib", { public = true })
+
+	after_load(function (target)
+		target:set("kind", target:dep("serverlib_static") and "static" or "shared")
+	end)
+
+	add_defines("TSOM_SERVERLIB_BUILD")
+	add_options("serverlib_static")
+end)
+
 target("ClientLib", function ()
 	set_group("Common")
 	set_basename("TSOMClient")
@@ -156,7 +173,7 @@ end)
 target("TSOMServer", function ()
 	set_group("Executable")
 	set_basename("ThisServerOfMine")
-	add_deps("CommonLib", "Main")
+	add_deps("ServerLib", "Main")
 
 	add_defines("TSOM_SERVER_BUILD")
 

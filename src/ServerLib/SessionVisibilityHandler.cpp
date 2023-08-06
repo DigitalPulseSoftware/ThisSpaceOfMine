@@ -2,7 +2,7 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
-#include <CommonLib/SessionVisibilityHandler.hpp>
+#include <ServerLib/SessionVisibilityHandler.hpp>
 #include <CommonLib/NetworkSession.hpp>
 #include <NazaraUtils/Algorithm.hpp>
 #include <Nazara/Utility/Components/NodeComponent.hpp>

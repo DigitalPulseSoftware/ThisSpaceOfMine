@@ -4,11 +4,11 @@
 
 #pragma once
 
-#ifndef TSOM_COMMONLIB_COMPONENTS_SERVERPLAYERCONTROLLEDCOMPONENT_HPP
-#define TSOM_COMMONLIB_COMPONENTS_SERVERPLAYERCONTROLLEDCOMPONENT_HPP
+#ifndef TSOM_SERVERLIB_COMPONENTS_SERVERPLAYERCONTROLLEDCOMPONENT_HPP
+#define TSOM_SERVERLIB_COMPONENTS_SERVERPLAYERCONTROLLEDCOMPONENT_HPP
 
 #include <CommonLib/Export.hpp>
-#include <CommonLib/ServerPlayer.hpp>
+#include <ServerLib/ServerPlayer.hpp>
 #include <Nazara/Core/ObjectHandle.hpp>
 #include <entt/entt.hpp>
 #include <vector>
@@ -35,6 +35,6 @@ namespace tsom
 	};
 }
 
-#include <CommonLib/Components/ServerPlayerControlledComponent.inl>
+#include <ServerLib/Components/ServerPlayerControlledComponent.inl>
 
-#endif // TSOM_COMMONLIB_COMPONENTS_SERVERPLAYERCONTROLLEDCOMPONENT_HPP
+#endif // TSOM_SERVERLIB_COMPONENTS_SERVERPLAYERCONTROLLEDCOMPONENT_HPP

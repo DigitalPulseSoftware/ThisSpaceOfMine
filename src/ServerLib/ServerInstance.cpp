@@ -2,8 +2,8 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
-#include <CommonLib/ServerInstance.hpp>
-#include <CommonLib/NetworkedEntitiesSystem.hpp>
+#include <ServerLib/ServerInstance.hpp>
+#include <ServerLib/NetworkedEntitiesSystem.hpp>
 #include <Nazara/JoltPhysics3D/Systems/JoltPhysics3DSystem.hpp>
 #include <Nazara/Utility/Components.hpp>
 #include <fmt/format.h>

@@ -4,13 +4,13 @@
 
 #pragma once
 
-#ifndef TSOM_COMMONLIB_SERVERINSTANCE_HPP
-#define TSOM_COMMONLIB_SERVERINSTANCE_HPP
+#ifndef TSOM_SERVERLIB_SERVERINSTANCE_HPP
+#define TSOM_SERVERLIB_SERVERINSTANCE_HPP
 
-#include <CommonLib/Export.hpp>
+#include <ServerLib/Export.hpp>
 #include <CommonLib/Planet.hpp>
 #include <CommonLib/NetworkSessionManager.hpp>
-#include <CommonLib/ServerPlayer.hpp>
+#include <ServerLib/ServerPlayer.hpp>
 #include <CommonLib/VoxelBlock.hpp>
 #include <NazaraUtils/Bitset.hpp>
 #include <NazaraUtils/MemoryPool.hpp>
@@ -21,7 +21,7 @@
 
 namespace tsom
 {
-	class TSOM_COMMONLIB_API ServerInstance
+	class TSOM_SERVERLIB_API ServerInstance
 	{
 		public:
 			ServerInstance();
@@ -72,6 +72,6 @@ namespace tsom
 	};
 }
 
-#include <CommonLib/ServerInstance.inl>
+#include <ServerLib/ServerInstance.inl>
 
 #endif

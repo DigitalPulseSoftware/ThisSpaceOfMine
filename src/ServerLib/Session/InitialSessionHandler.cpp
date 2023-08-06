@@ -2,11 +2,11 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
-#include <CommonLib/Session/InitialSessionHandler.hpp>
-#include <CommonLib/NetworkedEntitiesSystem.hpp>
-#include <CommonLib/ServerPlayer.hpp>
-#include <CommonLib/ServerInstance.hpp>
-#include <CommonLib/Session/PlayerSessionHandler.hpp>
+#include <ServerLib/Session/InitialSessionHandler.hpp>
+#include <ServerLib/NetworkedEntitiesSystem.hpp>
+#include <ServerLib/ServerPlayer.hpp>
+#include <ServerLib/ServerInstance.hpp>
+#include <ServerLib/Session/PlayerSessionHandler.hpp>
 #include <fmt/format.h>
 
 namespace tsom

@@ -2,10 +2,10 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
-#include <CommonLib/NetworkedEntitiesSystem.hpp>
-#include <CommonLib/ServerInstance.hpp>
-#include <CommonLib/Components/NetworkedComponent.hpp>
-#include <CommonLib/Components/ServerPlayerControlledComponent.hpp>
+#include <ServerLib/NetworkedEntitiesSystem.hpp>
+#include <ServerLib/ServerInstance.hpp>
+#include <ServerLib/Components/NetworkedComponent.hpp>
+#include <ServerLib/Components/ServerPlayerControlledComponent.hpp>
 #include <Nazara/Core/Components/DisabledComponent.hpp>
 #include <Nazara/JoltPhysics3D/Components/JoltCharacterComponent.hpp>
 #include <Nazara/JoltPhysics3D/Components/JoltRigidBody3DComponent.hpp>

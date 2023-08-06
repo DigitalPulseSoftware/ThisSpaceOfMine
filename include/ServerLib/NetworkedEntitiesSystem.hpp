@@ -4,11 +4,11 @@
 
 #pragma once
 
-#ifndef TSOM_COMMONLIB_NETWORKEDENTITIESYSTEM_HPP
-#define TSOM_COMMONLIB_NETWORKEDENTITIESYSTEM_HPP
+#ifndef TSOM_SERVERLIB_NETWORKEDENTITIESYSTEM_HPP
+#define TSOM_SERVERLIB_NETWORKEDENTITIESYSTEM_HPP
 
-#include <CommonLib/Export.hpp>
-#include <CommonLib/SessionVisibilityHandler.hpp>
+#include <ServerLib/Export.hpp>
+#include <ServerLib/SessionVisibilityHandler.hpp>
 #include <NazaraUtils/FunctionRef.hpp>
 #include <NazaraUtils/TypeList.hpp>
 #include <Nazara/Core/Time.hpp>
@@ -19,7 +19,7 @@ namespace tsom
 {
 	class ServerInstance;
 
-	class TSOM_COMMONLIB_API NetworkedEntitiesSystem
+	class TSOM_SERVERLIB_API NetworkedEntitiesSystem
 	{
 		public:
 			static constexpr bool AllowConcurrent = false;
@@ -54,6 +54,6 @@ namespace tsom
 	};
 }
 
-#include <CommonLib/NetworkedEntitiesSystem.inl>
+#include <ServerLib/NetworkedEntitiesSystem.inl>
 
 #endif

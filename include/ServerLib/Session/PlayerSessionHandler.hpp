@@ -4,17 +4,17 @@
 
 #pragma once
 
-#ifndef TSOM_COMMONLIB_SESSION_PLAYERSESSIONHANDLER_HPP
-#define TSOM_COMMONLIB_SESSION_PLAYERSESSIONHANDLER_HPP
+#ifndef TSOM_SERVERLIB_SESSION_PLAYERSESSIONHANDLER_HPP
+#define TSOM_SERVERLIB_SESSION_PLAYERSESSIONHANDLER_HPP
 
-#include <CommonLib/Export.hpp>
+#include <ServerLib/Export.hpp>
 #include <CommonLib/SessionHandler.hpp>
-#include <CommonLib/ServerPlayer.hpp>
+#include <ServerLib/ServerPlayer.hpp>
 #include <CommonLib/Protocol/Packets.hpp>
 
 namespace tsom
 {
-	class TSOM_COMMONLIB_API PlayerSessionHandler : public SessionHandler
+	class TSOM_SERVERLIB_API PlayerSessionHandler : public SessionHandler
 	{
 		public:
 			PlayerSessionHandler(NetworkSession* session, ServerPlayer* player);
@@ -29,6 +29,6 @@ namespace tsom
 	};
 }
 
-#include <CommonLib/Session/PlayerSessionHandler.inl>
+#include <ServerLib/Session/PlayerSessionHandler.inl>
 
 #endif

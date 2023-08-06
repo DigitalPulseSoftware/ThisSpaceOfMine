@@ -4,12 +4,12 @@
 
 #pragma once
 
-#ifndef TSOM_COMMONLIB_SERVERPLAYER_HPP
-#define TSOM_COMMONLIB_SERVERPLAYER_HPP
+#ifndef TSOM_SERVERLIB_SERVERPLAYER_HPP
+#define TSOM_SERVERLIB_SERVERPLAYER_HPP
 
-#include <CommonLib/Export.hpp>
+#include <ServerLib/Export.hpp>
 #include <CommonLib/PlayerIndex.hpp>
-#include <CommonLib/SessionVisibilityHandler.hpp>
+#include <ServerLib/SessionVisibilityHandler.hpp>
 #include <Nazara/Core/HandledObject.hpp>
 #include <Nazara/Core/ObjectHandle.hpp>
 #include <entt/entt.hpp>
@@ -24,7 +24,7 @@ namespace tsom
 
 	using ServerPlayerHandle = Nz::ObjectHandle<ServerPlayer>;
 
-	class TSOM_COMMONLIB_API ServerPlayer : public Nz::HandledObject<ServerPlayer>
+	class TSOM_SERVERLIB_API ServerPlayer : public Nz::HandledObject<ServerPlayer>
 	{
 		public:
 			inline ServerPlayer(ServerInstance& instance, PlayerIndex playerIndex, NetworkSession* session, std::string nickname);
@@ -62,6 +62,6 @@ namespace tsom
 	};
 }
 
-#include <CommonLib/ServerPlayer.inl>
+#include <ServerLib/ServerPlayer.inl>
 
-#endif // TSOM_COMMONLIB_SERVERPLAYER_HPP
+#endif // TSOM_SERVERLIB_SERVERPLAYER_HPP

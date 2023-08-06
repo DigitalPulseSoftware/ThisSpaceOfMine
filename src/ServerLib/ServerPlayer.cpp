@@ -2,11 +2,11 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in Config.hpp
 
-#include <CommonLib/ServerPlayer.hpp>
+#include <ServerLib/ServerPlayer.hpp>
 #include <CommonLib/CharacterController.hpp>
-#include <CommonLib/ServerInstance.hpp>
-#include <CommonLib/Components/NetworkedComponent.hpp>
-#include <CommonLib/Components/ServerPlayerControlledComponent.hpp>
+#include <ServerLib/ServerInstance.hpp>
+#include <ServerLib/Components/NetworkedComponent.hpp>
+#include <ServerLib/Components/ServerPlayerControlledComponent.hpp>
 #include <Nazara/JoltPhysics3D/Systems/JoltPhysics3DSystem.hpp>
 #include <Nazara/Utility/Components/NodeComponent.hpp>
 

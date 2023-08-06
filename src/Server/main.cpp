@@ -1,8 +1,8 @@
 #include <Nazara/Core.hpp>
 #include <Nazara/JoltPhysics3D/JoltPhysics3D.hpp>
 #include <Nazara/Network/Network.hpp>
-#include <CommonLib/ServerInstanceAppComponent.hpp>
-#include <CommonLib/Session/InitialSessionHandler.hpp>
+#include <ServerLib/ServerInstanceAppComponent.hpp>
+#include <ServerLib/Session/InitialSessionHandler.hpp>
 #include <Main/Main.hpp>
 
 int ServerMain(int argc, char* argv[])
