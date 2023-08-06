@@ -12,7 +12,7 @@
 #include <CommonLib/SessionHandler.hpp>
 #include <CommonLib/Protocol/Packets.hpp>
 #include <entt/entt.hpp>
-#include <unordered_map>
+#include <tsl/hopscotch_map.h>
 
 namespace Nz
 {
@@ -30,15 +30,19 @@ namespace tsom
 			inline entt::handle GetControlledEntity() const;
 
 			void HandlePacket(Packets::AuthResponse&& authResponse);
+			void HandlePacket(Packets::ChunkCreate&& chunkCreate);
+			void HandlePacket(Packets::ChunkDestroy&& chunkDestroy);
+			void HandlePacket(Packets::ChunkUpdate&& chunkUpdate);
 			void HandlePacket(Packets::EntitiesCreation&& entitiesCreation);
 			void HandlePacket(Packets::EntitiesDelete&& entitiesDelete);
 			void HandlePacket(Packets::EntitiesStateUpdate&& stateUpdate);
 			void HandlePacket(Packets::PlayerLeave&& playerLeave);
 			void HandlePacket(Packets::PlayerJoin&& playerJoin);
-			void HandlePacket(Packets::VoxelGridUpdate&& stateUpdate);
 
+			NazaraSignal(OnChunkCreate, const Packets::ChunkCreate& /*chunkCreate*/);
+			NazaraSignal(OnChunkDestroy, const Packets::ChunkDestroy& /*chunkDestroy*/);
+			NazaraSignal(OnChunkUpdate, const Packets::ChunkUpdate& /*gridUpdate*/);
 			NazaraSignal(OnControlledEntityChanged, entt::handle /*newEntity*/);
-			NazaraSignal(OnVoxelGridUpdate, const Packets::VoxelGridUpdate& /*gridUpdate*/);
 
 			static constexpr Nz::UInt32 InvalidEntity = 0xFFFFFFFF;
 
@@ -54,7 +58,7 @@ namespace tsom
 			};
 
 			entt::handle m_playerControlledEntity;
-			std::unordered_map<Nz::UInt32, entt::handle> m_networkIdToEntity;
+			tsl::hopscotch_map<Nz::UInt32, entt::handle> m_networkIdToEntity;
 			std::vector<std::optional<PlayerInfo>> m_players; //< FIXME: Nz::SparseVector
 			Nz::EnttWorld& m_world;
 			Nz::UInt16 m_ownPlayerIndex;

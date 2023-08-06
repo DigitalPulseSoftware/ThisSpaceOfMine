@@ -42,9 +42,7 @@ namespace tsom
 			inline Nz::EnttWorld& GetWorld();
 
 			void Update(Nz::Time elapsedTime);
-
-			// TEMP
-			void UpdatePlanetBlock(const Nz::Vector3f& position, VoxelBlock newBlock);
+			void UpdatePlanetBlock(const Nz::Vector3ui& chunkIndices, const Nz::Vector3ui& voxelIndices, VoxelBlock newBlock);
 
 			ServerInstance& operator=(const ServerInstance&) = delete;
 			ServerInstance& operator=(ServerInstance&&) = delete;
@@ -53,8 +51,16 @@ namespace tsom
 			void OnNetworkTick();
 			void OnTick(Nz::Time elapsedTime);
 
+			struct BlockUpdate
+			{
+				Nz::Vector3ui chunkIndices;
+				Nz::Vector3ui voxelIndices;
+				VoxelBlock newBlock;
+			};
+
 			entt::handle m_planetEntity;
 			std::unique_ptr<Planet> m_planet;
+			std::vector<BlockUpdate> m_voxelGridUpdates;
 			std::vector<std::unique_ptr<NetworkSessionManager>> m_sessionManagers;
 			Nz::Bitset<> m_disconnectedPlayers;
 			Nz::Bitset<> m_newPlayers;
@@ -63,14 +69,6 @@ namespace tsom
 			Nz::Time m_tickAccumulator;
 			Nz::Time m_tickDuration;
 
-			// TEMP
-			struct BlockUpdate
-			{
-				Nz::Vector3f position;
-				VoxelBlock newBlock;
-			};
-			std::size_t m_voxelGridUpdateLastSize = 0;
-			std::vector<BlockUpdate> m_voxelGridUpdates;
 	};
 }
 

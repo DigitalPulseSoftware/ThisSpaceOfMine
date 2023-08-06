@@ -19,6 +19,16 @@ namespace tsom
 		return m_cells[m_size.x * (m_size.y * indices.z + indices.y) + indices.x];
 	}
 
+	inline float Chunk::GetCellSize() const
+	{
+		return m_cellSize;
+	}
+
+	inline const VoxelBlock* Chunk::GetContent() const
+	{
+		return m_cells.data();
+	}
+
 	inline std::optional<VoxelBlock> Chunk::GetNeighborCell(Nz::Vector3ui indices, const Nz::Vector3i& offsets) const
 	{
 		const Chunk* currentChunk = this;
@@ -110,8 +120,15 @@ namespace tsom
 		return m_size;
 	}
 
-	inline void Chunk::UpdateCell(const Nz::Vector3ui& indices, VoxelBlock cellType)
+	template<typename F> void Chunk::InitBlocks(F&& func)
 	{
-		m_cells[m_size.x * (m_size.y * indices.z + indices.y) + indices.x] = cellType;
+		func(m_cells.data());
+	}
+
+	inline void Chunk::UpdateBlock(const Nz::Vector3ui& indices, VoxelBlock newBlock)
+	{
+		m_cells[m_size.x * (m_size.y * indices.z + indices.y) + indices.x] = newBlock;
+
+		OnCellUpdated(this, indices, newBlock);
 	}
 }

@@ -41,6 +41,16 @@ namespace tsom
 		m_ownPlayerIndex = authResponse.ownPlayerIndex;
 	}
 
+	void ClientSessionHandler::HandlePacket(Packets::ChunkCreate&& chunkCreate)
+	{
+		OnChunkCreate(chunkCreate);
+	}
+
+	void ClientSessionHandler::HandlePacket(Packets::ChunkDestroy&& chunkDestroy)
+	{
+		OnChunkDestroy(chunkDestroy);
+	}
+
 	void ClientSessionHandler::HandlePacket(Packets::EntitiesCreation&& entitiesCreation)
 	{
 		for (auto&& entityData : entitiesCreation.entities)
@@ -106,9 +116,9 @@ namespace tsom
 		playerInfo.nickname = std::move(playerJoin.nickname);
 	}
 
-	void ClientSessionHandler::HandlePacket(Packets::VoxelGridUpdate&& stateUpdate)
+	void ClientSessionHandler::HandlePacket(Packets::ChunkUpdate&& stateUpdate)
 	{
-		OnVoxelGridUpdate(stateUpdate);
+		OnChunkUpdate(stateUpdate);
 	}
 
 	void ClientSessionHandler::SetupEntity(entt::handle entity, Packets::Helper::PlayerControlledData&& entityData)
@@ -136,23 +146,32 @@ namespace tsom
 			gfx.AttachRenderable(std::move(colliderModel), 0x0000FFFF);
 		}
 
-		entt::handle textEntity = m_world.CreateEntity();
+		std::shared_ptr<Nz::TextSprite> textSprite = std::make_shared<Nz::TextSprite>();
+
+		if (const PlayerInfo* playerInfo = FetchPlayerInfo(entityData.controllingPlayerId))
+			textSprite->Update(Nz::SimpleTextDrawer::Draw(playerInfo->nickname, 48), 0.01f);
+		else
+			textSprite->Update(Nz::SimpleTextDrawer::Draw("<disconnected>", 48), 0.01f);
+
+		entt::handle frontTextEntity = m_world.CreateEntity();
 		{
-			auto& textNode = textEntity.emplace<Nz::NodeComponent>();
+			auto& textNode = frontTextEntity.emplace<Nz::NodeComponent>();
 			textNode.SetParent(entity);
-			//textNode.SetInheritRotation(false);
-
-			std::shared_ptr<Nz::TextSprite> textSprite = std::make_shared<Nz::TextSprite>();
-			if (const PlayerInfo* playerInfo = FetchPlayerInfo(entityData.controllingPlayerId))
-				textSprite->Update(Nz::SimpleTextDrawer::Draw(playerInfo->nickname, 48), 0.01f);
-			else
-				textSprite->Update(Nz::SimpleTextDrawer::Draw("<disconnected>", 48), 0.01f);
-
 			textNode.SetPosition(-textSprite->GetAABB().width * 0.5f, 1.5f, 0.f);
 
-			textEntity.emplace<Nz::GraphicsComponent>(std::move(textSprite));
+			frontTextEntity.emplace<Nz::GraphicsComponent>(textSprite);
 		}
+		entity.get_or_emplace<EntityOwnerComponent>().Register(frontTextEntity);
 
-		entity.get_or_emplace<EntityOwnerComponent>().Register(textEntity);
+		entt::handle backTextEntity = m_world.CreateEntity();
+		{
+			auto& textNode = backTextEntity.emplace<Nz::NodeComponent>();
+			textNode.SetParent(entity);
+			textNode.SetPosition(textSprite->GetAABB().width * 0.5f, 1.5f, 0.f);
+			textNode.SetRotation(Nz::EulerAnglesf(0.f, Nz::TurnAnglef(0.5f), 0.f));
+
+			backTextEntity.emplace<Nz::GraphicsComponent>(std::move(textSprite));
+		}
+		entity.get_or_emplace<EntityOwnerComponent>().Register(backTextEntity);
 	}
 }

@@ -2,6 +2,7 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
+#include <fmt/format.h>
 #include <type_traits>
 
 namespace tsom
@@ -55,7 +56,7 @@ namespace tsom
 	{
 		const SendAttributes& sendAttributes = (*m_sendAttributes)[PacketIndex<T>];
 		if (sendAttributes.channelId == SendAttributes::InvalidChannel)
-			throw std::runtime_error("missing packet setup");
+			throw std::runtime_error(fmt::format("missing packet setup for {}", PacketNames[PacketIndex<T>]));
 
 		return sendAttributes;
 	}

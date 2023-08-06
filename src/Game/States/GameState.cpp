@@ -28,7 +28,8 @@ namespace tsom
 	m_stateData(std::move(stateData)),
 	m_upCorrection(Nz::Quaternionf::Identity()),
 	m_tickAccumulator(Nz::Time::Zero()),
-	m_tickDuration(Nz::Time::TickDuration(30))
+	m_tickDuration(Nz::Time::TickDuration(30)),
+	m_rebuildPlanet(true)
 	{
 		auto& filesystem = m_stateData->app->GetComponent<Nz::AppFilesystemComponent>();
 
@@ -103,17 +104,32 @@ namespace tsom
 			m_controlledEntity = entity;
 		});
 
-		m_onVoxelGridUpdated.Connect(m_stateData->sessionHandler->OnVoxelGridUpdate, [&](const Packets::VoxelGridUpdate& voxelGrid)
+		m_onChunkCreate.Connect(m_stateData->sessionHandler->OnChunkCreate, [&](const Packets::ChunkCreate& chunkCreate)
 		{
-			for (auto&& [pos, blockIndex] : voxelGrid.updates)
-			{
-				if (auto intersectionData = m_planet->ComputeGridCell(pos))
-				{
-					//m_planet->GetChunk().UpdateCell(intersectionData->x, intersectionData->y, intersectionData->z, Nz::SafeCast<VoxelBlock>(blockIndex));
-				}
-			}
+			Nz::Vector3ui indices(chunkCreate.chunkLocX, chunkCreate.chunkLocY, chunkCreate.chunkLocZ);
 
-			RebuildPlanet();
+			Chunk& chunk = m_planet->AddChunk(chunkCreate.chunkId, indices);
+			chunk.InitBlocks([&](VoxelBlock* blocks)
+			{
+				for (Nz::UInt8 blockContent : chunkCreate.content)
+					*blocks++ = Nz::SafeCast<VoxelBlock>(blockContent);
+			});
+
+			m_rebuildPlanet = true;
+		});
+		
+		m_onChunkDestroy.Connect(m_stateData->sessionHandler->OnChunkDestroy, [&](const Packets::ChunkDestroy& chunkDestroy)
+		{
+			m_planet->RemoveChunk(chunkDestroy.chunkId);
+		});
+
+		m_onChunkUpdate.Connect(m_stateData->sessionHandler->OnChunkUpdate, [&](const Packets::ChunkUpdate& chunkUpdate)
+		{
+			Chunk* chunk = m_planet->GetChunkByNetworkIndex(chunkUpdate.chunkId);
+			for (auto&& [blockPos, blockIndex] : chunkUpdate.updates)
+				chunk->UpdateBlock({ blockPos.x, blockPos.y, blockPos.z }, Nz::SafeCast<VoxelBlock>(blockIndex));
+
+			m_rebuildPlanet = true;
 		});
 	}
 
@@ -130,9 +146,9 @@ namespace tsom
 		cameraNode.SetPosition(Nz::Vector3f::Up() * (m_planet->GetGridDimensions().z * m_planet->GetTileSize() * 0.5f + 1.f));
 #endif
 
-		m_cameraEntity.erase<Nz::DisabledComponent>();
-		m_planetEntity.erase<Nz::DisabledComponent>();
-		m_skyboxEntity.erase<Nz::DisabledComponent>();
+		m_cameraEntity.remove<Nz::DisabledComponent>();
+		m_planetEntity.remove<Nz::DisabledComponent>();
+		m_skyboxEntity.remove<Nz::DisabledComponent>();
 
 		Nz::WindowEventHandler& eventHandler = m_stateData->window->GetEventHandler();
 
@@ -195,14 +211,14 @@ namespace tsom
 			if (event.button != Nz::Mouse::Left && event.button != Nz::Mouse::Right)
 				return;
 
-			Nz::Vector3f closestHit, closestNormal;
+			Nz::Vector3f hitPos, hitNormal;
 			auto filter = [&](const Nz::JoltPhysics3DSystem::RaycastHit& hitInfo) -> std::optional<float>
 			{
 				if (hitInfo.hitEntity != m_planetEntity)
 					return std::nullopt;
 
-				closestHit = hitInfo.hitPosition;
-				closestNormal = hitInfo.hitNormal;
+				hitPos = hitInfo.hitPosition;
+				hitNormal = hitInfo.hitNormal;
 				return hitInfo.fraction;
 			};
 
@@ -213,29 +229,44 @@ namespace tsom
 			{
 				if (event.button == Nz::Mouse::Left)
 				{
-					Nz::Vector3f position = closestHit - closestNormal * m_planet->GetTileSize() * 0.25f;
-					if (auto intersectionData = m_planet->ComputeGridCell(position))
-					{
-						// Mine
-						Packets::MineBlock mineBlock;
-						mineBlock.position = position;
+					// Mine
+					Nz::Vector3f localPos;
+					const Chunk* chunk = m_planet->GetChunkByPosition(hitPos - hitNormal * m_planet->GetTileSize() * 0.25f, &localPos);
+					if (!chunk)
+						return;
 
-						m_stateData->networkSession->SendPacket(mineBlock);
-					}
+					auto coordinates = chunk->ComputeCoordinates(localPos);
+					if (!coordinates)
+						return;
+
+					Packets::MineBlock mineBlock;
+					mineBlock.chunkId = m_planet->GetChunkNetworkIndex(chunk);
+					mineBlock.voxelLoc.x = coordinates->x;
+					mineBlock.voxelLoc.y = coordinates->y;
+					mineBlock.voxelLoc.z = coordinates->z;
+
+					m_stateData->networkSession->SendPacket(mineBlock);
 				}
 				else
 				{
 					// Place
-					Nz::Vector3f position = closestHit + closestNormal * m_planet->GetTileSize() * 0.25f;
-					if (auto intersectionData = m_planet->ComputeGridCell(position))
-					{
-						// Mine
-						Packets::PlaceBlock placeBlock;
-						placeBlock.position = position;
-						placeBlock.newContent = Nz::SafeCast<Nz::UInt8>(VoxelBlock::Dirt);
+					Nz::Vector3f localPos;
+					const Chunk* chunk = m_planet->GetChunkByPosition(hitPos + hitNormal * m_planet->GetTileSize() * 0.25f, &localPos);
+					if (!chunk)
+						return;
 
-						m_stateData->networkSession->SendPacket(placeBlock);
-					}
+					auto coordinates = chunk->ComputeCoordinates(localPos);
+					if (!coordinates)
+						return;
+
+					Packets::PlaceBlock placeBlock;
+					placeBlock.chunkId = m_planet->GetChunkNetworkIndex(chunk);
+					placeBlock.voxelLoc.x = coordinates->x;
+					placeBlock.voxelLoc.y = coordinates->y;
+					placeBlock.voxelLoc.z = coordinates->z;
+					placeBlock.newContent = Nz::SafeCast<Nz::UInt8>(VoxelBlock::Dirt);
+
+					m_stateData->networkSession->SendPacket(placeBlock);
 				}
 			}
 		});
@@ -272,6 +303,12 @@ namespace tsom
 
 	bool GameState::Update(Nz::StateMachine& /*fsm*/, Nz::Time elapsedTime)
 	{
+		if (m_rebuildPlanet)
+		{
+			RebuildPlanet();
+			m_rebuildPlanet = false;
+		}
+
 		m_tickAccumulator += elapsedTime;
 		while (m_tickAccumulator >= m_tickDuration)
 		{
@@ -418,7 +455,6 @@ namespace tsom
 			planeMat->SetTextureProperty("BaseColorMap", filesystem.Load<Nz::Texture>("assets/tileset.png"), blockSampler);
 			planeMat->UpdatePassesStates([&](Nz::RenderStates& states)
 			{
-				states.faceCulling = Nz::FaceCulling::None;
 				//states.primitiveMode = Nz::PrimitiveMode::LineList;
 			});
 
@@ -430,11 +466,14 @@ namespace tsom
 				fmt::print("planet mesh generated in {}\n", fmt::streamed(genClock.GetElapsedTime()));
 			}
 
-			std::shared_ptr<Nz::Model> planetModel = std::make_shared<Nz::Model>(planetMesh);
-			planetModel->SetMaterial(0, planeMat);
+			if (planetMesh)
+			{
+				std::shared_ptr<Nz::Model> planetModel = std::make_shared<Nz::Model>(planetMesh);
+				planetModel->SetMaterial(0, planeMat);
 
-			auto& planetGfx = m_planetEntity.emplace<Nz::GraphicsComponent>();
-			planetGfx.AttachRenderable(planetModel, 0x0000FFFF);
+				auto& planetGfx = m_planetEntity.emplace<Nz::GraphicsComponent>();
+				planetGfx.AttachRenderable(planetModel, 0x0000FFFF);
+			}
 			
 			m_planetEntity.emplace<Nz::NodeComponent>();
 
@@ -448,29 +487,32 @@ namespace tsom
 
 			auto& physicsSystem = m_stateData->world->GetSystem<Nz::JoltPhysics3DSystem>();
 
-			auto& planetBody = m_planetEntity.emplace<Nz::JoltRigidBody3DComponent>(settings);
+			if (settings.geom)
+			{
+				auto& planetBody = m_planetEntity.emplace<Nz::JoltRigidBody3DComponent>(settings);
 
 #if 0
-			std::shared_ptr<Nz::Model> colliderModel;
-			{
-				std::shared_ptr<Nz::MaterialInstance> colliderMat = Nz::Graphics::Instance()->GetDefaultMaterials().basicMaterial->Instantiate();
-				colliderMat->SetValueProperty("BaseColor", Nz::Color::Green());
-				colliderMat->UpdatePassesStates([](Nz::RenderStates& states)
-					{
-						states.primitiveMode = Nz::PrimitiveMode::LineList;
-						return true;
-					});
+				std::shared_ptr<Nz::Model> colliderModel;
+				{
+					std::shared_ptr<Nz::MaterialInstance> colliderMat = Nz::Graphics::Instance()->GetDefaultMaterials().basicMaterial->Instantiate();
+					colliderMat->SetValueProperty("BaseColor", Nz::Color::Green());
+					colliderMat->UpdatePassesStates([](Nz::RenderStates& states)
+						{
+							states.primitiveMode = Nz::PrimitiveMode::LineList;
+							return true;
+						});
 
-				std::shared_ptr<Nz::Mesh> colliderMesh = Nz::Mesh::Build(settings.geom->GenerateDebugMesh());
-				std::shared_ptr<Nz::GraphicalMesh> colliderGraphicalMesh = Nz::GraphicalMesh::BuildFromMesh(*colliderMesh);
+					std::shared_ptr<Nz::Mesh> colliderMesh = Nz::Mesh::Build(settings.geom->GenerateDebugMesh());
+					std::shared_ptr<Nz::GraphicalMesh> colliderGraphicalMesh = Nz::GraphicalMesh::BuildFromMesh(*colliderMesh);
 
-				colliderModel = std::make_shared<Nz::Model>(colliderGraphicalMesh);
-				for (std::size_t i = 0; i < colliderModel->GetSubMeshCount(); ++i)
-					colliderModel->SetMaterial(i, colliderMat);
+					colliderModel = std::make_shared<Nz::Model>(colliderGraphicalMesh);
+					for (std::size_t i = 0; i < colliderModel->GetSubMeshCount(); ++i)
+						colliderModel->SetMaterial(i, colliderMat);
 
-				planetGfx.AttachRenderable(std::move(colliderModel), 0x0000FFFF);
-			}
+					planetGfx.AttachRenderable(std::move(colliderModel), 0x0000FFFF);
+				}
 #endif
+			}
 		}
 	}
 

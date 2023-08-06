@@ -10,12 +10,14 @@
 namespace tsom
 {
 	constexpr SessionHandler::SendAttributeTable s_packetAttributes = SessionHandler::BuildAttributeTable({
+		{ PacketIndex<Packets::ChunkCreate>,         { 1, Nz::ENetPacketFlag_Reliable } },
+		{ PacketIndex<Packets::ChunkDestroy>,        { 1, Nz::ENetPacketFlag_Reliable } },
+		{ PacketIndex<Packets::ChunkUpdate>,         { 1, Nz::ENetPacketFlag_Reliable } },
 		{ PacketIndex<Packets::EntitiesCreation>,    { 1, Nz::ENetPacketFlag_Reliable } },
 		{ PacketIndex<Packets::EntitiesDelete>,      { 1, Nz::ENetPacketFlag_Reliable } },
 		{ PacketIndex<Packets::EntitiesStateUpdate>, { 1, 0 } },
 		{ PacketIndex<Packets::PlayerJoin>,          { 1, Nz::ENetPacketFlag_Reliable } },
 		{ PacketIndex<Packets::PlayerLeave>,         { 1, Nz::ENetPacketFlag_Reliable } },
-		{ PacketIndex<Packets::VoxelGridUpdate>,     { 1, Nz::ENetPacketFlag_Reliable } }
 	});
 
 	PlayerSessionHandler::PlayerSessionHandler(NetworkSession* session, ServerPlayer* player) :
@@ -33,12 +35,24 @@ namespace tsom
 
 	void PlayerSessionHandler::HandlePacket(Packets::MineBlock&& mineBlock)
 	{
-		m_player->GetServerInstance().UpdatePlanetBlock(mineBlock.position, VoxelBlock::Empty);
+		Chunk* chunk = m_player->GetVisibilityHandler().GetChunkByIndex(mineBlock.chunkId);
+		if (!chunk)
+			return; //< ignore
+
+		Nz::Vector3ui voxelLoc(mineBlock.voxelLoc.x, mineBlock.voxelLoc.y, mineBlock.voxelLoc.z);
+
+		m_player->GetServerInstance().UpdatePlanetBlock(chunk->GetIndices(), voxelLoc, VoxelBlock::Empty);
 	}
 
 	void PlayerSessionHandler::HandlePacket(Packets::PlaceBlock&& placeBlock)
 	{
-		m_player->GetServerInstance().UpdatePlanetBlock(placeBlock.position, static_cast<VoxelBlock>(placeBlock.newContent));
+		Chunk* chunk = m_player->GetVisibilityHandler().GetChunkByIndex(placeBlock.chunkId);
+		if (!chunk)
+			return; //< ignore
+
+		Nz::Vector3ui voxelLoc(placeBlock.voxelLoc.x, placeBlock.voxelLoc.y, placeBlock.voxelLoc.z);
+
+		m_player->GetServerInstance().UpdatePlanetBlock(chunk->GetIndices(), voxelLoc, static_cast<VoxelBlock>(placeBlock.newContent));
 	}
 
 	void PlayerSessionHandler::HandlePacket(Packets::UpdatePlayerInputs&& playerInputs)

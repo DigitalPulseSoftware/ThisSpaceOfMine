@@ -41,7 +41,9 @@ namespace tsom
 			void SendInputs();
 
 			NazaraSlot(ClientSessionHandler, OnControlledEntityChanged, m_onControlledEntityChanged);
-			NazaraSlot(ClientSessionHandler, OnVoxelGridUpdate, m_onVoxelGridUpdated);
+			NazaraSlot(ClientSessionHandler, OnChunkCreate, m_onChunkCreate);
+			NazaraSlot(ClientSessionHandler, OnChunkDestroy, m_onChunkDestroy);
+			NazaraSlot(ClientSessionHandler, OnChunkUpdate, m_onChunkUpdate);
 
 			std::shared_ptr<StateData> m_stateData;
 			std::unique_ptr<ClientPlanet> m_planet;
@@ -53,6 +55,7 @@ namespace tsom
 			Nz::Quaternionf m_upCorrection;
 			Nz::Time m_tickAccumulator;
 			Nz::Time m_tickDuration;
+			bool m_rebuildPlanet;
 	};
 }
 

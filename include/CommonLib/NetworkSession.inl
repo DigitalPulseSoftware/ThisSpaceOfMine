@@ -4,7 +4,6 @@
 
 #include <CommonLib/NetworkSessionManager.hpp>
 #include <CommonLib/Protocol/Packets.hpp>
-#include "NetworkSession.hpp"
 
 namespace tsom
 {

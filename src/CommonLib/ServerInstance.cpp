@@ -23,6 +23,7 @@ namespace tsom
 		physicsSystem.GetPhysWorld().SetGravity(Nz::Vector3f::Zero());
 
 		m_planet = std::make_unique<Planet>(Nz::Vector3ui(80), 2.f, 2.f);
+		m_planet->GenerateChunks();
 
 		m_planetEntity = m_world.CreateEntity();
 		{
@@ -35,7 +36,8 @@ namespace tsom
 				fmt::print("built collider in {}\n", fmt::streamed(colliderClock.GetElapsedTime()));
 			}
 
-			m_planetEntity.emplace<Nz::JoltRigidBody3DComponent>(settings);
+			if (settings.geom)
+				m_planetEntity.emplace<Nz::JoltRigidBody3DComponent>(settings);
 		}
 	}
 
@@ -55,11 +57,25 @@ namespace tsom
 
 		m_newPlayers.UnboundedSet(playerIndex);
 
+		// Send all chunks
+		auto& playerVisibility = player->GetVisibilityHandler();
+
+		std::size_t chunkCount = m_planet->GetChunkCount();
+		for (std::size_t i = 0; i < chunkCount; ++i)
+		{
+			if (Chunk* chunk = m_planet->GetChunk(i))
+				playerVisibility.CreateChunk(*chunk);
+		}
+
 		return player;
 	}
 
 	void ServerInstance::DestroyPlayer(PlayerIndex playerIndex)
 	{
+		ServerPlayer* player = m_players.RetrieveFromIndex(playerIndex);
+		if (entt::handle controlledEntity = player->GetControlledEntity())
+			controlledEntity.destroy();
+
 		m_disconnectedPlayers.UnboundedSet(playerIndex);
 		m_newPlayers.UnboundedReset(playerIndex);
 
@@ -76,19 +92,17 @@ namespace tsom
 		}
 	}
 
-	void ServerInstance::UpdatePlanetBlock(const Nz::Vector3f& position, VoxelBlock newBlock)
+	void ServerInstance::UpdatePlanetBlock(const Nz::Vector3ui& chunkIndices, const Nz::Vector3ui& voxelIndices, VoxelBlock newBlock)
 	{
 		m_voxelGridUpdates.push_back({
-			position,
+			chunkIndices,
+			voxelIndices,
 			newBlock
 		});
 	}
 
 	void ServerInstance::OnNetworkTick()
 	{
-		for (auto&& sessionManagerPtr : m_sessionManagers)
-			sessionManagerPtr->Poll();
-
 		// Handle disconnected players
 		for (std::size_t playerIndex = m_disconnectedPlayers.FindFirst(); playerIndex != m_disconnectedPlayers.npos; playerIndex = m_disconnectedPlayers.FindNext(playerIndex))
 		{
@@ -134,26 +148,6 @@ namespace tsom
 
 					session->SendPacket(playerJoined);
 				});
-
-				// Send planet (TEMP)
-				if (m_voxelGridUpdateLastSize > 0)
-				{
-					Packets::VoxelGridUpdate voxelGridUpdatePacket;
-
-					for (std::size_t i = 0; i < m_voxelGridUpdates.size(); ++i)
-					{
-						auto&& [pos, block] = m_voxelGridUpdates[i];
-						if (auto intersectionData = m_planet->ComputeGridCell(pos))
-						{
-							voxelGridUpdatePacket.updates.push_back({
-								pos,
-								Nz::SafeCast<Nz::UInt8>(block)
-								});
-						}
-					}
-
-					session->SendPacket(voxelGridUpdatePacket);
-				}
 			}
 
 		}
@@ -167,28 +161,16 @@ namespace tsom
 
 	void ServerInstance::OnTick(Nz::Time elapsedTime)
 	{
-		OnNetworkTick();
+		for (auto&& sessionManagerPtr : m_sessionManagers)
+			sessionManagerPtr->Poll();
 
-		if (m_voxelGridUpdates.size() > m_voxelGridUpdateLastSize)
+		if (!m_voxelGridUpdates.empty())
 		{
-			Packets::VoxelGridUpdate voxelGridUpdatePacket;
-
-			for (std::size_t i = m_voxelGridUpdateLastSize; i < m_voxelGridUpdates.size(); ++i)
+			for (BlockUpdate& blockUpdate : m_voxelGridUpdates)
 			{
-				auto&& [pos, block] = m_voxelGridUpdates[i];
-				if (auto intersectionData = m_planet->ComputeGridCell(pos))
-				{
-					//m_planet->GetChunk().UpdateCell(intersectionData->x, intersectionData->y, intersectionData->z, block);
-
-					voxelGridUpdatePacket.updates.push_back({
-						pos,
-						Nz::SafeCast<Nz::UInt8>(block)
-					});
-				}
+				Chunk& chunk = m_planet->GetChunk(blockUpdate.chunkIndices);
+				chunk.UpdateBlock(blockUpdate.voxelIndices, blockUpdate.newBlock);
 			}
-
-			m_voxelGridUpdateLastSize = m_voxelGridUpdates.size();
-
 
 			std::shared_ptr<Nz::JoltCollider3D> geom;
 			{
@@ -200,12 +182,11 @@ namespace tsom
 			auto& planetBody = m_planetEntity.get<Nz::JoltRigidBody3DComponent>();
 			planetBody.SetGeom(geom, false);
 
-			ForEachPlayer([&](ServerPlayer& serverPlayer)
-			{
-				serverPlayer.GetSession()->SendPacket(voxelGridUpdatePacket);
-			});
+			m_voxelGridUpdates.clear();
 		}
 
 		m_world.Update(elapsedTime);
+
+		OnNetworkTick();
 	}
 }

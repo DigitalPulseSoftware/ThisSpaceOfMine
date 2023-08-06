@@ -34,6 +34,7 @@ namespace tsom
 
 			void Destroy();
 
+			inline entt::handle GetControlledEntity() const;
 			inline const std::string& GetNickname() const;
 			inline PlayerIndex GetPlayerIndex() const;
 			inline ServerInstance& GetServerInstance();

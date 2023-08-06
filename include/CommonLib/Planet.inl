@@ -9,20 +9,32 @@ namespace tsom
 		return Nz::Vector3f::Zero();
 	}
 
+	inline Chunk* Planet::GetChunk(std::size_t chunkIndex)
+	{
+		return m_chunks[chunkIndex].get();
+	}
+
 	inline Chunk& Planet::GetChunk(const Nz::Vector3ui& indices)
 	{
-		assert(indices.x < m_chunkCount.x);
-		assert(indices.y < m_chunkCount.y);
-		assert(indices.z < m_chunkCount.z);
-		return *m_chunks[m_chunkCount.z * (m_chunkCount.y * indices.z + indices.y) + indices.x];
+		return *m_chunks[GetChunkIndex(indices)];
 	}
 
 	inline const Chunk& Planet::GetChunk(const Nz::Vector3ui& indices) const
 	{
+		return *m_chunks[GetChunkIndex(indices)];
+	}
+
+	inline std::size_t Planet::GetChunkCount() const
+	{
+		return m_chunks.size();
+	}
+
+	inline std::size_t Planet::GetChunkIndex(const Nz::Vector3ui& indices) const
+	{
 		assert(indices.x < m_chunkCount.x);
 		assert(indices.y < m_chunkCount.y);
 		assert(indices.z < m_chunkCount.z);
-		return *m_chunks[m_chunkCount.z * (m_chunkCount.y * indices.z + indices.y) + indices.x];
+		return indices.z * m_chunkCount.y * m_chunkCount.x + indices.y * m_chunkCount.x + indices.x;
 	}
 
 	inline Chunk& Planet::GetChunkByIndices(const Nz::Vector3ui& gridPosition, Nz::Vector3ui* innerPos)

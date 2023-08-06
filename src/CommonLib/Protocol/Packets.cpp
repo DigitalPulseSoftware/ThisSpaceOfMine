@@ -37,6 +37,13 @@ namespace tsom
 
 				serializer &= data.orientation;
 			}
+
+			void Serialize(PacketSerializer& serializer, VoxelLocation& data)
+			{
+				serializer &= data.x;
+				serializer &= data.y;
+				serializer &= data.z;
+			}
 		}
 
 		void Serialize(PacketSerializer& serializer, AuthRequest& data)
@@ -48,6 +55,39 @@ namespace tsom
 		{
 			serializer &= data.succeeded;
 			serializer &= data.ownPlayerIndex;
+		}
+
+		void Serialize(PacketSerializer& serializer, ChunkCreate& data)
+		{
+			serializer &= data.chunkId;
+			serializer &= data.chunkLocX;
+			serializer &= data.chunkLocY;
+			serializer &= data.chunkLocZ;
+			serializer &= data.chunkSizeX;
+			serializer &= data.chunkSizeY;
+			serializer &= data.chunkSizeZ;
+			serializer &= data.cellSize;
+
+			serializer.SerializeArraySize(data.content);
+			for (Nz::UInt8& block : data.content)
+				serializer &= block;
+		}
+
+		void Serialize(PacketSerializer& serializer, ChunkDestroy& data)
+		{
+			serializer &= data.chunkId;
+		}
+
+		void Serialize(PacketSerializer& serializer, ChunkUpdate& data)
+		{
+			serializer &= data.chunkId;
+
+			serializer.SerializeArraySize(data.updates);
+			for (auto& update : data.updates)
+			{
+				Helper::Serialize(serializer, update.voxelLoc);
+				serializer &= update.newContent;
+			}
 		}
 
 		void Serialize(PacketSerializer& serializer, EntitiesCreation& data)
@@ -84,7 +124,8 @@ namespace tsom
 
 		void Serialize(PacketSerializer& serializer, MineBlock& data)
 		{
-			serializer &= data.position;
+			serializer &= data.chunkId;
+			Helper::Serialize(serializer, data.voxelLoc);
 		}
 
 		void Serialize(PacketSerializer& serializer, NetworkStrings& data)
@@ -98,7 +139,8 @@ namespace tsom
 
 		void Serialize(PacketSerializer& serializer, PlaceBlock& data)
 		{
-			serializer &= data.position;
+			serializer &= data.chunkId;
+			Helper::Serialize(serializer, data.voxelLoc);
 			serializer &= data.newContent;
 		}
 
@@ -116,16 +158,6 @@ namespace tsom
 		void Serialize(PacketSerializer& serializer, UpdatePlayerInputs& data)
 		{
 			Helper::Serialize(serializer, data.inputs);
-		}
-
-		void Serialize(PacketSerializer& serializer, VoxelGridUpdate& data)
-		{
-			serializer.SerializeArraySize(data.updates);
-			for (auto& update : data.updates)
-			{
-				serializer &= update.position;
-				serializer &= update.newContent;
-			}
 		}
 	}
 }

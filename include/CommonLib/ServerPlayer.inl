@@ -1,4 +1,3 @@
-#include "ServerPlayer.hpp"
 // Copyright (C) 2023 Jérôme "Lynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in Config.hpp
@@ -12,6 +11,11 @@ namespace tsom
 	m_visibilityHandler(m_session),
 	m_instance(instance)
 	{
+	}
+
+	inline entt::handle ServerPlayer::GetControlledEntity() const
+	{
+		return m_controlledEntity;
 	}
 
 	inline const std::string& ServerPlayer::GetNickname() const

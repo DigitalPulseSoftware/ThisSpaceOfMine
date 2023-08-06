@@ -8,6 +8,8 @@
 
 namespace tsom
 {
+	Chunk::~Chunk() = default;
+
 	void Chunk::BuildMesh(const Nz::Matrix4f& transformMatrix, std::vector<Nz::UInt32>& indices, std::vector<Nz::VertexStruct_XYZ_Color_UV>& vertices) const
 	{
 		std::random_device rd;

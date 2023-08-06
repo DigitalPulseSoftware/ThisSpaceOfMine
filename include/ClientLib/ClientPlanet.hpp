@@ -9,6 +9,7 @@
 
 #include <CommonLib/Planet.hpp>
 #include <ClientLib/Export.hpp>
+#include <tsl/hopscotch_map.h>
 
 namespace Nz
 {
@@ -27,10 +28,21 @@ namespace tsom
 			ClientPlanet(ClientPlanet&&) = delete;
 			~ClientPlanet() = default;
 
+			Chunk& AddChunk(Nz::UInt16 networkIndex, const Nz::Vector3ui& indices);
+
 			std::shared_ptr<Nz::GraphicalMesh> BuildGfxMesh();
+
+			inline Chunk* GetChunkByNetworkIndex(Nz::UInt16 networkIndex) const;
+			inline Nz::UInt16 GetChunkNetworkIndex(const Chunk* chunk) const;
+
+			void RemoveChunk(Nz::UInt16 networkIndex);
 
 			ClientPlanet& operator=(const ClientPlanet&) = delete;
 			ClientPlanet& operator=(ClientPlanet&&) = delete;
+
+		private:
+			tsl::hopscotch_map<Nz::UInt16 /*networkIndex*/, Chunk* /*chunk*/> m_chunkByNetworkIndex;
+			tsl::hopscotch_map<const Chunk* /*chunk*/, Nz::UInt16 /*networkIndex*/> m_chunkNetworkIndices;
 	};
 }
 

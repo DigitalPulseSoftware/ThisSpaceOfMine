@@ -7,7 +7,7 @@
 #ifndef TSOM_COMMONLIB_SESSIONVISIBILITYHANDLER_HPP
 #define TSOM_COMMONLIB_SESSIONVISIBILITYHANDLER_HPP
 
-#include <CommonLib/Export.hpp>
+#include <CommonLib/Chunk.hpp>
 #include <CommonLib/Protocol/Packets.hpp>
 #include <NazaraUtils/Bitset.hpp>
 #include <entt/entt.hpp>
@@ -28,10 +28,15 @@ namespace tsom
 			SessionVisibilityHandler(SessionVisibilityHandler&&) = delete;
 			~SessionVisibilityHandler() = default;
 
+			void CreateChunk(Chunk& chunk);
 			void CreateEntity(entt::handle entity, CreateEntityData entityData);
+
+			void DestroyChunk(Chunk& chunk);
 			void DestroyEntity(entt::handle entity);
 
 			void Dispatch();
+
+			Chunk* GetChunkByIndex(std::size_t chunkIndex) const;
 
 			SessionVisibilityHandler& operator=(const SessionVisibilityHandler&) = delete;
 			SessionVisibilityHandler& operator=(SessionVisibilityHandler&&) = delete;
@@ -45,18 +50,36 @@ namespace tsom
 			};
 
 		private:
-			static constexpr std::size_t FreeIdGrowRate = 512;
+			void DispatchChunks();
+			void DispatchEntities();
+
+			static constexpr std::size_t FreeChunkIdGrowRate = 128;
+			static constexpr std::size_t FreeEntityIdGrowRate = 512;
 
 			struct HandlerHasher
 			{
 				inline std::size_t operator()(const entt::handle& handle) const;
 			};
 
+			struct VisibleChunk
+			{
+				NazaraSlot(Chunk, OnCellUpdated, onCellUpdatedSlot);
+
+				Chunk* chunk;
+				Packets::ChunkUpdate chunkUpdatePacket;
+			};
+
 			tsl::hopscotch_map<entt::handle, Nz::UInt32, HandlerHasher> m_entityToNetworkId;
 			tsl::hopscotch_map<entt::handle, CreateEntityData, HandlerHasher> m_createdEntities;
 			tsl::hopscotch_set<entt::handle, HandlerHasher> m_deletedEntities;
 			tsl::hopscotch_set<entt::handle, HandlerHasher> m_movingEntities;
+			tsl::hopscotch_map<Chunk*, std::size_t> m_chunkIndices;
+			std::vector<VisibleChunk> m_visibleChunks;
+			Nz::Bitset<Nz::UInt64> m_freeChunkIds;
 			Nz::Bitset<Nz::UInt64> m_freeEntityIds;
+			Nz::Bitset<Nz::UInt64> m_newlyHiddenChunk;
+			Nz::Bitset<Nz::UInt64> m_newlyVisibleChunk;
+			Nz::Bitset<Nz::UInt64> m_updatedChunk;
 			NetworkSession* m_networkSession;
 	};
 }

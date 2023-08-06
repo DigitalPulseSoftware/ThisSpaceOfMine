@@ -34,12 +34,13 @@ namespace tsom
 
 	template<typename T> static constexpr std::size_t PacketIndex = Nz::TypeListFind<PacketTypes, T>;
 
-	extern std::array<std::string_view, PacketCount> PacketNames;
+	TSOM_COMMONLIB_API extern std::array<std::string_view, PacketCount> PacketNames;
 
 	namespace Packets
 	{
 		namespace Helper
 		{
+			using ChunkId = Nz::UInt16;
 			using EntityId = Nz::UInt16;
 
 			struct EntityState
@@ -53,9 +54,17 @@ namespace tsom
 				PlayerIndex controllingPlayerId;
 			};
 
+			struct VoxelLocation
+			{
+				Nz::UInt8 x;
+				Nz::UInt8 y;
+				Nz::UInt8 z;
+			};
+
 			TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntityState& data);
 			TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, PlayerControlledData& data);
 			TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, PlayerInputs& data);
+			TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, VoxelLocation& data);
 		}
 
 		struct AuthRequest
@@ -67,6 +76,37 @@ namespace tsom
 		{
 			bool succeeded;
 			PlayerIndex ownPlayerIndex;
+		};
+
+		struct ChunkCreate
+		{
+			Helper::ChunkId chunkId;
+			CompressedUnsigned<Nz::UInt32> chunkLocX;
+			CompressedUnsigned<Nz::UInt32> chunkLocY;
+			CompressedUnsigned<Nz::UInt32> chunkLocZ;
+			CompressedUnsigned<Nz::UInt32> chunkSizeX;
+			CompressedUnsigned<Nz::UInt32> chunkSizeY;
+			CompressedUnsigned<Nz::UInt32> chunkSizeZ;
+			float cellSize;
+			std::vector<Nz::UInt8> content;
+		};
+
+		struct ChunkDestroy
+		{
+			Helper::ChunkId chunkId;
+		};
+
+		struct ChunkUpdate
+		{
+			Helper::ChunkId chunkId;
+
+			struct BlockUpdate
+			{
+				Helper::VoxelLocation voxelLoc;
+				Nz::UInt8 newContent;
+			};
+
+			std::vector<BlockUpdate> updates;
 		};
 
 		struct EntitiesCreation
@@ -99,7 +139,8 @@ namespace tsom
 
 		struct MineBlock
 		{
-			Nz::Vector3f position;
+			Helper::ChunkId chunkId;
+			Helper::VoxelLocation voxelLoc;
 		};
 
 		struct NetworkStrings
@@ -110,7 +151,8 @@ namespace tsom
 
 		struct PlaceBlock
 		{
-			Nz::Vector3f position;
+			Helper::ChunkId chunkId;
+			Helper::VoxelLocation voxelLoc;
 			Nz::UInt8 newContent;
 		};
 
@@ -130,19 +172,11 @@ namespace tsom
 			PlayerInputs inputs;
 		};
 
-		struct VoxelGridUpdate
-		{
-			struct BlockUpdate
-			{
-				Nz::Vector3f position;
-				Nz::UInt8 newContent;
-			};
-
-			std::vector<BlockUpdate> updates;
-		};
-
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, AuthRequest& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, AuthResponse& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, ChunkCreate& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, ChunkDestroy& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, ChunkUpdate& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntitiesCreation& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntitiesDelete& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntitiesStateUpdate& data);
@@ -152,7 +186,6 @@ namespace tsom
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, PlayerJoin& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, PlayerLeave& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, UpdatePlayerInputs& data);
-		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, VoxelGridUpdate& data);
 	}
 }
 

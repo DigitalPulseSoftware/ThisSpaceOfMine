@@ -8,10 +8,12 @@
 #define TSOM_COMMONLIB_CHUNK_HPP
 
 #include <CommonLib/Direction.hpp>
+#include <CommonLib/Export.hpp>
 #include <CommonLib/VoxelBlock.hpp>
+#include <NazaraUtils/EnumArray.hpp>
+#include <NazaraUtils/Signal.hpp>
 #include <Nazara/Core/Color.hpp>
 #include <Nazara/Math/Matrix4.hpp>
-#include <NazaraUtils/EnumArray.hpp>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -24,13 +26,13 @@ namespace Nz
 
 namespace tsom
 {
-	class Chunk
+	class TSOM_COMMONLIB_API Chunk
 	{
 		public:
 			inline Chunk(const Nz::Vector3ui& indices, const Nz::Vector3ui& size, float cellSize);
 			Chunk(const Chunk&) = delete;
 			Chunk(Chunk&&) = delete;
-			~Chunk() = default;
+			virtual ~Chunk();
 
 			virtual std::shared_ptr<Nz::JoltCollider3D> BuildCollider() const = 0;
 			virtual void BuildMesh(const Nz::Matrix4f& transformMatrix, std::vector<Nz::UInt32>& indices, std::vector<Nz::VertexStruct_XYZ_Color_UV>& vertices) const;
@@ -39,14 +41,20 @@ namespace tsom
 			virtual Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> ComputeVoxelCorners(const Nz::Vector3ui& indices) const = 0;
 
 			inline VoxelBlock GetCellContent(const Nz::Vector3ui& indices) const;
+			inline float GetCellSize() const;
+			inline const VoxelBlock* GetContent() const;
 			inline const Nz::Vector3ui& GetIndices() const;
 			inline std::optional<VoxelBlock> GetNeighborCell(Nz::Vector3ui indices, const Nz::Vector3i& offsets) const;
 			inline const Nz::Vector3ui& GetSize() const;
 
-			inline void UpdateCell(const Nz::Vector3ui& indices, VoxelBlock cellType);
+			template<typename F> void InitBlocks(F&& func);
+
+			inline void UpdateBlock(const Nz::Vector3ui& indices, VoxelBlock cellType);
 
 			Chunk& operator=(const Chunk&) = delete;
 			Chunk& operator=(Chunk&&) = delete;
+
+			NazaraSignal(OnCellUpdated, Chunk* /*emitter*/, const Nz::Vector3ui& /*indices*/, VoxelBlock /*newBlock*/);
 
 		protected:
 			std::vector<VoxelBlock> m_cells;
