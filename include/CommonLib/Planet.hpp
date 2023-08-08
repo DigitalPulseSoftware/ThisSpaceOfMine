@@ -18,7 +18,6 @@
 
 namespace Nz
 {
-	class DebugDrawer;
 	class JoltCollider3D;
 }
 
@@ -34,12 +33,11 @@ namespace tsom
 
 			Chunk& AddChunk(const Nz::Vector3ui& indices);
 
-			std::shared_ptr<Nz::JoltCollider3D> BuildCollider();
-
 			void GenerateChunks();
 
 			inline Nz::Vector3f GetCenter() const;
 			inline Chunk* GetChunk(std::size_t chunkIndex);
+			inline const Chunk* GetChunk(std::size_t chunkIndex) const;
 			inline Chunk& GetChunk(const Nz::Vector3ui& indices);
 			inline const Chunk& GetChunk(const Nz::Vector3ui& indices) const;
 			inline std::size_t GetChunkCount() const;
@@ -62,10 +60,19 @@ namespace tsom
 
 			static constexpr unsigned int ChunkSize = 32;
 
-		protected:
-			void BuildMesh(std::vector<Nz::UInt32>& indices, std::vector<Nz::VertexStruct_XYZ_Color_UV>& vertices);
+			NazaraSignal(OnChunkAdded, Planet* /*planet*/, Chunk* /*chunk*/);
+			NazaraSignal(OnChunkRemove, Planet* /*planet*/, Chunk* /*chunk*/);
+			NazaraSignal(OnChunkUpdated, Planet* /*planet*/, Chunk* /*chunk*/);
 
-			std::vector<std::unique_ptr<Chunk>> m_chunks;
+		protected:
+			struct ChunkData
+			{
+				std::unique_ptr<Chunk> chunk;
+
+				NazaraSlot(Chunk, OnBlockUpdated, onUpdated);
+			};
+
+			std::vector<ChunkData> m_chunks;
 			Nz::Vector3ui m_chunkCount;
 			Nz::Vector3ui m_gridSize;
 			float m_tileSize;

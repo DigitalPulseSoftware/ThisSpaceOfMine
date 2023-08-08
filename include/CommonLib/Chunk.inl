@@ -129,6 +129,6 @@ namespace tsom
 	{
 		m_cells[m_size.x * (m_size.y * indices.z + indices.y) + indices.x] = newBlock;
 
-		OnCellUpdated(this, indices, newBlock);
+		OnBlockUpdated(this, indices, newBlock);
 	}
 }

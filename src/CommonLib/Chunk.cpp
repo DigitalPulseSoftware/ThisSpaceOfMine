@@ -10,7 +10,7 @@ namespace tsom
 {
 	Chunk::~Chunk() = default;
 
-	void Chunk::BuildMesh(const Nz::Matrix4f& transformMatrix, std::vector<Nz::UInt32>& indices, std::vector<Nz::VertexStruct_XYZ_Color_UV>& vertices) const
+	void Chunk::BuildMesh(std::vector<Nz::UInt32>& indices, std::vector<Nz::VertexStruct_XYZ_Color_UV>& vertices) const
 	{
 		std::random_device rd;
 		std::bernoulli_distribution dis(0.9);
@@ -58,7 +58,7 @@ namespace tsom
 
 			std::size_t n = vertices.size();
 			for (std::size_t i = 0; i < 4; ++i)
-				vertices.push_back({ transformMatrix * pos[i], Nz::Color::White(), uvs[i]});
+				vertices.push_back({ pos[i], Nz::Color::White(), uvs[i]});
 
 			if (reverseWinding)
 			{

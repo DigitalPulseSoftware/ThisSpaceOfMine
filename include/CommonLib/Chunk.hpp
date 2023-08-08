@@ -35,7 +35,7 @@ namespace tsom
 			virtual ~Chunk();
 
 			virtual std::shared_ptr<Nz::JoltCollider3D> BuildCollider() const = 0;
-			virtual void BuildMesh(const Nz::Matrix4f& transformMatrix, std::vector<Nz::UInt32>& indices, std::vector<Nz::VertexStruct_XYZ_Color_UV>& vertices) const;
+			virtual void BuildMesh(std::vector<Nz::UInt32>& indices, std::vector<Nz::VertexStruct_XYZ_Color_UV>& vertices) const;
 
 			virtual std::optional<Nz::Vector3ui> ComputeCoordinates(const Nz::Vector3f& position) const = 0;
 			virtual Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> ComputeVoxelCorners(const Nz::Vector3ui& indices) const = 0;
@@ -54,7 +54,7 @@ namespace tsom
 			Chunk& operator=(const Chunk&) = delete;
 			Chunk& operator=(Chunk&&) = delete;
 
-			NazaraSignal(OnCellUpdated, Chunk* /*emitter*/, const Nz::Vector3ui& /*indices*/, VoxelBlock /*newBlock*/);
+			NazaraSignal(OnBlockUpdated, Chunk* /*emitter*/, const Nz::Vector3ui& /*indices*/, VoxelBlock /*newBlock*/);
 
 		protected:
 			std::vector<VoxelBlock> m_cells;

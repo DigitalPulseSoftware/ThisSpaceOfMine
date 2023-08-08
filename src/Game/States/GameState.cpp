@@ -28,8 +28,7 @@ namespace tsom
 	m_stateData(std::move(stateData)),
 	m_upCorrection(Nz::Quaternionf::Identity()),
 	m_tickAccumulator(Nz::Time::Zero()),
-	m_tickDuration(Nz::Time::TickDuration(30)),
-	m_rebuildPlanet(true)
+	m_tickDuration(Nz::Time::TickDuration(30))
 	{
 		auto& filesystem = m_stateData->app->GetComponent<Nz::AppFilesystemComponent>();
 
@@ -46,9 +45,6 @@ namespace tsom
 		}
 
 		m_planet = std::make_unique<ClientPlanet>(Nz::Vector3ui(80), 2.f, 2.f);
-		RebuildPlanet();
-
-		m_planetEntity.emplace<Nz::DisabledComponent>();
 
 		m_skyboxEntity = m_stateData->world->CreateEntity();
 		{
@@ -114,8 +110,6 @@ namespace tsom
 				for (Nz::UInt8 blockContent : chunkCreate.content)
 					*blocks++ = Nz::SafeCast<VoxelBlock>(blockContent);
 			});
-
-			m_rebuildPlanet = true;
 		});
 		
 		m_onChunkDestroy.Connect(m_stateData->sessionHandler->OnChunkDestroy, [&](const Packets::ChunkDestroy& chunkDestroy)
@@ -128,8 +122,6 @@ namespace tsom
 			Chunk* chunk = m_planet->GetChunkByNetworkIndex(chunkUpdate.chunkId);
 			for (auto&& [blockPos, blockIndex] : chunkUpdate.updates)
 				chunk->UpdateBlock({ blockPos.x, blockPos.y, blockPos.z }, Nz::SafeCast<VoxelBlock>(blockIndex));
-
-			m_rebuildPlanet = true;
 		});
 	}
 
@@ -147,8 +139,9 @@ namespace tsom
 #endif
 
 		m_cameraEntity.remove<Nz::DisabledComponent>();
-		m_planetEntity.remove<Nz::DisabledComponent>();
 		m_skyboxEntity.remove<Nz::DisabledComponent>();
+
+		m_planetEntities = std::make_unique<ClientPlanetEntities>(*m_stateData->app, *m_stateData->world, *m_planet);
 
 		Nz::WindowEventHandler& eventHandler = m_stateData->window->GetEventHandler();
 
@@ -176,15 +169,11 @@ namespace tsom
 				case Nz::Keyboard::VKey::Add:
 					m_planet->UpdateCornerRadius(m_planet->GetCornerRadius() + 1.f);
 					fmt::print("Corner radius: {}\n", m_planet->GetCornerRadius());
-
-					RebuildPlanet();
 					break;
 
 				case Nz::Keyboard::VKey::Subtract:
 					m_planet->UpdateCornerRadius(m_planet->GetCornerRadius() - 1.f);
 					fmt::print("Corner radius: {}\n", m_planet->GetCornerRadius());
-
-					RebuildPlanet();
 					break;
 
 				/*case Nz::Keyboard::VKey::Divide:
@@ -214,8 +203,8 @@ namespace tsom
 			Nz::Vector3f hitPos, hitNormal;
 			auto filter = [&](const Nz::JoltPhysics3DSystem::RaycastHit& hitInfo) -> std::optional<float>
 			{
-				if (hitInfo.hitEntity != m_planetEntity)
-					return std::nullopt;
+				//if (hitInfo.hitEntity != m_planetEntity)
+				//	return std::nullopt;
 
 				hitPos = hitInfo.hitPosition;
 				hitNormal = hitInfo.hitNormal;
@@ -296,18 +285,15 @@ namespace tsom
 	{
 		Nz::Mouse::SetRelativeMouseMode(false);
 
+		m_planetEntities.reset();
+
 		m_cameraEntity.emplace<Nz::DisabledComponent>();
-		m_planetEntity.emplace<Nz::DisabledComponent>();
 		m_skyboxEntity.emplace<Nz::DisabledComponent>();
 	}
 
 	bool GameState::Update(Nz::StateMachine& /*fsm*/, Nz::Time elapsedTime)
 	{
-		if (m_rebuildPlanet)
-		{
-			RebuildPlanet();
-			m_rebuildPlanet = false;
-		}
+		m_planetEntities->Update();
 
 		m_tickAccumulator += elapsedTime;
 		while (m_tickAccumulator >= m_tickDuration)
@@ -382,8 +368,8 @@ namespace tsom
 			Nz::Vector3f hitPos, hitNormal;
 			if (physSystem.RaycastQuery(cameraNode.GetPosition(), cameraNode.GetPosition() + cameraNode.GetForward() * 10.f, [&](const Nz::JoltPhysics3DSystem::RaycastHit& hitInfo) -> std::optional<float>
 				{
-					if (hitInfo.hitEntity != m_planetEntity)
-						return std::nullopt;
+					//if (hitInfo.hitEntity != m_planetEntity)
+					//	return std::nullopt;
 
 					hitPos = hitInfo.hitPosition;
 					hitNormal = hitInfo.hitNormal;
@@ -433,87 +419,6 @@ namespace tsom
 	void GameState::OnTick(Nz::Time elapsedTime)
 	{
 		SendInputs();
-	}
-
-	void GameState::RebuildPlanet()
-	{
-		auto& filesystem = m_stateData->app->GetComponent<Nz::AppFilesystemComponent>();
-
-		if (m_planetEntity)
-			m_planetEntity.destroy();
-
-		m_planetEntity = m_stateData->world->CreateEntity();
-		{
-			Nz::TextureSamplerInfo blockSampler;
-			blockSampler.anisotropyLevel = 16;
-			blockSampler.magFilter = Nz::SamplerFilter::Nearest;
-			blockSampler.minFilter = Nz::SamplerFilter::Nearest;
-			blockSampler.wrapModeU = Nz::SamplerWrap::Repeat;
-			blockSampler.wrapModeV = Nz::SamplerWrap::Repeat;
-
-			std::shared_ptr<Nz::MaterialInstance> planeMat = Nz::Graphics::Instance()->GetDefaultMaterials().basicMaterial->Instantiate();
-			planeMat->SetTextureProperty("BaseColorMap", filesystem.Load<Nz::Texture>("assets/tileset.png"), blockSampler);
-			planeMat->UpdatePassesStates([&](Nz::RenderStates& states)
-			{
-				//states.primitiveMode = Nz::PrimitiveMode::LineList;
-			});
-
-			std::shared_ptr<Nz::GraphicalMesh> planetMesh;
-			{
-				Nz::HighPrecisionClock genClock;
-				planetMesh = m_planet->BuildGfxMesh();
-
-				fmt::print("planet mesh generated in {}\n", fmt::streamed(genClock.GetElapsedTime()));
-			}
-
-			if (planetMesh)
-			{
-				std::shared_ptr<Nz::Model> planetModel = std::make_shared<Nz::Model>(planetMesh);
-				planetModel->SetMaterial(0, planeMat);
-
-				auto& planetGfx = m_planetEntity.emplace<Nz::GraphicsComponent>();
-				planetGfx.AttachRenderable(planetModel, 0x0000FFFF);
-			}
-			
-			m_planetEntity.emplace<Nz::NodeComponent>();
-
-
-			Nz::JoltRigidBody3D::StaticSettings settings;
-			{
-				Nz::HighPrecisionClock colliderClock;
-				settings.geom = m_planet->BuildCollider();
-				fmt::print("built collider in {}\n", fmt::streamed(colliderClock.GetElapsedTime()));
-			}
-
-			auto& physicsSystem = m_stateData->world->GetSystem<Nz::JoltPhysics3DSystem>();
-
-			if (settings.geom)
-			{
-				auto& planetBody = m_planetEntity.emplace<Nz::JoltRigidBody3DComponent>(settings);
-
-#if 0
-				std::shared_ptr<Nz::Model> colliderModel;
-				{
-					std::shared_ptr<Nz::MaterialInstance> colliderMat = Nz::Graphics::Instance()->GetDefaultMaterials().basicMaterial->Instantiate();
-					colliderMat->SetValueProperty("BaseColor", Nz::Color::Green());
-					colliderMat->UpdatePassesStates([](Nz::RenderStates& states)
-						{
-							states.primitiveMode = Nz::PrimitiveMode::LineList;
-							return true;
-						});
-
-					std::shared_ptr<Nz::Mesh> colliderMesh = Nz::Mesh::Build(settings.geom->GenerateDebugMesh());
-					std::shared_ptr<Nz::GraphicalMesh> colliderGraphicalMesh = Nz::GraphicalMesh::BuildFromMesh(*colliderMesh);
-
-					colliderModel = std::make_shared<Nz::Model>(colliderGraphicalMesh);
-					for (std::size_t i = 0; i < colliderModel->GetSubMeshCount(); ++i)
-						colliderModel->SetMaterial(i, colliderMat);
-
-					planetGfx.AttachRenderable(std::move(colliderModel), 0x0000FFFF);
-				}
-#endif
-			}
-		}
 	}
 
 	void GameState::SendInputs()

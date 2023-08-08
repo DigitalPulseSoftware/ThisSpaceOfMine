@@ -25,20 +25,7 @@ namespace tsom
 		m_planet = std::make_unique<Planet>(Nz::Vector3ui(80), 2.f, 2.f);
 		m_planet->GenerateChunks();
 
-		m_planetEntity = m_world.CreateEntity();
-		{
-			m_planetEntity.emplace<Nz::NodeComponent>();
-
-			Nz::JoltRigidBody3D::StaticSettings settings;
-			{
-				Nz::HighPrecisionClock colliderClock;
-				settings.geom = m_planet->BuildCollider();
-				fmt::print("built collider in {}\n", fmt::streamed(colliderClock.GetElapsedTime()));
-			}
-
-			if (settings.geom)
-				m_planetEntity.emplace<Nz::JoltRigidBody3DComponent>(settings);
-		}
+		m_planetEntities = std::make_unique<PlanetEntities>(m_world, *m_planet);
 	}
 
 	ServerInstance::~ServerInstance()
@@ -172,15 +159,11 @@ namespace tsom
 				chunk.UpdateBlock(blockUpdate.voxelIndices, blockUpdate.newBlock);
 			}
 
-			std::shared_ptr<Nz::JoltCollider3D> geom;
 			{
 				Nz::HighPrecisionClock colliderClock;
-				geom = m_planet->BuildCollider();
+				m_planetEntities->Update();
 				fmt::print("built collider in {}\n", fmt::streamed(colliderClock.GetElapsedTime()));
 			}
-
-			auto& planetBody = m_planetEntity.get<Nz::JoltRigidBody3DComponent>();
-			planetBody.SetGeom(geom, false);
 
 			m_voxelGridUpdates.clear();
 		}

@@ -64,7 +64,7 @@ namespace tsom
 
 			struct VisibleChunk
 			{
-				NazaraSlot(Chunk, OnCellUpdated, onCellUpdatedSlot);
+				NazaraSlot(Chunk, OnBlockUpdated, onCellUpdatedSlot);
 
 				Chunk* chunk;
 				Packets::ChunkUpdate chunkUpdatePacket;

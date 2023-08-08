@@ -127,7 +127,7 @@ namespace tsom
 
 		std::shared_ptr<Nz::Model> colliderModel;
 		{
-			std::shared_ptr<Nz::MaterialInstance> colliderMat = Nz::Graphics::Instance()->GetDefaultMaterials().basicMaterial->Instantiate();
+			std::shared_ptr<Nz::MaterialInstance> colliderMat = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic);
 			colliderMat->SetValueProperty("BaseColor", Nz::Color::Green());
 			colliderMat->UpdatePassesStates([](Nz::RenderStates& states)
 			{

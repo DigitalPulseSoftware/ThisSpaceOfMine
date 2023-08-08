@@ -11,13 +11,6 @@
 #include <ClientLib/Export.hpp>
 #include <tsl/hopscotch_map.h>
 
-namespace Nz
-{
-	class DebugDrawer;
-	class GraphicalMesh;
-	class JoltCollider3D;
-}
-
 namespace tsom
 {
 	class TSOM_CLIENTLIB_API ClientPlanet : public Planet
@@ -29,8 +22,6 @@ namespace tsom
 			~ClientPlanet() = default;
 
 			Chunk& AddChunk(Nz::UInt16 networkIndex, const Nz::Vector3ui& indices);
-
-			std::shared_ptr<Nz::GraphicalMesh> BuildGfxMesh();
 
 			inline Chunk* GetChunkByNetworkIndex(Nz::UInt16 networkIndex) const;
 			inline Nz::UInt16 GetChunkNetworkIndex(const Chunk* chunk) const;

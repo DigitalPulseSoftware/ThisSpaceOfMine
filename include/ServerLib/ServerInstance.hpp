@@ -10,8 +10,9 @@
 #include <ServerLib/Export.hpp>
 #include <CommonLib/Planet.hpp>
 #include <CommonLib/NetworkSessionManager.hpp>
-#include <ServerLib/ServerPlayer.hpp>
+#include <CommonLib/PlanetEntities.hpp>
 #include <CommonLib/VoxelBlock.hpp>
+#include <ServerLib/ServerPlayer.hpp>
 #include <NazaraUtils/Bitset.hpp>
 #include <NazaraUtils/MemoryPool.hpp>
 #include <Nazara/Core/Clock.hpp>
@@ -58,8 +59,8 @@ namespace tsom
 				VoxelBlock newBlock;
 			};
 
-			entt::handle m_planetEntity;
 			std::unique_ptr<Planet> m_planet;
+			std::unique_ptr<PlanetEntities> m_planetEntities;
 			std::vector<BlockUpdate> m_voxelGridUpdates;
 			std::vector<std::unique_ptr<NetworkSessionManager>> m_sessionManagers;
 			Nz::Bitset<> m_disconnectedPlayers;
@@ -68,7 +69,6 @@ namespace tsom
 			Nz::MemoryPool<ServerPlayer> m_players;
 			Nz::Time m_tickAccumulator;
 			Nz::Time m_tickDuration;
-
 	};
 }
 

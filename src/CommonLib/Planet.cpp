@@ -27,39 +27,15 @@ namespace tsom
 	{
 		std::size_t index = GetChunkIndex(indices);
 		assert(!m_chunks[index]);
-		m_chunks[index] = std::make_unique<FlatChunk>(indices, Nz::Vector3ui{ ChunkSize }, m_tileSize);
-		return *m_chunks[index];
-	}
-
-	std::shared_ptr<Nz::JoltCollider3D> Planet::BuildCollider()
-	{
-		std::vector<Nz::JoltCompoundCollider3D::ChildCollider> colliders;
-
-		for (unsigned int z = 0; z < m_chunkCount.z; ++z)
+		m_chunks[index].chunk = std::make_unique<FlatChunk>(indices, Nz::Vector3ui{ ChunkSize }, m_tileSize);
+		m_chunks[index].onUpdated.Connect(m_chunks[index].chunk->OnBlockUpdated, [this](Chunk* chunk, const Nz::Vector3ui& /*indices*/, VoxelBlock /*newBlock*/)
 		{
-			for (unsigned int y = 0; y < m_chunkCount.y; ++y)
-			{
-				for (unsigned int x = 0; x < m_chunkCount.x; ++x)
-				{
-					auto& chunkPtr = m_chunks[m_chunkCount.x * (z * m_chunkCount.y + y) + x];
-					if (!chunkPtr)
-						continue;
+			OnChunkUpdated(this, chunk);
+		});
 
-					auto collider = chunkPtr->BuildCollider();
-					if (!collider)
-						continue;
+		OnChunkAdded(this, m_chunks[index].chunk.get());
 
-					auto& colliderEntry = colliders.emplace_back();
-					colliderEntry.collider = std::move(collider);
-					colliderEntry.offset = GetChunkOffset({ x, y, z });
-				}
-			}
-		}
-
-		if (colliders.empty())
-			return nullptr;
-
-		return std::make_shared<Nz::JoltCompoundCollider3D>(std::move(colliders));
+		return *m_chunks[index].chunk;
 	}
 
 	void Planet::GenerateChunks()
@@ -131,36 +107,10 @@ namespace tsom
 	{
 		std::size_t index = GetChunkIndex(indices);
 		assert(m_chunks[index]);
-		m_chunks[index] = nullptr;
-	}
 
-	void Planet::BuildMesh(std::vector<Nz::UInt32>& indices, std::vector<Nz::VertexStruct_XYZ_Color_UV>& vertices)
-	{
-		for (unsigned int z = 0; z < m_chunkCount.z; ++z)
-		{
-			for (unsigned int y = 0; y < m_chunkCount.y; ++y)
-			{
-				for (unsigned int x = 0; x < m_chunkCount.x; ++x)
-				{
-					auto& chunkPtr = m_chunks[m_chunkCount.x * (z * m_chunkCount.y + y) + x];
-					if (chunkPtr)
-						chunkPtr->BuildMesh(Nz::Matrix4f::Translate(GetChunkOffset({ x, y, z })), indices, vertices);
-				}
-			}
-		}
+		OnChunkRemove(this, m_chunks[index].chunk.get());
 
-		float maxHeight = m_gridSize.y / 2 * m_tileSize;
-
-		Nz::Vector3f center = GetCenter();
-		for (Nz::VertexStruct_XYZ_Color_UV& vert : vertices)
-		{
-			float distToCenter = std::max({
-				std::abs(vert.position.x - center.x),
-				std::abs(vert.position.y - center.y),
-				std::abs(vert.position.z - center.z),
-			});
-
-			vert.color *= Nz::Color(std::clamp(distToCenter / maxHeight * 2.f, 0.f, 1.f));
-		}
+		m_chunks[index].chunk = nullptr;
+		m_chunks[index].onUpdated.Disconnect();
 	}
 }

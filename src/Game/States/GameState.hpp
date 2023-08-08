@@ -11,6 +11,7 @@
 #include <Nazara/Core/Time.hpp>
 #include <Nazara/Math/EulerAngles.hpp>
 #include <ClientLib/ClientPlanet.hpp>
+#include <ClientLib/ClientPlanetEntities.hpp>
 #include <ClientLib/ClientSessionHandler.hpp>
 #include <entt/entt.hpp>
 #include <array>
@@ -35,9 +36,6 @@ namespace tsom
 
 		private:
 			void OnTick(Nz::Time elapsedTime);
-
-			void RebuildPlanet();
-
 			void SendInputs();
 
 			NazaraSlot(ClientSessionHandler, OnControlledEntityChanged, m_onControlledEntityChanged);
@@ -47,15 +45,14 @@ namespace tsom
 
 			std::shared_ptr<StateData> m_stateData;
 			std::unique_ptr<ClientPlanet> m_planet;
+			std::unique_ptr<ClientPlanetEntities> m_planetEntities;
 			entt::handle m_cameraEntity;
 			entt::handle m_controlledEntity;
-			entt::handle m_planetEntity;
 			entt::handle m_skyboxEntity;
 			Nz::EulerAnglesf m_cameraRotation;
 			Nz::Quaternionf m_upCorrection;
 			Nz::Time m_tickAccumulator;
 			Nz::Time m_tickDuration;
-			bool m_rebuildPlanet;
 	};
 }
 

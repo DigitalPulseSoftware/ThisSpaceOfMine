@@ -13,7 +13,7 @@ namespace tsom
 	{
 		std::vector<Nz::UInt32> indices;
 		std::vector<Nz::VertexStruct_XYZ_Color_UV> vertices;
-		BuildMesh(Nz::Matrix4f::Identity(), indices, vertices);
+		BuildMesh(indices, vertices);
 		if (indices.empty())
 			return nullptr;
 
