@@ -23,11 +23,15 @@ namespace tsom
 		m_chunks.resize(m_chunkCount.x * m_chunkCount.y * m_chunkCount.z);
 	}
 
-	Chunk& Planet::AddChunk(const Nz::Vector3ui& indices)
+	Chunk& Planet::AddChunk(const Nz::Vector3ui& indices, const Nz::FunctionRef<void(VoxelBlock* blocks)>& initCallback)
 	{
 		std::size_t index = GetChunkIndex(indices);
-		assert(!m_chunks[index]);
+		assert(!m_chunks[index].chunk);
 		m_chunks[index].chunk = std::make_unique<FlatChunk>(indices, Nz::Vector3ui{ ChunkSize }, m_tileSize);
+
+		if (initCallback)
+			m_chunks[index].chunk->InitBlocks(initCallback);
+
 		m_chunks[index].onUpdated.Connect(m_chunks[index].chunk->OnBlockUpdated, [this](Chunk* chunk, const Nz::Vector3ui& /*indices*/, VoxelBlock /*newBlock*/)
 		{
 			OnChunkUpdated(this, chunk);
@@ -114,7 +118,7 @@ namespace tsom
 	void Planet::RemoveChunk(const Nz::Vector3ui& indices)
 	{
 		std::size_t index = GetChunkIndex(indices);
-		assert(m_chunks[index]);
+		assert(m_chunks[index].chunk);
 
 		OnChunkRemove(this, m_chunks[index].chunk.get());
 

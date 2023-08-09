@@ -10,6 +10,7 @@
 #include <Nazara/Graphics/MaterialInstance.hpp>
 #include <Nazara/Graphics/Model.hpp>
 #include <Nazara/Graphics/Components/GraphicsComponent.hpp>
+#include <Nazara/JoltPhysics3D/Components/JoltRigidBody3DComponent.hpp>
 #include <Nazara/Utility/IndexBuffer.hpp>
 #include <Nazara/Utility/VertexBuffer.hpp>
 
@@ -38,6 +39,8 @@ namespace tsom
 		std::vector<Nz::UInt32> indices;
 		std::vector<Nz::VertexStruct_XYZ_Color_UV> vertices;
 		chunk->BuildMesh(indices, vertices);
+		if (indices.empty())
+			return nullptr;
 
 		std::shared_ptr<Nz::IndexBuffer> indexBuffer = std::make_shared<Nz::IndexBuffer>(Nz::IndexType::U32, Nz::SafeCast<Nz::UInt32>(indices.size()), Nz::BufferUsage::Read, Nz::SoftwareBufferFactory, indices.data());
 		std::shared_ptr<Nz::VertexBuffer> vertexBuffer = std::make_shared<Nz::VertexBuffer>(Nz::VertexDeclaration::Get(Nz::VertexLayout::XYZ_Color_UV), Nz::SafeCast<Nz::UInt32>(vertices.size()), Nz::BufferUsage::Read, Nz::SoftwareBufferFactory, vertices.data());
@@ -63,7 +66,35 @@ namespace tsom
 
 		std::shared_ptr<Nz::Model> model = BuildModel(chunk);
 
-		m_chunkEntities[chunkId].emplace<Nz::GraphicsComponent>(std::move(model), 0x0000FFFF);
+		auto& gfxComponent = m_chunkEntities[chunkId].emplace<Nz::GraphicsComponent>();
+		if (model)
+			gfxComponent.AttachRenderable(std::move(model), 0x0000FFFF);
+
+#if 0
+		std::shared_ptr<Nz::Model> colliderModel;
+		{
+			auto& rigidBodyComponent = m_chunkEntities[chunkId].get<Nz::JoltRigidBody3DComponent>();
+			const std::shared_ptr<Nz::JoltCollider3D>& geom = rigidBodyComponent.GetGeom();
+
+
+			std::shared_ptr<Nz::MaterialInstance> colliderMat = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic);
+			colliderMat->SetValueProperty("BaseColor", Nz::Color::Green());
+			colliderMat->UpdatePassesStates([](Nz::RenderStates& states)
+			{
+				states.primitiveMode = Nz::PrimitiveMode::LineList;
+				return true;
+			});
+
+			std::shared_ptr<Nz::Mesh> colliderMesh = Nz::Mesh::Build(geom->GenerateDebugMesh());
+			std::shared_ptr<Nz::GraphicalMesh> colliderGraphicalMesh = Nz::GraphicalMesh::BuildFromMesh(*colliderMesh);
+
+			colliderModel = std::make_shared<Nz::Model>(colliderGraphicalMesh);
+			for (std::size_t i = 0; i < colliderModel->GetSubMeshCount(); ++i)
+				colliderModel->SetMaterial(i, colliderMat);
+
+			gfxComponent.AttachRenderable(std::move(colliderModel), 0x0000FFFF);
+		}
+#endif
 	}
 
 	void ClientPlanetEntities::UpdateChunkEntity(std::size_t chunkId)
@@ -74,6 +105,7 @@ namespace tsom
 
 		auto& gfxComponent = m_chunkEntities[chunkId].get_or_emplace<Nz::GraphicsComponent>();
 		gfxComponent.Clear();
-		gfxComponent.AttachRenderable(std::move(model), 0x0000FFFF);
+		if (model)
+			gfxComponent.AttachRenderable(std::move(model), 0x0000FFFF);
 	}
 }

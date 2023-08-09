@@ -11,9 +11,9 @@ namespace tsom
 	{
 	}
 
-	Chunk& ClientPlanet::AddChunk(Nz::UInt16 networkIndex, const Nz::Vector3ui& indices)
+	Chunk& ClientPlanet::AddChunk(Nz::UInt16 networkIndex, const Nz::Vector3ui& indices, const Nz::FunctionRef<void(VoxelBlock* blocks)>& initCallback)
 	{
-		Chunk& chunk = Planet::AddChunk(indices);
+		Chunk& chunk = Planet::AddChunk(indices, initCallback);
 
 		m_chunkByNetworkIndex.emplace(networkIndex, &chunk);
 		m_chunkNetworkIndices.emplace(&chunk, networkIndex);

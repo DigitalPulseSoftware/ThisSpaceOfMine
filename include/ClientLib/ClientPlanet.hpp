@@ -21,7 +21,7 @@ namespace tsom
 			ClientPlanet(ClientPlanet&&) = delete;
 			~ClientPlanet() = default;
 
-			Chunk& AddChunk(Nz::UInt16 networkIndex, const Nz::Vector3ui& indices);
+			Chunk& AddChunk(Nz::UInt16 networkIndex, const Nz::Vector3ui& indices, const Nz::FunctionRef<void(VoxelBlock* blocks)>& initCallback);
 
 			inline Chunk* GetChunkByNetworkIndex(Nz::UInt16 networkIndex) const;
 			inline Nz::UInt16 GetChunkNetworkIndex(const Chunk* chunk) const;

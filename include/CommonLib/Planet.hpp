@@ -11,6 +11,7 @@
 #include <CommonLib/Direction.hpp>
 #include <CommonLib/Export.hpp>
 #include <NazaraUtils/EnumArray.hpp>
+#include <NazaraUtils/FunctionRef.hpp>
 #include <Nazara/Utility/VertexStruct.hpp>
 #include <memory>
 #include <tuple>
@@ -31,7 +32,7 @@ namespace tsom
 			Planet(Planet&&) = delete;
 			~Planet() = default;
 
-			Chunk& AddChunk(const Nz::Vector3ui& indices);
+			Chunk& AddChunk(const Nz::Vector3ui& indices, const Nz::FunctionRef<void(VoxelBlock* blocks)>& initCallback = nullptr);
 
 			void GenerateChunks();
 

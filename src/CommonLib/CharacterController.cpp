@@ -91,8 +91,11 @@ namespace tsom
 			// Apply gravity
 			velocity -= 9.81f * up * elapsedTime;
 
-			if (m_lastInputs.jump && character.IsOnGround())
-				velocity += up * 5.f;
+			if (m_lastInputs.jump)
+			{
+				if (character.IsOnGround())
+					velocity += up * 5.f;
+			}
 		}
 
 		float moveSpeed = 49.3f * 0.2f;

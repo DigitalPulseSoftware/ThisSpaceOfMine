@@ -104,8 +104,7 @@ namespace tsom
 		{
 			Nz::Vector3ui indices(chunkCreate.chunkLocX, chunkCreate.chunkLocY, chunkCreate.chunkLocZ);
 
-			Chunk& chunk = m_planet->AddChunk(chunkCreate.chunkId, indices);
-			chunk.InitBlocks([&](VoxelBlock* blocks)
+			Chunk& chunk = m_planet->AddChunk(chunkCreate.chunkId, indices, [&](VoxelBlock* blocks)
 			{
 				for (Nz::UInt8 blockContent : chunkCreate.content)
 					*blocks++ = Nz::SafeCast<VoxelBlock>(blockContent);
