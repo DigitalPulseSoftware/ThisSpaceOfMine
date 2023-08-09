@@ -94,7 +94,7 @@ namespace tsom
 			if (m_lastInputs.jump)
 			{
 				if (character.IsOnGround())
-					velocity += up * 5.f;
+					velocity += up * 8.f;
 			}
 		}
 
