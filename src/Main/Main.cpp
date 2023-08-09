@@ -8,9 +8,18 @@
 #include <fmt/format.h>
 #include <exception>
 
+#ifdef NAZARA_PLATFORM_WINDOWS
+#include <Windows.h>
+#endif
+
 int TSOMEntry(int argc, char* argv[], int(*mainFunc)(int argc, char* argv[]))
 {
 	fmt::print("TSOM {0}.{1}.{2} {3} ({4}) - {5}\n", tsom::GameMajorVersion, tsom::GameMinorVersion, tsom::GamePatchVersion, tsom::BuildBranch, tsom::BuildCommit, tsom::BuildDate);
+
+#ifdef NAZARA_PLATFORM_WINDOWS
+	if (IsDebuggerPresent())
+		return mainFunc(argc, argv);
+#endif
 
 	std::unique_ptr<tsom::CrashHandler> crashHandler = tsom::CrashHandler::PlatformCrashHandler();
 	crashHandler->Install();
