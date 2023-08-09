@@ -5,6 +5,7 @@
 #include <Game/States/MenuState.hpp>
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/GameState.hpp>
+#include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/StateMachine.hpp>
 #include <Nazara/Network/Algorithm.hpp>
 #include <Nazara/Network/IpAddress.hpp>
@@ -19,6 +20,13 @@ namespace tsom
 	WidgetState(stateData),
 	m_connectionState(connectionState)
 	{
+		std::string_view address = "malcolm.digitalpulse.software";
+		std::string_view nickname = "Mingebag";
+
+		const Nz::CommandLineParameters& cmdParams = GetStateData().app->GetCommandLineParameters();
+		cmdParams.GetParameter("server-address", &address);
+		cmdParams.GetParameter("nickname", &nickname);
+
 		m_layout = CreateWidget<Nz::BoxLayout>(Nz::BoxLayoutOrientation::TopToBottom);
 
 		Nz::BoxLayout* addressLayout = m_layout->Add<Nz::BoxLayout>(Nz::BoxLayoutOrientation::LeftToRight);
@@ -28,7 +36,7 @@ namespace tsom
 
 		m_serverAddressArea = addressLayout->Add<Nz::TextAreaWidget>();
 		m_serverAddressArea->SetCharacterSize(24);
-		m_serverAddressArea->SetText("malcolm.digitalpulse.software");
+		m_serverAddressArea->SetText(std::string(address));
 		m_serverAddressArea->SetTextColor(Nz::Color::Black());
 
 		Nz::BoxLayout* loginLayout = m_layout->Add<Nz::BoxLayout>(Nz::BoxLayoutOrientation::LeftToRight);
@@ -38,55 +46,26 @@ namespace tsom
 
 		m_loginArea = loginLayout->Add<Nz::TextAreaWidget>();
 		m_loginArea->SetCharacterSize(24);
-		m_loginArea->SetText("Mingebag");
+		m_loginArea->SetText(std::string(nickname));
 		m_loginArea->SetTextColor(Nz::Color::Black());
 
 		m_connectButton = m_layout->Add<Nz::ButtonWidget>();
 		m_connectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Connect", 36, Nz::TextStyle_Regular, Nz::Color(0.13f)));
 		m_connectButton->OnButtonTrigger.Connect([this](const Nz::ButtonWidget*)
 		{
-			constexpr Nz::UInt16 GamePort = 29536;
-
-			if (m_serverAddressArea->GetText().empty())
-			{
-				fmt::print(fg(fmt::color::red), "missing server address\n");
-				return;
-			}
-
-			if (m_loginArea->GetText().empty())
-			{
-				fmt::print(fg(fmt::color::red), "missing login\n");
-				return;
-			}
-
-			Nz::ResolveError resolveError;
-			auto hostVec = Nz::IpAddress::ResolveHostname(Nz::NetProtocol::IPv6, m_serverAddressArea->GetText(), std::to_string(GamePort), &resolveError);
-
-			if (hostVec.empty())
-			{
-				fmt::print(fg(fmt::color::red), "failed to resolve {}: {}\n", m_serverAddressArea->GetText(), Nz::ErrorToString(resolveError));
-				return;
-			}
-
-			Nz::IpAddress serverAddress = hostVec[0].address;
-
-			fmt::print("connecting to {}...\n", serverAddress.ToString());
-
-			if (auto connectionState = m_connectionState.lock())
-				connectionState->Connect(serverAddress, m_loginArea->GetText(), shared_from_this());
+			OnConnectPressed();
 		});
+
+		m_autoConnect = cmdParams.HasFlag("auto-connect");
 	}
 
-	bool MenuState::Update(Nz::StateMachine& fsm, Nz::Time /*elapsedTime*/)
+	bool MenuState::Update(Nz::StateMachine& fsm, Nz::Time elapsedTime)
 	{
-		/*if (auto connectionState = m_connectionState.lock())
+		if (m_autoConnect)
 		{
-			if (connectionState->HasSession())
-			{
-				fsm.PopStatesUntil(shared_from_this());
-				fsm.PopState();
-			}
-		}*/
+			OnConnectPressed();
+			m_autoConnect = false;
+		}
 
 		return true;
 	}
@@ -95,5 +74,38 @@ namespace tsom
 	{
 		m_layout->Resize({ newSize.x * 0.2f, m_layout->GetPreferredHeight() });
 		m_layout->Center();
+	}
+
+	void MenuState::OnConnectPressed()
+	{
+		constexpr Nz::UInt16 GamePort = 29536;
+
+		if (m_serverAddressArea->GetText().empty())
+		{
+			fmt::print(fg(fmt::color::red), "missing server address\n");
+			return;
+		}
+
+		if (m_loginArea->GetText().empty())
+		{
+			fmt::print(fg(fmt::color::red), "missing login\n");
+			return;
+		}
+
+		Nz::ResolveError resolveError;
+		auto hostVec = Nz::IpAddress::ResolveHostname(Nz::NetProtocol::IPv6, m_serverAddressArea->GetText(), std::to_string(GamePort), &resolveError);
+
+		if (hostVec.empty())
+		{
+			fmt::print(fg(fmt::color::red), "failed to resolve {}: {}\n", m_serverAddressArea->GetText(), Nz::ErrorToString(resolveError));
+			return;
+		}
+
+		Nz::IpAddress serverAddress = hostVec[0].address;
+
+		fmt::print("connecting to {}...\n", serverAddress.ToString());
+
+		if (auto connectionState = m_connectionState.lock())
+			connectionState->Connect(serverAddress, m_loginArea->GetText(), shared_from_this());
 	}
 }

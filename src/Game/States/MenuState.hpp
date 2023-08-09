@@ -26,18 +26,18 @@ namespace tsom
 			MenuState(std::shared_ptr<StateData> stateData, std::shared_ptr<ConnectionState> connectionState);
 			~MenuState() = default;
 
-			/*void Enter(Nz::StateMachine& fsm) override;
-			void Leave(Nz::StateMachine& fsm) override;*/
 			bool Update(Nz::StateMachine& fsm, Nz::Time elapsedTime) override;
 
 		private:
 			void LayoutWidgets(const Nz::Vector2f& newSize) override;
+			void OnConnectPressed();
 
 			std::weak_ptr<ConnectionState> m_connectionState;
 			Nz::BoxLayout* m_layout;
 			Nz::ButtonWidget* m_connectButton;
 			Nz::TextAreaWidget* m_serverAddressArea;
 			Nz::TextAreaWidget* m_loginArea;
+			bool m_autoConnect;
 	};
 }
 
