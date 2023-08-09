@@ -62,7 +62,15 @@ namespace tsom
 						z < freeSpace || z >= m_gridSize.z - freeSpace)
 						continue;
 
-					unsigned int depth = z - freeSpace;
+					unsigned int depth = std::min({
+						x - freeSpace,
+						y - freeSpace,
+						z - freeSpace,
+						m_gridSize.x - freeSpace - x - 1,
+						m_gridSize.y - freeSpace - y - 1,
+						m_gridSize.z - freeSpace - z - 1,
+					});
+
 					VoxelBlock blockType;
 					if (depth == 0)
 						blockType = VoxelBlock::Grass;
@@ -73,7 +81,7 @@ namespace tsom
 
 					Nz::Vector3ui innerCoordinates;
 					Chunk& chunk = GetChunkByIndices({ x, y, z }, &innerCoordinates);
-					chunk.UpdateBlock(innerCoordinates, VoxelBlock::Grass);
+					chunk.UpdateBlock(innerCoordinates, blockType);
 				}
 			}
 		}
