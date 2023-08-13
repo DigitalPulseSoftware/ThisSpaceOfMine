@@ -5,11 +5,11 @@
 #include <ServerLib/Session/PlayerSessionHandler.hpp>
 #include <ServerLib/ServerInstance.hpp>
 #include <CommonLib/VoxelBlock.hpp>
-#include <fmt/format.h>
 
 namespace tsom
 {
 	constexpr SessionHandler::SendAttributeTable s_packetAttributes = SessionHandler::BuildAttributeTable({
+		{ PacketIndex<Packets::ChatMessage>,         { 0, Nz::ENetPacketFlag_Reliable } },
 		{ PacketIndex<Packets::ChunkCreate>,         { 1, Nz::ENetPacketFlag_Reliable } },
 		{ PacketIndex<Packets::ChunkDestroy>,        { 1, Nz::ENetPacketFlag_Reliable } },
 		{ PacketIndex<Packets::ChunkUpdate>,         { 1, Nz::ENetPacketFlag_Reliable } },
@@ -53,6 +53,11 @@ namespace tsom
 		Nz::Vector3ui voxelLoc(placeBlock.voxelLoc.x, placeBlock.voxelLoc.y, placeBlock.voxelLoc.z);
 
 		m_player->GetServerInstance().UpdatePlanetBlock(chunk->GetIndices(), voxelLoc, static_cast<VoxelBlock>(placeBlock.newContent));
+	}
+
+	void PlayerSessionHandler::HandlePacket(Packets::SendChatMessage&& playerChat)
+	{
+		m_player->GetServerInstance().BroadcastChatMessage(std::move(playerChat.message), m_player->GetPlayerIndex());
 	}
 
 	void PlayerSessionHandler::HandlePacket(Packets::UpdatePlayerInputs&& playerInputs)

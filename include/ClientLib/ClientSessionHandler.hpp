@@ -30,6 +30,7 @@ namespace tsom
 			inline entt::handle GetControlledEntity() const;
 
 			void HandlePacket(Packets::AuthResponse&& authResponse);
+			void HandlePacket(Packets::ChatMessage&& chatMessage);
 			void HandlePacket(Packets::ChunkCreate&& chunkCreate);
 			void HandlePacket(Packets::ChunkDestroy&& chunkDestroy);
 			void HandlePacket(Packets::ChunkUpdate&& chunkUpdate);
@@ -39,10 +40,13 @@ namespace tsom
 			void HandlePacket(Packets::PlayerLeave&& playerLeave);
 			void HandlePacket(Packets::PlayerJoin&& playerJoin);
 
+			NazaraSignal(OnChatMessage, const std::string& /*message*/, const std::string& /*senderNickname*/);
 			NazaraSignal(OnChunkCreate, const Packets::ChunkCreate& /*chunkCreate*/);
 			NazaraSignal(OnChunkDestroy, const Packets::ChunkDestroy& /*chunkDestroy*/);
 			NazaraSignal(OnChunkUpdate, const Packets::ChunkUpdate& /*gridUpdate*/);
 			NazaraSignal(OnControlledEntityChanged, entt::handle /*newEntity*/);
+			NazaraSignal(OnPlayerLeave, const std::string& /*playerName*/);
+			NazaraSignal(OnPlayerJoined, const std::string& /*playerName*/);
 
 			static constexpr Nz::UInt32 InvalidEntity = 0xFFFFFFFF;
 

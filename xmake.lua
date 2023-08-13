@@ -141,7 +141,7 @@ target("ClientLib", function ()
 	add_defines("TSOM_CLIENTLIB_BUILD")
 	add_options("clientlib_static")
 
-	add_packages("nazaraengine", { components = { "audio", "graphics" }, public = true })
+	add_packages("nazaraengine", { components = { "audio", "graphics", "widgets" }, public = true })
 end)
 
 target("Main")

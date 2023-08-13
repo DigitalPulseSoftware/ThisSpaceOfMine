@@ -78,6 +78,12 @@ namespace tsom
 			PlayerIndex ownPlayerIndex;
 		};
 
+		struct ChatMessage
+		{
+			std::optional<PlayerIndex> playerIndex;
+			std::string message;
+		};
+
 		struct ChunkCreate
 		{
 			Helper::ChunkId chunkId;
@@ -167,6 +173,11 @@ namespace tsom
 			PlayerIndex index;
 		};
 
+		struct SendChatMessage
+		{
+			std::string message;
+		};
+
 		struct UpdatePlayerInputs
 		{
 			PlayerInputs inputs;
@@ -174,6 +185,7 @@ namespace tsom
 
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, AuthRequest& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, AuthResponse& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, ChatMessage& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, ChunkCreate& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, ChunkDestroy& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, ChunkUpdate& data);
@@ -185,6 +197,7 @@ namespace tsom
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, PlaceBlock& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, PlayerJoin& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, PlayerLeave& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, SendChatMessage& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, UpdatePlayerInputs& data);
 	}
 }

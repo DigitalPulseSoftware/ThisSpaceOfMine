@@ -10,7 +10,7 @@
 #include <Nazara/Core/EnttWorld.hpp>
 #include <Nazara/Core/State.hpp>
 #include <Nazara/Renderer/RenderTarget.hpp>
-#include <Nazara/Widgets/BaseWidget.hpp>
+#include <Nazara/Widgets/Canvas.hpp>
 #include <Game/States/StateData.hpp>
 #include <functional>
 #include <memory>

@@ -57,6 +57,21 @@ namespace tsom
 			serializer &= data.ownPlayerIndex;
 		}
 
+		void Serialize(PacketSerializer& serializer, ChatMessage& data)
+		{
+			serializer &= data.message;
+
+			bool hasPlayer;
+			if (serializer.IsWriting())
+				hasPlayer = data.playerIndex.has_value();
+
+			serializer &= hasPlayer;
+			if (!serializer.IsWriting() && hasPlayer)
+				data.playerIndex.emplace();
+
+			serializer.Serialize(data.playerIndex);
+		}
+
 		void Serialize(PacketSerializer& serializer, ChunkCreate& data)
 		{
 			serializer &= data.chunkId;
@@ -153,6 +168,11 @@ namespace tsom
 		void Serialize(PacketSerializer& serializer, PlayerLeave& data)
 		{
 			serializer &= data.index;
+		}
+
+		void Serialize(PacketSerializer& serializer, SendChatMessage& data)
+		{
+			serializer &= data.message;
 		}
 
 		void Serialize(PacketSerializer& serializer, UpdatePlayerInputs& data)

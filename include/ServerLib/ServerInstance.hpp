@@ -32,6 +32,8 @@ namespace tsom
 
 			template<typename... Args> NetworkSessionManager& AddSessionManager(Args&&... args);
 
+			void BroadcastChatMessage(std::string message, std::optional<PlayerIndex> senderIndex);
+
 			ServerPlayer* CreatePlayer(NetworkSession* session, std::string nickname);
 			void DestroyPlayer(PlayerIndex playerIndex);
 

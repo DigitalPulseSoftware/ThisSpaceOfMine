@@ -12,7 +12,7 @@
 namespace Nz
 {
 	class ApplicationBase;
-	class BaseWidget;
+	class Canvas;
 	class EnttWorld;
 	class Window;
 	class WindowSwapchain;
@@ -26,7 +26,7 @@ namespace tsom
 	struct StateData : std::enable_shared_from_this<StateData>
 	{
 		Nz::ApplicationBase* app;
-		Nz::BaseWidget* canvas;
+		Nz::Canvas* canvas;
 		Nz::EnttWorld* world;
 		Nz::Window* window;
 		Nz::WindowSwapchain* swapchain;

@@ -34,6 +34,19 @@ namespace tsom
 		m_players.Clear();
 	}
 
+	void ServerInstance::BroadcastChatMessage(std::string message, std::optional<PlayerIndex> senderIndex)
+	{
+		Packets::ChatMessage chatMessage;
+		chatMessage.message = std::move(message);
+		chatMessage.playerIndex = senderIndex;
+
+		ForEachPlayer([&](ServerPlayer& serverPlayer)
+		{
+			if (NetworkSession* session = serverPlayer.GetSession())
+				session->SendPacket(chatMessage);
+		});
+	}
+
 	ServerPlayer* ServerInstance::CreatePlayer(NetworkSession* session, std::string nickname)
 	{
 		std::size_t playerIndex;

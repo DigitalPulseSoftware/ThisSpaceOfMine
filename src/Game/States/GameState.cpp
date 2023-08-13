@@ -6,7 +6,7 @@
 #include <Game/States/StateData.hpp>
 #include <CommonLib/PlayerInputs.hpp>
 #include <CommonLib/NetworkSession.hpp>
-#include <CommonLib/Utility/SignedDistanceFunctions.hpp>
+#include <ClientLib/Chatbox.hpp>
 #include <Nazara/Core.hpp>
 #include <Nazara/Graphics.hpp>
 #include <Nazara/Graphics/PropertyHandler/TexturePropertyHandler.hpp>
@@ -121,6 +121,81 @@ namespace tsom
 			Chunk* chunk = m_planet->GetChunkByNetworkIndex(chunkUpdate.chunkId);
 			for (auto&& [blockPos, blockIndex] : chunkUpdate.updates)
 				chunk->UpdateBlock({ blockPos.x, blockPos.y, blockPos.z }, Nz::SafeCast<VoxelBlock>(blockIndex));
+		});
+		
+		m_chatBox = std::make_unique<Chatbox>(m_stateData->swapchain, m_stateData->canvas);
+		m_chatBox->OnChatMessage.Connect([&](const std::string& message)
+		{
+			Packets::SendChatMessage messagePacket;
+			messagePacket.message = message;
+
+			m_stateData->networkSession->SendPacket(messagePacket);
+		});
+		
+		m_onUnhandledKeyPressed.Connect(m_stateData->canvas->OnUnhandledKeyPressed, [this](const Nz::WindowEventHandler*, const Nz::WindowEvent::KeyEvent& event)
+		{
+			switch (event.virtualKey)
+			{
+				case Nz::Keyboard::VKey::Escape:
+				{
+					if (m_chatBox->IsOpen())
+						m_chatBox->Close();
+
+					break;
+				}
+
+				case Nz::Keyboard::VKey::Return:
+				{
+					if (m_chatBox->IsOpen())
+					{
+						m_chatBox->SendMessage();
+						m_chatBox->Close();
+					}
+					else
+						m_chatBox->Open();
+				
+					break;
+				}
+
+				default:
+					break;
+			}
+		});
+
+		m_onChatMessage.Connect(m_stateData->sessionHandler->OnChatMessage, [this](const std::string& message, const std::string& senderName)
+		{
+			if (!senderName.empty())
+			{
+				m_chatBox->PrintMessage({
+					{ Chatbox::ColorItem(Nz::Color::Yellow()) },
+					{ Chatbox::TextItem{ senderName } },
+					{ Chatbox::TextItem{ ": " }},
+					{ Chatbox::ColorItem(Nz::Color::White()) },
+					{ Chatbox::TextItem{ message } }
+				});
+			}
+			else
+			{
+				m_chatBox->PrintMessage({
+					{ Chatbox::TextItem{ message } }
+				});
+			}
+		});
+
+		m_onPlayerLeave.Connect(m_stateData->sessionHandler->OnPlayerLeave, [this](const std::string& playerName)
+		{
+			m_chatBox->PrintMessage({
+				{ Chatbox::TextItem{ playerName } },
+				{ Chatbox::TextItem{ " left the server" } }
+			});
+		});
+
+		m_onPlayerJoined.Connect(m_stateData->sessionHandler->OnPlayerJoined, [this](const std::string& playerName)
+		{
+			m_chatBox->PrintMessage({
+				{ Chatbox::TextItem{ playerName } },
+				{ Chatbox::TextItem{ " joined the server" } }
+			});
 		});
 	}
 
@@ -283,6 +358,8 @@ namespace tsom
 	void GameState::Leave(Nz::StateMachine& /*fsm*/)
 	{
 		Nz::Mouse::SetRelativeMouseMode(false);
+
+		m_chatBox->Close();
 
 		m_planetEntities.reset();
 

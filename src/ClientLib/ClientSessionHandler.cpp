@@ -23,6 +23,7 @@ namespace tsom
 		{ PacketIndex<Packets::AuthRequest>,        { 0, Nz::ENetPacketFlag_Reliable } },
 		{ PacketIndex<Packets::MineBlock>,          { 1, Nz::ENetPacketFlag_Reliable } },
 		{ PacketIndex<Packets::PlaceBlock>,         { 1, Nz::ENetPacketFlag_Reliable } },
+		{ PacketIndex<Packets::SendChatMessage>,    { 0, Nz::ENetPacketFlag_Reliable } },
 		{ PacketIndex<Packets::UpdatePlayerInputs>, { 1, 0 } }
 	});
 
@@ -39,6 +40,22 @@ namespace tsom
 	{
 		fmt::print("Auth response\n");
 		m_ownPlayerIndex = authResponse.ownPlayerIndex;
+	}
+
+	void ClientSessionHandler::HandlePacket(Packets::ChatMessage&& chatMessage)
+	{
+		if (chatMessage.playerIndex)
+		{
+			if (chatMessage.playerIndex >= m_players.size())
+			{
+				fmt::print(fg(fmt::color::red), "ChatMessage with unknown player index {}\n", *chatMessage.playerIndex);
+				return;
+			}
+
+			OnChatMessage(chatMessage.message, m_players[*chatMessage.playerIndex]->nickname);
+		}
+		else
+			OnChatMessage(chatMessage.message, {});
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::ChunkCreate&& chunkCreate)
@@ -104,6 +121,8 @@ namespace tsom
 			return;
 		}
 
+		OnPlayerLeave(m_players[playerLeave.index]->nickname);
+
 		m_players[playerLeave.index].reset();
 	}
 
@@ -114,6 +133,8 @@ namespace tsom
 
 		auto& playerInfo = m_players[playerJoin.index].emplace();
 		playerInfo.nickname = std::move(playerJoin.nickname);
+
+		OnPlayerJoined(playerInfo.nickname);
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::ChunkUpdate&& stateUpdate)
