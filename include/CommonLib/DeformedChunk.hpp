@@ -24,12 +24,12 @@ namespace tsom
 			std::optional<Nz::Vector3ui> ComputeCoordinates(const Nz::Vector3f& position) const override;
 			Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> ComputeVoxelCorners(const Nz::Vector3ui& indices) const override;
 
-			Nz::Vector3f DeformPosition(const Nz::Vector3f& position) const;
-
 			inline void UpdateDeformationRadius(float deformationRadius);
 
 			DeformedChunk& operator=(const DeformedChunk&) = delete;
 			DeformedChunk& operator=(DeformedChunk&&) = delete;
+
+			static Nz::Vector3f DeformPosition(const Nz::Vector3f& position, const Nz::Vector3f& deformationCenter, float deformationRadius);
 
 		private:
 			Nz::Vector3f m_deformationCenter;

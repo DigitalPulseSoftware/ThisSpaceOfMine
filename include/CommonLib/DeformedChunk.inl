@@ -15,4 +15,21 @@ namespace tsom
 	{
 		m_deformationRadius = deformationRadius;
 	}
+
+	inline Nz::Vector3f DeformedChunk::DeformPosition(const Nz::Vector3f& position, const Nz::Vector3f& deformationCenter, float deformationRadius)
+	{
+		float distToCenter = std::max({
+			std::abs(position.x - deformationCenter.x),
+			std::abs(position.y - deformationCenter.y),
+			std::abs(position.z - deformationCenter.z),
+		});
+
+		float innerReductionSize = std::max(distToCenter - deformationRadius, 0.f);
+		Nz::Boxf innerBox(deformationCenter - Nz::Vector3f(innerReductionSize), Nz::Vector3f(innerReductionSize * 2.f));
+
+		Nz::Vector3f innerPos = Nz::Vector3f::Clamp(position, innerBox.GetMinimum(), innerBox.GetMaximum());
+		Nz::Vector3f normal = Nz::Vector3f::Normalize(position - innerPos);
+
+		return innerPos + normal * std::min(deformationRadius, distToCenter);
+	}
 }
