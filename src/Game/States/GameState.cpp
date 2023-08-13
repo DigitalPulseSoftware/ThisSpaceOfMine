@@ -288,7 +288,7 @@ namespace tsom
 			auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
 
 			auto& physSystem = m_stateData->world->GetSystem<Nz::JoltPhysics3DSystem>();
-			if (physSystem.RaycastQuery(cameraNode.GetPosition(), cameraNode.GetPosition() + cameraNode.GetForward() * 5.f, filter))
+			if (physSystem.RaycastQuery(cameraNode.GetPosition(), cameraNode.GetPosition() + cameraNode.GetForward() * 10.f, filter))
 			{
 				if (event.button == Nz::Mouse::Left)
 				{
