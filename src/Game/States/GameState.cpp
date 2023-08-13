@@ -387,7 +387,7 @@ namespace tsom
 		//debugDrawer.DrawBox(m_skybox.get<Nz::GraphicsComponent>().GetAABB(), Nz::Color::Blue());
 		//debugDrawer.DrawFrustum(m_camera.get<Nz::CameraComponent>().GetViewerInsta, Nz::Color::Blue());
 
-		float cameraSpeed = (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::LShift)) ? 20.f : 5.f;
+		float cameraSpeed = (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::LShift)) ? 50.f : 10.f;
 		float updateTime = elapsedTime.AsSeconds();
 
 		auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
