@@ -167,17 +167,21 @@ namespace tsom
 			if (!senderName.empty())
 			{
 				m_chatBox->PrintMessage({
-					{ Chatbox::ColorItem(Nz::Color::Yellow()) },
-					{ Chatbox::TextItem{ senderName } },
-					{ Chatbox::TextItem{ ": " }},
-					{ Chatbox::ColorItem(Nz::Color::White()) },
-					{ Chatbox::TextItem{ message } }
+					{
+						{ Chatbox::ColorItem(Nz::Color::Yellow()) },
+						{ Chatbox::TextItem{ senderName } },
+						{ Chatbox::TextItem{ ": " }},
+						{ Chatbox::ColorItem(Nz::Color::White()) },
+						{ Chatbox::TextItem{ message } }
+					}
 				});
 			}
 			else
 			{
 				m_chatBox->PrintMessage({
-					{ Chatbox::TextItem{ message } }
+					{
+						{ Chatbox::TextItem{ message } }
+					}
 				});
 			}
 		});
@@ -185,16 +189,20 @@ namespace tsom
 		m_onPlayerLeave.Connect(m_stateData->sessionHandler->OnPlayerLeave, [this](const std::string& playerName)
 		{
 			m_chatBox->PrintMessage({
-				{ Chatbox::TextItem{ playerName } },
-				{ Chatbox::TextItem{ " left the server" } }
+				{
+					{ Chatbox::TextItem{ playerName } },
+					{ Chatbox::TextItem{ " left the server" } }
+				}
 			});
 		});
 
 		m_onPlayerJoined.Connect(m_stateData->sessionHandler->OnPlayerJoined, [this](const std::string& playerName)
 		{
 			m_chatBox->PrintMessage({
-				{ Chatbox::TextItem{ playerName } },
-				{ Chatbox::TextItem{ " joined the server" } }
+				{
+					{ Chatbox::TextItem{ playerName } },
+					{ Chatbox::TextItem{ " joined the server" } }
+				}
 			});
 		});
 	}
