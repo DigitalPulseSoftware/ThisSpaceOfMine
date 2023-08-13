@@ -25,7 +25,7 @@ namespace tsom
 
 	void ServerPlayer::Respawn()
 	{
-		const Nz::Vector3f position = Nz::Vector3f::Up() * 85.f;
+		const Nz::Vector3f position = Nz::Vector3f::Up() * 165.f;
 		const Nz::Quaternionf rotation = Nz::EulerAnglesf(-30.f, 0.f, 0.f);
 
 		m_controlledEntity = m_instance.GetWorld().CreateEntity();

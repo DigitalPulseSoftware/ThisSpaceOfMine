@@ -22,7 +22,7 @@ namespace tsom
 		physicsSystem.GetPhysWorld().SetStepSize(m_tickDuration);
 		physicsSystem.GetPhysWorld().SetGravity(Nz::Vector3f::Zero());
 
-		m_planet = std::make_unique<Planet>(Nz::Vector3ui(80), 2.f, 2.f);
+		m_planet = std::make_unique<Planet>(Nz::Vector3ui(160), 2.f, 16.f);
 		m_planet->GenerateChunks();
 
 		m_planetEntities = std::make_unique<PlanetEntities>(m_world, *m_planet);

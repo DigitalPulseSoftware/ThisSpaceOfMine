@@ -44,7 +44,7 @@ namespace tsom
 			cameraComponent.UpdateZNear(0.1f);
 		}
 
-		m_planet = std::make_unique<ClientPlanet>(Nz::Vector3ui(80), 2.f, 2.f);
+		m_planet = std::make_unique<ClientPlanet>(Nz::Vector3ui(160), 2.f, 16.f);
 
 		m_skyboxEntity = m_stateData->world->CreateEntity();
 		{
