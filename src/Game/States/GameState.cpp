@@ -16,6 +16,7 @@
 #include <ClientLib/Systems/AnimationSystem.hpp>
 #include <ClientLib/Systems/CameraFollowerSystem.hpp>
 #include <CommonLib/GameConstants.hpp>
+#include <CommonLib/DeformedChunk.hpp>
 #include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/NetworkSession.hpp>
 #include <CommonLib/PlayerInputs.hpp>
@@ -680,13 +681,32 @@ namespace tsom
 		//debugDrawer.DrawLine(Nz::Vector3f::Left() * 20.f, Nz::Vector3f::Left() * 20.f + Nz::Vector3f::Forward() * 10.f, Nz::Color::Green());
 		//debugDrawer.DrawLine(Nz::Vector3f::Forward() * 20.f, Nz::Vector3f::Left() * 20.f + Nz::Vector3f::Forward() * 10.f, Nz::Color::Green());
 
-		//debugDrawer.DrawBox(m_skybox.get<Nz::GraphicsComponent>().GetAABB(), Nz::Color::Blue());
+		//debugDrawer.DrawBox(Nz::Boxf(Nz::Vector3f(-1.f), Nz::Vector3f(2.f)), Nz::Color::Blue());
+		//debugDrawer.DrawBox(Nz::Boxf(Nz::Vector3f(Nz::Vector3f(m_planet->GetGridDimensions()) * -0.5f * m_planet->GetTileSize()), Nz::Vector3f(Nz::Vector3f(m_planet->GetGridDimensions()) * m_planet->GetTileSize())), Nz::Color::Green());
 		//debugDrawer.DrawFrustum(m_camera.get<Nz::CameraComponent>().GetViewerInsta, Nz::Color::Blue());
 
 		float cameraSpeed = (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::LShift)) ? 50.f : 10.f;
 		float updateTime = elapsedTime.AsSeconds();
 
 		auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
+
+#if 0
+		if (Chunk* chunk = m_planet->GetChunkByPosition(cameraNode.GetPosition()))
+		{
+			Nz::Vector3f chunkOffset = m_planet->GetChunkOffset(chunk->GetIndices());
+			Nz::Boxf aabb(chunkOffset, Nz::Vector3f(Planet::ChunkSize) * m_planet->GetTileSize());
+			debugDrawer.DrawBox(aabb, Nz::Color::Blue());
+
+			for (const Nz::Vector3f& corner : aabb.GetCorners())
+			{
+				if (DeformedChunk::DeformPosition(corner, m_planet->GetCenter(), m_planet->GetCornerRadius()).ApproxEqual(corner, 0.001f))
+					debugDrawer.DrawBox(Nz::Boxf(corner - Nz::Vector3f(0.5f), Nz::Vector3f(1.f)), Nz::Color::Red());
+				else
+					debugDrawer.DrawBox(Nz::Boxf(corner - Nz::Vector3f(0.5f), Nz::Vector3f(1.f)), Nz::Color::Green());
+			}
+		}
+#endif
+
 		if (m_controlledEntity)
 		{
 			Nz::NodeComponent& characterNode = m_controlledEntity.get<Nz::NodeComponent>();

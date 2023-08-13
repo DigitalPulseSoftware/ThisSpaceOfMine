@@ -6,15 +6,9 @@
 #include <CommonLib/BlockLibrary.hpp>
 #include <CommonLib/DeformedChunk.hpp>
 #include <CommonLib/FlatChunk.hpp>
-#include <CommonLib/Utility/SignedDistanceFunctions.hpp>
-#include <Nazara/Core/TaskScheduler.hpp>
-#include <Nazara/Core/VertexStruct.hpp>
-#include <Nazara/Math/Ray.hpp>
-#include <Nazara/Physics3D/Collider3D.hpp>
 #include <NazaraUtils/CallOnExit.hpp>
+#include <Nazara/Core/TaskScheduler.hpp>
 #include <PerlinNoise.hpp>
-#include <fmt/format.h>
-#include <random>
 
 namespace tsom
 {
@@ -29,7 +23,27 @@ namespace tsom
 	{
 		assert(!m_chunks.contains(indices));
 		ChunkData chunkData;
-		chunkData.chunk = std::make_shared<FlatChunk>(blockLibrary, *this, indices, Nz::Vector3ui{ ChunkSize }, m_tileSize);
+
+		Nz::Vector3f chunkOffset = GetChunkOffset(indices);
+
+		// Check if chunk has to be deformed (check if it has a deformed corner)
+		auto IsDeformedChunk = [&]()
+		{
+			Nz::Boxf aabb(chunkOffset, Nz::Vector3f(ChunkSize) * m_tileSize);
+
+			for (const Nz::Vector3f& corner : aabb.GetCorners())
+			{
+				if (!DeformedChunk::DeformPosition(corner, GetCenter(), m_cornerRadius).ApproxEqual(corner, 0.001f))
+					return true;
+			}
+
+			return false;
+		};
+
+		if (IsDeformedChunk())
+			chunkData.chunk = std::make_unique<DeformedChunk>(blockLibrary, *this, indices, Nz::Vector3ui{ ChunkSize }, m_tileSize, GetCenter() - chunkOffset, m_cornerRadius);
+		else
+			chunkData.chunk = std::make_unique<FlatChunk>(blockLibrary, *this, indices, Nz::Vector3ui{ ChunkSize }, m_tileSize);
 
 		chunkData.onReset.Connect(chunkData.chunk->OnReset, [this](Chunk* chunk)
 		{

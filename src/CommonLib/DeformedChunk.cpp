@@ -125,37 +125,11 @@ namespace tsom
 		float fZ = indices.z * m_blockSize;
 
 		Nz::Boxf box(fX, fZ, fY, m_blockSize, m_blockSize, m_blockSize);
-		Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> corners {
-			box.GetCorner(Nz::BoxCorner::LeftBottomFar),
-			box.GetCorner(Nz::BoxCorner::LeftTopFar),
-			box.GetCorner(Nz::BoxCorner::RightBottomFar),
-			box.GetCorner(Nz::BoxCorner::RightTopFar),
-			box.GetCorner(Nz::BoxCorner::LeftBottomNear),
-			box.GetCorner(Nz::BoxCorner::LeftTopNear),
-			box.GetCorner(Nz::BoxCorner::RightBottomNear),
-			box.GetCorner(Nz::BoxCorner::RightTopNear)
-		};
+		Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> corners = box.GetCorners();
 
 		for (auto& position : corners)
-			position = DeformPosition(position);
+			position = DeformPosition(position, m_deformationCenter, m_deformationRadius);
 
 		return corners;
-	}
-
-	Nz::Vector3f DeformedChunk::DeformPosition(const Nz::Vector3f& position) const
-	{
-		float distToCenter = std::max({
-			std::abs(position.x - m_deformationCenter.x),
-			std::abs(position.y - m_deformationCenter.y),
-			std::abs(position.z - m_deformationCenter.z),
-		});
-
-		float innerReductionSize = std::max(distToCenter - m_deformationRadius, 0.f);
-		Nz::Boxf innerBox(m_deformationCenter - Nz::Vector3f(innerReductionSize), Nz::Vector3f(innerReductionSize * 2.f));
-
-		Nz::Vector3f innerPos = Nz::Vector3f::Clamp(position, innerBox.GetMinimum(), innerBox.GetMaximum());
-		Nz::Vector3f normal = Nz::Vector3f::Normalize(position - innerPos);
-
-		return innerPos + normal * std::min(m_deformationRadius, distToCenter);
 	}
 }
