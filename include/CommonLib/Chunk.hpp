@@ -29,7 +29,7 @@ namespace tsom
 	class TSOM_COMMONLIB_API Chunk
 	{
 		public:
-			inline Chunk(const Nz::Vector3ui& indices, const Nz::Vector3ui& size, float cellSize);
+			inline Chunk(const Nz::Vector3ui& indices, const Nz::Vector3ui& size, float blockSize);
 			Chunk(const Chunk&) = delete;
 			Chunk(Chunk&&) = delete;
 			virtual ~Chunk();
@@ -40,11 +40,12 @@ namespace tsom
 			virtual std::optional<Nz::Vector3ui> ComputeCoordinates(const Nz::Vector3f& position) const = 0;
 			virtual Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> ComputeVoxelCorners(const Nz::Vector3ui& indices) const = 0;
 
-			inline VoxelBlock GetCellContent(const Nz::Vector3ui& indices) const;
-			inline float GetCellSize() const;
+			inline unsigned int GetBlockIndex(const Nz::Vector3ui& indices) const;
+			inline VoxelBlock GetBlockContent(const Nz::Vector3ui& indices) const;
+			inline float GetBlockSize() const;
 			inline const VoxelBlock* GetContent() const;
 			inline const Nz::Vector3ui& GetIndices() const;
-			inline std::optional<VoxelBlock> GetNeighborCell(Nz::Vector3ui indices, const Nz::Vector3i& offsets) const;
+			inline std::optional<VoxelBlock> GetNeighborBlock(Nz::Vector3ui indices, const Nz::Vector3i& offsets) const;
 			inline const Nz::Vector3ui& GetSize() const;
 
 			template<typename F> void InitBlocks(F&& func);
@@ -60,7 +61,7 @@ namespace tsom
 			std::vector<VoxelBlock> m_cells;
 			Nz::Vector3ui m_indices;
 			Nz::Vector3ui m_size;
-			float m_cellSize;
+			float m_blockSize;
 	};
 }
 

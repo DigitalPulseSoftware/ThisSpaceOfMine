@@ -70,12 +70,32 @@ namespace tsom
 		if (model)
 			gfxComponent.AttachRenderable(std::move(model), 0x0000FFFF);
 
+		UpdateChunkDebugCollider(chunkId);
+	}
+
+	void ClientPlanetEntities::UpdateChunkEntity(std::size_t chunkId)
+	{
+		PlanetEntities::UpdateChunkEntity(chunkId);
+
+		std::shared_ptr<Nz::Model> model = BuildModel(m_planet.GetChunk(chunkId));
+
+		auto& gfxComponent = m_chunkEntities[chunkId].get_or_emplace<Nz::GraphicsComponent>();
+		gfxComponent.Clear();
+		if (model)
+			gfxComponent.AttachRenderable(std::move(model), 0x0000FFFF);
+
+		UpdateChunkDebugCollider(chunkId);
+	}
+
+	void ClientPlanetEntities::UpdateChunkDebugCollider(std::size_t chunkId)
+	{
 #if 0
 		std::shared_ptr<Nz::Model> colliderModel;
 		{
 			auto& rigidBodyComponent = m_chunkEntities[chunkId].get<Nz::JoltRigidBody3DComponent>();
 			const std::shared_ptr<Nz::JoltCollider3D>& geom = rigidBodyComponent.GetGeom();
-
+			if (!geom)
+				return;
 
 			std::shared_ptr<Nz::MaterialInstance> colliderMat = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic);
 			colliderMat->SetValueProperty("BaseColor", Nz::Color::Green());
@@ -92,20 +112,9 @@ namespace tsom
 			for (std::size_t i = 0; i < colliderModel->GetSubMeshCount(); ++i)
 				colliderModel->SetMaterial(i, colliderMat);
 
+			auto& gfxComponent = m_chunkEntities[chunkId].get_or_emplace<Nz::GraphicsComponent>();
 			gfxComponent.AttachRenderable(std::move(colliderModel), 0x0000FFFF);
-		}
-#endif
 	}
-
-	void ClientPlanetEntities::UpdateChunkEntity(std::size_t chunkId)
-	{
-		PlanetEntities::UpdateChunkEntity(chunkId);
-
-		std::shared_ptr<Nz::Model> model = BuildModel(m_planet.GetChunk(chunkId));
-
-		auto& gfxComponent = m_chunkEntities[chunkId].get_or_emplace<Nz::GraphicsComponent>();
-		gfxComponent.Clear();
-		if (model)
-			gfxComponent.AttachRenderable(std::move(model), 0x0000FFFF);
+#endif
 	}
 }

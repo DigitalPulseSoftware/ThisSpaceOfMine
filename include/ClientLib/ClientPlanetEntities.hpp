@@ -38,6 +38,7 @@ namespace tsom
 			std::shared_ptr<Nz::Model> BuildModel(const Chunk* chunk);
 			void CreateChunkEntity(std::size_t chunkId, const Chunk* chunk) override;
 			void UpdateChunkEntity(std::size_t chunkId) override;
+			void UpdateChunkDebugCollider(std::size_t chunkId);
 
 			std::shared_ptr<Nz::MaterialInstance> m_chunkMaterial;
 	};

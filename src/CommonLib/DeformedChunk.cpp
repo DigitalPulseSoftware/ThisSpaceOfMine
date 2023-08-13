@@ -34,7 +34,7 @@ namespace tsom
 		std::size_t z = 0;
 		for (; z < m_size.z; ++z)
 		{
-			float depth = z * m_cellSize;
+			float depth = z * m_blockSize;
 			float dist = sdRoundBox(position, Nz::Vector3f(depth), m_deformationRadius);
 			if (dist < 0.f)
 				break;
@@ -42,11 +42,11 @@ namespace tsom
 
 		if (z >= m_size.z)
 		{
-			fmt::print("grid out of bounds (dist: {})\n", sdRoundBox(position, Nz::Vector3f((m_size.z - 1) * m_cellSize), m_deformationRadius));
+			fmt::print("grid out of bounds (dist: {})\n", sdRoundBox(position, Nz::Vector3f((m_size.z - 1) * m_blockSize), m_deformationRadius));
 			return std::nullopt;
 		}
 
-		float gridHeight = z * m_cellSize;
+		float gridHeight = z * m_blockSize;
 
 		float distToCenter = std::max({
 			std::abs(position.x - m_deformationCenter.x),
@@ -54,7 +54,7 @@ namespace tsom
 			std::abs(position.z - m_deformationCenter.z),
 		});
 
-		float innerReductionSize = std::max(m_cellSize + gridHeight - std::max(m_deformationRadius, 1.f), 0.f);
+		float innerReductionSize = std::max(m_blockSize + gridHeight - std::max(m_deformationRadius, 1.f), 0.f);
 		Nz::Boxf innerBox(m_deformationCenter - Nz::Vector3f(innerReductionSize), Nz::Vector3f(innerReductionSize * 2.f));
 
 		//debugDrawer.DrawBox(innerBox, Nz::Color::Red());
@@ -62,7 +62,7 @@ namespace tsom
 		Nz::Vector3f innerPos = Nz::Vector3f::Clamp(position, innerBox.GetMinimum(), innerBox.GetMaximum());
 		Nz::Vector3f rayNormal = Nz::Vector3f::Normalize(position - innerPos);
 
-		Nz::Boxf box(m_deformationCenter - Nz::Vector3f(gridHeight), Nz::Vector3f(gridHeight * 2.f + m_cellSize));
+		Nz::Boxf box(m_deformationCenter - Nz::Vector3f(gridHeight), Nz::Vector3f(gridHeight * 2.f + m_blockSize));
 		//debugDrawer.DrawBox(box, Nz::Color::Gray());
 		Nz::Rayf ray(innerPos + rayNormal * gridHeight * 2.f, -rayNormal);
 
@@ -87,9 +87,9 @@ namespace tsom
 		Nz::Matrix4f transformInverse = Nz::Matrix4f::TransformInverse(rotation * Nz::Vector3f::Up() * gridHeight, rotation);
 
 		Nz::Vector3f hitPoint = ray.GetPoint(closest);
-		hitPoint += { 0.5f * m_size.x * m_cellSize, 0.5f * m_size.y * m_cellSize, 0.5f * m_size.z * m_cellSize };
+		hitPoint += { 0.5f * m_size.x * m_blockSize, 0.5f * m_size.y * m_blockSize, 0.5f * m_size.z * m_blockSize };
 
-		Nz::Vector3f indices = hitPoint / m_cellSize;
+		Nz::Vector3f indices = hitPoint / m_blockSize;
 		if (indices.x < 0.f || indices.y < 0.f || indices.z < 0.f)
 			return std::nullopt;
 

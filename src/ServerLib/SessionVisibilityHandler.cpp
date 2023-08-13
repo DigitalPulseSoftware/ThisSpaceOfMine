@@ -141,7 +141,7 @@ namespace tsom
 			chunkCreatePacket.chunkSizeX = chunkSize.x;
 			chunkCreatePacket.chunkSizeY = chunkSize.y;
 			chunkCreatePacket.chunkSizeZ = chunkSize.z;
-			chunkCreatePacket.cellSize = visibleChunk.chunk->GetCellSize();
+			chunkCreatePacket.cellSize = visibleChunk.chunk->GetBlockSize();
 
 			unsigned int blockCount = chunkSize.x * chunkSize.y * chunkSize.z;
 			chunkCreatePacket.content.resize(blockCount);

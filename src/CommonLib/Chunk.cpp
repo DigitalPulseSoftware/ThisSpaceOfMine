@@ -88,34 +88,34 @@ namespace tsom
 			{
 				for (unsigned int x = 0; x < m_size.x; ++x)
 				{
-					VoxelBlock cell = GetCellContent({ x, y, z });
+					VoxelBlock cell = GetBlockContent({ x, y, z });
 					if (cell == VoxelBlock::Empty)
 						continue;
 
 					Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> corners = ComputeVoxelCorners({ x, y, z });
 
 					// Up
-					if (auto neighborOpt = GetNeighborCell({ x, y, z }, { 0, 0, 1 }); !neighborOpt || neighborOpt == VoxelBlock::Empty)
+					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, { 0, 0, 1 }); !neighborOpt || neighborOpt == VoxelBlock::Empty)
 						DrawFace(Direction::Up, cell, { corners[Nz::BoxCorner::NearLeftTop], corners[Nz::BoxCorner::FarLeftTop], corners[Nz::BoxCorner::NearRightTop], corners[Nz::BoxCorner::FarRightTop] }, false);
 
 					// Down
-					if (auto neighborOpt = GetNeighborCell({ x, y, z }, { 0, 0, -1 }); !neighborOpt || neighborOpt == VoxelBlock::Empty)
+					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, { 0, 0, -1 }); !neighborOpt || neighborOpt == VoxelBlock::Empty)
 						DrawFace(Direction::Down, cell, { corners[Nz::BoxCorner::NearLeftBottom], corners[Nz::BoxCorner::FarLeftBottom], corners[Nz::BoxCorner::NearRightBottom], corners[Nz::BoxCorner::FarRightBottom] }, true);
 
 					// Front
-					if (auto neighborOpt = GetNeighborCell({ x, y, z }, { 0, -1, 0 }); !neighborOpt || neighborOpt == VoxelBlock::Empty)
+					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, { 0, -1, 0 }); !neighborOpt || neighborOpt == VoxelBlock::Empty)
 						DrawFace(Direction::Front, cell, { corners[Nz::BoxCorner::FarLeftTop], corners[Nz::BoxCorner::FarRightTop], corners[Nz::BoxCorner::FarLeftBottom], corners[Nz::BoxCorner::FarRightBottom] }, true);
 
 					// Back
-					if (auto neighborOpt = GetNeighborCell({ x, y, z }, { 0, 1, 0 }); !neighborOpt || neighborOpt == VoxelBlock::Empty)
+					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, { 0, 1, 0 }); !neighborOpt || neighborOpt == VoxelBlock::Empty)
 						DrawFace(Direction::Back, cell, { corners[Nz::BoxCorner::NearLeftTop], corners[Nz::BoxCorner::NearRightTop], corners[Nz::BoxCorner::NearLeftBottom], corners[Nz::BoxCorner::NearRightBottom] }, false);
 
 					// Left
-					if (auto neighborOpt = GetNeighborCell({ x, y, z }, { -1, 0, 0 }); !neighborOpt || neighborOpt == VoxelBlock::Empty)
+					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, { -1, 0, 0 }); !neighborOpt || neighborOpt == VoxelBlock::Empty)
 						DrawFace(Direction::Left, cell, { corners[Nz::BoxCorner::FarLeftTop], corners[Nz::BoxCorner::NearLeftTop], corners[Nz::BoxCorner::FarLeftBottom], corners[Nz::BoxCorner::NearLeftBottom] }, false);
 
 					// Right
-					if (auto neighborOpt = GetNeighborCell({ x, y, z }, { 1, 0, 0 }); !neighborOpt || neighborOpt == VoxelBlock::Empty)
+					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, { 1, 0, 0 }); !neighborOpt || neighborOpt == VoxelBlock::Empty)
 						DrawFace(Direction::Right, cell, { corners[Nz::BoxCorner::FarRightTop], corners[Nz::BoxCorner::NearRightTop], corners[Nz::BoxCorner::FarRightBottom], corners[Nz::BoxCorner::NearRightBottom] }, true);
 				}
 			}
