@@ -11,6 +11,7 @@
 #include <CommonLib/Protocol/Packets.hpp>
 #include <Game/States/BackgroundState.hpp>
 #include <Game/States/ConnectionState.hpp>
+#include <Game/States/DebugInfoState.hpp>
 #include <Game/States/GameState.hpp>
 #include <Game/States/MenuState.hpp>
 #include <Game/States/StateData.hpp>
@@ -64,6 +65,7 @@ int GameMain(int argc, char* argv[])
 	std::shared_ptr<tsom::ConnectionState> connectionState = std::make_shared<tsom::ConnectionState>(stateData);
 
 	Nz::StateMachine fsm;
+	fsm.PushState(std::make_shared<tsom::DebugInfoState>(stateData));
 	fsm.PushState(connectionState);
 	fsm.PushState(std::make_shared<tsom::BackgroundState>(stateData));
 	fsm.PushState(std::make_shared<tsom::MenuState>(stateData, connectionState));
