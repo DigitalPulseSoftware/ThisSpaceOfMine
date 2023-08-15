@@ -5,7 +5,7 @@ option("clientlib_static", { default = false, defines = "TSOM_CLIENTLIB_STATIC"}
 option("serverlib_static", { default = false,  defines = "TSOM_SERVERLIB_STATIC"})
 
 add_repositories("nazara-repo https://github.com/NazaraEngine/xmake-repo.git")
-add_requires("nazaraengine", { configs = { debug = is_mode("debug"), with_symbols = true }})
+add_requires("nazaraengine >=2023.08.15", { configs = { debug = is_mode("debug"), with_symbols = true }})
 add_requires("fmt", { configs = { header_only = false }})
 add_requires("concurrentqueue", "hopscotch-map", "nlohmann_json")
 

@@ -21,6 +21,8 @@ namespace tsom
 
 	bool DebugInfoState::Update(Nz::StateMachine& /*fsm*/, Nz::Time /*elapsedTime*/)
 	{
+		m_fpsCounter++;
+
 		if (m_updateClock.RestartIfOver(Nz::Time::Second()))
 		{
 			m_textDrawer.Clear();
@@ -42,8 +44,6 @@ namespace tsom
 
 			m_fpsCounter = 0;
 		}
-		else
-			m_fpsCounter++;
 
 		return true;
 	}

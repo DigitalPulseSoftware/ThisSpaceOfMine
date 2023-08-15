@@ -36,7 +36,14 @@ int GameMain(int argc, char* argv[])
 	auto& world = ecsComponent.AddWorld<Nz::EnttWorld>();
 
 	auto& renderSystem = world.AddSystem<Nz::RenderSystem>();
-	auto& windowSwapchain = renderSystem.CreateSwapchain(window);
+
+	Nz::SwapchainParameters swapchainParams;
+	if (app.GetCommandLineParameters().HasFlag("--no-vsync"))
+		swapchainParams.presentMode = { Nz::PresentMode::Mailbox, Nz::PresentMode::Immediate };
+	else
+		swapchainParams.presentMode = { Nz::PresentMode::RelaxedVerticalSync, Nz::PresentMode::VerticalSync };
+
+	auto& windowSwapchain = renderSystem.CreateSwapchain(window, swapchainParams);
 
 	auto& physicsSystem = world.AddSystem<Nz::JoltPhysics3DSystem>();
 	physicsSystem.GetPhysWorld().SetGravity(Nz::Vector3f::Zero());
