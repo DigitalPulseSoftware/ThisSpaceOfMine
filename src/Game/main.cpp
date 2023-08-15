@@ -38,7 +38,7 @@ int GameMain(int argc, char* argv[])
 	auto& renderSystem = world.AddSystem<Nz::RenderSystem>();
 
 	Nz::SwapchainParameters swapchainParams;
-	if (app.GetCommandLineParameters().HasFlag("--no-vsync"))
+	if (app.GetCommandLineParameters().HasFlag("no-vsync"))
 		swapchainParams.presentMode = { Nz::PresentMode::Mailbox, Nz::PresentMode::Immediate };
 	else
 		swapchainParams.presentMode = { Nz::PresentMode::RelaxedVerticalSync, Nz::PresentMode::VerticalSync };
