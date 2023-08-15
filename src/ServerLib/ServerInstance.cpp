@@ -3,6 +3,7 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ServerLib/ServerInstance.hpp>
+#include <CommonLib/GameConstants.hpp>
 #include <ServerLib/NetworkedEntitiesSystem.hpp>
 #include <Nazara/JoltPhysics3D/Systems/JoltPhysics3DSystem.hpp>
 #include <Nazara/Utility/Components.hpp>
@@ -15,7 +16,7 @@ namespace tsom
 	ServerInstance::ServerInstance() :
 	m_players(256),
 	m_tickAccumulator(Nz::Time::Zero()),
-	m_tickDuration(Nz::Time::TickDuration(30))
+	m_tickDuration(Constants::TickDuration)
 	{
 		m_world.AddSystem<NetworkedEntitiesSystem>(*this);
 		auto& physicsSystem = m_world.AddSystem<Nz::JoltPhysics3DSystem>();

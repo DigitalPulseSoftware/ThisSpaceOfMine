@@ -5,6 +5,7 @@
 #include <Game/States/MenuState.hpp>
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/GameState.hpp>
+#include <CommonLib/GameConstants.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/StateMachine.hpp>
 #include <Nazara/Network/Algorithm.hpp>
@@ -78,8 +79,6 @@ namespace tsom
 
 	void MenuState::OnConnectPressed()
 	{
-		constexpr Nz::UInt16 GamePort = 29536;
-
 		if (m_serverAddressArea->GetText().empty())
 		{
 			fmt::print(fg(fmt::color::red), "missing server address\n");
@@ -93,7 +92,7 @@ namespace tsom
 		}
 
 		Nz::ResolveError resolveError;
-		auto hostVec = Nz::IpAddress::ResolveHostname(Nz::NetProtocol::IPv6, m_serverAddressArea->GetText(), std::to_string(GamePort), &resolveError);
+		auto hostVec = Nz::IpAddress::ResolveHostname(Nz::NetProtocol::IPv6, m_serverAddressArea->GetText(), std::to_string(Constants::ServerPort), &resolveError);
 
 		if (hostVec.empty())
 		{

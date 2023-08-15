@@ -4,6 +4,7 @@
 
 #include <Game/States/GameState.hpp>
 #include <Game/States/StateData.hpp>
+#include <CommonLib/GameConstants.hpp>
 #include <CommonLib/PlayerInputs.hpp>
 #include <CommonLib/NetworkSession.hpp>
 #include <ClientLib/Chatbox.hpp>
@@ -28,7 +29,7 @@ namespace tsom
 	m_stateData(std::move(stateData)),
 	m_upCorrection(Nz::Quaternionf::Identity()),
 	m_tickAccumulator(Nz::Time::Zero()),
-	m_tickDuration(Nz::Time::TickDuration(30))
+	m_tickDuration(Constants::TickDuration)
 	{
 		auto& filesystem = m_stateData->app->GetComponent<Nz::AppFilesystemComponent>();
 
