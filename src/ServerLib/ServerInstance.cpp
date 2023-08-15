@@ -14,6 +14,7 @@
 namespace tsom
 {
 	ServerInstance::ServerInstance() :
+	m_tickIndex(0),
 	m_players(256),
 	m_tickAccumulator(Nz::Time::Zero()),
 	m_tickDuration(Constants::TickDuration)
@@ -141,27 +142,32 @@ namespace tsom
 			// Send a packet to the new player containing all existing players
 			if (NetworkSession* session = player->GetSession())
 			{
+				Packets::GameData gameData;
+				gameData.tickIndex = m_tickIndex;
+
 				ForEachPlayer([&](ServerPlayer& serverPlayer)
 				{
-					Packets::PlayerJoin playerJoined;
-					playerJoined.index = Nz::SafeCast<PlayerIndex>(serverPlayer.GetPlayerIndex());
-					playerJoined.nickname = serverPlayer.GetNickname();
+					auto& playerData = gameData.players.emplace_back();
+					playerData.index = Nz::SafeCast<PlayerIndex>(serverPlayer.GetPlayerIndex());
+					playerData.nickname = serverPlayer.GetNickname();
 
-					session->SendPacket(playerJoined);
 				});
-			}
 
+				session->SendPacket(gameData);
+			}
 		}
 		m_newPlayers.Clear();
 
 		ForEachPlayer([&](ServerPlayer& serverPlayer)
 		{
-			serverPlayer.GetVisibilityHandler().Dispatch();
+			serverPlayer.GetVisibilityHandler().Dispatch(m_tickIndex);
 		});
 	}
 
 	void ServerInstance::OnTick(Nz::Time elapsedTime)
 	{
+		m_tickIndex++;
+
 		for (auto&& sessionManagerPtr : m_sessionManagers)
 			sessionManagerPtr->Poll();
 

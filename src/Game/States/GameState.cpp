@@ -498,6 +498,17 @@ namespace tsom
 			}
 		}
 
+
+		m_controlledEntity = m_stateData->sessionHandler->GetControlledEntity();
+		auto& playerNode = m_controlledEntity.get<Nz::NodeComponent>();
+
+		Nz::Vector3f playerUp = playerNode.GetUp();
+		if (Nz::Vector3f previousUp = m_upCorrection * Nz::Vector3f::Up(); !previousUp.ApproxEqual(playerUp, 0.001f))
+		{
+			m_upCorrection = Nz::Quaternionf::RotationBetween(previousUp, playerUp) * m_upCorrection;
+			m_upCorrection.Normalize();
+		}
+
 		return true;
 	}
 
@@ -517,19 +528,7 @@ namespace tsom
 		inputPacket.inputs.sprint = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::LShift);
 
 		if (m_controlledEntity)
-		{
-			m_controlledEntity = m_stateData->sessionHandler->GetControlledEntity();
-			auto& playerNode = m_controlledEntity.get<Nz::NodeComponent>();
-
-			Nz::Vector3f playerUp = playerNode.GetUp();
-			if (Nz::Vector3f previousUp = m_upCorrection * Nz::Vector3f::Up(); !previousUp.ApproxEqual(playerUp, 0.001f))
-			{
-				m_upCorrection = Nz::Quaternionf::RotationBetween(previousUp, playerUp) * m_upCorrection;
-				m_upCorrection.Normalize();
-			}
-
 			inputPacket.inputs.orientation = m_upCorrection * Nz::Quaternionf(m_cameraRotation);
-		}
 		else
 			inputPacket.inputs.orientation = Nz::Quaternionf::Identity();
 

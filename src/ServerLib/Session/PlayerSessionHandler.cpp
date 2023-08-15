@@ -16,6 +16,7 @@ namespace tsom
 		{ PacketIndex<Packets::EntitiesCreation>,    { 1, Nz::ENetPacketFlag_Reliable } },
 		{ PacketIndex<Packets::EntitiesDelete>,      { 1, Nz::ENetPacketFlag_Reliable } },
 		{ PacketIndex<Packets::EntitiesStateUpdate>, { 1, 0 } },
+		{ PacketIndex<Packets::GameData>,            { 1, Nz::ENetPacketFlag_Reliable } },
 		{ PacketIndex<Packets::PlayerJoin>,          { 1, Nz::ENetPacketFlag_Reliable } },
 		{ PacketIndex<Packets::PlayerLeave>,         { 1, Nz::ENetPacketFlag_Reliable } },
 	});

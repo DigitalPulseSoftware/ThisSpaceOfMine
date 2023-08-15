@@ -3,6 +3,7 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ClientLib/ClientSessionHandler.hpp>
+#include <ClientLib/Components/MovementInterpolationComponent.hpp>
 #include <CommonLib/Components/EntityOwnerComponent.hpp>
 #include <Nazara/Core/EnttWorld.hpp>
 #include <Nazara/Graphics/Graphics.hpp>
@@ -108,8 +109,28 @@ namespace tsom
 	{
 		for (auto& entityData : stateUpdate.entities)
 		{
-			auto& entityNode = m_networkIdToEntity[entityData.entityId].get<Nz::NodeComponent>();
-			entityNode.SetTransform(entityData.newStates.position, entityData.newStates.rotation);
+			entt::handle& entity = m_networkIdToEntity[entityData.entityId];
+
+			if (MovementInterpolationComponent* movementInterpolation = entity.try_get<MovementInterpolationComponent>())
+				movementInterpolation->PushMovement(stateUpdate.tickIndex, entityData.newStates.position, entityData.newStates.rotation);
+			else
+			{
+				auto& entityNode = entity.get<Nz::NodeComponent>();
+				entityNode.SetTransform(entityData.newStates.position, entityData.newStates.rotation);
+			}
+		}
+	}
+
+	void ClientSessionHandler::HandlePacket(Packets::GameData&& gameData)
+	{
+		m_lastTickIndex = gameData.tickIndex;
+		for (auto& playerData : gameData.players)
+		{
+			if (playerData.index >= m_players.size())
+				m_players.resize(playerData.index + 1);
+
+			auto& playerInfo = m_players[playerData.index].emplace();
+			playerInfo.nickname = std::move(playerData.nickname);
 		}
 	}
 
@@ -144,6 +165,8 @@ namespace tsom
 
 	void ClientSessionHandler::SetupEntity(entt::handle entity, Packets::Helper::PlayerControlledData&& entityData)
 	{
+		entity.emplace<MovementInterpolationComponent>(m_lastTickIndex);
+
 		auto collider = std::make_shared<Nz::JoltCapsuleCollider3D>(1.8f, 0.4f);
 
 		std::shared_ptr<Nz::Model> colliderModel;

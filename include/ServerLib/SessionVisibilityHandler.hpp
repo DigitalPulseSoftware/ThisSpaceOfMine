@@ -35,7 +35,7 @@ namespace tsom
 			void DestroyChunk(Chunk& chunk);
 			void DestroyEntity(entt::handle entity);
 
-			void Dispatch();
+			void Dispatch(Nz::UInt16 tickIndex);
 
 			Chunk* GetChunkByIndex(std::size_t chunkIndex) const;
 
@@ -52,7 +52,7 @@ namespace tsom
 
 		private:
 			void DispatchChunks();
-			void DispatchEntities();
+			void DispatchEntities(Nz::UInt16 tickIndex);
 
 			static constexpr std::size_t FreeChunkIdGrowRate = 128;
 			static constexpr std::size_t FreeEntityIdGrowRate = 512;

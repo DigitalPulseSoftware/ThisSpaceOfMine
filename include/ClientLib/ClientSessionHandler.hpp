@@ -37,6 +37,7 @@ namespace tsom
 			void HandlePacket(Packets::EntitiesCreation&& entitiesCreation);
 			void HandlePacket(Packets::EntitiesDelete&& entitiesDelete);
 			void HandlePacket(Packets::EntitiesStateUpdate&& stateUpdate);
+			void HandlePacket(Packets::GameData&& gameData);
 			void HandlePacket(Packets::PlayerLeave&& playerLeave);
 			void HandlePacket(Packets::PlayerJoin&& playerJoin);
 
@@ -65,6 +66,7 @@ namespace tsom
 			tsl::hopscotch_map<Nz::UInt32, entt::handle> m_networkIdToEntity;
 			std::vector<std::optional<PlayerInfo>> m_players; //< FIXME: Nz::SparseVector
 			Nz::EnttWorld& m_world;
+			Nz::UInt16 m_lastTickIndex;
 			Nz::UInt16 m_ownPlayerIndex;
 	};
 }

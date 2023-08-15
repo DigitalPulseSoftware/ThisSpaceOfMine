@@ -7,6 +7,8 @@
 #include <Nazara/Utility.hpp>
 #include <Nazara/Widgets.hpp>
 #include <Main/Main.hpp>
+#include <ClientLib/Systems/MovementInterpolationSystem.hpp>
+#include <CommonLib/GameConstants.hpp>
 #include <CommonLib/NetworkReactor.hpp>
 #include <CommonLib/Protocol/Packets.hpp>
 #include <Game/States/BackgroundState.hpp>
@@ -47,6 +49,8 @@ int GameMain(int argc, char* argv[])
 
 	auto& physicsSystem = world.AddSystem<Nz::JoltPhysics3DSystem>();
 	physicsSystem.GetPhysWorld().SetGravity(Nz::Vector3f::Zero());
+
+	world.AddSystem<tsom::MovementInterpolationSystem>(tsom::Constants::TickDuration);
 
 	entt::handle camera2D = world.CreateEntity();
 	{

@@ -107,6 +107,8 @@ namespace tsom
 
 		void Serialize(PacketSerializer& serializer, EntitiesCreation& data)
 		{
+			serializer &= data.tickIndex;
+
 			serializer.SerializeArraySize(data.entities);
 			for (auto& entity : data.entities)
 			{
@@ -122,6 +124,8 @@ namespace tsom
 
 		void Serialize(PacketSerializer& serializer, EntitiesDelete& data)
 		{
+			serializer &= data.tickIndex;
+
 			serializer.SerializeArraySize(data.entities);
 			for (auto& entityId : data.entities)
 				serializer &= entityId;
@@ -129,11 +133,25 @@ namespace tsom
 
 		void Serialize(PacketSerializer& serializer, EntitiesStateUpdate& data)
 		{
+			serializer &= data.tickIndex;
+
 			serializer.SerializeArraySize(data.entities);
 			for (auto& entity : data.entities)
 			{
 				serializer &= entity.entityId;
 				Helper::Serialize(serializer, entity.newStates);
+			}
+		}
+
+		void Serialize(PacketSerializer& serializer, GameData& data)
+		{
+			serializer &= data.tickIndex;
+
+			serializer.SerializeArraySize(data.players);
+			for (auto& player : data.players)
+			{
+				serializer &= player.index;
+				serializer &= player.nickname;
 			}
 		}
 

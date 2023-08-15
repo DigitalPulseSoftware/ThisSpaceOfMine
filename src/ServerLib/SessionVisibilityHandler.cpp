@@ -68,10 +68,10 @@ namespace tsom
 		m_deletedEntities.emplace(entity);
 	}
 
-	void SessionVisibilityHandler::Dispatch()
+	void SessionVisibilityHandler::Dispatch(Nz::UInt16 tickIndex)
 	{
 		DispatchChunks();
-		DispatchEntities();
+		DispatchEntities(tickIndex);
 	}
 
 	Chunk* SessionVisibilityHandler::GetChunkByIndex(std::size_t chunkIndex) const
@@ -162,11 +162,12 @@ namespace tsom
 		m_updatedChunk.Clear();
 	}
 
-	void SessionVisibilityHandler::DispatchEntities()
+	void SessionVisibilityHandler::DispatchEntities(Nz::UInt16 tickIndex)
 	{
 		if (!m_deletedEntities.empty())
 		{
 			Packets::EntitiesDelete deletePacket;
+			deletePacket.tickIndex = tickIndex;
 
 			for (const entt::handle& handle : m_deletedEntities)
 			{
@@ -185,6 +186,7 @@ namespace tsom
 		if (!m_createdEntities.empty())
 		{
 			Packets::EntitiesCreation creationPacket;
+			creationPacket.tickIndex = tickIndex;
 
 			for (auto&& [handle, data] : m_createdEntities)
 			{
@@ -211,6 +213,7 @@ namespace tsom
 		}
 
 		Packets::EntitiesStateUpdate stateUpdate;
+		stateUpdate.tickIndex = tickIndex;
 
 		for (const entt::handle& handle : m_movingEntities)
 		{

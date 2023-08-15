@@ -124,11 +124,13 @@ namespace tsom
 				std::optional<Helper::PlayerControlledData> playerControlled;
 			};
 
+			Nz::UInt16 tickIndex;
 			std::vector<EntityData> entities;
 		};
 
 		struct EntitiesDelete
 		{
+			Nz::UInt16 tickIndex;
 			std::vector<Helper::EntityId> entities;
 		};
 
@@ -140,7 +142,20 @@ namespace tsom
 				Helper::EntityState newStates;
 			};
 
+			Nz::UInt16 tickIndex;
 			std::vector<EntityData> entities;
+		};
+
+		struct GameData
+		{
+			struct PlayerData
+			{
+				PlayerIndex index;
+				std::string nickname;
+			};
+
+			std::vector<PlayerData> players;
+			Nz::UInt16 tickIndex;
 		};
 
 		struct MineBlock
@@ -192,6 +207,7 @@ namespace tsom
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntitiesCreation& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntitiesDelete& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntitiesStateUpdate& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, GameData& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, MineBlock& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, NetworkStrings& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, PlaceBlock& data);

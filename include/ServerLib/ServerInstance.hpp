@@ -61,6 +61,7 @@ namespace tsom
 				VoxelBlock newBlock;
 			};
 
+			Nz::UInt16 m_tickIndex;
 			std::unique_ptr<Planet> m_planet;
 			std::unique_ptr<PlanetEntities> m_planetEntities;
 			std::vector<BlockUpdate> m_voxelGridUpdates;
