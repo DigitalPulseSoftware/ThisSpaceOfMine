@@ -500,13 +500,16 @@ namespace tsom
 
 
 		m_controlledEntity = m_stateData->sessionHandler->GetControlledEntity();
-		auto& playerNode = m_controlledEntity.get<Nz::NodeComponent>();
-
-		Nz::Vector3f playerUp = playerNode.GetUp();
-		if (Nz::Vector3f previousUp = m_upCorrection * Nz::Vector3f::Up(); !previousUp.ApproxEqual(playerUp, 0.001f))
+		if (m_controlledEntity)
 		{
-			m_upCorrection = Nz::Quaternionf::RotationBetween(previousUp, playerUp) * m_upCorrection;
-			m_upCorrection.Normalize();
+			auto& playerNode = m_controlledEntity.get<Nz::NodeComponent>();
+
+			Nz::Vector3f playerUp = playerNode.GetUp();
+			if (Nz::Vector3f previousUp = m_upCorrection * Nz::Vector3f::Up(); !previousUp.ApproxEqual(playerUp, 0.001f))
+			{
+				m_upCorrection = Nz::Quaternionf::RotationBetween(previousUp, playerUp) * m_upCorrection;
+				m_upCorrection.Normalize();
+			}
 		}
 
 		return true;
