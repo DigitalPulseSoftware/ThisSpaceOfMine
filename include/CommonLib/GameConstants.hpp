@@ -12,7 +12,7 @@
 
 namespace tsom::Constants
 {
-	constexpr Nz::Time TickDuration = Nz::Time::TickDuration(30);
+	constexpr Nz::Time TickDuration = Nz::Time::TickDuration(60);
 	constexpr Nz::UInt16 ServerPort = 29536;
 }
 

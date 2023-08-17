@@ -26,7 +26,7 @@ namespace tsom
 			static constexpr Nz::Int64 ExecutionOrder = 0;
 			using Components = Nz::TypeList<class MovementInterpolationComponent, Nz::NodeComponent>;
 
-			MovementInterpolationSystem(entt::registry& registry, Nz::Time movementTickDuration, std::size_t targetMovementPoints = 5);
+			MovementInterpolationSystem(entt::registry& registry, Nz::Time movementTickDuration, std::size_t targetMovementPoints = 4);
 			MovementInterpolationSystem(const MovementInterpolationSystem&) = delete;
 			MovementInterpolationSystem(MovementInterpolationSystem&&) = default;
 			~MovementInterpolationSystem() = default;
