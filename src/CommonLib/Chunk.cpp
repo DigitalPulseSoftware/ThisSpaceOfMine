@@ -18,7 +18,7 @@ namespace tsom
 		auto DrawFace = [&](Direction direction, VoxelBlock cell, const std::array<Nz::Vector3f, 4>& pos, bool reverseWinding)
 		{
 			constexpr Nz::Vector2ui tileCount(3, 2);
-			constexpr Nz::Vector2f tilesetSize(192.f, 128.f);
+			constexpr Nz::Vector2f tilesetSize(192.f, 192.f);
 			constexpr Nz::Vector2f uvSize = Nz::Vector2f(64.f, 64.f) / tilesetSize;
 
 			std::size_t tileIndex;
@@ -39,6 +39,10 @@ namespace tsom
 
 					break;
 				}
+
+				case VoxelBlock::Snow:
+					tileIndex = 6;
+					break;
 
 				case VoxelBlock::Stone:
 					tileIndex = (dis(rd)) ? 1 : 2;

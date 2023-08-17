@@ -14,7 +14,8 @@ namespace tsom
 		Empty,
 		Grass,
 		Dirt,
-		Stone
+		Snow,
+		Stone,
 	};
 }
 
