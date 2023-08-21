@@ -11,6 +11,7 @@
 #include <Game/States/WidgetState.hpp>
 #include <CommonLib/NetworkReactor.hpp>
 #include <CommonLib/NetworkSession.hpp>
+#include <NazaraUtils/FixedVector.hpp>
 
 namespace Nz
 {
@@ -44,8 +45,8 @@ namespace tsom
 			std::shared_ptr<Nz::State> m_previousState;
 			std::shared_ptr<Nz::State> m_nextState;
 			std::string m_nickname;
+			Nz::FixedVector<NetworkReactor, 2> m_reactors;
 			Nz::LabelWidget* m_connectingLabel;
-			NetworkReactor m_reactor;
 			Nz::Time m_nextStateTimer;
 	};
 }

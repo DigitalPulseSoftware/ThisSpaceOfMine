@@ -92,7 +92,7 @@ namespace tsom
 		}
 
 		Nz::ResolveError resolveError;
-		auto hostVec = Nz::IpAddress::ResolveHostname(Nz::NetProtocol::IPv6, m_serverAddressArea->GetText(), std::to_string(Constants::ServerPort), &resolveError);
+		auto hostVec = Nz::IpAddress::ResolveHostname(Nz::NetProtocol::Any, m_serverAddressArea->GetText(), std::to_string(Constants::ServerPort), &resolveError);
 
 		if (hostVec.empty())
 		{

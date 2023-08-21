@@ -16,7 +16,6 @@ namespace tsom
 {
 	ConnectionState::ConnectionState(std::shared_ptr<StateData> stateData) :
 	WidgetState(std::move(stateData)),
-	m_reactor(0, Nz::NetProtocol::Any, 0, 2),
 	m_connectingLabel(nullptr)
 	{
 		m_connectingLabel = CreateWidget<Nz::LabelWidget>();
@@ -29,8 +28,29 @@ namespace tsom
 		m_previousState = std::move(previousState);
 		m_nickname = std::move(nickname);
 
-		std::size_t peerId = m_reactor.ConnectTo(serverAddress);
-		m_serverSession.emplace(m_reactor, peerId, serverAddress);
+		// Find a compatible reactor
+		NetworkReactor* reactor = nullptr;
+		for (auto& reactorCandidate : m_reactors)
+		{
+			if (reactorCandidate.GetProtocol() == serverAddress.GetProtocol())
+			{
+				reactor = &reactorCandidate;
+				break;
+			}
+		}
+
+		if (!reactor)
+		{
+			constexpr std::size_t MaxConnection = 5;
+
+			if (m_reactors.size() == m_reactors.capacity())
+				throw std::runtime_error("unable to allocate a new reactor (this shouldn't happen)");
+
+			reactor = &m_reactors.emplace_back(MaxConnection * m_reactors.size(), serverAddress.GetProtocol(), 0, MaxConnection);
+		}
+
+		std::size_t peerId = reactor->ConnectTo(serverAddress);
+		m_serverSession.emplace(*reactor, peerId, serverAddress);
 		ClientSessionHandler& sessionHandler = m_serverSession->SetupHandler<ClientSessionHandler>(*GetStateData().world);
 
 		auto& stateData = GetStateData();
@@ -105,7 +125,8 @@ namespace tsom
 			m_serverSession->HandlePacket(std::move(packet));
 		};
 
-		m_reactor.Poll(ConnectionHandler, DisconnectionHandler, PacketHandler);
+		for (auto& reactor : m_reactors)
+			reactor.Poll(ConnectionHandler, DisconnectionHandler, PacketHandler);
 
 		if (m_nextState)
 		{
