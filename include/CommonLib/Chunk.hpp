@@ -11,7 +11,9 @@
 #include <CommonLib/Export.hpp>
 #include <CommonLib/VoxelBlock.hpp>
 #include <NazaraUtils/EnumArray.hpp>
+#include <NazaraUtils/FunctionRef.hpp>
 #include <NazaraUtils/Signal.hpp>
+#include <NazaraUtils/SparsePtr.hpp>
 #include <Nazara/Core/Color.hpp>
 #include <Nazara/Math/Matrix4.hpp>
 #include <memory>
@@ -29,13 +31,15 @@ namespace tsom
 	class TSOM_COMMONLIB_API Chunk
 	{
 		public:
+			struct VertexAttributes;
+
 			inline Chunk(const Nz::Vector3ui& indices, const Nz::Vector3ui& size, float blockSize);
 			Chunk(const Chunk&) = delete;
 			Chunk(Chunk&&) = delete;
 			virtual ~Chunk();
 
 			virtual std::shared_ptr<Nz::JoltCollider3D> BuildCollider() const = 0;
-			virtual void BuildMesh(std::vector<Nz::UInt32>& indices, std::vector<Nz::VertexStruct_XYZ_Color_UV>& vertices) const;
+			virtual void BuildMesh(std::vector<Nz::UInt32>& indices, const Nz::FunctionRef<VertexAttributes(Nz::UInt32 count)>& addVertices) const;
 
 			virtual std::optional<Nz::Vector3ui> ComputeCoordinates(const Nz::Vector3f& position) const = 0;
 			virtual Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> ComputeVoxelCorners(const Nz::Vector3ui& indices) const = 0;
@@ -56,6 +60,15 @@ namespace tsom
 			Chunk& operator=(Chunk&&) = delete;
 
 			NazaraSignal(OnBlockUpdated, Chunk* /*emitter*/, const Nz::Vector3ui& /*indices*/, VoxelBlock /*newBlock*/);
+
+			struct VertexAttributes
+			{
+				Nz::UInt32 firstIndex;
+				Nz::SparsePtr<Nz::Vector3f> position;
+				Nz::SparsePtr<Nz::Vector3f> normal;
+				Nz::SparsePtr<Nz::Vector3f> tangent;
+				Nz::SparsePtr<Nz::Vector2f> uv;
+			};
 
 		protected:
 			std::vector<VoxelBlock> m_cells;

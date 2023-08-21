@@ -56,6 +56,9 @@ namespace tsom
 			}
 		}
 
+		std::mt19937 rand(std::random_device{}());
+		std::bernoulli_distribution dis(0.9);
+
 		for (unsigned int z = 0; z < m_gridSize.z; ++z)
 		{
 			for (unsigned int y = 0; y < m_gridSize.y; ++y)
@@ -81,7 +84,7 @@ namespace tsom
 					else if (depth <= 40)
 						blockType = VoxelBlock::Dirt;
 					else
-						blockType = VoxelBlock::Stone;
+						blockType = (dis(rand)) ? VoxelBlock::Stone : VoxelBlock::MossedStone;
 
 
 					Nz::Vector3ui innerCoordinates;

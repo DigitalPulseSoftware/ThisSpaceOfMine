@@ -52,6 +52,17 @@ namespace tsom
 
 		m_planet = std::make_unique<ClientPlanet>(Nz::Vector3ui(160), 2.f, 16.f);
 
+		m_sunLightEntity = m_stateData->world->CreateEntity();
+		{
+			m_sunLightEntity.emplace<Nz::DisabledComponent>();
+			auto& lightComponent = m_sunLightEntity.emplace<Nz::LightComponent>();
+			m_sunLightEntity.emplace<Nz::NodeComponent>(Nz::Vector3f::Zero(), Nz::EulerAnglesf(-45.f, 90.f, 0.f));
+
+			auto& dirLight = lightComponent.AddLight<Nz::DirectionalLight>();
+			dirLight.UpdateAmbientFactor(0.05f);
+			//dirLight.EnableShadowCasting(true);
+		}
+
 		std::shared_ptr<Nz::MaterialInstance> inventoryMaterial = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic);
 		inventoryMaterial->SetTextureProperty("BaseColorMap", filesystem.Load<Nz::Texture>("assets/tileset.png"));
 
@@ -290,6 +301,7 @@ namespace tsom
 #endif
 
 		m_cameraEntity.remove<Nz::DisabledComponent>();
+		m_sunLightEntity.remove<Nz::DisabledComponent>();
 		m_skyboxEntity.remove<Nz::DisabledComponent>();
 
 		for (auto& inventorySlot : m_inventorySlots)
@@ -444,6 +456,7 @@ namespace tsom
 		m_planetEntities.reset();
 
 		m_cameraEntity.emplace<Nz::DisabledComponent>();
+		m_sunLightEntity.emplace<Nz::DisabledComponent>();
 		m_skyboxEntity.emplace<Nz::DisabledComponent>();
 
 		for (auto& inventorySlot : m_inventorySlots)

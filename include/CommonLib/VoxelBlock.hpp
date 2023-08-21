@@ -14,8 +14,11 @@ namespace tsom
 		Empty,
 		Grass,
 		Dirt,
+		MossedStone,
 		Snow,
 		Stone,
+
+		Max = Stone
 	};
 }
 

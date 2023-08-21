@@ -28,8 +28,10 @@ namespace tsom
 		blockSampler.wrapModeU = Nz::SamplerWrap::Repeat;
 		blockSampler.wrapModeV = Nz::SamplerWrap::Repeat;
 
-		m_chunkMaterial = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic);
+		m_chunkMaterial = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Phong);
 		m_chunkMaterial->SetTextureProperty("BaseColorMap", filesystem.Load<Nz::Texture>("assets/tileset.png"), blockSampler);
+		m_chunkMaterial->SetValueProperty("SpecularColor", Nz::Color::White() * Nz::Color(0.2f));
+		m_chunkMaterial->SetValueProperty("Shininess", 10.f);
 
 		FillChunks();
 	}
@@ -37,13 +39,28 @@ namespace tsom
 	std::shared_ptr<Nz::Model> ClientPlanetEntities::BuildModel(const Chunk* chunk)
 	{
 		std::vector<Nz::UInt32> indices;
-		std::vector<Nz::VertexStruct_XYZ_Color_UV> vertices;
-		chunk->BuildMesh(indices, vertices);
+		std::vector<Nz::VertexStruct_XYZ_Normal_UV_Tangent> vertices;
+
+		auto AddVertices = [&](Nz::UInt32 count)
+		{
+			Chunk::VertexAttributes vertexAttributes;
+
+			vertexAttributes.firstIndex = Nz::SafeCast<Nz::UInt32>(vertices.size());
+			vertices.resize(vertices.size() + count);
+			vertexAttributes.position = Nz::SparsePtr<Nz::Vector3f>(&vertices[vertexAttributes.firstIndex].position, sizeof(vertices.front()));
+			vertexAttributes.normal = Nz::SparsePtr<Nz::Vector3f>(&vertices[vertexAttributes.firstIndex].normal, sizeof(vertices.front()));
+			vertexAttributes.tangent = Nz::SparsePtr<Nz::Vector3f>(&vertices[vertexAttributes.firstIndex].tangent, sizeof(vertices.front()));
+			vertexAttributes.uv = Nz::SparsePtr<Nz::Vector2f>(&vertices[vertexAttributes.firstIndex].uv, sizeof(vertices.front()));
+
+			return vertexAttributes;
+		};
+
+		chunk->BuildMesh(indices, AddVertices);
 		if (indices.empty())
 			return nullptr;
 
 		std::shared_ptr<Nz::IndexBuffer> indexBuffer = std::make_shared<Nz::IndexBuffer>(Nz::IndexType::U32, Nz::SafeCast<Nz::UInt32>(indices.size()), Nz::BufferUsage::Read, Nz::SoftwareBufferFactory, indices.data());
-		std::shared_ptr<Nz::VertexBuffer> vertexBuffer = std::make_shared<Nz::VertexBuffer>(Nz::VertexDeclaration::Get(Nz::VertexLayout::XYZ_Color_UV), Nz::SafeCast<Nz::UInt32>(vertices.size()), Nz::BufferUsage::Read, Nz::SoftwareBufferFactory, vertices.data());
+		std::shared_ptr<Nz::VertexBuffer> vertexBuffer = std::make_shared<Nz::VertexBuffer>(Nz::VertexDeclaration::Get(Nz::VertexLayout::XYZ_Normal_UV_Tangent), Nz::SafeCast<Nz::UInt32>(vertices.size()), Nz::BufferUsage::Read, Nz::SoftwareBufferFactory, vertices.data());
 
 		std::shared_ptr<Nz::StaticMesh> staticMesh = std::make_shared<Nz::StaticMesh>(std::move(vertexBuffer), std::move(indexBuffer));
 		staticMesh->GenerateAABB();

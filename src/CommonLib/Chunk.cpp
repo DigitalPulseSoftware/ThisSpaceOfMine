@@ -4,85 +4,95 @@
 
 #include <CommonLib/Chunk.hpp>
 #include <Nazara/Utility/VertexStruct.hpp>
-#include <random>
+#include <cassert>
 
 namespace tsom
 {
 	Chunk::~Chunk() = default;
 
-	void Chunk::BuildMesh(std::vector<Nz::UInt32>& indices, std::vector<Nz::VertexStruct_XYZ_Color_UV>& vertices) const
+	void Chunk::BuildMesh(std::vector<Nz::UInt32>& indices, const Nz::FunctionRef<VertexAttributes(Nz::UInt32)>& addVertices) const
 	{
-		std::random_device rd;
-		std::bernoulli_distribution dis(0.9);
-
 		auto DrawFace = [&](Direction direction, VoxelBlock cell, const std::array<Nz::Vector3f, 4>& pos, bool reverseWinding)
 		{
-			constexpr Nz::Vector2ui tileCount(3, 2);
-			constexpr Nz::Vector2f tilesetSize(192.f, 192.f);
-			constexpr Nz::Vector2f uvSize = Nz::Vector2f(64.f, 64.f) / tilesetSize;
+			VertexAttributes vertexAttributes = addVertices(pos.size());
+			assert(vertexAttributes.position);
 
-			std::size_t tileIndex;
-			switch (cell)
+			for (std::size_t i = 0; i < pos.size(); ++i)
+				vertexAttributes.position[i] = pos[i];
+
+			if (vertexAttributes.normal)
 			{
-				case VoxelBlock::Dirt:
-					tileIndex = 3;
-					break;
-
-				case VoxelBlock::Grass:
-				{
-					if (direction == Direction::Up)
-						tileIndex = 5;
-					else if (direction == Direction::Down)
-						tileIndex = 3;
-					else
-						tileIndex = 4;
-
-					break;
-				}
-
-				case VoxelBlock::Snow:
-					tileIndex = 6;
-					break;
-
-				case VoxelBlock::Stone:
-					tileIndex = (dis(rd)) ? 1 : 2;
-					break;
+				for (std::size_t i = 0; i < pos.size(); ++i)
+					vertexAttributes.normal[i] = s_dirNormals[direction];
 			}
 
-			Nz::Vector2ui tileCoords(tileIndex % tileCount.x, tileIndex / tileCount.x);
-			Nz::Vector2f uv(tileCoords);
-			uv *= uvSize;
+			if (vertexAttributes.uv)
+			{
+				constexpr Nz::Vector2ui tileCount(3, 3);
+				constexpr Nz::Vector2f tilesetSize(192.f, 192.f);
+				constexpr Nz::Vector2f uvSize = Nz::Vector2f(64.f, 64.f) / tilesetSize;
 
-			std::array uvs = {
-				Nz::Vector2f(uv.x, uv.y),
-				Nz::Vector2f(uv.x + uvSize.x, uv.y),
-				Nz::Vector2f(uv.x, uv.y + uvSize.y),
-				Nz::Vector2f(uv.x + uvSize.x, uv.y + uvSize.y)
-			};
+				std::size_t tileIndex;
+				switch (cell)
+				{
+					case VoxelBlock::Dirt:
+						tileIndex = 3;
+						break;
 
-			std::size_t n = vertices.size();
-			for (std::size_t i = 0; i < 4; ++i)
-				vertices.push_back({ pos[i], Nz::Color::White(), uvs[i]});
+					case VoxelBlock::Grass:
+					{
+						if (direction == Direction::Up)
+							tileIndex = 5;
+						else if (direction == Direction::Down)
+							tileIndex = 3;
+						else
+							tileIndex = 4;
+
+						break;
+					}
+
+					case VoxelBlock::MossedStone:
+						tileIndex = 2;
+						break;
+
+					case VoxelBlock::Snow:
+						tileIndex = 6;
+						break;
+
+					case VoxelBlock::Stone:
+						tileIndex = 1;
+						break;
+				}
+
+				Nz::Vector2ui tileCoords(tileIndex % tileCount.x, tileIndex / tileCount.x);
+				Nz::Vector2f uv(tileCoords);
+				uv *= uvSize;
+
+				vertexAttributes.uv[0] = Nz::Vector2f(uv.x, uv.y);
+				vertexAttributes.uv[1] = Nz::Vector2f(uv.x + uvSize.x, uv.y);
+				vertexAttributes.uv[2] = Nz::Vector2f(uv.x, uv.y + uvSize.y);
+				vertexAttributes.uv[3] = Nz::Vector2f(uv.x + uvSize.x, uv.y + uvSize.y);
+			}
 
 			if (reverseWinding)
 			{
-				indices.push_back(n);
-				indices.push_back(n + 1);
-				indices.push_back(n + 2);
+				indices.push_back(vertexAttributes.firstIndex);
+				indices.push_back(vertexAttributes.firstIndex + 1);
+				indices.push_back(vertexAttributes.firstIndex + 2);
 
-				indices.push_back(n + 2);
-				indices.push_back(n + 1);
-				indices.push_back(n + 3);
+				indices.push_back(vertexAttributes.firstIndex + 2);
+				indices.push_back(vertexAttributes.firstIndex + 1);
+				indices.push_back(vertexAttributes.firstIndex + 3);
 			}
 			else
 			{
-				indices.push_back(n);
-				indices.push_back(n + 2);
-				indices.push_back(n + 1);
+				indices.push_back(vertexAttributes.firstIndex);
+				indices.push_back(vertexAttributes.firstIndex + 2);
+				indices.push_back(vertexAttributes.firstIndex + 1);
 
-				indices.push_back(n + 1);
-				indices.push_back(n + 2);
-				indices.push_back(n + 3);
+				indices.push_back(vertexAttributes.firstIndex + 1);
+				indices.push_back(vertexAttributes.firstIndex + 2);
+				indices.push_back(vertexAttributes.firstIndex + 3);
 			}
 		};
 

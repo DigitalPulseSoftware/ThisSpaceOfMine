@@ -15,12 +15,24 @@ namespace tsom
 	std::shared_ptr<Nz::JoltCollider3D> DeformedChunk::BuildCollider() const
 	{
 		std::vector<Nz::UInt32> indices;
-		std::vector<Nz::VertexStruct_XYZ_Color_UV> vertices;
-		BuildMesh(indices, vertices);
+		std::vector<Nz::Vector3f> positions;
+
+		auto AddVertices = [&](Nz::UInt32 count)
+		{
+			VertexAttributes vertexAttributes;
+
+			vertexAttributes.firstIndex = Nz::SafeCast<Nz::UInt32>(positions.size());
+			positions.resize(positions.size() + count);
+			vertexAttributes.position = Nz::SparsePtr<Nz::Vector3f>(&positions[vertexAttributes.firstIndex]);
+
+			return vertexAttributes;
+		};
+
+		BuildMesh(indices, AddVertices);
 		if (indices.empty())
 			return nullptr;
 
-		return std::make_shared<Nz::JoltMeshCollider3D>(Nz::SparsePtr<Nz::Vector3f>(&vertices[0].position, sizeof(vertices[0])), vertices.size(), indices.data(), indices.size());
+		return std::make_shared<Nz::JoltMeshCollider3D>(&positions[0], positions.size(), indices.data(), indices.size());
 	}
 
 	std::optional<Nz::Vector3ui> DeformedChunk::ComputeCoordinates(const Nz::Vector3f& position) const
