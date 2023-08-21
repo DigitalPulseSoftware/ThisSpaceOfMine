@@ -10,6 +10,7 @@
 #include <Nazara/Core/State.hpp>
 #include <Nazara/Core/Time.hpp>
 #include <Nazara/Math/EulerAngles.hpp>
+#include <Nazara/Platform/WindowEventHandler.hpp>
 #include <Nazara/Widgets/Canvas.hpp>
 #include <ClientLib/ClientPlanet.hpp>
 #include <ClientLib/ClientPlanetEntities.hpp>
@@ -54,13 +55,23 @@ namespace tsom
 			NazaraSlot(ClientSessionHandler, OnPlayerJoined, m_onPlayerJoined);
 			NazaraSlot(Nz::Canvas, OnUnhandledKeyPressed, m_onUnhandledKeyPressed);
 			NazaraSlot(Nz::Canvas, OnUnhandledKeyReleased, m_onUnhandledKeyReleased);
+			NazaraSlot(Nz::WindowEventHandler, OnMouseWheelMoved, m_mouseWheelMovedSlot);
+
+			struct InventorySlot
+			{
+				std::shared_ptr<Nz::Sprite> sprite;
+				entt::handle entity;
+			};
 
 			std::shared_ptr<StateData> m_stateData;
+			std::size_t m_selectedBlock;
 			std::unique_ptr<ClientPlanet> m_planet;
 			std::unique_ptr<ClientPlanetEntities> m_planetEntities;
 			std::unique_ptr<Chatbox> m_chatBox;
+			std::vector<InventorySlot> m_inventorySlots;
 			entt::handle m_cameraEntity;
 			entt::handle m_controlledEntity;
+			entt::handle m_sunLightEntity;
 			entt::handle m_skyboxEntity;
 			Nz::EulerAnglesf m_cameraRotation;
 			Nz::Quaternionf m_upCorrection;

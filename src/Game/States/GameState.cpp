@@ -25,13 +25,18 @@
 
 namespace tsom
 {
+	constexpr std::array s_selectableBlocks = { VoxelBlock::Dirt, VoxelBlock::Grass, VoxelBlock::Stone, VoxelBlock::Snow };
+
 	GameState::GameState(std::shared_ptr<StateData> stateData) :
 	m_stateData(std::move(stateData)),
+	m_selectedBlock(0),
 	m_upCorrection(Nz::Quaternionf::Identity()),
 	m_tickAccumulator(Nz::Time::Zero()),
 	m_tickDuration(Constants::TickDuration)
 	{
 		auto& filesystem = m_stateData->app->GetComponent<Nz::AppFilesystemComponent>();
+
+		Nz::Vector2f screenSize = Nz::Vector2f(m_stateData->swapchain->GetSize());
 
 		m_cameraEntity = m_stateData->world->CreateEntity();
 		{
@@ -46,6 +51,69 @@ namespace tsom
 		}
 
 		m_planet = std::make_unique<ClientPlanet>(Nz::Vector3ui(160), 2.f, 16.f);
+
+		std::shared_ptr<Nz::MaterialInstance> inventoryMaterial = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic);
+		inventoryMaterial->SetTextureProperty("BaseColorMap", filesystem.Load<Nz::Texture>("assets/tileset.png"));
+
+		constexpr float InventoryTileSize = 96.f;
+
+		float offset = screenSize.x / 2.f - (s_selectableBlocks.size() * (InventoryTileSize + 5.f)) * 0.5f;
+		for (VoxelBlock block : s_selectableBlocks)
+		{
+			constexpr Nz::EnumArray<VoxelBlock, std::size_t> blockTextureIndices{
+				0, //< Empty
+				4, //< Grass
+				3, //< Dirt
+				2, //< MossedStone
+				6, //< Snow
+				1, //< Stone
+			};
+
+			constexpr Nz::Vector2ui tileCount(3, 3);
+			constexpr Nz::Vector2f tilesetSize(192.f, 192.f);
+			constexpr Nz::Vector2f uvSize = Nz::Vector2f(64.f, 64.f) / tilesetSize;
+
+			Nz::Vector2ui tileCoords(blockTextureIndices[block] % tileCount.x, blockTextureIndices[block] / tileCount.x);
+			Nz::Vector2f uv(tileCoords);
+			uv *= uvSize;
+
+			bool active = m_selectedBlock == m_inventorySlots.size();
+
+			auto& slot = m_inventorySlots.emplace_back();
+
+			slot.sprite = std::make_shared<Nz::Sprite>(inventoryMaterial);
+			slot.sprite->SetColor((active) ? Nz::Color::White() : Nz::Color::Gray());
+			slot.sprite->SetSize({ InventoryTileSize, InventoryTileSize });
+			slot.sprite->SetTextureCoords(Nz::Rectf(uv, uvSize));
+
+			slot.entity = m_stateData->world->CreateEntity();
+			slot.entity.emplace<Nz::DisabledComponent>();
+			slot.entity.emplace<Nz::GraphicsComponent>(slot.sprite);
+
+			auto& entityNode = slot.entity.emplace<Nz::NodeComponent>();
+			entityNode.SetPosition(offset, 5.f);
+			offset += (InventoryTileSize + 5.f);
+		}
+
+		m_mouseWheelMovedSlot.Connect(m_stateData->window->GetEventHandler().OnMouseWheelMoved, [&](const Nz::WindowEventHandler* /*eventHandler*/, const Nz::WindowEvent::MouseWheelEvent& event)
+		{
+			if (event.delta < 0.f)
+			{
+				m_selectedBlock++;
+				if (m_selectedBlock > s_selectableBlocks.size())
+					m_selectedBlock = 0;
+			}
+			else
+			{
+				if (m_selectedBlock > 0)
+					m_selectedBlock--;
+				else
+					m_selectedBlock = s_selectableBlocks.size() - 1;
+			}
+
+			for (std::size_t i = 0; i < m_inventorySlots.size(); ++i)
+				m_inventorySlots[i].sprite->SetColor((i == m_selectedBlock) ? Nz::Color::White() : Nz::Color::Gray());
+		});
 
 		m_skyboxEntity = m_stateData->world->CreateEntity();
 		{
@@ -224,6 +292,9 @@ namespace tsom
 		m_cameraEntity.remove<Nz::DisabledComponent>();
 		m_skyboxEntity.remove<Nz::DisabledComponent>();
 
+		for (auto& inventorySlot : m_inventorySlots)
+			inventorySlot.entity.remove<Nz::DisabledComponent>();
+
 		m_planetEntities = std::make_unique<ClientPlanetEntities>(*m_stateData->app, *m_stateData->world, *m_planet);
 
 		Nz::WindowEventHandler& eventHandler = m_stateData->window->GetEventHandler();
@@ -336,7 +407,7 @@ namespace tsom
 					placeBlock.voxelLoc.x = coordinates->x;
 					placeBlock.voxelLoc.y = coordinates->y;
 					placeBlock.voxelLoc.z = coordinates->z;
-					placeBlock.newContent = Nz::SafeCast<Nz::UInt8>(VoxelBlock::Dirt);
+					placeBlock.newContent = Nz::SafeCast<Nz::UInt8>(s_selectableBlocks[m_selectedBlock]);
 
 					m_stateData->networkSession->SendPacket(placeBlock);
 				}
@@ -374,6 +445,9 @@ namespace tsom
 
 		m_cameraEntity.emplace<Nz::DisabledComponent>();
 		m_skyboxEntity.emplace<Nz::DisabledComponent>();
+
+		for (auto& inventorySlot : m_inventorySlots)
+			inventorySlot.entity.emplace<Nz::DisabledComponent>();
 	}
 
 	bool GameState::Update(Nz::StateMachine& /*fsm*/, Nz::Time elapsedTime)
