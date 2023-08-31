@@ -89,12 +89,12 @@ namespace tsom
 		if (m_planet)
 		{
 			// Apply gravity
-			velocity -= 9.81f * up * elapsedTime;
+			velocity -= 20.f * up * elapsedTime;
 
 			if (m_lastInputs.jump)
 			{
 				if (character.IsOnGround())
-					velocity += up * 8.f;
+					velocity += up * 12.f;
 			}
 		}
 
