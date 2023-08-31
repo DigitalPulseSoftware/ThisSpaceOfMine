@@ -3,6 +3,7 @@
 // For conditions of distribution and use, see copyright notice in Config.hpp
 
 #include <Game/States/DebugInfoState.hpp>
+#include <Nazara/Utility/RichTextBuilder.hpp>
 #include <Nazara/Widgets/LabelWidget.hpp>
 
 namespace tsom
@@ -26,16 +27,18 @@ namespace tsom
 		if (m_updateClock.RestartIfOver(Nz::Time::Second()))
 		{
 			m_textDrawer.Clear();
-			m_textDrawer.SetDefaultColor(Nz::Color::White());
-			m_textDrawer.AppendText("FPS: ");
-			if (m_fpsCounter >= 60)
-				m_textDrawer.SetDefaultColor(Nz::Color::Green());
-			else if (m_fpsCounter >= 20)
-				m_textDrawer.SetDefaultColor(Nz::Color::Orange());
-			else
-				m_textDrawer.SetDefaultColor(Nz::Color::Red());
 
-			m_textDrawer.AppendText(std::to_string(m_fpsCounter));
+			Nz::RichTextBuilder textBuilder(m_textDrawer);
+
+			textBuilder << Nz::Color::White() << "FPS: ";
+			if (m_fpsCounter >= 60)
+				textBuilder << Nz::Color::Green();
+			else if (m_fpsCounter >= 20)
+				textBuilder << Nz::Color::Orange();
+			else
+				textBuilder << Nz::Color::Red();
+
+			textBuilder << std::to_string(m_fpsCounter);
 
 			m_fpsEntity->UpdateText(m_textDrawer);
 			m_fpsEntity->Resize(m_fpsEntity->GetPreferredSize());

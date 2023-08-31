@@ -59,6 +59,7 @@ namespace tsom
 
 		m_connectingLabel->UpdateText(Nz::SimpleTextDrawer::Draw("Connecting to " + serverAddress.ToString() + "...", 48));
 		m_connectingLabel->Center();
+		m_connectingLabel->Show();
 
 		m_connectedState = std::make_shared<GameState>(GetStateDataPtr());
 	}
@@ -91,29 +92,38 @@ namespace tsom
 
 			m_connectingLabel->UpdateText(Nz::SimpleTextDrawer::Draw("Authenticating...", 48));
 			m_connectingLabel->Center();
+			m_connectingLabel->Show();
 
 			Packets::AuthRequest request;
 			request.nickname = m_nickname;
 
 			m_serverSession->SendPacket(request);
 
-			m_nextState = m_connectedState;
+			m_nextState = std::move(m_connectedState);
 			m_nextStateTimer = Nz::Time::Milliseconds(500);
 		};
 
-		auto DisconnectionHandler = [&](std::size_t peerIndex, [[maybe_unused]] Nz::UInt32 data)
+		auto DisconnectionHandler = [&](std::size_t peerIndex, [[maybe_unused]] Nz::UInt32 data, bool timeout)
 		{
 			if (!m_serverSession || m_serverSession->GetPeerId() != peerIndex)
 				return;
 
-			m_connectingLabel->UpdateText(Nz::SimpleTextDrawer::Draw("Connection lost.", 48, Nz::TextStyle_Regular, Nz::Color::Red()));
-			m_connectingLabel->Center();
+			if (timeout)
+			{
+				m_connectingLabel->UpdateText(Nz::SimpleTextDrawer::Draw("Connection lost.", 48, Nz::TextStyle_Regular, Nz::Color::Red()));
+				m_connectingLabel->Center();
+				m_connectingLabel->Show();
+
+				m_nextState = m_previousState;
+				m_nextStateTimer = Nz::Time::Milliseconds(2000);
+			}
+			else
+			{
+				m_nextState = m_previousState;
+				m_nextStateTimer = Nz::Time::Milliseconds(200);
+			}
 
 			fmt::print("Disconnected from server\n");
-
-			m_nextState = m_previousState;
-			m_nextStateTimer = Nz::Time::Milliseconds(2000);
-
 			m_serverSession.reset();
 		};
 

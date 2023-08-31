@@ -23,12 +23,12 @@ namespace tsom
 			m_sessions[peerIndex]->SetHandler(m_handlerFactory(&m_sessions[peerIndex].value()));
 		};
 
-		auto DisconnectionHandler = [&](std::size_t peerIndex, [[maybe_unused]] Nz::UInt32 data)
+		auto DisconnectionHandler = [&](std::size_t peerIndex, [[maybe_unused]] Nz::UInt32 data, bool timeout)
 		{
 			assert(m_sessions[peerIndex].has_value());
 			assert(data == 0);
 
-			fmt::print("Peer disconnected (peerIndex: {}, data: {})\n", peerIndex, data);
+			fmt::print("Peer {} (peerIndex: {}, data: {})\n", (timeout) ? "timeout" : "disconnected", peerIndex, data);
 			m_sessions[peerIndex].reset();
 		};
 

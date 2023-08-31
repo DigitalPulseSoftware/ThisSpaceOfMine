@@ -32,7 +32,9 @@ namespace tsom
 	m_selectedBlock(0),
 	m_upCorrection(Nz::Quaternionf::Identity()),
 	m_tickAccumulator(Nz::Time::Zero()),
-	m_tickDuration(Constants::TickDuration)
+	m_tickDuration(Constants::TickDuration),
+	m_escapeMenu(m_stateData->canvas),
+	m_isMouseLocked(true)
 	{
 		auto& filesystem = m_stateData->app->GetComponent<Nz::AppFilesystemComponent>();
 
@@ -59,7 +61,7 @@ namespace tsom
 			m_sunLightEntity.emplace<Nz::NodeComponent>(Nz::Vector3f::Zero(), Nz::EulerAnglesf(-45.f, 90.f, 0.f));
 
 			auto& dirLight = lightComponent.AddLight<Nz::DirectionalLight>();
-			dirLight.UpdateAmbientFactor(0.05f);
+			dirLight.UpdateAmbientFactor(std::pow(0.05f, 1.f / 2.2f)); //< TODO: waiting for gamma correction in the engine
 			//dirLight.EnableShadowCasting(true);
 		}
 
@@ -99,7 +101,7 @@ namespace tsom
 
 			slot.entity = m_stateData->world->CreateEntity();
 			slot.entity.emplace<Nz::DisabledComponent>();
-			slot.entity.emplace<Nz::GraphicsComponent>(slot.sprite);
+			slot.entity.emplace<Nz::GraphicsComponent>(slot.sprite, 0xFFFF0000);
 
 			auto& entityNode = slot.entity.emplace<Nz::NodeComponent>();
 			entityNode.SetPosition(offset, 5.f);
@@ -108,6 +110,9 @@ namespace tsom
 
 		m_mouseWheelMovedSlot.Connect(m_stateData->window->GetEventHandler().OnMouseWheelMoved, [&](const Nz::WindowEventHandler* /*eventHandler*/, const Nz::WindowEvent::MouseWheelEvent& event)
 		{
+			if (!m_isMouseLocked)
+				return;
+
 			if (event.delta < 0.f)
 			{
 				m_selectedBlock++;
@@ -218,9 +223,14 @@ namespace tsom
 			{
 				case Nz::Keyboard::VKey::Escape:
 				{
-					if (m_chatBox->IsOpen())
+					if (m_escapeMenu.IsVisible())
+						m_escapeMenu.Hide();
+					else if (m_chatBox->IsOpen())
 						m_chatBox->Close();
+					else
+						m_escapeMenu.Show();
 
+					UpdateMouseLock();
 					break;
 				}
 
@@ -233,7 +243,8 @@ namespace tsom
 					}
 					else
 						m_chatBox->Open();
-				
+
+					UpdateMouseLock();
 					break;
 				}
 
@@ -285,6 +296,16 @@ namespace tsom
 				}
 			});
 		});
+
+		m_escapeMenu.OnDisconnect.Connect([this](EscapeMenu* /*menu*/)
+		{
+			m_stateData->networkSession->Disconnect();
+		});
+
+		m_escapeMenu.OnQuitApp.Connect([this](EscapeMenu* /*menu*/)
+		{
+			m_stateData->app->Quit();
+		});
 	}
 
 	GameState::~GameState()
@@ -293,8 +314,6 @@ namespace tsom
 
 	void GameState::Enter(Nz::StateMachine& /*fsm*/)
 	{
-		Nz::Mouse::SetRelativeMouseMode(true);
-
 #ifdef FREEFLIGHT
 		auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
 		cameraNode.SetPosition(Nz::Vector3f::Up() * (m_planet->GetGridDimensions().z * m_planet->GetTileSize() * 0.5f + 1.f));
@@ -314,6 +333,9 @@ namespace tsom
 		m_cameraRotation = Nz::EulerAnglesf(-30.f, 0.f, 0.f);
 		eventHandler.OnMouseMoved.Connect([&](const Nz::WindowEventHandler*, const Nz::WindowEvent::MouseMoveEvent& event)
 		{
+			if (!m_isMouseLocked)
+				return;
+
 			// Gestion de la caméra free-fly (Rotation)
 			float sensitivity = 0.3f; // Sensibilité de la souris
 
@@ -328,41 +350,11 @@ namespace tsom
 			//playerRotNode.SetRotation(camAngles);
 		});
 
-		eventHandler.OnKeyPressed.Connect([&](const Nz::WindowEventHandler*, const Nz::WindowEvent::KeyEvent& event)
-		{
-			switch (event.virtualKey)
-			{
-				case Nz::Keyboard::VKey::Add:
-					m_planet->UpdateCornerRadius(m_planet->GetCornerRadius() + 1.f);
-					fmt::print("Corner radius: {}\n", m_planet->GetCornerRadius());
-					break;
-
-				case Nz::Keyboard::VKey::Subtract:
-					m_planet->UpdateCornerRadius(m_planet->GetCornerRadius() - 1.f);
-					fmt::print("Corner radius: {}\n", m_planet->GetCornerRadius());
-					break;
-
-				/*case Nz::Keyboard::VKey::Divide:
-					m_planet = std::make_unique<ClientPlanet>(m_planet->GetGridDimensions() - 1, m_planet->GetTileSize(), m_planet->GetCornerRadius());
-					fmt::print("Dimensions size: {}\n", m_planet->GetGridDimensions());
-
-					RebuildPlanet();
-					break;
-
-				case Nz::Keyboard::VKey::Multiply:
-					m_planet = std::make_unique<ClientPlanet>(m_planet->GetGridDimensions() + 1, m_planet->GetTileSize(), m_planet->GetCornerRadius());
-					fmt::print("Dimensions size: {}\n", m_planet->GetGridDimensions());
-
-					RebuildPlanet();
-					break;*/
-
-				default:
-					break;
-			}
-		});
-
 		eventHandler.OnMouseButtonReleased.Connect([&](const Nz::WindowEventHandler*, const Nz::WindowEvent::MouseButtonEvent& event)
 		{
+			if (!m_isMouseLocked)
+				return;
+
 			if (event.button != Nz::Mouse::Left && event.button != Nz::Mouse::Right)
 				return;
 
@@ -429,6 +421,9 @@ namespace tsom
 #ifdef FREEFLIGHT
 		eventHandler.OnMouseMoved.Connect([&, camAngles = Nz::EulerAnglesf(0.f, 0.f, 0.f)](const Nz::WindowEventHandler*, const Nz::WindowEvent::MouseMoveEvent& event) mutable
 		{
+			if (!m_isMouseLocked)
+				return;
+
 			// Gestion de la caméra free-fly (Rotation)
 			float sensitivity = 0.3f; // Sensibilité de la souris
 
@@ -445,6 +440,8 @@ namespace tsom
 			playerRotNode.SetRotation(camAngles);
 		});
 #endif
+
+		UpdateMouseLock();
 	}
 
 	void GameState::Leave(Nz::StateMachine& /*fsm*/)
@@ -488,20 +485,23 @@ namespace tsom
 
 		auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
 #ifdef FREEFLIGHT
-		if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::Space))
-			cameraNode.Move(Nz::Vector3f::Up() * cameraSpeed * updateTime, Nz::CoordSys::Global);
+		if (m_isMouseLocked)
+		{
+			if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::Space))
+				cameraNode.Move(Nz::Vector3f::Up() * cameraSpeed * updateTime, Nz::CoordSys::Global);
 
-		if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::Z))
-			cameraNode.Move(Nz::Vector3f::Forward() * cameraSpeed * updateTime, Nz::CoordSys::Local);
+			if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::Z))
+				cameraNode.Move(Nz::Vector3f::Forward() * cameraSpeed * updateTime, Nz::CoordSys::Local);
 
-		if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::S))
-			cameraNode.Move(Nz::Vector3f::Backward() * cameraSpeed * updateTime, Nz::CoordSys::Local);
+			if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::S))
+				cameraNode.Move(Nz::Vector3f::Backward() * cameraSpeed * updateTime, Nz::CoordSys::Local);
 
-		if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::Q))
-			cameraNode.Move(Nz::Vector3f::Left() * cameraSpeed * updateTime, Nz::CoordSys::Local);
+			if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::Q))
+				cameraNode.Move(Nz::Vector3f::Left() * cameraSpeed * updateTime, Nz::CoordSys::Local);
 
-		if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::D))
-			cameraNode.Move(Nz::Vector3f::Right() * cameraSpeed * updateTime, Nz::CoordSys::Local);
+			if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::D))
+				cameraNode.Move(Nz::Vector3f::Right() * cameraSpeed * updateTime, Nz::CoordSys::Local);
+		}
 #else
 		if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::F1) && m_stateData->networkSession->IsConnected())
 			m_stateData->networkSession->Disconnect();
@@ -610,7 +610,7 @@ namespace tsom
 	void GameState::SendInputs()
 	{
 		Packets::UpdatePlayerInputs inputPacket;
-		if (!m_chatBox->IsTyping())
+		if (m_isMouseLocked)
 		{
 			inputPacket.inputs.jump = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::Space);
 			inputPacket.inputs.moveForward = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::W);
@@ -626,5 +626,11 @@ namespace tsom
 			inputPacket.inputs.orientation = Nz::Quaternionf::Identity();
 
 		m_stateData->networkSession->SendPacket(inputPacket);
+	}
+
+	void GameState::UpdateMouseLock()
+	{
+		m_isMouseLocked = !m_chatBox->IsTyping() && !m_escapeMenu.IsVisible();
+		Nz::Mouse::SetRelativeMouseMode(m_isMouseLocked);
 	}
 }

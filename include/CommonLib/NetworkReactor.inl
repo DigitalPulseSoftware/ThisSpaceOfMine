@@ -29,7 +29,7 @@ namespace tsom
 				}
 				else if constexpr (std::is_same_v<T, IncomingEvent::DisconnectEvent>)
 				{
-					onDisconnection(inEvent.peerId, arg.data);
+					onDisconnection(inEvent.peerId, arg.data, arg.timeout);
 				}
 				else if constexpr (std::is_same_v<T, IncomingEvent::PacketEvent>)
 				{

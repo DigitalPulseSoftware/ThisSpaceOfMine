@@ -15,6 +15,7 @@
 #include <ClientLib/ClientPlanet.hpp>
 #include <ClientLib/ClientPlanetEntities.hpp>
 #include <ClientLib/ClientSessionHandler.hpp>
+#include <ClientLib/EscapeMenu.hpp>
 #include <entt/entt.hpp>
 #include <array>
 #include <functional>
@@ -45,6 +46,7 @@ namespace tsom
 		private:
 			void OnTick(Nz::Time elapsedTime);
 			void SendInputs();
+			void UpdateMouseLock();
 
 			NazaraSlot(ClientSessionHandler, OnChatMessage, m_onChatMessage);
 			NazaraSlot(ClientSessionHandler, OnChunkCreate, m_onChunkCreate);
@@ -77,6 +79,8 @@ namespace tsom
 			Nz::Quaternionf m_upCorrection;
 			Nz::Time m_tickAccumulator;
 			Nz::Time m_tickDuration;
+			EscapeMenu m_escapeMenu;
+			bool m_isMouseLocked;
 	};
 }
 
