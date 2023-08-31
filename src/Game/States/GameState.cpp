@@ -248,10 +248,10 @@ namespace tsom
 			{
 				m_chatBox->PrintMessage({
 					{
-						{ Chatbox::ColorItem(Nz::Color::Yellow()) },
+						{ Chatbox::ColorItem{ Nz::Color::Yellow() } },
 						{ Chatbox::TextItem{ senderName } },
 						{ Chatbox::TextItem{ ": " }},
-						{ Chatbox::ColorItem(Nz::Color::White()) },
+						{ Chatbox::ColorItem{ Nz::Color::White() } },
 						{ Chatbox::TextItem{ message } }
 					}
 				});
