@@ -65,6 +65,10 @@ int GameMain(int argc, char* argv[])
 
 	Nz::Canvas canvas(world.GetRegistry(), window.GetEventHandler(), window.GetCursorController().CreateHandle(), 0xFFFF0000);
 	canvas.Resize(Nz::Vector2f(window.GetSize()));
+	window.GetEventHandler().OnResized.Connect([&](const Nz::WindowEventHandler* /*eventHandler*/, const Nz::WindowEvent::SizeEvent& sizeEvent)
+	{
+		canvas.Resize(Nz::Vector2f(sizeEvent.width, sizeEvent.height));
+	});
 
 	std::shared_ptr<tsom::StateData> stateData = std::make_shared<tsom::StateData>();
 	stateData->app = &app;
