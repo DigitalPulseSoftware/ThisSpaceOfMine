@@ -16,38 +16,51 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
+        platform:
+        - { runner: windows-latest, os: windows, arch: x64    }
+        - { runner: ubuntu-latest,  os: ubuntu,  arch: x86_64 }
+        - { runner: macos-latest,   os: macos,   arch: x86_64 }
         mode: [debug, releasedbg]
 
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.platform.runner }}
 
     steps:
+    - name: Get current date as package key
+      id: cache_key
+      run: echo "key=$(date +'%W')" >> $GITHUB_OUTPUT
+
+    - name: "Set OUTPUT_FOLDER variable"
+      run: echo "OUTPUT_FOLDER=${{ matrix.platform.os }}_${{ matrix.platform.arch }}_${{ matrix.mode }}" >> $GITHUB_ENV
+      shell: bash
+
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: "Set OUTPUT_FOLDER variable (Windows)"
-      if: ${{ runner.os == 'Windows' }}
-      run: echo "OUTPUT_FOLDER=windows_x64_${{ matrix.mode }}" >> $GITHUB_ENV
-      shell: bash
-
-    - name: "Set OUTPUT_FOLDER variable (Linux)"
-      if: ${{ runner.os == 'Linux' }}
-      run: echo "OUTPUT_FOLDER=linux_x86_64_${{ matrix.mode }}" >> $GITHUB_ENV
-      shell: bash
-
-    - name: "Set OUTPUT_FOLDER variable (macOS)"
-      if: ${{ runner.os == 'macOS' }}
-      run: echo "OUTPUT_FOLDER=macosx_x86_64_${{ matrix.mode }}" >> $GITHUB_ENV
-      shell: bash
-
+    # Install xmake
     - name: Setup xmake
       uses: xmake-io/github-action-setup-xmake@v1
       with:
         xmake-version: latest
         actions-cache-folder: '.xmake-cache'
 
+    # Update xmake repository (in order to have the file that will be cached)
+    - name: Update xmake repository
+      run: xmake repo --update
+
+    # Fetch xmake dephash
+    - name: Retrieve dependencies hash
+      id: dep_hash
+      run: echo "hash=$(xmake l utils.ci.packageskey)" >> $GITHUB_OUTPUT
+
+    # Cache xmake dependencies
+    - name: Retrieve cached xmake dependencies
+      uses: actions/cache@v3
+      with:
+        path: ${{ env.XMAKE_GLOBALDIR }}/.xmake/packages
+        key: ${{ matrix.os }}-${{ matrix.mode }}-${{ steps.dep_hash.outputs.hash }}-W${{ steps.cache_key.outputs.key }}
+
     - name: Configure xmake and install dependencies
-      run: xmake config --mode=${{ matrix.mode }} --yes
+      run: xmake config --arch=${{ matrix.platform.arch }} --mode=${{ matrix.mode }} --yes
 
     - name: Build
       run: xmake
@@ -70,6 +83,7 @@ jobs:
         files: dest/
         dest: ${{ env.OUTPUT_FOLDER }}.zip
 
+    # Nightly tags (for commits to dev branch)
     - name: Upload binaries to release (Branch)
       uses: svenstaro/upload-release-action@v2
       if: ${{ (github.ref == 'refs/heads/dev') && github.event_name == 'push' }}
@@ -81,6 +95,7 @@ jobs:
         overwrite: true
         body: "Dev branch"
 
+    # Release tags (for tags)
     - name: Upload binaries to release (Tag)
       uses: svenstaro/upload-release-action@v2
       if: ${{ startsWith(github.event.ref, 'refs/tags/') && matrix.mode == 'releasedbg' }}
