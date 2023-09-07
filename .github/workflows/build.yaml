@@ -28,6 +28,7 @@ jobs:
     - name: Get current date as package key
       id: cache_key
       run: echo "key=$(date +'%W')" >> $GITHUB_OUTPUT
+      shell: bash
 
     - name: "Set OUTPUT_FOLDER variable"
       run: echo "OUTPUT_FOLDER=${{ matrix.platform.os }}_${{ matrix.platform.arch }}_${{ matrix.mode }}" >> $GITHUB_ENV
