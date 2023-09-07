@@ -34,6 +34,11 @@ jobs:
       run: echo "OUTPUT_FOLDER=${{ matrix.platform.os }}_${{ matrix.platform.arch }}_${{ matrix.mode }}" >> $GITHUB_ENV
       shell: bash
 
+    # Force xmake to a specific folder (for cache)
+    - name: Set xmake env
+      run: echo "XMAKE_GLOBALDIR=${{ runner.workspace }}/xmake-global" >> $GITHUB_ENV
+      shell: bash
+
     - name: Checkout repository
       uses: actions/checkout@v3
 
