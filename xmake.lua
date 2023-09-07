@@ -145,7 +145,7 @@ target("ClientLib", function ()
 	add_packages("nazaraengine", { components = { "audio", "graphics", "widgets" }, public = true })
 end)
 
-target("Main")
+target("Main", function ()
 	set_group("Common")
 	set_basename("TSOMMain")
 	set_kind("static")
@@ -157,6 +157,7 @@ target("Main")
 	add_headerfiles("src/Main/**.hpp", "src/Main/**.inl")
 	add_files("src/Main/**.cpp")
 	add_packages("nazaraengine", { components = { "core" }, public = true })
+end)
 
 target("TSOMGame", function ()
 	set_group("Executable")
@@ -167,6 +168,8 @@ target("TSOMGame", function ()
 
 	add_headerfiles("src/Game/**.hpp", "src/Game/**.inl")
 	add_files("src/Game/**.cpp")
+
+	add_rpathdirs("@executable_path")
 
 	add_packages("nazaraengine", { components = { "widgets" }, public = true })
 end)
@@ -180,6 +183,8 @@ target("TSOMServer", function ()
 
 	add_headerfiles("src/Server/**.hpp", "src/Server/**.inl")
 	add_files("src/Server/**.cpp")
+
+	add_rpathdirs("@executable_path")
 
 	add_packages("nazaraengine", { components = { "core" } })
 end)
