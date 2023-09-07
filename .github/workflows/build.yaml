@@ -18,7 +18,7 @@ jobs:
       matrix:
         platform:
         - { runner: windows-latest, os: windows, arch: x64    }
-        - { runner: ubuntu-latest,  os: ubuntu,  arch: x86_64 }
+        - { runner: ubuntu-latest,  os: linux,   arch: x86_64 }
         - { runner: macos-latest,   os: macos,   arch: x86_64 }
         mode: [debug, releasedbg]
 
