@@ -21,7 +21,7 @@ namespace tsom
 	{
 		auto& filesystem = stateData->app->GetComponent<Nz::AppFilesystemComponent>();
 
-		m_camera = stateData->world->CreateEntity();
+		m_camera = CreateEntity();
 		{
 			std::random_device rd;
 			std::uniform_real_distribution<float> dis(-180.f, 180.f);
