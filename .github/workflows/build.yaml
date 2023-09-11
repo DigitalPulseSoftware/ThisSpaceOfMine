@@ -74,7 +74,6 @@ jobs:
 
     - name: Install
       run: |
-        mkdir dest/
         xmake install -vo dest/
         if [ "$RUNNER_OS" == "Linux" ]; then
           mv ./dest/lib/*.so ./dest/bin/
@@ -84,11 +83,11 @@ jobs:
         rm -rf dest/include/
         rm -rf dest/lib/
       shell: bash
-
-    - uses: vimtor/action-zip@v1
+    
+    - name: Compress folder
+      uses: edgarrc/action-7z@v1
       with:
-        files: dest/
-        dest: ${{ env.OUTPUT_FOLDER }}.zip
+        args: 7z a -bb -t7z -mx=9 -cu=on ${{ env.OUTPUT_FOLDER }}.7z ./dest
 
     # Nightly tags (for commits to dev branch)
     - name: Upload binaries to release (Branch)
@@ -96,8 +95,8 @@ jobs:
       if: ${{ (github.ref == 'refs/heads/dev') && github.event_name == 'push' }}
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ${{ env.OUTPUT_FOLDER }}.zip
-        asset_name: ${{ env.OUTPUT_FOLDER }}.zip
+        file: ${{ env.OUTPUT_FOLDER }}.7z
+        asset_name: ${{ env.OUTPUT_FOLDER }}.7z
         tag: "0.0.0-nightly"
         overwrite: true
         body: "Dev branch"
@@ -108,8 +107,8 @@ jobs:
       if: ${{ startsWith(github.event.ref, 'refs/tags/') && matrix.mode == 'releasedbg' }}
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ${{ env.OUTPUT_FOLDER }}.zip
-        asset_name: ${{ env.OUTPUT_FOLDER }}.zip
+        file: ${{ env.OUTPUT_FOLDER }}.7z
+        asset_name: ${{ env.OUTPUT_FOLDER }}.7z
         tag: ${{ github.ref }}
         overwrite: true
         body: Version ${{ github.ref }}
