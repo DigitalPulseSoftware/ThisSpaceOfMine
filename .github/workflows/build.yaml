@@ -31,7 +31,7 @@ jobs:
       shell: bash
 
     - name: "Set OUTPUT_FILE variable"
-      run: echo "OUTPUT_FILE=${{ matrix.platform.os }}_${{ matrix.platform.arch }}_${{ matrix.mode }}_${{ matrix.platform.archive_ext }}" >> $GITHUB_ENV
+      run: echo "OUTPUT_FILE=${{ matrix.platform.os }}_${{ matrix.platform.arch }}_${{ matrix.mode }}${{ matrix.platform.archive_ext }}" >> $GITHUB_ENV
       shell: bash
 
     # Force xmake to a specific folder (for cache)
