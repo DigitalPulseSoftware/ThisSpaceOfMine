@@ -17,9 +17,9 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-        - { runner: windows-latest, os: windows, arch: x64    }
-        - { runner: ubuntu-latest,  os: linux,   arch: x86_64 }
-        - { runner: macos-latest,   os: macos,   arch: x86_64 }
+        - { runner: windows-latest, os: windows, arch: x64,    archive_ext: .zip }
+        - { runner: ubuntu-latest,  os: linux,   arch: x86_64, archive_ext: .tar.gz }
+        - { runner: macos-latest,   os: macos,   arch: x86_64, archive_ext: .tar.gz }
         mode: [debug, releasedbg]
 
     runs-on: ${{ matrix.platform.runner }}
@@ -30,8 +30,8 @@ jobs:
       run: echo "key=$(date +'%W')" >> $GITHUB_OUTPUT
       shell: bash
 
-    - name: "Set OUTPUT_FOLDER variable"
-      run: echo "OUTPUT_FOLDER=${{ matrix.platform.os }}_${{ matrix.platform.arch }}_${{ matrix.mode }}" >> $GITHUB_ENV
+    - name: "Set OUTPUT_FILE variable"
+      run: echo "OUTPUT_FILE=${{ matrix.platform.os }}_${{ matrix.platform.arch }}_${{ matrix.mode }}_${{ matrix.platform.archive_ext }}" >> $GITHUB_ENV
       shell: bash
 
     # Force xmake to a specific folder (for cache)
@@ -84,10 +84,12 @@ jobs:
         rm -rf dest/lib/
       shell: bash
     
-    - name: Compress folder
-      uses: edgarrc/action-7z@v1
+    - name: Archive result
+      uses: ihiroky/archive-action@v1
       with:
-        args: 7z a -bb -t7z -mx=9 -cu=on ${{ env.OUTPUT_FOLDER }}.7z ./dest
+        root_dir: dest
+        file_path: ${{ env.OUTPUT_FILE }}
+        verbose: true
 
     # Nightly tags (for commits to dev branch)
     - name: Upload binaries to release (Branch)
@@ -95,8 +97,8 @@ jobs:
       if: ${{ (github.ref == 'refs/heads/dev') && github.event_name == 'push' }}
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ${{ env.OUTPUT_FOLDER }}.7z
-        asset_name: ${{ env.OUTPUT_FOLDER }}.7z
+        file: ${{ env.OUTPUT_FILE }}
+        asset_name: ${{ env.OUTPUT_FILE }}
         tag: "0.0.0-nightly"
         overwrite: true
         body: "Dev branch"
@@ -107,8 +109,8 @@ jobs:
       if: ${{ startsWith(github.event.ref, 'refs/tags/') && matrix.mode == 'releasedbg' }}
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ${{ env.OUTPUT_FOLDER }}.7z
-        asset_name: ${{ env.OUTPUT_FOLDER }}.7z
+        file: ${{ env.OUTPUT_FILE }}
+        asset_name: ${{ env.OUTPUT_FILE }}
         tag: ${{ github.ref }}
         overwrite: true
         body: Version ${{ github.ref }}
