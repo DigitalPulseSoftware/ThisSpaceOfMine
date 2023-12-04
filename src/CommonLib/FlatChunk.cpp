@@ -9,22 +9,11 @@
 
 namespace tsom
 {
-	std::shared_ptr<Nz::JoltCollider3D> FlatChunk::BuildCollider() const
+	std::shared_ptr<Nz::JoltCollider3D> FlatChunk::BuildCollider(const BlockLibrary& /*blockManager*/) const
 	{
 		std::vector<Nz::JoltCompoundCollider3D::ChildCollider> childColliders;
 
-		Nz::Bitset<Nz::UInt64> availableBlocks(m_size.x * m_size.y * m_size.z, true);
-		for (unsigned int z = 0; z < m_size.z; ++z)
-		{
-			for (unsigned int y = 0; y < m_size.y; ++y)
-			{
-				for (unsigned int x = 0; x < m_size.x; ++x)
-				{
-					VoxelBlock cell = GetBlockContent({ x, y, z });
-					availableBlocks[GetBlockIndex({ x, y, z })] = (cell != VoxelBlock::Empty);
-				}
-			}
-		}
+		Nz::Bitset<Nz::UInt64> availableBlocks = GetCollisionCellMask();
 
 		std::optional<Nz::Vector3ui> startPos;
 		auto CommitCollider = [&](unsigned int endX)

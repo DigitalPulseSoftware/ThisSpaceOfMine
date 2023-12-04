@@ -29,12 +29,12 @@ namespace tsom
 		return m_blockSize;
 	}
 
-	inline const VoxelBlock* Chunk::GetContent() const
+	inline const BlockIndex* Chunk::GetContent() const
 	{
 		return m_cells.data();
 	}
 
-	inline std::optional<VoxelBlock> Chunk::GetNeighborBlock(Nz::Vector3ui indices, const Nz::Vector3i& offsets) const
+	inline std::optional<BlockIndex> Chunk::GetNeighborBlock(Nz::Vector3ui indices, const Nz::Vector3i& offsets) const
 	{
 		const Chunk* currentChunk = this;
 		if (offsets.x < 0)
@@ -130,9 +130,9 @@ namespace tsom
 		func(m_cells.data());
 	}
 
-	inline void Chunk::UpdateBlock(const Nz::Vector3ui& indices, VoxelBlock newBlock)
 	{
-		m_cells[GetBlockIndex(indices)] = newBlock;
+		unsigned int blockIndex = GetBlockIndex(indices);
+		m_cells[blockIndex] = newBlock;
 
 		OnBlockUpdated(this, indices, newBlock);
 	}

@@ -106,7 +106,7 @@ namespace tsom
 			VisibleChunk& visibleChunk = m_visibleChunks[chunkIndex];
 
 			// Connect update signal on dispatch to prevent updates made during the same tick to be sent as update
-			visibleChunk.onCellUpdatedSlot.Connect(visibleChunk.chunk->OnBlockUpdated, [this, chunkIndex]([[maybe_unused]] Chunk* chunk, const Nz::Vector3ui& indices, VoxelBlock newBlock)
+			visibleChunk.onCellUpdatedSlot.Connect(visibleChunk.chunk->OnBlockUpdated, [this, chunkIndex]([[maybe_unused]] Chunk* chunk, const Nz::Vector3ui& indices, BlockIndex newBlock)
 			{
 				m_updatedChunk.UnboundedSet(chunkIndex);
 
@@ -146,7 +146,7 @@ namespace tsom
 			unsigned int blockCount = chunkSize.x * chunkSize.y * chunkSize.z;
 			chunkCreatePacket.content.resize(blockCount);
 
-			const VoxelBlock* chunkContent = visibleChunk.chunk->GetContent();
+			const BlockIndex* chunkContent = visibleChunk.chunk->GetContent();
 			for (unsigned int i = 0; i < blockCount; ++i)
 				chunkCreatePacket.content[i] = Nz::SafeCast<Nz::UInt8>(chunkContent[i]);
 

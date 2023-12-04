@@ -38,8 +38,8 @@ namespace tsom
 			Chunk(Chunk&&) = delete;
 			virtual ~Chunk();
 
-			virtual std::shared_ptr<Nz::JoltCollider3D> BuildCollider() const = 0;
-			virtual void BuildMesh(std::vector<Nz::UInt32>& indices, const Nz::FunctionRef<VertexAttributes(Nz::UInt32 count)>& addVertices) const;
+			virtual std::shared_ptr<Nz::JoltCollider3D> BuildCollider(const BlockLibrary& blockManager) const = 0;
+			virtual void BuildMesh(const BlockLibrary& blockManager, std::vector<Nz::UInt32>& indices, const Nz::Vector3f& center, const Nz::FunctionRef<VertexAttributes(Nz::UInt32 count)>& addVertices) const;
 
 			virtual std::optional<Nz::Vector3ui> ComputeCoordinates(const Nz::Vector3f& position) const = 0;
 			virtual Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> ComputeVoxelCorners(const Nz::Vector3ui& indices) const = 0;
@@ -47,19 +47,19 @@ namespace tsom
 			inline unsigned int GetBlockIndex(const Nz::Vector3ui& indices) const;
 			inline VoxelBlock GetBlockContent(const Nz::Vector3ui& indices) const;
 			inline float GetBlockSize() const;
-			inline const VoxelBlock* GetContent() const;
+			inline const BlockIndex* GetContent() const;
 			inline const Nz::Vector3ui& GetIndices() const;
-			inline std::optional<VoxelBlock> GetNeighborBlock(Nz::Vector3ui indices, const Nz::Vector3i& offsets) const;
+			inline std::optional<BlockIndex> GetNeighborBlock(Nz::Vector3ui indices, const Nz::Vector3i& offsets) const;
 			inline const Nz::Vector3ui& GetSize() const;
 
 			template<typename F> void InitBlocks(F&& func);
 
-			inline void UpdateBlock(const Nz::Vector3ui& indices, VoxelBlock cellType);
+			inline void UpdateBlock(const Nz::Vector3ui& indices, BlockIndex cellType);
 
 			Chunk& operator=(const Chunk&) = delete;
 			Chunk& operator=(Chunk&&) = delete;
 
-			NazaraSignal(OnBlockUpdated, Chunk* /*emitter*/, const Nz::Vector3ui& /*indices*/, VoxelBlock /*newBlock*/);
+			NazaraSignal(OnBlockUpdated, Chunk* /*emitter*/, const Nz::Vector3ui& /*indices*/, BlockIndex /*newBlock*/);
 
 			struct VertexAttributes
 			{
@@ -67,7 +67,7 @@ namespace tsom
 				Nz::SparsePtr<Nz::Vector3f> position;
 				Nz::SparsePtr<Nz::Vector3f> normal;
 				Nz::SparsePtr<Nz::Vector3f> tangent;
-				Nz::SparsePtr<Nz::Vector2f> uv;
+				Nz::SparsePtr<Nz::Vector3f> uv;
 			};
 
 		protected:

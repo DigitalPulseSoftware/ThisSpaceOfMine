@@ -79,6 +79,7 @@ namespace tsom
 			Nz::Quaternionf m_upCorrection;
 			Nz::Time m_tickAccumulator;
 			Nz::Time m_tickDuration;
+			BlockIndex m_selectedBlockIndex;
 			EscapeMenu m_escapeMenu;
 			bool m_isMouseLocked;
 	};

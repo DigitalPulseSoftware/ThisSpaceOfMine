@@ -25,7 +25,7 @@
 
 namespace tsom
 {
-	constexpr std::array s_selectableBlocks = { VoxelBlock::Dirt, VoxelBlock::Grass, VoxelBlock::Stone, VoxelBlock::Snow };
+	constexpr std::array<std::string_view, 4> s_selectableBlocks = { "dirt", "grass", "stone", "snow" };
 
 	GameState::GameState(std::shared_ptr<StateData> stateData) :
 	m_stateData(std::move(stateData)),
@@ -70,34 +70,31 @@ namespace tsom
 
 		constexpr float InventoryTileSize = 96.f;
 
+		const auto& blockColorMap = m_stateData->blockLibrary->GetBaseColorTexture();
+
 		float offset = screenSize.x / 2.f - (s_selectableBlocks.size() * (InventoryTileSize + 5.f)) * 0.5f;
-		for (VoxelBlock block : s_selectableBlocks)
+		for (std::string_view blockName : s_selectableBlocks)
 		{
-			constexpr Nz::EnumArray<VoxelBlock, std::size_t> blockTextureIndices{
-				0, //< Empty
-				4, //< Grass
-				3, //< Dirt
-				2, //< MossedStone
-				6, //< Snow
-				1, //< Stone
-			};
-
-			constexpr Nz::Vector2ui tileCount(3, 3);
-			constexpr Nz::Vector2f tilesetSize(192.f, 192.f);
-			constexpr Nz::Vector2f uvSize = Nz::Vector2f(64.f, 64.f) / tilesetSize;
-
-			Nz::Vector2ui tileCoords(blockTextureIndices[block] % tileCount.x, blockTextureIndices[block] / tileCount.x);
-			Nz::Vector2f uv(tileCoords);
-			uv *= uvSize;
-
 			bool active = m_selectedBlock == m_inventorySlots.size();
 
 			auto& slot = m_inventorySlots.emplace_back();
 
-			slot.sprite = std::make_shared<Nz::Sprite>(inventoryMaterial);
+			const auto& blockData = m_stateData->blockLibrary->GetBlockData(m_stateData->blockLibrary->GetBlockIndex(blockName));
+
+			Nz::TextureViewInfo slotTexView = {
+				.viewType = Nz::ImageType::E2D,
+				.reinterpretFormat = Nz::PixelFormat::RGBA8, //< FIXME: Disable sRGB in UI?
+				.baseArrayLayer = blockData.texIndices[Direction::Up]
+			};
+
+			std::shared_ptr<Nz::Texture> slotTex = blockColorMap->CreateView(slotTexView);
+
+			std::shared_ptr<Nz::MaterialInstance> slotMat = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic);
+			slotMat->SetTextureProperty("BaseColorMap", slotTex);
+
+			slot.sprite = std::make_shared<Nz::Sprite>(std::move(slotMat));
 			slot.sprite->SetColor((active) ? Nz::Color::White() : Nz::Color::Gray());
 			slot.sprite->SetSize({ InventoryTileSize, InventoryTileSize });
-			slot.sprite->SetTextureCoords(Nz::Rectf(uv, uvSize));
 
 			slot.entity = m_stateData->world->CreateEntity();
 			slot.entity.emplace<Nz::DisabledComponent>();
@@ -108,6 +105,8 @@ namespace tsom
 			offset += (InventoryTileSize + 5.f);
 		}
 
+		m_selectedBlockIndex = m_stateData->blockLibrary->GetBlockIndex(s_selectableBlocks[m_selectedBlock]);
+
 		m_mouseWheelMovedSlot.Connect(m_stateData->window->GetEventHandler().OnMouseWheelMoved, [&](const Nz::WindowEventHandler* /*eventHandler*/, const Nz::WindowEvent::MouseWheelEvent& event)
 		{
 			if (!m_isMouseLocked)
@@ -116,7 +115,7 @@ namespace tsom
 			if (event.delta < 0.f)
 			{
 				m_selectedBlock++;
-				if (m_selectedBlock > s_selectableBlocks.size())
+				if (m_selectedBlock >= s_selectableBlocks.size())
 					m_selectedBlock = 0;
 			}
 			else
@@ -126,6 +125,8 @@ namespace tsom
 				else
 					m_selectedBlock = s_selectableBlocks.size() - 1;
 			}
+
+			m_selectedBlockIndex = m_stateData->blockLibrary->GetBlockIndex(s_selectableBlocks[m_selectedBlock]);
 
 			for (std::size_t i = 0; i < m_inventorySlots.size(); ++i)
 				m_inventorySlots[i].sprite->SetColor((i == m_selectedBlock) ? Nz::Color::White() : Nz::Color::Gray());
@@ -189,10 +190,10 @@ namespace tsom
 		{
 			Nz::Vector3ui indices(chunkCreate.chunkLocX, chunkCreate.chunkLocY, chunkCreate.chunkLocZ);
 
-			Chunk& chunk = m_planet->AddChunk(chunkCreate.chunkId, indices, [&](VoxelBlock* blocks)
+			Chunk& chunk = m_planet->AddChunk(chunkCreate.chunkId, indices, [&](BlockIndex* blocks)
 			{
 				for (Nz::UInt8 blockContent : chunkCreate.content)
-					*blocks++ = Nz::SafeCast<VoxelBlock>(blockContent);
+					*blocks++ = Nz::SafeCast<BlockIndex>(blockContent);
 			});
 		});
 		
@@ -205,7 +206,7 @@ namespace tsom
 		{
 			Chunk* chunk = m_planet->GetChunkByNetworkIndex(chunkUpdate.chunkId);
 			for (auto&& [blockPos, blockIndex] : chunkUpdate.updates)
-				chunk->UpdateBlock({ blockPos.x, blockPos.y, blockPos.z }, Nz::SafeCast<VoxelBlock>(blockIndex));
+				chunk->UpdateBlock({ blockPos.x, blockPos.y, blockPos.z }, Nz::SafeCast<BlockIndex>(blockIndex));
 		});
 		
 		m_chatBox = std::make_unique<Chatbox>(m_stateData->swapchain, m_stateData->canvas);
@@ -326,7 +327,7 @@ namespace tsom
 		for (auto& inventorySlot : m_inventorySlots)
 			inventorySlot.entity.remove<Nz::DisabledComponent>();
 
-		m_planetEntities = std::make_unique<ClientPlanetEntities>(*m_stateData->app, *m_stateData->world, *m_planet);
+		m_planetEntities = std::make_unique<ClientChunkEntities>(*m_stateData->app, *m_stateData->world, *m_planet, *m_stateData->blockLibrary);
 
 		Nz::WindowEventHandler& eventHandler = m_stateData->window->GetEventHandler();
 
@@ -411,7 +412,7 @@ namespace tsom
 					placeBlock.voxelLoc.x = coordinates->x;
 					placeBlock.voxelLoc.y = coordinates->y;
 					placeBlock.voxelLoc.z = coordinates->z;
-					placeBlock.newContent = Nz::SafeCast<Nz::UInt8>(s_selectableBlocks[m_selectedBlock]);
+					placeBlock.newContent = Nz::SafeCast<Nz::UInt8>(m_selectedBlockIndex);
 
 					m_stateData->networkSession->SendPacket(placeBlock);
 				}

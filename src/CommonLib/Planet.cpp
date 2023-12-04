@@ -24,7 +24,7 @@ namespace tsom
 		m_chunks.resize(m_chunkCount.x * m_chunkCount.y * m_chunkCount.z);
 	}
 
-	Chunk& Planet::AddChunk(const Nz::Vector3ui& indices, const Nz::FunctionRef<void(VoxelBlock* blocks)>& initCallback)
+	Chunk& Planet::AddChunk(const Nz::Vector3ui& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback)
 	{
 		std::size_t index = GetChunkIndex(indices);
 		assert(!m_chunks[index].chunk);
@@ -33,7 +33,7 @@ namespace tsom
 		if (initCallback)
 			m_chunks[index].chunk->InitBlocks(initCallback);
 
-		m_chunks[index].onUpdated.Connect(m_chunks[index].chunk->OnBlockUpdated, [this](Chunk* chunk, const Nz::Vector3ui& /*indices*/, VoxelBlock /*newBlock*/)
+		m_chunks[index].onUpdated.Connect(m_chunks[index].chunk->OnBlockUpdated, [this](Chunk* chunk, const Nz::Vector3ui& /*indices*/, BlockIndex /*newBlock*/)
 		{
 			OnChunkUpdated(this, chunk);
 		});
@@ -74,29 +74,32 @@ namespace tsom
 						m_gridSize.z - z - 1,
 					});
 
-					VoxelBlock blockType;
-					if (depth <= 5)
-						blockType = VoxelBlock::Snow;
+					std::string_view blockType;
+					if (depth <= 8)
+						blockType = "debug";
 					else if (depth <= 10)
-						blockType = VoxelBlock::Dirt;
+						blockType = "dirt";
 					else if (depth <= 15)
-						blockType = VoxelBlock::Grass;
+						blockType = "grass";
 					else if (depth <= 40)
-						blockType = VoxelBlock::Dirt;
+						blockType = "dirt";
 					else
-						blockType = (dis(rand)) ? VoxelBlock::Stone : VoxelBlock::MossedStone;
+						blockType = (dis(rand)) ? "stone" : "stone_mossy";
 
-
-					Nz::Vector3ui innerCoordinates;
-					Chunk& chunk = GetChunkByIndices({ x, y, z }, &innerCoordinates);
-					chunk.UpdateBlock(innerCoordinates, blockType);
+					BlockIndex blockIndex = blockLibrary.GetBlockIndex(blockType);
+					if (blockIndex != InvalidBlockIndex)
+					{
+						Nz::Vector3ui innerCoordinates;
+						Chunk& chunk = GetChunkByIndices({ x, y, z }, &innerCoordinates);
+						chunk.UpdateBlock(innerCoordinates, blockIndex);
+					}
 				}
 			}
 		}
 
 		siv::PerlinNoise perlin(42);
 
-		constexpr std::size_t heightScale = 20;
+		constexpr std::size_t heightScale = 30;
 
 		// +X
 		for (unsigned int z = 0; z < m_gridSize.z; ++z)
@@ -110,7 +113,7 @@ namespace tsom
 				{
 					Nz::Vector3ui innerCoordinates;
 					Chunk& chunk = GetChunkByIndices({ x, y, z }, &innerCoordinates);
-					chunk.UpdateBlock(innerCoordinates, VoxelBlock::Empty);
+					chunk.UpdateBlock(innerCoordinates, EmptyBlockIndex);
 				}
 			}
 		}
@@ -127,7 +130,7 @@ namespace tsom
 				{
 					Nz::Vector3ui innerCoordinates;
 					Chunk& chunk = GetChunkByIndices({ x, y, z }, &innerCoordinates);
-					chunk.UpdateBlock(innerCoordinates, VoxelBlock::Empty);
+					chunk.UpdateBlock(innerCoordinates, EmptyBlockIndex);
 				}
 			}
 		}
@@ -144,7 +147,7 @@ namespace tsom
 				{
 					Nz::Vector3ui innerCoordinates;
 					Chunk& chunk = GetChunkByIndices({ x, y, z }, &innerCoordinates);
-					chunk.UpdateBlock(innerCoordinates, VoxelBlock::Empty);
+					chunk.UpdateBlock(innerCoordinates, EmptyBlockIndex);
 				}
 			}
 		}
@@ -161,7 +164,7 @@ namespace tsom
 				{
 					Nz::Vector3ui innerCoordinates;
 					Chunk& chunk = GetChunkByIndices({ x, y, z }, &innerCoordinates);
-					chunk.UpdateBlock(innerCoordinates, VoxelBlock::Empty);
+					chunk.UpdateBlock(innerCoordinates, EmptyBlockIndex);
 				}
 			}
 		}
@@ -178,7 +181,7 @@ namespace tsom
 				{
 					Nz::Vector3ui innerCoordinates;
 					Chunk& chunk = GetChunkByIndices({ x, y, z }, &innerCoordinates);
-					chunk.UpdateBlock(innerCoordinates, VoxelBlock::Empty);
+					chunk.UpdateBlock(innerCoordinates, EmptyBlockIndex);
 				}
 			}
 		}
@@ -195,7 +198,7 @@ namespace tsom
 				{
 					Nz::Vector3ui innerCoordinates;
 					Chunk& chunk = GetChunkByIndices({ x, y, z }, &innerCoordinates);
-					chunk.UpdateBlock(innerCoordinates, VoxelBlock::Empty);
+					chunk.UpdateBlock(innerCoordinates, EmptyBlockIndex);
 				}
 			}
 		}
@@ -246,7 +249,7 @@ namespace tsom
 			{
 				VoxelBlock cell;
 				if (i >= maxHeight)
-					cell = VoxelBlock::Empty;
+					cell = EmptyBlockIndex;
 				else if (i == maxHeight - 1)
 					cell = VoxelBlock::Grass;
 				else if (i >= maxHeight - 3)

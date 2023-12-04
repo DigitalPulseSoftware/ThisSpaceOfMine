@@ -25,7 +25,7 @@ namespace tsom
 		Max = Up
 	};
 
-	constexpr Nz::EnumArray<tsom::Direction, Nz::Vector3f> s_dirNormals = {
+	constexpr Nz::EnumArray<Direction, Nz::Vector3f> s_dirNormals = {
 		Nz::Vector3f::Backward(),
 		Nz::Vector3f::Down(),
 		Nz::Vector3f::Forward(),
@@ -35,13 +35,13 @@ namespace tsom
 	};
 
 	// Debug colors
-	constexpr Nz::EnumArray<tsom::Direction, Nz::Color> s_dirColors = {
-		Nz::Color(0.9f, 0.9f, 0.9f), //< Back
-		Nz::Color(1.f, 0.9f, 1.f),   //< Down
-		Nz::Color(0.9f, 0.9f, 1.f),  //< Forward
-		Nz::Color(1.f, 0.9f, 0.9f),  //< Left
-		Nz::Color(1.f, 1.f, 0.9f),   //< Right
-		Nz::Color(0.9f, 1.f, 0.9f),  //< Up
+	constexpr Nz::EnumArray<Direction, Nz::Color> s_dirColors = {
+		Nz::Color::Green(), //< Back
+		Nz::Color::Gray(),  //< Down
+		Nz::Color::White(), //< Front
+		Nz::Color::Red(),   //< Left
+		Nz::Color::Blue(),  //< Right
+		Nz::Color::Cyan(),  //< Up
 	};
 
 	constexpr Direction DirectionFromNormal(const Nz::Vector3f& outsideNormal);

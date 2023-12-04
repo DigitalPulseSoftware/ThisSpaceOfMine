@@ -7,6 +7,7 @@
 #include <Nazara/Utility.hpp>
 #include <Nazara/Widgets.hpp>
 #include <Main/Main.hpp>
+#include <ClientLib/ClientBlockLibrary.hpp>
 #include <ClientLib/Systems/MovementInterpolationSystem.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/NetworkReactor.hpp>
@@ -25,10 +26,10 @@ int GameMain(int argc, char* argv[])
 	Nz::Application<Nz::Graphics, Nz::JoltPhysics3D, Nz::Network, Nz::Widgets> app(argc, argv);
 
 	auto& filesystem = app.AddComponent<Nz::AppFilesystemComponent>();
-	filesystem.Mount("assets", Nz::Utf8Path("../Assets"));
+	filesystem.Mount("assets", Nz::Utf8Path("assets"));
 
 	// Register a new SkyboxMaterial shader
-	Nz::Graphics::Instance()->GetShaderModuleResolver()->RegisterModuleDirectory(Nz::Utf8Path("../Assets/Shaders"), true);
+	Nz::Graphics::Instance()->GetShaderModuleResolver()->RegisterModuleDirectory(Nz::Utf8Path("assets/shaders"), true);
 
 	auto& windowComponent = app.AddComponent<Nz::AppWindowingComponent>();
 	auto& window = windowComponent.CreateWindow(Nz::VideoMode(1920, 1080), "This Space Of Mine");
@@ -70,8 +71,12 @@ int GameMain(int argc, char* argv[])
 		canvas.Resize(Nz::Vector2f(sizeEvent.width, sizeEvent.height));
 	});
 
+	tsom::ClientBlockLibrary blockLibrary(app, *Nz::Graphics::Instance()->GetRenderDevice());
+	blockLibrary.BuildTexture();
+
 	std::shared_ptr<tsom::StateData> stateData = std::make_shared<tsom::StateData>();
 	stateData->app = &app;
+	stateData->blockLibrary = &blockLibrary;
 	stateData->canvas = &canvas;
 	stateData->swapchain = &windowSwapchain;
 	stateData->window = &window;

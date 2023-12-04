@@ -25,9 +25,9 @@ namespace tsom
 		physicsSystem.GetPhysWorld().SetGravity(Nz::Vector3f::Zero());
 
 		m_planet = std::make_unique<Planet>(Nz::Vector3ui(160), 2.f, 16.f);
-		m_planet->GenerateChunks();
+		m_planet->GenerateChunks(m_blockLibrary);
 
-		m_planetEntities = std::make_unique<PlanetEntities>(m_world, *m_planet);
+		m_planetEntities = std::make_unique<ChunkEntities>(m_world, *m_planet, m_blockLibrary);
 	}
 
 	ServerInstance::~ServerInstance()
@@ -94,7 +94,7 @@ namespace tsom
 		}
 	}
 
-	void ServerInstance::UpdatePlanetBlock(const Nz::Vector3ui& chunkIndices, const Nz::Vector3ui& voxelIndices, VoxelBlock newBlock)
+	void ServerInstance::UpdatePlanetBlock(const Nz::Vector3ui& chunkIndices, const Nz::Vector3ui& voxelIndices, BlockIndex newBlock)
 	{
 		m_voxelGridUpdates.push_back({
 			chunkIndices,

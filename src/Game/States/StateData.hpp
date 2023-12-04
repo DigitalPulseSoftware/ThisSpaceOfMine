@@ -14,12 +14,14 @@ namespace Nz
 	class ApplicationBase;
 	class Canvas;
 	class EnttWorld;
+	class RenderTarget;
 	class Window;
 	class WindowSwapchain;
 }
 
 namespace tsom
 {
+	class ClientBlockLibrary;
 	class ClientSessionHandler;
 	class NetworkSession;
 
@@ -29,7 +31,7 @@ namespace tsom
 		Nz::Canvas* canvas;
 		Nz::EnttWorld* world;
 		Nz::Window* window;
-		Nz::WindowSwapchain* swapchain;
+		ClientBlockLibrary* blockLibrary = nullptr;
 		ClientSessionHandler* sessionHandler = nullptr;
 		NetworkSession* networkSession = nullptr;
 	};

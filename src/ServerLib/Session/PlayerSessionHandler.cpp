@@ -4,7 +4,7 @@
 
 #include <ServerLib/Session/PlayerSessionHandler.hpp>
 #include <ServerLib/ServerInstance.hpp>
-#include <CommonLib/VoxelBlock.hpp>
+#include <CommonLib/BlockIndex.hpp>
 
 namespace tsom
 {
@@ -42,7 +42,7 @@ namespace tsom
 
 		Nz::Vector3ui voxelLoc(mineBlock.voxelLoc.x, mineBlock.voxelLoc.y, mineBlock.voxelLoc.z);
 
-		m_player->GetServerInstance().UpdatePlanetBlock(chunk->GetIndices(), voxelLoc, VoxelBlock::Empty);
+		m_player->GetServerInstance().UpdatePlanetBlock(chunk->GetIndices(), voxelLoc, EmptyBlockIndex);
 	}
 
 	void PlayerSessionHandler::HandlePacket(Packets::PlaceBlock&& placeBlock)
@@ -53,7 +53,7 @@ namespace tsom
 
 		Nz::Vector3ui voxelLoc(placeBlock.voxelLoc.x, placeBlock.voxelLoc.y, placeBlock.voxelLoc.z);
 
-		m_player->GetServerInstance().UpdatePlanetBlock(chunk->GetIndices(), voxelLoc, static_cast<VoxelBlock>(placeBlock.newContent));
+		m_player->GetServerInstance().UpdatePlanetBlock(chunk->GetIndices(), voxelLoc, static_cast<BlockIndex>(placeBlock.newContent));
 	}
 
 	void PlayerSessionHandler::HandlePacket(Packets::SendChatMessage&& playerChat)
