@@ -18,7 +18,6 @@
 #include <Game/States/DebugInfoState.hpp>
 #include <Game/States/GameState.hpp>
 #include <Game/States/MenuState.hpp>
-#include <Game/States/ShipEditionState.hpp>
 #include <Game/States/StateData.hpp>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
