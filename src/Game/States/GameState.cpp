@@ -7,6 +7,7 @@
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/PlayerInputs.hpp>
 #include <CommonLib/NetworkSession.hpp>
+#include <CommonLib/Components/PlanetGravityComponent.hpp>
 #include <ClientLib/Chatbox.hpp>
 #include <Nazara/Core.hpp>
 #include <Nazara/Graphics.hpp>
@@ -54,7 +55,7 @@ namespace tsom
 			cameraComponent.UpdateZNear(0.1f);
 		}
 
-		m_planet = std::make_unique<ClientPlanet>(Nz::Vector3ui(160), 2.f, 16.f);
+		m_planet = std::make_unique<ClientPlanet>(Nz::Vector3ui(160), 2.f, 16.f, 9.81f);
 
 		m_sunLightEntity = m_stateData->world->CreateEntity();
 		{
@@ -67,9 +68,6 @@ namespace tsom
 			dirLight.EnableShadowCasting(true);
 			dirLight.UpdateShadowMapSize(4096);
 		}
-
-		std::shared_ptr<Nz::MaterialInstance> inventoryMaterial = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic);
-		inventoryMaterial->SetTextureProperty("BaseColorMap", filesystem.Load<Nz::Texture>("assets/tileset.png"));
 
 		constexpr float InventoryTileSize = 96.f;
 
@@ -252,6 +250,36 @@ namespace tsom
 						m_chatBox->Open();
 
 					UpdateMouseLock();
+					break;
+				}
+
+				case Nz::Keyboard::VKey::F2:
+				{
+					auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
+
+					auto primitive = Nz::Primitive::IcoSphere(2.f, 1);
+
+					auto geom = Nz::JoltCollider3D::Build(primitive);
+
+					Nz::JoltRigidBody3D::DynamicSettings dynSettings(geom, 10.f);
+					dynSettings.allowSleeping = false;
+
+					entt::handle debugEntity = m_stateData->world->CreateEntity();
+					debugEntity.emplace<PlanetGravityComponent>().planet = m_planet.get();
+					debugEntity.emplace<Nz::NodeComponent>(cameraNode.GetPosition());
+					debugEntity.emplace<Nz::JoltRigidBody3DComponent>(dynSettings);
+
+					std::shared_ptr<Nz::MaterialInstance> colliderMat = Nz::MaterialInstance::Instantiate(Nz::MaterialType::PhysicallyBased);
+
+					std::shared_ptr<Nz::Mesh> colliderMesh = Nz::Mesh::Build(primitive);
+					std::shared_ptr<Nz::GraphicalMesh> colliderGraphicalMesh = Nz::GraphicalMesh::BuildFromMesh(*colliderMesh);
+
+					auto colliderModel = std::make_shared<Nz::Model>(colliderGraphicalMesh);
+					for (std::size_t i = 0; i < colliderModel->GetSubMeshCount(); ++i)
+						colliderModel->SetMaterial(i, colliderMat);
+
+					auto& gfxComponent = debugEntity.get_or_emplace<Nz::GraphicsComponent>();
+					gfxComponent.AttachRenderable(std::move(colliderModel), 0x0000FFFF);
 					break;
 				}
 

@@ -17,14 +17,16 @@ namespace tsom
 	m_tickIndex(0),
 	m_players(256),
 	m_tickAccumulator(Nz::Time::Zero()),
-	m_tickDuration(Constants::TickDuration)
+	m_tickDuration(Constants::TickDuration),
+	m_gravitySystem(m_world)
 	{
 		m_world.AddSystem<NetworkedEntitiesSystem>(*this);
 		auto& physicsSystem = m_world.AddSystem<Nz::JoltPhysics3DSystem>();
 		physicsSystem.GetPhysWorld().SetStepSize(m_tickDuration);
 		physicsSystem.GetPhysWorld().SetGravity(Nz::Vector3f::Zero());
+		physicsSystem.GetPhysWorld().RegisterStepListener(&m_gravitySystem);
 
-		m_planet = std::make_unique<Planet>(Nz::Vector3ui(160), 2.f, 16.f);
+		m_planet = std::make_unique<Planet>(Nz::Vector3ui(160), 2.f, 16.f, 9.81f);
 		m_planet->GenerateChunks(m_blockLibrary);
 
 		m_planetEntities = std::make_unique<ChunkEntities>(m_world, *m_planet, m_blockLibrary);

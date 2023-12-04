@@ -4,8 +4,8 @@
 
 #pragma once
 
-#ifndef TSOM_CLIENT_WIDGETSTATE_HPP
-#define TSOM_CLIENT_WIDGETSTATE_HPP
+#ifndef TSOM_CLIENT_GAMESTATE_HPP
+#define TSOM_CLIENT_GAMESTATE_HPP
 
 #include <Nazara/Core/State.hpp>
 #include <Nazara/Core/Time.hpp>
@@ -13,7 +13,7 @@
 #include <Nazara/Platform/WindowEventHandler.hpp>
 #include <Nazara/Widgets/Canvas.hpp>
 #include <ClientLib/ClientPlanet.hpp>
-#include <ClientLib/ClientPlanetEntities.hpp>
+#include <ClientLib/ClientChunkEntities.hpp>
 #include <ClientLib/ClientSessionHandler.hpp>
 #include <ClientLib/EscapeMenu.hpp>
 #include <entt/entt.hpp>
@@ -68,7 +68,7 @@ namespace tsom
 			std::shared_ptr<StateData> m_stateData;
 			std::size_t m_selectedBlock;
 			std::unique_ptr<ClientPlanet> m_planet;
-			std::unique_ptr<ClientPlanetEntities> m_planetEntities;
+			std::unique_ptr<ClientChunkEntities> m_planetEntities;
 			std::unique_ptr<Chatbox> m_chatBox;
 			std::vector<InventorySlot> m_inventorySlots;
 			entt::handle m_cameraEntity;

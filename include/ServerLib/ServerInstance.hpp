@@ -7,11 +7,11 @@
 #ifndef TSOM_SERVERLIB_SERVERINSTANCE_HPP
 #define TSOM_SERVERLIB_SERVERINSTANCE_HPP
 
-#include <ServerLib/Export.hpp>
+#include <CommonLib/BlockLibrary.hpp>
 #include <CommonLib/Planet.hpp>
 #include <CommonLib/NetworkSessionManager.hpp>
-#include <CommonLib/PlanetEntities.hpp>
-#include <CommonLib/VoxelBlock.hpp>
+#include <CommonLib/ChunkEntities.hpp>
+#include <CommonLib/Systems/PlanetGravitySystem.hpp>
 #include <ServerLib/ServerPlayer.hpp>
 #include <NazaraUtils/Bitset.hpp>
 #include <NazaraUtils/MemoryPool.hpp>
@@ -45,7 +45,7 @@ namespace tsom
 			inline Nz::EnttWorld& GetWorld();
 
 			void Update(Nz::Time elapsedTime);
-			void UpdatePlanetBlock(const Nz::Vector3ui& chunkIndices, const Nz::Vector3ui& voxelIndices, VoxelBlock newBlock);
+			void UpdatePlanetBlock(const Nz::Vector3ui& chunkIndices, const Nz::Vector3ui& voxelIndices, BlockIndex newBlock);
 
 			ServerInstance& operator=(const ServerInstance&) = delete;
 			ServerInstance& operator=(ServerInstance&&) = delete;
@@ -58,12 +58,12 @@ namespace tsom
 			{
 				Nz::Vector3ui chunkIndices;
 				Nz::Vector3ui voxelIndices;
-				VoxelBlock newBlock;
+				BlockIndex newBlock;
 			};
 
 			Nz::UInt16 m_tickIndex;
 			std::unique_ptr<Planet> m_planet;
-			std::unique_ptr<PlanetEntities> m_planetEntities;
+			std::unique_ptr<ChunkEntities> m_planetEntities;
 			std::vector<BlockUpdate> m_voxelGridUpdates;
 			std::vector<std::unique_ptr<NetworkSessionManager>> m_sessionManagers;
 			Nz::Bitset<> m_disconnectedPlayers;
@@ -72,6 +72,8 @@ namespace tsom
 			Nz::MemoryPool<ServerPlayer> m_players;
 			Nz::Time m_tickAccumulator;
 			Nz::Time m_tickDuration;
+			BlockLibrary m_blockLibrary;
+			PlanetGravitySystem m_gravitySystem;
 	};
 }
 

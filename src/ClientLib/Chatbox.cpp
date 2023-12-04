@@ -3,6 +3,7 @@
 // For conditions of distribution and use, see copyright notice in Config.hpp
 
 #include <ClientLib/Chatbox.hpp>
+#include <Nazara/Graphics/RenderTarget.hpp>
 #include <Nazara/Utility/Font.hpp>
 #include <Nazara/Widgets.hpp>
 #include <fmt/format.h>
@@ -11,7 +12,7 @@ namespace tsom
 {
 	static constexpr std::size_t maxChatLines = 100;
 
-	Chatbox::Chatbox( Nz::RenderTarget* rt, Nz::Canvas* canvas) :
+	Chatbox::Chatbox(Nz::RenderTarget& renderTarget, Nz::Canvas* canvas) :
 	m_chatEnteringBox(nullptr)
 	{
 		//TODO
@@ -41,9 +42,9 @@ namespace tsom
 		m_chatEnteringBox->Hide();
 
 		// Connect every slot
-		m_onTargetChangeSizeSlot.Connect(rt->OnRenderTargetSizeChange, this, &Chatbox::OnRenderTargetSizeChange);
+		m_onTargetChangeSizeSlot.Connect(renderTarget.OnRenderTargetSizeChange, this, &Chatbox::OnRenderTargetSizeChange);
 
-		OnRenderTargetSizeChange(rt, rt->GetSize());
+		OnRenderTargetSizeChange(&renderTarget, renderTarget.GetSize());
 	}
 
 	Chatbox::~Chatbox()

@@ -161,6 +161,9 @@ namespace tsom
 	{
 		entity.emplace<MovementInterpolationComponent>(m_lastTickIndex);
 
+		auto collider = std::make_shared<Nz::JoltCapsuleCollider3D>(1.8f, 0.4f);
+		entity.emplace<Nz::JoltRigidBody3DComponent>(Nz::JoltRigidBody3D::DynamicSettings(collider, 0.f));
+
 		if (entityData.controllingPlayerId == m_ownPlayerIndex)
 		{
 			m_playerControlledEntity = entity;
@@ -168,8 +171,6 @@ namespace tsom
 		}
 		else
 		{
-			auto collider = std::make_shared<Nz::JoltCapsuleCollider3D>(1.8f, 0.4f);
-
 			// Player model (collider for now)
 			std::shared_ptr<Nz::MaterialInstance> colliderMat = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic);
 			colliderMat->SetValueProperty("BaseColor", Nz::Color::Green());

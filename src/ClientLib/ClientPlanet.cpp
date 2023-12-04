@@ -6,12 +6,7 @@
 
 namespace tsom
 {
-	ClientPlanet::ClientPlanet(const Nz::Vector3ui& gridSize, float tileSize, float cornerRadius) :
-	Planet(gridSize, tileSize, cornerRadius)
-	{
-	}
-
-	Chunk& ClientPlanet::AddChunk(Nz::UInt16 networkIndex, const Nz::Vector3ui& indices, const Nz::FunctionRef<void(VoxelBlock* blocks)>& initCallback)
+	Chunk& ClientPlanet::AddChunk(Nz::UInt16 networkIndex, const Nz::Vector3ui& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback)
 	{
 		Chunk& chunk = Planet::AddChunk(indices, initCallback);
 

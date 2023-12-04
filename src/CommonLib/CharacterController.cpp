@@ -31,19 +31,7 @@ namespace tsom
 	{
 		if (m_planet)
 		{
-			Nz::Vector3f center = Nz::Vector3f::Zero();
 			Nz::Vector3f characterPosition = character.GetPosition() + character.GetRotation() * Nz::Vector3f::Down() * 0.9f;
-
-			float distToCenter = std::max({
-				std::abs(characterPosition.x - center.x),
-				std::abs(characterPosition.y - center.y),
-				std::abs(characterPosition.z - center.z),
-			});
-
-			float innerReductionSize = std::max(distToCenter - std::max(m_planet->GetCornerRadius(), 1.f), 0.f);
-			Nz::Boxf innerBox(center - Nz::Vector3f(innerReductionSize), Nz::Vector3f(innerReductionSize * 2.f));
-
-			Nz::Vector3f innerPos = Nz::Vector3f::Clamp(characterPosition, innerBox.GetMinimum(), innerBox.GetMaximum());
 
 			/*auto ExtractYawRotation = [&](const Nz::Quaternionf& quat)
 			{
@@ -65,7 +53,7 @@ namespace tsom
 				rotation = newRotation;
 			}
 			
-			Nz::Vector3f up = Nz::Vector3f::Normalize(characterPosition - innerPos);
+			Nz::Vector3f up = m_planet->ComputeUpDirection(characterPosition);
 			character.SetUp(up);
 
 			if (Nz::Vector3f previousUp = rotation * Nz::Vector3f::Up(); !previousUp.ApproxEqual(up, 0.001f))
@@ -89,12 +77,12 @@ namespace tsom
 		if (m_planet)
 		{
 			// Apply gravity
-			velocity -= 20.f * up * elapsedTime;
+			velocity -= m_planet->GetGravityFactor() * up * elapsedTime;
 
 			if (m_lastInputs.jump)
 			{
 				if (character.IsOnGround())
-					velocity += up * 12.f;
+					velocity += up * 10.f;
 			}
 		}
 

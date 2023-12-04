@@ -16,7 +16,7 @@ namespace tsom
 	class TSOM_CLIENTLIB_API ClientPlanet : public Planet
 	{
 		public:
-			ClientPlanet(const Nz::Vector3ui& gridSize, float tileSize, float cornerRadius);
+			using Planet::Planet;
 			ClientPlanet(const ClientPlanet&) = delete;
 			ClientPlanet(ClientPlanet&&) = delete;
 			~ClientPlanet() = default;

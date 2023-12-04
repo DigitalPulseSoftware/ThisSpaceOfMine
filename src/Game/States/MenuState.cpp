@@ -74,7 +74,8 @@ namespace tsom
 	void MenuState::LayoutWidgets(const Nz::Vector2f& newSize)
 	{
 		m_layout->Resize({ newSize.x * 0.2f, m_layout->GetPreferredHeight() });
-		m_layout->Center();
+		m_layout->CenterHorizontal();
+		m_layout->SetPosition(m_layout->GetPosition().x, newSize.y * 0.2f - m_layout->GetSize().y / 2.f);
 	}
 
 	void MenuState::OnConnectPressed()

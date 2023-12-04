@@ -12,11 +12,13 @@
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/NetworkReactor.hpp>
 #include <CommonLib/Protocol/Packets.hpp>
+#include <CommonLib/Systems/PlanetGravitySystem.hpp>
 #include <Game/States/BackgroundState.hpp>
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/DebugInfoState.hpp>
 #include <Game/States/GameState.hpp>
 #include <Game/States/MenuState.hpp>
+#include <Game/States/ShipEditionState.hpp>
 #include <Game/States/StateData.hpp>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
@@ -48,8 +50,14 @@ int GameMain(int argc, char* argv[])
 
 	auto& windowSwapchain = renderSystem.CreateSwapchain(window, swapchainParams);
 
+	auto renderTarget = std::make_shared<Nz::RenderWindow>(windowSwapchain);
+
+	tsom::PlanetGravitySystem planetGravity(world.GetRegistry());
+
 	auto& physicsSystem = world.AddSystem<Nz::JoltPhysics3DSystem>();
 	physicsSystem.GetPhysWorld().SetGravity(Nz::Vector3f::Zero());
+	physicsSystem.GetPhysWorld().SetStepSize(tsom::Constants::TickDuration);
+	physicsSystem.GetPhysWorld().RegisterStepListener(&planetGravity);
 
 	world.AddSystem<tsom::MovementInterpolationSystem>(tsom::Constants::TickDuration);
 

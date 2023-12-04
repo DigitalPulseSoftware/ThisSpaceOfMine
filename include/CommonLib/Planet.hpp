@@ -7,50 +7,37 @@
 #ifndef TSOM_COMMONLIB_PLANET_HPP
 #define TSOM_COMMONLIB_PLANET_HPP
 
-#include <CommonLib/Chunk.hpp>
+#include <CommonLib/ChunkContainer.hpp>
 #include <CommonLib/Direction.hpp>
 #include <CommonLib/Export.hpp>
-#include <NazaraUtils/EnumArray.hpp>
 #include <NazaraUtils/FunctionRef.hpp>
-#include <Nazara/Utility/VertexStruct.hpp>
 #include <memory>
-#include <tuple>
 #include <vector>
-
-namespace Nz
-{
-	class JoltCollider3D;
-}
 
 namespace tsom
 {
-	class TSOM_COMMONLIB_API Planet
+	class TSOM_COMMONLIB_API Planet : public ChunkContainer
 	{
 		public:
-			Planet(const Nz::Vector3ui& gridSize, float tileSize, float cornerRadius);
+			Planet(const Nz::Vector3ui& gridSize, float tileSize, float cornerRadius, float gravityFactor);
 			Planet(const Planet&) = delete;
 			Planet(Planet&&) = delete;
 			~Planet() = default;
 
-			Chunk& AddChunk(const Nz::Vector3ui& indices, const Nz::FunctionRef<void(VoxelBlock* blocks)>& initCallback = nullptr);
+			Chunk& AddChunk(const Nz::Vector3ui& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback = nullptr);
 
-			void GenerateChunks();
+			Nz::Vector3f ComputeUpDirection(const Nz::Vector3f& position) const;
 
-			inline Nz::Vector3f GetCenter() const;
-			inline Chunk* GetChunk(std::size_t chunkIndex);
-			inline const Chunk* GetChunk(std::size_t chunkIndex) const;
-			inline Chunk& GetChunk(const Nz::Vector3ui& indices);
-			inline const Chunk& GetChunk(const Nz::Vector3ui& indices) const;
-			inline std::size_t GetChunkCount() const;
-			inline std::size_t GetChunkIndex(const Nz::Vector3ui& indices) const;
-			inline Chunk& GetChunkByIndices(const Nz::Vector3ui& gridPosition, Nz::Vector3ui* innerPos = nullptr);
-			inline const Chunk& GetChunkByIndices(const Nz::Vector3ui& gridPosition, Nz::Vector3ui* innerPos = nullptr) const;
-			inline Chunk* GetChunkByPosition(const Nz::Vector3f& position, Nz::Vector3f* localPos = nullptr);
-			inline const Chunk* GetChunkByPosition(const Nz::Vector3f& position, Nz::Vector3f* localPos = nullptr) const;
-			inline Nz::Vector3f GetChunkOffset(const Nz::Vector3ui& indices) const;
+			void GenerateChunks(BlockLibrary& blockLibrary);
+
+			inline Nz::Vector3f GetCenter() const override;
+			inline Chunk* GetChunk(std::size_t chunkIndex) override;
+			inline const Chunk* GetChunk(std::size_t chunkIndex) const override;
+			inline Chunk& GetChunk(const Nz::Vector3ui& indices) override;
+			inline const Chunk& GetChunk(const Nz::Vector3ui& indices) const override;
+			inline std::size_t GetChunkCount() const override;
 			inline float GetCornerRadius() const;
-			inline Nz::Vector3ui GetGridDimensions() const;
-			inline float GetTileSize() const;
+			inline float GetGravityFactor() const;
 
 			void RemoveChunk(const Nz::Vector3ui& indices);
 
@@ -61,10 +48,6 @@ namespace tsom
 
 			static constexpr unsigned int ChunkSize = 32;
 
-			NazaraSignal(OnChunkAdded, Planet* /*planet*/, Chunk* /*chunk*/);
-			NazaraSignal(OnChunkRemove, Planet* /*planet*/, Chunk* /*chunk*/);
-			NazaraSignal(OnChunkUpdated, Planet* /*planet*/, Chunk* /*chunk*/);
-
 		protected:
 			struct ChunkData
 			{
@@ -74,10 +57,8 @@ namespace tsom
 			};
 
 			std::vector<ChunkData> m_chunks;
-			Nz::Vector3ui m_chunkCount;
-			Nz::Vector3ui m_gridSize;
-			float m_tileSize;
 			float m_cornerRadius;
+			float m_gravityFactor;
 	};
 }
 

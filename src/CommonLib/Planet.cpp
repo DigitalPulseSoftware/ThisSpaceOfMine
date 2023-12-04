@@ -3,6 +3,7 @@
 // For conditions of distribution and use, see copyright notice in Config.hpp
 
 #include <CommonLib/Planet.hpp>
+#include <CommonLib/BlockLibrary.hpp>
 #include <CommonLib/DeformedChunk.hpp>
 #include <CommonLib/FlatChunk.hpp>
 #include <CommonLib/Utility/SignedDistanceFunctions.hpp>
@@ -15,11 +16,10 @@
 
 namespace tsom
 {
-	Planet::Planet(const Nz::Vector3ui& gridSize, float tileSize, float cornerRadius) :
-	m_chunkCount(Nz::Vector3ui((gridSize + Nz::Vector3ui(ChunkSize - 1)) / ChunkSize)),
-	m_gridSize(gridSize),
+	Planet::Planet(const Nz::Vector3ui& gridSize, float tileSize, float cornerRadius, float gravityFactor) :
+	ChunkContainer(gridSize, tileSize),
 	m_cornerRadius(cornerRadius),
-	m_tileSize(tileSize)
+	m_gravityFactor(gravityFactor)
 	{
 		m_chunks.resize(m_chunkCount.x * m_chunkCount.y * m_chunkCount.z);
 	}
@@ -43,7 +43,25 @@ namespace tsom
 		return *m_chunks[index].chunk;
 	}
 
-	void Planet::GenerateChunks()
+	Nz::Vector3f Planet::ComputeUpDirection(const Nz::Vector3f& position) const
+	{
+		Nz::Vector3f center = GetCenter();
+
+		float distToCenter = std::max({
+			std::abs(position.x - center.x),
+			std::abs(position.y - center.y),
+			std::abs(position.z - center.z),
+		});
+
+		float innerReductionSize = std::max(distToCenter - std::max(m_cornerRadius, 1.f), 0.f);
+		Nz::Boxf innerBox(center - Nz::Vector3f(innerReductionSize), Nz::Vector3f(innerReductionSize * 2.f));
+
+		Nz::Vector3f innerPos = Nz::Vector3f::Clamp(position, innerBox.GetMinimum(), innerBox.GetMaximum());
+
+		return Nz::Vector3f::Normalize(position - innerPos);
+	}
+
+	void Planet::GenerateChunks(BlockLibrary& blockLibrary)
 	{
 		constexpr std::size_t freeSpace = 10;
 

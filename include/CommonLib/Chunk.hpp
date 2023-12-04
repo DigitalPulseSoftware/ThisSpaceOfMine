@@ -7,9 +7,10 @@
 #ifndef TSOM_COMMONLIB_CHUNK_HPP
 #define TSOM_COMMONLIB_CHUNK_HPP
 
+#include <CommonLib/BlockIndex.hpp>
 #include <CommonLib/Direction.hpp>
 #include <CommonLib/Export.hpp>
-#include <CommonLib/VoxelBlock.hpp>
+#include <NazaraUtils/Bitset.hpp>
 #include <NazaraUtils/EnumArray.hpp>
 #include <NazaraUtils/FunctionRef.hpp>
 #include <NazaraUtils/Signal.hpp>
@@ -28,6 +29,8 @@ namespace Nz
 
 namespace tsom
 {
+	class BlockLibrary;
+
 	class TSOM_COMMONLIB_API Chunk
 	{
 		public:
@@ -44,8 +47,12 @@ namespace tsom
 			virtual std::optional<Nz::Vector3ui> ComputeCoordinates(const Nz::Vector3f& position) const = 0;
 			virtual Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> ComputeVoxelCorners(const Nz::Vector3ui& indices) const = 0;
 
+			inline const Nz::Bitset<Nz::UInt64>& GetCollisionCellMask() const;
 			inline unsigned int GetBlockIndex(const Nz::Vector3ui& indices) const;
-			inline VoxelBlock GetBlockContent(const Nz::Vector3ui& indices) const;
+			inline Nz::Vector3ui GetBlockIndices(unsigned int blockIndex) const;
+			inline BlockIndex GetBlockContent(unsigned int blockIndex) const;
+			inline BlockIndex GetBlockContent(const Nz::Vector3ui& indices) const;
+			inline std::size_t GetBlockCount() const;
 			inline float GetBlockSize() const;
 			inline const BlockIndex* GetContent() const;
 			inline const Nz::Vector3ui& GetIndices() const;
@@ -64,6 +71,7 @@ namespace tsom
 			struct VertexAttributes
 			{
 				Nz::UInt32 firstIndex;
+				Nz::SparsePtr<Nz::Color> color;
 				Nz::SparsePtr<Nz::Vector3f> position;
 				Nz::SparsePtr<Nz::Vector3f> normal;
 				Nz::SparsePtr<Nz::Vector3f> tangent;
@@ -71,7 +79,8 @@ namespace tsom
 			};
 
 		protected:
-			std::vector<VoxelBlock> m_cells;
+			std::vector<BlockIndex> m_cells;
+			Nz::Bitset<Nz::UInt64> m_collisionCellMask;
 			Nz::Vector3ui m_indices;
 			Nz::Vector3ui m_size;
 			float m_blockSize;
