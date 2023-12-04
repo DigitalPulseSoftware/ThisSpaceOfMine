@@ -38,7 +38,7 @@ namespace tsom
 	{
 		auto& filesystem = m_stateData->app->GetComponent<Nz::AppFilesystemComponent>();
 
-		Nz::Vector2f screenSize = Nz::Vector2f(m_stateData->swapchain->GetSize());
+		Nz::Vector2f screenSize = Nz::Vector2f(m_stateData->renderTarget->GetSize());
 
 		m_cameraEntity = m_stateData->world->CreateEntity();
 		{
@@ -59,12 +59,13 @@ namespace tsom
 		m_sunLightEntity = m_stateData->world->CreateEntity();
 		{
 			m_sunLightEntity.emplace<Nz::DisabledComponent>();
-			auto& lightComponent = m_sunLightEntity.emplace<Nz::LightComponent>();
-			m_sunLightEntity.emplace<Nz::NodeComponent>(Nz::Vector3f::Zero(), Nz::EulerAnglesf(-45.f, 90.f, 0.f));
+			m_sunLightEntity.emplace<Nz::NodeComponent>(Nz::Vector3f::Zero(), Nz::EulerAnglesf(-30.f, 80.f, 0.f));
 
-			auto& dirLight = lightComponent.AddLight<Nz::DirectionalLight>();
-			dirLight.UpdateAmbientFactor(std::pow(0.05f, 1.f / 2.2f)); //< TODO: waiting for gamma correction in the engine
-			//dirLight.EnableShadowCasting(true);
+			auto& lightComponent = m_sunLightEntity.emplace<Nz::LightComponent>();
+			auto& dirLight = lightComponent.AddLight<Nz::DirectionalLight>(0x0000FFFF);
+			dirLight.UpdateAmbientFactor(0.05f);
+			dirLight.EnableShadowCasting(true);
+			dirLight.UpdateShadowMapSize(4096);
 		}
 
 		std::shared_ptr<Nz::MaterialInstance> inventoryMaterial = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic);
@@ -214,7 +215,7 @@ namespace tsom
 				chunk->UpdateBlock({ blockPos.x, blockPos.y, blockPos.z }, Nz::SafeCast<BlockIndex>(blockIndex));
 		});
 		
-		m_chatBox = std::make_unique<Chatbox>(m_stateData->swapchain, m_stateData->canvas);
+		m_chatBox = std::make_unique<Chatbox>(*m_stateData->renderTarget, m_stateData->canvas);
 		m_chatBox->OnChatMessage.Connect([&](const std::string& message)
 		{
 			Packets::SendChatMessage messagePacket;

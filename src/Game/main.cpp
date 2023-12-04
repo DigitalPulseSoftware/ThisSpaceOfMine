@@ -58,7 +58,9 @@ int GameMain(int argc, char* argv[])
 		camera2D.emplace<Nz::NodeComponent>();
 		//camera2D.emplace<Nz::DisabledComponent>();
 
-		auto& cameraComponent = camera2D.emplace<Nz::CameraComponent>(&windowSwapchain, Nz::ProjectionType::Orthographic);
+		auto passList = filesystem.Load<Nz::PipelinePassList>("assets/2d.passlist");
+
+		auto& cameraComponent = camera2D.emplace<Nz::CameraComponent>(renderTarget, std::move(passList), Nz::ProjectionType::Orthographic);
 		cameraComponent.UpdateClearColor(Nz::Color(0.f, 0.f, 0.f, 0.f));
 		cameraComponent.UpdateRenderMask(0xFFFF0000);
 		cameraComponent.UpdateRenderOrder(1);
@@ -78,7 +80,7 @@ int GameMain(int argc, char* argv[])
 	stateData->app = &app;
 	stateData->blockLibrary = &blockLibrary;
 	stateData->canvas = &canvas;
-	stateData->swapchain = &windowSwapchain;
+	stateData->renderTarget = std::move(renderTarget);
 	stateData->window = &window;
 	stateData->world = &world;
 

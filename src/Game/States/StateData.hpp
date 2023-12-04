@@ -27,6 +27,7 @@ namespace tsom
 
 	struct StateData : std::enable_shared_from_this<StateData>
 	{
+		std::shared_ptr<Nz::RenderTarget> renderTarget;
 		Nz::ApplicationBase* app;
 		Nz::Canvas* canvas;
 		Nz::EnttWorld* world;

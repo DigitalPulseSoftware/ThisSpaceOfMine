@@ -15,6 +15,7 @@
 
 namespace Nz
 {
+	class AbstractTextDrawer;
 	class ApplicationBase;
 	class BaseWidget;
 	class LabelWidget;
@@ -40,6 +41,8 @@ namespace tsom
 			bool Update(Nz::StateMachine& fsm, Nz::Time elapsedTime) override;
 
 		private:
+			void UpdateStatus(const Nz::AbstractTextDrawer& textDrawer);
+
 			std::optional<NetworkSession> m_serverSession;
 			std::shared_ptr<Nz::State> m_connectedState;
 			std::shared_ptr<Nz::State> m_previousState;

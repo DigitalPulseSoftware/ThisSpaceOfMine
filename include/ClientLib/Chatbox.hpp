@@ -9,7 +9,7 @@
 
 #include <ClientLib/Export.hpp>
 #include <NazaraUtils/Signal.hpp>
-#include <Nazara/Renderer/RenderTarget.hpp>
+#include <Nazara/Graphics/RenderTarget.hpp>
 #include <Nazara/Widgets/Canvas.hpp>
 #include <Nazara/Widgets/RichTextAreaWidget.hpp>
 #include <Nazara/Widgets/ScrollAreaWidget.hpp>
@@ -33,7 +33,7 @@ namespace tsom
 
 			using Item = std::variant<ColorItem, TextItem>;
 
-			Chatbox(Nz::RenderTarget* rt, Nz::Canvas* canvas);
+			Chatbox(Nz::RenderTarget& renderTarget, Nz::Canvas* canvas);
 			Chatbox(const Chatbox&) = delete;
 			Chatbox(Chatbox&&) = delete;
 			~Chatbox();

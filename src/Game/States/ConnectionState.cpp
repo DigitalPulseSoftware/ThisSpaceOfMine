@@ -15,8 +15,7 @@
 namespace tsom
 {
 	ConnectionState::ConnectionState(std::shared_ptr<StateData> stateData) :
-	WidgetState(std::move(stateData)),
-	m_connectingLabel(nullptr)
+	WidgetState(std::move(stateData))
 	{
 		m_connectingLabel = CreateWidget<Nz::LabelWidget>();
 	}
@@ -57,9 +56,7 @@ namespace tsom
 		stateData.networkSession = &m_serverSession.value();
 		stateData.sessionHandler = &sessionHandler;
 
-		m_connectingLabel->UpdateText(Nz::SimpleTextDrawer::Draw("Connecting to " + serverAddress.ToString() + "...", 48));
-		m_connectingLabel->Center();
-		m_connectingLabel->Show();
+		UpdateStatus(Nz::SimpleTextDrawer::Draw("Connecting to " + serverAddress.ToString() + "...", 48));
 
 		m_connectedState = std::make_shared<GameState>(GetStateDataPtr());
 	}
@@ -80,7 +77,7 @@ namespace tsom
 
 	void ConnectionState::LayoutWidgets(const Nz::Vector2f& newSize)
 	{
-		m_connectingLabel->Center();
+		m_connectingLabel->SetPosition(newSize * Nz::Vector2f(0.5f, 0.9f) - m_connectingLabel->GetSize() * 0.5f);
 	}
 
 	bool ConnectionState::Update(Nz::StateMachine& fsm, Nz::Time elapsedTime)
@@ -90,9 +87,7 @@ namespace tsom
 			if (!m_serverSession || m_serverSession->GetPeerId() != peerIndex)
 				return;
 
-			m_connectingLabel->UpdateText(Nz::SimpleTextDrawer::Draw("Authenticating...", 48));
-			m_connectingLabel->Center();
-			m_connectingLabel->Show();
+			UpdateStatus(Nz::SimpleTextDrawer::Draw("Authenticating...", 48));
 
 			Packets::AuthRequest request;
 			request.nickname = m_nickname;
@@ -110,9 +105,7 @@ namespace tsom
 
 			if (timeout)
 			{
-				m_connectingLabel->UpdateText(Nz::SimpleTextDrawer::Draw("Connection lost.", 48, Nz::TextStyle_Regular, Nz::Color::Red()));
-				m_connectingLabel->Center();
-				m_connectingLabel->Show();
+				UpdateStatus(Nz::SimpleTextDrawer::Draw("Connection lost.", 48, Nz::TextStyle_Regular, Nz::Color::Red()));
 
 				m_nextState = m_previousState;
 				m_nextStateTimer = Nz::Time::Milliseconds(2000);
@@ -154,5 +147,14 @@ namespace tsom
 		}
 
 		return true;
+	}
+
+	void ConnectionState::UpdateStatus(const Nz::AbstractTextDrawer& textDrawer)
+	{
+		m_connectingLabel->UpdateText(textDrawer);
+		m_connectingLabel->Center();
+		m_connectingLabel->Show();
+
+		LayoutWidgets(GetStateData().canvas->GetSize());
 	}
 }
