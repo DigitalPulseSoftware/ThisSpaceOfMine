@@ -1,0 +1,94 @@
+[nzsl_version("1.0")]
+module SkyboxMaterial;
+
+import ViewerData from Engine.ViewerData;
+
+// Material options
+option HasBaseColorTexture: bool = false;
+
+// Vertex declaration related options
+option VertexColorLoc: i32 = -1;
+option VertexPositionLoc: i32;
+
+const HasColor = (VertexColorLoc >= 0);
+
+[layout(std140)]
+struct MaterialSettings
+{
+	[tag("BaseColor")]
+	BaseColor: vec4[f32]
+}
+
+[tag("Material")]
+[auto_binding]
+external
+{
+	[tag("Settings")] settings: uniform[MaterialSettings],
+	[tag("BaseColorMap")] SkyboxTexture: sampler_cube[f32]
+}
+
+[tag("Engine")]
+[auto_binding]
+external
+{
+	[tag("ViewerData")] viewerData: uniform[ViewerData]
+}
+
+// Fragment stage
+struct VertOut
+{
+    [builtin(position)] position: vec4[f32],
+	[location(0)] uvw: vec3[f32],
+	[location(1), cond(HasColor)] color: vec4[f32],
+}
+
+struct FragOut
+{
+	[location(0)] color: vec4[f32],
+	[builtin(frag_depth)] depth: f32
+}
+
+[entry(frag), depth_write(greater)]
+fn main(input: VertOut) -> FragOut
+{
+	let color = settings.BaseColor;
+
+	const if (HasBaseColorTexture)
+		color *= SkyboxTexture.Sample(input.uvw);
+
+	const if (HasColor)
+		color *= input.color;
+
+	let output: FragOut;
+	output.color = color;
+	output.depth = 1.0;
+
+	return output;
+}
+
+// Vertex stage
+struct VertIn
+{
+	[location(VertexPositionLoc)] 
+	pos: vec3[f32],
+
+	[cond(HasColor), location(VertexColorLoc)] 
+	color: vec4[f32]
+}
+
+[entry(vert)]
+fn main(input: VertIn) -> VertOut
+{
+    // Set translation part to zero
+    let rotationMat = viewerData.viewMatrix;
+    rotationMat[3].xyz = vec3[f32](0.0, 0.0, 0.0);
+
+    let output: VertOut;
+    output.position = viewerData.projectionMatrix * rotationMat * vec4[f32](input.pos, 1.0);
+	output.uvw = input.pos;
+
+	const if (HasColor)
+		output.color = input.color;
+
+    return output;
+}

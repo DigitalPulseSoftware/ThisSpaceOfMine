@@ -1,0 +1,22 @@
+passlist "2D"
+{
+    attachment "DepthBuffer"
+    {
+        format "PreferredDepthStencil"
+    }
+
+    attachment "ForwardOutput"
+    {
+        format "RGBA8"
+    }
+
+    pass "UI Pass"
+    {
+        impl "Forward"
+        output "Output" "ForwardOutput"
+        depthstenciloutput "DepthBuffer"
+        flag "LightShadowing"
+    }
+
+    output "ForwardOutput"
+}

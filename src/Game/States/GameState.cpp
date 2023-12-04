@@ -46,7 +46,9 @@ namespace tsom
 
 			auto& cameraNode = m_cameraEntity.emplace<Nz::NodeComponent>();
 
-			auto& cameraComponent = m_cameraEntity.emplace<Nz::CameraComponent>(m_stateData->swapchain);
+			auto passList = filesystem.Load<Nz::PipelinePassList>("assets/3d.passlist");
+
+			auto& cameraComponent = m_cameraEntity.emplace<Nz::CameraComponent>(m_stateData->renderTarget, std::move(passList));
 			cameraComponent.UpdateClearColor(Nz::Color::Gray());
 			cameraComponent.UpdateRenderMask(0x0000FFFF);
 			cameraComponent.UpdateZNear(0.1f);
@@ -153,8 +155,11 @@ namespace tsom
 			std::shared_ptr<Nz::Material> skyboxMaterial = std::make_shared<Nz::Material>(std::move(skyboxSettings), "SkyboxMaterial");
 
 			// Instantiate the material to use it, and configure it (texture + cull front faces as the render is from the inside)
+			Nz::TextureParams skyboxTexParams;
+			skyboxTexParams.loadFormat = Nz::PixelFormat::RGBA8_SRGB;
+
 			std::shared_ptr<Nz::MaterialInstance> skyboxMat = skyboxMaterial->Instantiate();
-			skyboxMat->SetTextureProperty("BaseColorMap", filesystem.Load<Nz::Texture>("assets/skybox-space.png", Nz::CubemapParams{}));
+			skyboxMat->SetTextureProperty("BaseColorMap", filesystem.Load<Nz::Texture>("assets/skybox-space.png", skyboxTexParams, Nz::CubemapParams{}));
 			skyboxMat->UpdatePassesStates([](Nz::RenderStates& states)
 			{
 				states.faceCulling = Nz::FaceCulling::Front;
