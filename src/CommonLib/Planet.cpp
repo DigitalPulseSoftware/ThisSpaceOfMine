@@ -94,12 +94,12 @@ namespace tsom
 
 					std::string_view blockType;
 					if (depth <= 8)
-						blockType = "debug";
+						blockType = "snow";
 					else if (depth <= 10)
 						blockType = "dirt";
 					else if (depth <= 15)
 						blockType = "grass";
-					else if (depth <= 40)
+					else if (depth <= 20)
 						blockType = "dirt";
 					else
 						blockType = (dis(rand)) ? "stone" : "stone_mossy";
