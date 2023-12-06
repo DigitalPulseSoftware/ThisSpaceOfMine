@@ -88,12 +88,6 @@ namespace tsom
 					vertexAttributes.normal[i] = s_dirNormals[normalDirection];
 			}
 
-			if (vertexAttributes.color)
-			{
-				for (std::size_t i = 0; i < pos.size(); ++i)
-					vertexAttributes.color[i] = s_dirColors[upDirection];
-			}
-
 			if (vertexAttributes.uv)
 			{
 				Direction texDirection = s_texDirections[upDirection][normalDirection];

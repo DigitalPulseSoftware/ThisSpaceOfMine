@@ -25,7 +25,6 @@ namespace tsom
 {
 	struct VertexStruct
 	{
-		Nz::Color color;
 		Nz::Vector3f position;
 		Nz::Vector3f normal;
 		Nz::Vector3f uvw;

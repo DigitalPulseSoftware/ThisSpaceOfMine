@@ -107,11 +107,6 @@ namespace tsom
 
 		m_chunkVertexDeclaration = NewDeclaration(Nz::VertexInputRate::Vertex, {
 			{
-				Nz::VertexComponent::Color,
-				Nz::ComponentType::Color,
-				0
-			},
-			{
 				Nz::VertexComponent::Position,
 				Nz::ComponentType::Float3,
 				0
@@ -147,7 +142,6 @@ namespace tsom
 
 			vertexAttributes.firstIndex = Nz::SafeCast<Nz::UInt32>(vertices.size());
 			vertices.resize(vertices.size() + count);
-			vertexAttributes.color = Nz::SparsePtr<Nz::Color>(&vertices[vertexAttributes.firstIndex].color, sizeof(vertices.front()));
 			vertexAttributes.position = Nz::SparsePtr<Nz::Vector3f>(&vertices[vertexAttributes.firstIndex].position, sizeof(vertices.front()));
 			vertexAttributes.normal = Nz::SparsePtr<Nz::Vector3f>(&vertices[vertexAttributes.firstIndex].normal, sizeof(vertices.front()));
 			vertexAttributes.tangent = Nz::SparsePtr<Nz::Vector3f>(&vertices[vertexAttributes.firstIndex].tangent, sizeof(vertices.front()));
