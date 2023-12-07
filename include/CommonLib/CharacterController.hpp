@@ -28,7 +28,7 @@ namespace tsom
 			CharacterController(CharacterController&&) = delete;
 			~CharacterController() = default;
 
-			void PostSimulate(Nz::JoltCharacter& character) override;
+			void PostSimulate(Nz::JoltCharacter& character, float elapsedTime) override;
 			void PreSimulate(Nz::JoltCharacter& character, float elapsedTime) override;
 
 			inline void SetCurrentPlanet(const Planet* planet);

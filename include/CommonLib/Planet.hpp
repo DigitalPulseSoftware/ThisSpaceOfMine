@@ -37,7 +37,7 @@ namespace tsom
 			inline const Chunk& GetChunk(const Nz::Vector3ui& indices) const override;
 			inline std::size_t GetChunkCount() const override;
 			inline float GetCornerRadius() const;
-			inline float GetGravityFactor() const;
+			inline float GetGravityFactor(const Nz::Vector3f& position) const;
 
 			void RemoveChunk(const Nz::Vector3ui& indices);
 

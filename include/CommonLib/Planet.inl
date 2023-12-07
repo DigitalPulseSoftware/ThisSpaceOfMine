@@ -39,8 +39,11 @@ namespace tsom
 		return m_cornerRadius;
 	}
 
-	inline float Planet::GetGravityFactor() const
+	inline float Planet::GetGravityFactor(const Nz::Vector3f& position) const
 	{
+		if (position.SquaredDistance(GetCenter()) < Nz::IntegralPow(10.f, 2))
+			return 0.f;
+
 		return m_gravityFactor;
 	}
 

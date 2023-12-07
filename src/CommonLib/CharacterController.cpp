@@ -5,6 +5,8 @@
 #include <CommonLib/CharacterController.hpp>
 #include <CommonLib/Direction.hpp>
 #include <CommonLib/Planet.hpp>
+#include <Nazara/JoltPhysics3D/JoltPhysWorld3D.hpp>
+#include <Nazara/JoltPhysics3D/JoltRigidBody3D.hpp>
 #include <array>
 #include <fmt/ostream.h>
 #include <fmt/std.h>
@@ -27,11 +29,12 @@ namespace tsom
 	{
 	}
 
-	void CharacterController::PostSimulate(Nz::JoltCharacter& character)
+	void CharacterController::PostSimulate(Nz::JoltCharacter& character, float elapsedTime)
 	{
 		if (m_planet)
 		{
-			Nz::Vector3f characterPosition = character.GetPosition() + character.GetRotation() * Nz::Vector3f::Down() * 0.9f;
+			auto [charPos, charRot] = character.GetPositionAndRotation();
+			Nz::Vector3f characterPosition = charPos + charRot * Nz::Vector3f::Down() * 0.9f;
 
 			/*auto ExtractYawRotation = [&](const Nz::Quaternionf& quat)
 			{
@@ -39,33 +42,65 @@ namespace tsom
 				return Nz::Quaternionf(yaw, up);
 			};*/
 
-			Nz::Quaternionf previousRotation = character.GetRotation();
-			Nz::Quaternionf rotation = previousRotation;
-
 			Nz::Quaternionf rotationAroundUp = m_lastInputs.orientation;
 			Nz::Vector3f forward = rotationAroundUp * Nz::Vector3f::Forward();
 
-			if (Nz::Vector3f previousForward = rotation * Nz::Vector3f::Forward(); !previousForward.ApproxEqual(forward, 0.001f))
+			Nz::Quaternionf newRotation = charRot;
+			if (Nz::Vector3f previousForward = charRot * Nz::Vector3f::Forward(); !previousForward.ApproxEqual(forward, 0.001f))
 			{
-				Nz::Quaternionf newRotation = Nz::Quaternionf::RotationBetween(previousForward, forward) * rotation;
+				newRotation = Nz::Quaternionf::RotationBetween(previousForward, forward) * charRot;
 				newRotation.Normalize();
-
-				rotation = newRotation;
-			}
-			
-			Nz::Vector3f up = m_planet->ComputeUpDirection(characterPosition);
-			character.SetUp(up);
-
-			if (Nz::Vector3f previousUp = rotation * Nz::Vector3f::Up(); !previousUp.ApproxEqual(up, 0.001f))
-			{
-				Nz::Quaternionf newRotation = Nz::Quaternionf::RotationBetween(previousUp, up) * rotation;
-				newRotation.Normalize();
-
-				rotation = newRotation;
 			}
 
-			if (rotation != previousRotation)
-				character.SetRotation(rotation);
+			Nz::Vector3f targetUp = m_planet->ComputeUpDirection(characterPosition);
+			Nz::Vector3f newUp = Nz::Vector3f::RotateTowards(character.GetUp(), targetUp, Nz::DegreeAnglef(90.f) * elapsedTime);
+
+			if (Nz::Vector3f previousUp = newRotation * Nz::Vector3f::Up(); !previousUp.ApproxEqual(newUp, 0.001f))
+			{
+				newRotation = Nz::Quaternionf::RotationBetween(previousUp, newUp) * newRotation;
+				newRotation.Normalize();
+			}
+
+			if (!Nz::Quaternionf::ApproxEqual(newRotation, charRot, 0.001f))
+			{
+				Nz::JoltPhysWorld3D& physWorld = character.GetPhysWorld();
+				bool doesHit = false;
+				float maxPenetrationDepth = -1.f;
+				Nz::Vector3f penetrationAxis;
+				physWorld.CollisionQuery(*character.GetCollider(), Nz::Matrix4f::Transform(charPos, newRotation), Nz::Vector3f(1.2f), [&](const Nz::JoltPhysWorld3D::ShapeCollisionInfo& hitInfo) -> std::optional<float>
+				{
+					if (hitInfo.hitBody == &character)
+						return {};
+
+					doesHit = true;
+					if (hitInfo.penetrationDepth > maxPenetrationDepth)
+					{
+						maxPenetrationDepth = hitInfo.penetrationDepth;
+						penetrationAxis = hitInfo.penetrationAxis;
+					}
+
+					return 0.f;
+				});
+
+				if (doesHit)
+				{
+					doesHit = false;
+					physWorld.CollisionQuery(*character.GetCollider(), Nz::Matrix4f::Transform(charPos + penetrationAxis * maxPenetrationDepth * 1.05f, newRotation), Nz::Vector3f(1.1f), [&](const Nz::JoltPhysWorld3D::ShapeCollisionInfo& hitInfo) -> std::optional<float>
+					{
+						if (hitInfo.hitBody == &character)
+							return {};
+
+						doesHit = true;
+						return 0.f;
+					});
+				}
+
+				if (!doesHit)
+				{
+					character.SetRotation(newRotation);
+					character.SetUp(newUp);
+				}
+			}
 		}
 	}
 
@@ -77,7 +112,8 @@ namespace tsom
 		if (m_planet)
 		{
 			// Apply gravity
-			velocity -= m_planet->GetGravityFactor() * up * elapsedTime;
+			Nz::Vector3f position = character.GetPosition();
+			velocity -= m_planet->GetGravityFactor(position) * m_planet->ComputeUpDirection(character.GetPosition()) * elapsedTime;
 
 			if (m_lastInputs.jump)
 			{

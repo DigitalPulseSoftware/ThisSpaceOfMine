@@ -20,8 +20,9 @@ namespace tsom
 			if (rigidBody.IsSleeping() || !planetComponent.planet)
 				continue;
 
+			Nz::Vector3f pos = rigidBody.GetPosition();
 			Nz::Vector3f up = planetComponent.planet->ComputeUpDirection(rigidBody.GetPosition());
-			rigidBody.AddForce(-up * planetComponent.planet->GetGravityFactor() * rigidBody.GetMass());
+			rigidBody.AddForce(-up * planetComponent.planet->GetGravityFactor(pos) * rigidBody.GetMass());
 		}
 	}
 }
