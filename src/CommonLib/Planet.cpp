@@ -104,6 +104,12 @@ namespace tsom
 					else
 						blockType = (dis(rand)) ? "stone" : "stone_mossy";
 
+					if (x >= m_gridSize.x / 2 - 2 && x < m_gridSize.x / 2 + 1 &&
+					    y >= m_gridSize.y / 2 - 2 && y < m_gridSize.y / 2 + 1)
+					{
+						blockType = "empty";
+					}
+
 					BlockIndex blockIndex = blockLibrary.GetBlockIndex(blockType);
 					if (blockIndex != InvalidBlockIndex)
 					{
