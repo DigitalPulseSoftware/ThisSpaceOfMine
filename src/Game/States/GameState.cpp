@@ -26,7 +26,7 @@
 
 namespace tsom
 {
-	constexpr std::array<std::string_view, 4> s_selectableBlocks = { "dirt", "grass", "stone", "snow" };
+	constexpr std::array<std::string_view, 5> s_selectableBlocks = { "dirt", "grass", "stone", "snow", "debug" };
 
 	GameState::GameState(std::shared_ptr<StateData> stateData) :
 	m_stateData(std::move(stateData)),
@@ -657,8 +657,6 @@ namespace tsom
 
 		if (m_controlledEntity)
 			inputPacket.inputs.orientation = m_upCorrection * Nz::Quaternionf(m_cameraRotation);
-		else
-			inputPacket.inputs.orientation = Nz::Quaternionf::Identity();
 
 		m_stateData->networkSession->SendPacket(inputPacket);
 	}
