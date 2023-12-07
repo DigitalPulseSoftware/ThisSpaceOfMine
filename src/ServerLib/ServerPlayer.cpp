@@ -26,8 +26,11 @@ namespace tsom
 
 	void ServerPlayer::Respawn()
 	{
-		constexpr Nz::Vector3f position = Nz::Vector3f::Up() * 165.f;
-		const Nz::Quaternionf rotation = Nz::EulerAnglesf(-30.f, 0.f, 0.f);
+		constexpr Nz::Vector3f position = Nz::Vector3f::Up() * 165.f + Nz::Vector3f::Backward() * 5.f;
+		const Nz::Quaternionf rotation = Nz::EulerAnglesf(0.f, 0.f, 0.f);
+
+		if (m_controlledEntity)
+			m_controlledEntity.destroy();
 
 		m_controlledEntity = m_instance.GetWorld().CreateEntity();
 		m_controlledEntity.emplace<Nz::NodeComponent>(position, rotation);
@@ -43,7 +46,7 @@ namespace tsom
 		auto& physicsSystem = m_instance.GetWorld().GetSystem<Nz::JoltPhysics3DSystem>();
 
 		Nz::JoltCharacterComponent::Settings characterSettings;
-		characterSettings.collider = std::make_shared<Nz::JoltCapsuleCollider3D>(1.8f, 0.4f);
+		characterSettings.collider = collider;
 		characterSettings.position = position;
 		characterSettings.rotation = rotation;
 

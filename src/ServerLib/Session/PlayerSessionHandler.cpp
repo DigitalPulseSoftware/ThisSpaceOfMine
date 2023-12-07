@@ -58,6 +58,12 @@ namespace tsom
 
 	void PlayerSessionHandler::HandlePacket(Packets::SendChatMessage&& playerChat)
 	{
+		if (playerChat.message == "/respawn")
+		{
+			m_player->Respawn();
+			return;
+		}
+
 		m_player->GetServerInstance().BroadcastChatMessage(std::move(playerChat.message), m_player->GetPlayerIndex());
 	}
 
