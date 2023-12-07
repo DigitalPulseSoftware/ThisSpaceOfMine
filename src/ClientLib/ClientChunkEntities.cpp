@@ -78,6 +78,7 @@ namespace tsom
 		Nz::MaterialPass shadowPass = depthPass;
 		shadowPass.options[Nz::CRC32("ShadowPass")] = true;
 		shadowPass.states.frontFace = Nz::FrontFace::Clockwise;
+		shadowPass.states.depthClamp = Nz::Graphics::Instance()->GetRenderDevice()->GetEnabledFeatures().depthClamping;
 		settings.AddPass(shadowPassIndex, shadowPass);
 
 		Nz::MaterialPass distanceShadowPass = shadowPass;
