@@ -152,6 +152,7 @@ namespace tsom
 	void ConnectionState::UpdateStatus(const Nz::AbstractTextDrawer& textDrawer)
 	{
 		m_connectingLabel->UpdateText(textDrawer);
+		m_connectingLabel->Resize(m_connectingLabel->GetPreferredSize());
 		m_connectingLabel->Center();
 		m_connectingLabel->Show();
 
