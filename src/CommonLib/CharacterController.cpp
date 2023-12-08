@@ -36,12 +36,6 @@ namespace tsom
 			auto [charPos, charRot] = character.GetPositionAndRotation();
 			Nz::Vector3f characterPosition = charPos + charRot * Nz::Vector3f::Down() * 0.9f;
 
-			/*auto ExtractYawRotation = [&](const Nz::Quaternionf& quat)
-			{
-				Nz::RadianAnglef yaw(std::atan2(2.f * quat.y * quat.w - 2.f * quat.x * quat.z, 1.f - 2.f * quat.y * quat.y - 2.f * quat.z * quat.z));
-				return Nz::Quaternionf(yaw, up);
-			};*/
-
 			Nz::Quaternionf rotationAroundUp = m_lastInputs.orientation;
 			Nz::Vector3f forward = rotationAroundUp * Nz::Vector3f::Forward();
 
@@ -67,7 +61,7 @@ namespace tsom
 				bool doesHit = false;
 				float maxPenetrationDepth = -1.f;
 				Nz::Vector3f penetrationAxis;
-				physWorld.CollisionQuery(*character.GetCollider(), Nz::Matrix4f::Transform(charPos, newRotation), Nz::Vector3f(1.2f), [&](const Nz::JoltPhysWorld3D::ShapeCollisionInfo& hitInfo) -> std::optional<float>
+				physWorld.CollisionQuery(*character.GetCollider(), Nz::Matrix4f::Transform(charPos, newRotation), Nz::Vector3f(1.05f), [&](const Nz::JoltPhysWorld3D::ShapeCollisionInfo& hitInfo) -> std::optional<float>
 				{
 					if (hitInfo.hitBody == &character)
 						return {};
@@ -84,8 +78,10 @@ namespace tsom
 
 				if (doesHit)
 				{
+					Nz::Vector3f correctedPos = charPos + penetrationAxis * maxPenetrationDepth * 1.05f;
+
 					doesHit = false;
-					physWorld.CollisionQuery(*character.GetCollider(), Nz::Matrix4f::Transform(charPos + penetrationAxis * maxPenetrationDepth * 1.05f, newRotation), Nz::Vector3f(1.1f), [&](const Nz::JoltPhysWorld3D::ShapeCollisionInfo& hitInfo) -> std::optional<float>
+					physWorld.CollisionQuery(*character.GetCollider(), Nz::Matrix4f::Transform(correctedPos, newRotation), [&](const Nz::JoltPhysWorld3D::ShapeCollisionInfo& hitInfo) -> std::optional<float>
 					{
 						if (hitInfo.hitBody == &character)
 							return {};
@@ -93,9 +89,14 @@ namespace tsom
 						doesHit = true;
 						return 0.f;
 					});
-				}
 
-				if (!doesHit)
+					if (!doesHit)
+					{
+						character.TeleportTo(correctedPos, newRotation);
+						character.SetUp(newUp);
+					}
+				}
+				else
 				{
 					character.SetRotation(newRotation);
 					character.SetUp(newUp);
@@ -109,6 +110,7 @@ namespace tsom
 		Nz::Vector3f velocity = character.GetLinearVelocity();
 		Nz::Vector3f up = character.GetUp();
 
+		Nz::Quaternionf movementRotation = m_lastInputs.orientation;
 		if (m_planet)
 		{
 			// Apply gravity
@@ -120,6 +122,15 @@ namespace tsom
 				if (character.IsOnGround())
 					velocity += up * 10.f;
 			}
+
+			// Restrict movement around up
+			auto ExtractYawRotation = [&](const Nz::Quaternionf& quat)
+			{
+				Nz::RadianAnglef yaw(std::atan2(2.f * quat.y * quat.w - 2.f * quat.x * quat.z, 1.f - 2.f * quat.y * quat.y - 2.f * quat.z * quat.z));
+				return Nz::Quaternionf(yaw, up);
+			};
+
+			movementRotation = ExtractYawRotation(movementRotation);
 		}
 
 		float moveSpeed = 49.3f * 0.2f;
@@ -150,7 +161,7 @@ namespace tsom
 		else
 			character.SetFriction(1.f);
 
-		desiredVelocity = character.GetRotation() * desiredVelocity * moveSpeed;
+		desiredVelocity = movementRotation * desiredVelocity * moveSpeed;
 		desiredVelocity += fixme::ProjectVec3(velocity, up);
 
 		float desiredImpact = (character.IsOnGround()) ? 0.25f : 0.1f;
