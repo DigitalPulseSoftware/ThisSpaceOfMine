@@ -30,6 +30,8 @@ namespace tsom
 			ChunkEntities(ChunkEntities&&) = delete;
 			~ChunkEntities();
 
+			inline bool DoesRequireUpdate() const;
+
 			void Update();
 
 			ChunkEntities& operator=(const ChunkEntities&) = delete;

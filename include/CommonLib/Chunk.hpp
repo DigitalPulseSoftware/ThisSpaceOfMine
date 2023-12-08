@@ -30,13 +30,14 @@ namespace Nz
 namespace tsom
 {
 	class BlockLibrary;
+	class ChunkContainer;
 
 	class TSOM_COMMONLIB_API Chunk
 	{
 		public:
 			struct VertexAttributes;
 
-			inline Chunk(const Nz::Vector3ui& indices, const Nz::Vector3ui& size, float blockSize);
+			inline Chunk(ChunkContainer& owner, const Nz::Vector3ui& indices, const Nz::Vector3ui& size, float blockSize);
 			Chunk(const Chunk&) = delete;
 			Chunk(Chunk&&) = delete;
 			virtual ~Chunk();
@@ -54,6 +55,8 @@ namespace tsom
 			inline BlockIndex GetBlockContent(const Nz::Vector3ui& indices) const;
 			inline std::size_t GetBlockCount() const;
 			inline float GetBlockSize() const;
+			inline ChunkContainer& GetContainer();
+			inline const ChunkContainer& GetContainer() const;
 			inline const BlockIndex* GetContent() const;
 			inline const Nz::Vector3ui& GetIndices() const;
 			inline std::optional<BlockIndex> GetNeighborBlock(Nz::Vector3ui indices, const Nz::Vector3i& offsets) const;
@@ -83,6 +86,7 @@ namespace tsom
 			Nz::Bitset<Nz::UInt64> m_collisionCellMask;
 			Nz::Vector3ui m_indices;
 			Nz::Vector3ui m_size;
+			ChunkContainer& m_owner;
 			float m_blockSize;
 	};
 }

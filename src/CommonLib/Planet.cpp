@@ -28,7 +28,7 @@ namespace tsom
 	{
 		std::size_t index = GetChunkIndex(indices);
 		assert(!m_chunks[index].chunk);
-		m_chunks[index].chunk = std::make_unique<FlatChunk>(indices, Nz::Vector3ui{ ChunkSize }, m_tileSize);
+		m_chunks[index].chunk = std::make_unique<FlatChunk>(*this, indices, Nz::Vector3ui{ ChunkSize }, m_tileSize);
 
 		if (initCallback)
 			m_chunks[index].chunk->InitBlocks(initCallback);

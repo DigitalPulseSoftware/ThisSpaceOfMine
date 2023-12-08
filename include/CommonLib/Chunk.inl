@@ -3,15 +3,15 @@
 // For conditions of distribution and use, see copyright notice in Config.hpp
 
 #include <Nazara/Math/Box.hpp>
-#include "Chunk.hpp"
 
 namespace tsom
 {
-	inline Chunk::Chunk(const Nz::Vector3ui& indices, const Nz::Vector3ui& size, float cellSize) :
+	inline Chunk::Chunk(ChunkContainer& owner, const Nz::Vector3ui& indices, const Nz::Vector3ui& size, float cellSize) :
 	m_cells(size.x * size.y * size.z, EmptyBlockIndex),
 	m_collisionCellMask(m_cells.size(), false),
 	m_indices(indices),
 	m_size(size),
+	m_owner(owner),
 	m_blockSize(cellSize)
 	{
 	}
@@ -54,6 +54,16 @@ namespace tsom
 	inline float Chunk::GetBlockSize() const
 	{
 		return m_blockSize;
+	}
+
+	inline ChunkContainer& Chunk::GetContainer()
+	{
+		return m_owner;
+	}
+
+	inline const ChunkContainer& Chunk::GetContainer() const
+	{
+		return m_owner;
 	}
 
 	inline const BlockIndex* Chunk::GetContent() const

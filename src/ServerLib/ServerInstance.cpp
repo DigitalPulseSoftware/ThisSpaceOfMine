@@ -96,15 +96,6 @@ namespace tsom
 		}
 	}
 
-	void ServerInstance::UpdatePlanetBlock(const Nz::Vector3ui& chunkIndices, const Nz::Vector3ui& voxelIndices, BlockIndex newBlock)
-	{
-		m_voxelGridUpdates.push_back({
-			chunkIndices,
-			voxelIndices,
-			newBlock
-		});
-	}
-
 	void ServerInstance::OnNetworkTick()
 	{
 		// Handle disconnected players
@@ -173,21 +164,11 @@ namespace tsom
 		for (auto&& sessionManagerPtr : m_sessionManagers)
 			sessionManagerPtr->Poll();
 
-		if (!m_voxelGridUpdates.empty())
+		if (m_planetEntities->DoesRequireUpdate())
 		{
-			for (BlockUpdate& blockUpdate : m_voxelGridUpdates)
-			{
-				Chunk& chunk = m_planet->GetChunk(blockUpdate.chunkIndices);
-				chunk.UpdateBlock(blockUpdate.voxelIndices, blockUpdate.newBlock);
-			}
-
-			{
-				Nz::HighPrecisionClock colliderClock;
-				m_planetEntities->Update();
-				fmt::print("built collider in {}\n", fmt::streamed(colliderClock.GetElapsedTime()));
-			}
-
-			m_voxelGridUpdates.clear();
+			Nz::HighPrecisionClock colliderClock;
+			m_planetEntities->Update();
+			fmt::print("built planet collider in {}\n", fmt::streamed(colliderClock.GetElapsedTime()));
 		}
 
 		m_world.Update(elapsedTime);

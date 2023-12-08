@@ -14,7 +14,7 @@ namespace tsom
 	class DeformedChunk : public Chunk
 	{
 		public:
-			inline DeformedChunk(const Nz::Vector3ui& indices, const Nz::Vector3ui& size, float cellSize, const Nz::Vector3f& deformationCenter, float deformationRadius);
+			inline DeformedChunk(ChunkContainer& owner, const Nz::Vector3ui& indices, const Nz::Vector3ui& size, float cellSize, const Nz::Vector3f& deformationCenter, float deformationRadius);
 			DeformedChunk(const DeformedChunk&) = delete;
 			DeformedChunk(DeformedChunk&&) = delete;
 			~DeformedChunk() = default;
