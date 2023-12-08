@@ -35,8 +35,10 @@ namespace tsom
 		{
 			auto [charPos, charRot] = character.GetPositionAndRotation();
 			Nz::Vector3f characterPosition = charPos + charRot * Nz::Vector3f::Down() * 0.9f;
+			Nz::Vector3f charUp = character.GetUp();
 
-			Nz::Quaternionf rotationAroundUp = m_lastInputs.orientation;
+			// Forward (rotation around up vector)
+			Nz::Quaternionf rotationAroundUp = Nz::Quaternionf(m_lastInputs.yaw, charUp);
 			Nz::Vector3f forward = rotationAroundUp * Nz::Vector3f::Forward();
 
 			Nz::Quaternionf newRotation = charRot;
@@ -46,22 +48,20 @@ namespace tsom
 				newRotation.Normalize();
 			}
 
+			// Up
 			Nz::Vector3f targetUp = m_planet->ComputeUpDirection(characterPosition);
-			Nz::Vector3f newUp = Nz::Vector3f::RotateTowards(character.GetUp(), targetUp, Nz::DegreeAnglef(90.f) * elapsedTime);
+			Nz::Vector3f newUp = Nz::Vector3f::RotateTowards(charUp, targetUp, Nz::DegreeAnglef(90.f) * elapsedTime);
 
 			if (Nz::Vector3f previousUp = newRotation * Nz::Vector3f::Up(); !previousUp.ApproxEqual(newUp, 0.001f))
 			{
-				newRotation = Nz::Quaternionf::RotationBetween(previousUp, newUp) * newRotation;
-				newRotation.Normalize();
-			}
+				Nz::Quaternionf upCorrected = Nz::Quaternionf::RotationBetween(previousUp, newUp) * newRotation;
+				upCorrected.Normalize();
 
-			if (!Nz::Quaternionf::ApproxEqual(newRotation, charRot, 0.001f))
-			{
 				Nz::JoltPhysWorld3D& physWorld = character.GetPhysWorld();
 				bool doesHit = false;
 				float maxPenetrationDepth = -1.f;
 				Nz::Vector3f penetrationAxis;
-				physWorld.CollisionQuery(*character.GetCollider(), Nz::Matrix4f::Transform(charPos, newRotation), Nz::Vector3f(1.05f), [&](const Nz::JoltPhysWorld3D::ShapeCollisionInfo& hitInfo) -> std::optional<float>
+				physWorld.CollisionQuery(*character.GetCollider(), Nz::Matrix4f::Transform(charPos, upCorrected), Nz::Vector3f(1.05f), [&](const Nz::JoltPhysWorld3D::ShapeCollisionInfo& hitInfo) -> std::optional<float>
 				{
 					if (hitInfo.hitBody == &character)
 						return {};
@@ -81,7 +81,7 @@ namespace tsom
 					Nz::Vector3f correctedPos = charPos + penetrationAxis * maxPenetrationDepth * 1.05f;
 
 					doesHit = false;
-					physWorld.CollisionQuery(*character.GetCollider(), Nz::Matrix4f::Transform(correctedPos, newRotation), [&](const Nz::JoltPhysWorld3D::ShapeCollisionInfo& hitInfo) -> std::optional<float>
+					physWorld.CollisionQuery(*character.GetCollider(), Nz::Matrix4f::Transform(correctedPos, upCorrected), [&](const Nz::JoltPhysWorld3D::ShapeCollisionInfo& hitInfo) -> std::optional<float>
 					{
 						if (hitInfo.hitBody == &character)
 							return {};
@@ -92,15 +92,18 @@ namespace tsom
 
 					if (!doesHit)
 					{
-						character.TeleportTo(correctedPos, newRotation);
-						character.SetUp(newUp);
+						charPos = correctedPos;
+						newRotation = upCorrected;
 					}
 				}
 				else
-				{
-					character.SetRotation(newRotation);
-					character.SetUp(newUp);
-				}
+					newRotation = upCorrected;
+			}
+
+			if (!Nz::Quaternionf::ApproxEqual(newRotation, charRot, 0.001f))
+			{
+				character.TeleportTo(charPos, newRotation);
+				character.SetUp(newUp);
 			}
 		}
 	}
@@ -110,7 +113,7 @@ namespace tsom
 		Nz::Vector3f velocity = character.GetLinearVelocity();
 		Nz::Vector3f up = character.GetUp();
 
-		Nz::Quaternionf movementRotation = m_lastInputs.orientation;
+		Nz::Quaternionf movementRotation;
 		if (m_planet)
 		{
 			// Apply gravity
@@ -130,8 +133,10 @@ namespace tsom
 				return Nz::Quaternionf(yaw, up);
 			};
 
-			movementRotation = ExtractYawRotation(movementRotation);
+			movementRotation = character.GetRotation();
 		}
+		else
+			movementRotation = character.GetRotation() * Nz::Quaternionf(Nz::EulerAnglesf(m_lastInputs.pitch, 0.f, 0.f));
 
 		float moveSpeed = 49.3f * 0.2f;
 

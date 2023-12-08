@@ -35,7 +35,8 @@ namespace tsom
 				serializer &= data.moveRight;
 				serializer &= data.sprint;
 
-				serializer &= data.orientation;
+				serializer &= data.pitch;
+				serializer &= data.yaw;
 			}
 
 			void Serialize(PacketSerializer& serializer, VoxelLocation& data)

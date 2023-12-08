@@ -7,7 +7,7 @@
 #ifndef TSOM_COMMONLIB_PLAYERINPUTS_HPP
 #define TSOM_COMMONLIB_PLAYERINPUTS_HPP
 
-#include <Nazara/Math/Quaternion.hpp>
+#include <Nazara/Math/Angle.hpp>
 
 namespace tsom
 {
@@ -19,7 +19,8 @@ namespace tsom
 		bool moveLeft = false;
 		bool moveRight = false;
 		bool sprint = false;
-		Nz::Quaternionf orientation = Nz::Quaternionf::Identity();
+		Nz::RadianAnglef pitch = 0.f;
+		Nz::RadianAnglef yaw = 0.f;
 	};
 }
 

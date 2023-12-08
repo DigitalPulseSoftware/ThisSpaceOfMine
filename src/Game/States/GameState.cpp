@@ -533,11 +533,6 @@ namespace tsom
 		if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::F1) && m_stateData->networkSession->IsConnected())
 			m_stateData->networkSession->Disconnect();
 
-
-#ifdef THIRDPERSON
-		cameraNode.SetPosition(characterNode.GetPosition() + rotation * (Nz::Vector3f::Up() * 3.f + Nz::Vector3f::Backward() * 2.f));
-		cameraNode.SetRotation(rotation * Nz::Quaternionf(m_cameraRotation));
-#else
 		if (m_controlledEntity)
 		{
 			Nz::NodeComponent& characterNode = m_controlledEntity.get<Nz::NodeComponent>();
@@ -553,11 +548,15 @@ namespace tsom
 
 			Nz::Quaternionf rotation = characterComponent.GetRotation();*/
 
+#ifdef THIRDPERSON
+			cameraNode.SetPosition(characterNode.GetPosition() + characterNode.GetRotation() * (Nz::Vector3f::Up() * 3.f + Nz::Vector3f::Backward() * 2.f));
+			cameraNode.SetRotation(characterNode.GetRotation() * Nz::EulerAnglesf(-30.f, 0.f, 0.f));
+#else
 			cameraNode.SetPosition(characterNode.GetPosition() + characterNode.GetRotation() * (Nz::Vector3f::Up() * 1.6f));
 			//cameraNode.SetRotation(characterNode.GetRotation());
 			cameraNode.SetRotation(m_upCorrection * Nz::Quaternionf(m_cameraRotation));
-		}
 #endif
+		}
 
 #endif
 
@@ -648,7 +647,10 @@ namespace tsom
 		}
 
 		if (m_controlledEntity)
-			inputPacket.inputs.orientation = m_upCorrection * Nz::Quaternionf(m_cameraRotation);
+		{
+			inputPacket.inputs.pitch = m_cameraRotation.pitch;
+			inputPacket.inputs.yaw = m_cameraRotation.yaw;
+		}
 
 		m_stateData->networkSession->SendPacket(inputPacket);
 	}
