@@ -30,11 +30,13 @@ namespace tsom
 			inline const std::shared_ptr<Nz::Texture>& GetBaseColorTexture() const;
 			inline const std::shared_ptr<Nz::Texture>& GetDetailTexture() const;
 			inline const std::shared_ptr<Nz::Texture>& GetNormalTexture() const;
+			inline const std::shared_ptr<Nz::Texture>& GetPreviewTexture(BlockIndex blockIndex) const;
 
 		private:
 			std::shared_ptr<Nz::Texture> m_baseColorTexture;
 			std::shared_ptr<Nz::Texture> m_detailTexture;
 			std::shared_ptr<Nz::Texture> m_normalTexture;
+			std::vector<std::shared_ptr<Nz::Texture>> m_previewTextures;
 			Nz::ApplicationBase& m_applicationBase;
 			Nz::RenderDevice& m_renderDevice;
 	};

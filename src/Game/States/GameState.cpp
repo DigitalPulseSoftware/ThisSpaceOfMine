@@ -80,18 +80,10 @@ namespace tsom
 
 			auto& slot = m_inventorySlots.emplace_back();
 
-			const auto& blockData = m_stateData->blockLibrary->GetBlockData(m_stateData->blockLibrary->GetBlockIndex(blockName));
-
-			Nz::TextureViewInfo slotTexView = {
-				.viewType = Nz::ImageType::E2D,
-				.reinterpretFormat = Nz::PixelFormat::RGBA8, //< FIXME: Disable sRGB in UI?
-				.baseArrayLayer = blockData.texIndices[Direction::Up]
-			};
-
-			std::shared_ptr<Nz::Texture> slotTex = blockColorMap->CreateView(slotTexView);
+			BlockIndex blockIndex = m_stateData->blockLibrary->GetBlockIndex(blockName);
 
 			std::shared_ptr<Nz::MaterialInstance> slotMat = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic);
-			slotMat->SetTextureProperty("BaseColorMap", slotTex);
+			slotMat->SetTextureProperty("BaseColorMap", m_stateData->blockLibrary->GetPreviewTexture(blockIndex));
 
 			slot.sprite = std::make_shared<Nz::Sprite>(std::move(slotMat));
 			slot.sprite->SetColor((active) ? Nz::Color::White() : Nz::Color::Gray());

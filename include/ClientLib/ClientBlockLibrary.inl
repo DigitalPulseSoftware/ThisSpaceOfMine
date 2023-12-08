@@ -24,5 +24,11 @@ namespace tsom
 	{
 		return m_normalTexture;
 	}
+
+	inline const std::shared_ptr<Nz::Texture>& ClientBlockLibrary::GetPreviewTexture(BlockIndex blockIndex) const
+	{
+		assert(blockIndex < m_previewTextures.size());
+		return m_previewTextures[blockIndex];
+	}
 }
 

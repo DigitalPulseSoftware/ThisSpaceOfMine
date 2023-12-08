@@ -68,5 +68,19 @@ namespace tsom
 			.height = texSize,
 			.width = texSize,
 		}, detailArray.GetConstPixels(), true);
+
+		m_previewTextures.resize(m_blocks.size());
+		for (std::size_t blockIndex = 0; blockIndex < m_blocks.size(); ++blockIndex)
+		{
+			const auto& blockData = m_blocks[blockIndex];
+
+			Nz::TextureViewInfo slotTexView = {
+				.viewType = Nz::ImageType::E2D,
+				.reinterpretFormat = Nz::PixelFormat::RGBA8, //< FIXME: Disable sRGB in UI?
+				.baseArrayLayer = blockData.texIndices[Direction::Up]
+			};
+
+			m_previewTextures[blockIndex] = m_baseColorTexture->CreateView(slotTexView);
+		}
 	}
 }
