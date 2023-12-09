@@ -11,70 +11,11 @@
 
 namespace tsom
 {
-	constexpr Nz::EnumArray<Direction, Nz::EnumArray<Direction, Direction>> s_texDirections = {
-		{
-			// Back
-			Nz::EnumArray<Direction, Direction>{
-				Direction::Up,    // Direction::Back
-				Direction::Back,  // Direction::Down
-				Direction::Down,  // Direction::Front
-				Direction::Left,  // Direction::Left
-				Direction::Right, // Direction::Right
-				Direction::Front, // Direction::Up
-			},
-			// Down
-			Nz::EnumArray<Direction, Direction>{
-				Direction::Front, // Direction::Back
-				Direction::Up,    // Direction::Down
-				Direction::Back,  // Direction::Front
-				Direction::Left,  // Direction::Right
-				Direction::Right, // Direction::Left
-				Direction::Down,  // Direction::Up
-			},
-			// Front
-			Nz::EnumArray<Direction, Direction>{
-				Direction::Down,  // Direction::Back
-				Direction::Front, // Direction::Down
-				Direction::Up,    // Direction::Front
-				Direction::Left,  // Direction::Right
-				Direction::Right, // Direction::Left
-				Direction::Back,  // Direction::Up
-			},
-			// Left
-			Nz::EnumArray<Direction, Direction>{
-				Direction::Back,  // Direction::Back
-				Direction::Left,  // Direction::Down
-				Direction::Front, // Direction::Front
-				Direction::Up,    // Direction::Right
-				Direction::Down,  // Direction::Left
-				Direction::Right, // Direction::Up
-			},
-			// Right
-			Nz::EnumArray<Direction, Direction>{
-				Direction::Back,  // Direction::Back
-				Direction::Right, // Direction::Down
-				Direction::Front, // Direction::Front
-				Direction::Down,  // Direction::Right
-				Direction::Up,    // Direction::Left
-				Direction::Left,  // Direction::Up
-			},
-			// Up
-			Nz::EnumArray<Direction, Direction>{
-				Direction::Back,  // Direction::Back
-				Direction::Down,  // Direction::Down
-				Direction::Front, // Direction::Front
-				Direction::Left,  // Direction::Right
-				Direction::Right, // Direction::Left
-				Direction::Up,    // Direction::Up
-			}
-		}
-	};
-
 	Chunk::~Chunk() = default;
 
-	void Chunk::BuildMesh(const BlockLibrary& blockManager, std::vector<Nz::UInt32>& indices, const Nz::Vector3f& center, const Nz::FunctionRef<VertexAttributes(Nz::UInt32)>& addVertices) const
+	void Chunk::BuildMesh(const BlockLibrary& blockManager, std::vector<Nz::UInt32>& indices, const Nz::Vector3f& gravityCenter, const Nz::FunctionRef<VertexAttributes(Nz::UInt32)>& addVertices) const
 	{
-		auto DrawFace = [&](Direction normalDirection, Direction upDirection, BlockIndex blockIndex, const std::array<Nz::Vector3f, 4>& pos)
+		auto DrawFace = [&](BlockIndex blockIndex, const Nz::Vector3f& blockCenter, const std::array<Nz::Vector3f, 4>& pos)
 		{
 			VertexAttributes vertexAttributes = addVertices(pos.size());
 			assert(vertexAttributes.position);
@@ -82,19 +23,25 @@ namespace tsom
 			for (std::size_t i = 0; i < pos.size(); ++i)
 				vertexAttributes.position[i] = pos[i];
 
+			Nz::Vector3f faceCenter = std::accumulate(pos.begin(), pos.end(), Nz::Vector3f::Zero()) / pos.size();
+			Nz::Vector3f faceDirection = Nz::Vector3f::Normalize(faceCenter - blockCenter);
+
 			if (vertexAttributes.normal)
 			{
 				for (std::size_t i = 0; i < pos.size(); ++i)
-					vertexAttributes.normal[i] = s_dirNormals[normalDirection];
+					vertexAttributes.normal[i] = faceDirection;
 			}
 
 			if (vertexAttributes.uv)
 			{
-				Direction texDirection = s_texDirections[upDirection][normalDirection];
+				Nz::Vector3f faceUp = s_dirNormals[DirectionFromNormal(Nz::Vector3f::Normalize(faceCenter - gravityCenter))];
+				Nz::Quaternionf upRotation = Nz::Quaternionf::RotationBetween(faceUp, Nz::Vector3f::Up());
+				Direction texDirection = DirectionFromNormal(upRotation * faceDirection);
 
 				const auto& blockData = blockManager.GetBlockData(blockIndex);
 				std::size_t textureIndex = blockData.texIndices[texDirection];
 
+				// FIXME: UV need to rotate too
 				constexpr Nz::Vector2f uv(0.f, 0.f);
 				constexpr Nz::Vector2f uvSize(1.f, 1.f);
 
@@ -121,38 +68,37 @@ namespace tsom
 			{
 				for (unsigned int x = 0; x < m_size.x; ++x)
 				{
-					BlockIndex cell = GetBlockContent({ x, y, z });
-					if (cell == EmptyBlockIndex)
+					BlockIndex blockIndex = GetBlockContent({ x, y, z });
+					if (blockIndex == EmptyBlockIndex)
 						continue;
 
 					Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> corners = ComputeVoxelCorners({ x, y, z });
 
 					Nz::Vector3f blockCenter = std::accumulate(corners.begin(), corners.end(), Nz::Vector3f::Zero()) / corners.size();
-					Direction direction = DirectionFromNormal(Nz::Vector3f::Normalize(blockCenter - center));
 
 					// Up
 					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, { 0, 0, 1 }); !neighborOpt || neighborOpt == EmptyBlockIndex)
-						DrawFace(Direction::Up, direction, cell, { corners[Nz::BoxCorner::FarLeftTop], corners[Nz::BoxCorner::FarRightTop], corners[Nz::BoxCorner::NearLeftTop], corners[Nz::BoxCorner::NearRightTop] });
+						DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::FarLeftTop], corners[Nz::BoxCorner::FarRightTop], corners[Nz::BoxCorner::NearLeftTop], corners[Nz::BoxCorner::NearRightTop] });
 
 					// Down
 					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, { 0, 0, -1 }); !neighborOpt || neighborOpt == EmptyBlockIndex)
-						DrawFace(Direction::Down, direction, cell, { corners[Nz::BoxCorner::FarRightBottom], corners[Nz::BoxCorner::FarLeftBottom], corners[Nz::BoxCorner::NearRightBottom], corners[Nz::BoxCorner::NearLeftBottom] });
+						DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::FarRightBottom], corners[Nz::BoxCorner::FarLeftBottom], corners[Nz::BoxCorner::NearRightBottom], corners[Nz::BoxCorner::NearLeftBottom] });
 
 					// Front
 					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, { 0, -1, 0 }); !neighborOpt || neighborOpt == EmptyBlockIndex)
-						DrawFace(Direction::Front, direction, cell, { corners[Nz::BoxCorner::FarRightTop], corners[Nz::BoxCorner::FarLeftTop], corners[Nz::BoxCorner::FarRightBottom], corners[Nz::BoxCorner::FarLeftBottom] });
+						DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::FarRightTop], corners[Nz::BoxCorner::FarLeftTop], corners[Nz::BoxCorner::FarRightBottom], corners[Nz::BoxCorner::FarLeftBottom] });
 
 					// Back
 					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, { 0, 1, 0 }); !neighborOpt || neighborOpt == EmptyBlockIndex)
-						DrawFace(Direction::Back, direction, cell, { corners[Nz::BoxCorner::NearLeftTop], corners[Nz::BoxCorner::NearRightTop], corners[Nz::BoxCorner::NearLeftBottom], corners[Nz::BoxCorner::NearRightBottom] });
+						DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::NearLeftTop], corners[Nz::BoxCorner::NearRightTop], corners[Nz::BoxCorner::NearLeftBottom], corners[Nz::BoxCorner::NearRightBottom] });
 
 					// Left
 					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, { -1, 0, 0 }); !neighborOpt || neighborOpt == EmptyBlockIndex)
-						DrawFace(Direction::Left, direction, cell, { corners[Nz::BoxCorner::FarLeftTop], corners[Nz::BoxCorner::NearLeftTop], corners[Nz::BoxCorner::FarLeftBottom], corners[Nz::BoxCorner::NearLeftBottom] });
+						DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::FarLeftTop], corners[Nz::BoxCorner::NearLeftTop], corners[Nz::BoxCorner::FarLeftBottom], corners[Nz::BoxCorner::NearLeftBottom] });
 
 					// Right
 					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, { 1, 0, 0 }); !neighborOpt || neighborOpt == EmptyBlockIndex)
-						DrawFace(Direction::Right, direction, cell, { corners[Nz::BoxCorner::NearRightTop], corners[Nz::BoxCorner::FarRightTop], corners[Nz::BoxCorner::NearRightBottom], corners[Nz::BoxCorner::FarRightBottom] });
+						DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::NearRightTop], corners[Nz::BoxCorner::FarRightTop], corners[Nz::BoxCorner::NearRightBottom], corners[Nz::BoxCorner::FarRightBottom] });
 				}
 			}
 		}
