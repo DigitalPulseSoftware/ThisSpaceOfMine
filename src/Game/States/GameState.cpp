@@ -180,6 +180,11 @@ namespace tsom
 		m_onControlledEntityChanged.Connect(m_stateData->sessionHandler->OnControlledEntityChanged, [&](entt::handle entity)
 		{
 			m_controlledEntity = entity;
+			if (m_controlledEntity)
+			{
+				auto& entityNode = entity.get<Nz::NodeComponent>();
+				m_cameraRotation = entityNode.GetRotation();
+			}
 		});
 
 		m_onChunkCreate.Connect(m_stateData->sessionHandler->OnChunkCreate, [&](const Packets::ChunkCreate& chunkCreate)
