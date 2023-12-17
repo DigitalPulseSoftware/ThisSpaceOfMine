@@ -72,17 +72,17 @@ namespace tsom
 		settings.AddPass(forwardPassIndex, forwardPass);
 
 		Nz::MaterialPass depthPass = forwardPass;
-		depthPass.options[Nz::CRC32("DepthPass")] = true;
+		depthPass.options[nzsl::Ast::HashOption("DepthPass")] = true;
 		settings.AddPass(depthPassIndex, depthPass);
 
 		Nz::MaterialPass shadowPass = depthPass;
-		shadowPass.options[Nz::CRC32("ShadowPass")] = true;
+		shadowPass.options[nzsl::Ast::HashOption("ShadowPass")] = true;
 		shadowPass.states.frontFace = Nz::FrontFace::Clockwise;
 		shadowPass.states.depthClamp = Nz::Graphics::Instance()->GetRenderDevice()->GetEnabledFeatures().depthClamping;
 		settings.AddPass(shadowPassIndex, shadowPass);
 
 		Nz::MaterialPass distanceShadowPass = shadowPass;
-		distanceShadowPass.options[Nz::CRC32("DistanceDepth")] = true;
+		distanceShadowPass.options[nzsl::Ast::HashOption("DistanceDepth")] = true;
 		settings.AddPass(distanceShadowPassIndex, distanceShadowPass);
 
 		auto chunkMaterial = std::make_shared<Nz::Material>(std::move(settings), "TSOM.BlockPBR");
