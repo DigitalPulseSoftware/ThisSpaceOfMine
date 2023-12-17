@@ -34,23 +34,58 @@ namespace tsom
 
 			if (vertexAttributes.uv)
 			{
+				// Get face up vector
 				Nz::Vector3f faceUp = s_dirNormals[DirectionFromNormal(Nz::Vector3f::Normalize(faceCenter - gravityCenter))];
+
+				// Make up the rotation from the face up to the regular up
 				Nz::Quaternionf upRotation = Nz::Quaternionf::RotationBetween(faceUp, Nz::Vector3f::Up());
+
+				// Compute texture direction based on face direction in regular orientation
 				Direction texDirection = DirectionFromNormal(upRotation * faceDirection);
 
 				const auto& blockData = blockManager.GetBlockData(blockIndex);
 				std::size_t textureIndex = blockData.texIndices[texDirection];
 
-				// FIXME: UV need to rotate too
-				constexpr Nz::Vector2f uv(0.f, 0.f);
-				constexpr Nz::Vector2f uvSize(1.f, 1.f);
-
+				// Compute UV
 				float sliceIndex = textureIndex;
+				for (std::size_t i = 0; i < pos.size(); ++i)
+				{
+					// Get vector from center to corner (no need to normalize) and use it to compute UV
+					// This is similar to the way a GPU compute UV when sampling a cubemap: https://www.gamedev.net/forums/topic/687535-implementing-a-cube-map-lookup-function/5337472/
+					Nz::Vector3f dir = upRotation * (pos[i] - blockCenter);
+					Nz::Vector3f dirAbs = dir.GetAbs();
 
-				vertexAttributes.uv[0] = Nz::Vector3f(uv.x, uv.y, sliceIndex);
-				vertexAttributes.uv[1] = Nz::Vector3f(uv.x + uvSize.x, uv.y, sliceIndex);
-				vertexAttributes.uv[2] = Nz::Vector3f(uv.x, uv.y + uvSize.y, sliceIndex);
-				vertexAttributes.uv[3] = Nz::Vector3f(uv.x + uvSize.x, uv.y + uvSize.y, sliceIndex);
+					float mag;
+					Nz::Vector2f uv;
+					switch (texDirection) //< TODO: texture direction should be defined by dir to handle corners
+					{
+						case Direction::Back:
+						case Direction::Front:
+						{
+							mag = 0.5f / dirAbs.x;
+							uv = { dir.x < 0.f ? -dir.z : dir.z, -dir.y };
+							break;
+						}
+
+						case Direction::Down:
+						case Direction::Up:
+						{
+							mag = 0.5f / dirAbs.y;
+							uv = { dir.x, dir.y < 0.f ? -dir.z : dir.z };
+							break;
+						}
+
+						case Direction::Left:
+						case Direction::Right:
+						{
+							mag = 0.5f / dirAbs.z;
+							uv = { dir.z < 0.f ? dir.x : -dir.x, -dir.y };
+							break;
+						}
+					}
+
+					vertexAttributes.uv[i] = Nz::Vector3f(uv * mag + Nz::Vector2f(0.5f), sliceIndex);
+				}
 			}
 
 			indices.push_back(vertexAttributes.firstIndex);
