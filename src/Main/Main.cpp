@@ -14,7 +14,7 @@
 
 int TSOMEntry(int argc, char* argv[], int(*mainFunc)(int argc, char* argv[]))
 {
-	fmt::print("TSOM {0}.{1}.{2} {3} ({4}) - {5}\n", tsom::GameMajorVersion, tsom::GameMinorVersion, tsom::GamePatchVersion, tsom::BuildBranch, tsom::BuildCommit, tsom::BuildDate);
+	fmt::print("TSOM {0}.{1}.{2} {3} ({4}) - {5}\n", tsom::GameMajorVersion, tsom::GameMinorVersion, tsom::GamePatchVersion, tsom::BuildBranch, tsom::BuildCommit, tsom::BuildCommitDate);
 
 #ifdef NAZARA_PLATFORM_WINDOWS
 	if (IsDebuggerPresent())

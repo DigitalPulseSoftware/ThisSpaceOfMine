@@ -13,10 +13,10 @@
 
 namespace tsom
 {
-	TSOM_COMMONLIB_API extern const char* BuildSystem;
-	TSOM_COMMONLIB_API extern const char* BuildBranch;
-	TSOM_COMMONLIB_API extern const char* BuildCommit;
-	TSOM_COMMONLIB_API extern const char* BuildDate;
+	TSOM_COMMONLIB_API extern std::string_view BuildSystem;
+	TSOM_COMMONLIB_API extern std::string_view BuildBranch;
+	TSOM_COMMONLIB_API extern std::string_view BuildCommit;
+	TSOM_COMMONLIB_API extern std::string_view BuildCommitDate;
 	TSOM_COMMONLIB_API std::string GetBuildInfo();
 
 	constexpr std::uint32_t BuildVersion(std::uint32_t majorVersion, std::uint32_t minorVersion, std::uint32_t patchVersion)

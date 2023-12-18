@@ -9,7 +9,7 @@ namespace tsom
 {
 	std::string GetBuildInfo()
 	{
-		return fmt::format("{} - {} ({}) - {}", BuildSystem, BuildBranch, BuildCommit, BuildDate);
+		return fmt::format("{} - {} ({}) - {}", BuildSystem, BuildBranch, BuildCommit, BuildCommitDate);
 	}
 
 #include "VersionData.hpp"

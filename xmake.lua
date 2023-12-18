@@ -55,12 +55,18 @@ target("CommonLib", function ()
 		add_packages("stackwalker")
 	end
 
-	before_build(function (target)
+	before_build(function (target, opt)
+		import("core.project.depend")
+		import("detect.tools.find_git")
+		import("utils.progress")
+
+		local targetfile = "src/CommonLib/VersionData.hpp"
+
 		local host = os.host()
 		local subhost = os.subhost()
 
 		local system
-		if (host ~= subhost) then
+		if host ~= subhost then
 			system = host .. "/" .. subhost
 		else
 			system = host
@@ -68,17 +74,20 @@ target("CommonLib", function ()
 
 		local branch = "unknown-branch"
 		local commitHash = "unknown-commit"
-		try
+		local commitDate = "unknown-date"
+		local ok = try
 		{
 			function ()
-				import("detect.tools.find_git")
 				local git = find_git()
-				if (git) then
+				if git then
 					branch = os.iorunv(git, {"rev-parse", "--abbrev-ref", "HEAD"}):trim()
 					commitHash = os.iorunv(git, {"describe", "--always", "--tags", "--long"}):trim()
+					commitDate = os.iorunv(git, {"show", "--no-patch", "--format=%ci", commitHash}):trim()
 				else
-					error("git not found")
+					os.raise("git not found")
 				end
+
+				return true
 			end,
 
 			catch
@@ -89,23 +98,22 @@ target("CommonLib", function ()
 			}
 		}
 
-		import("core.project.depend")
-		import("core.project.project")
-		local tmpfile = path.join(os.projectdir(), "project.autoversion")
-		local dependfile = tmpfile .. ".d"
+
+		local dependfile = target:dependfile("versioninfo")
 		depend.on_changed(function ()
-			print("regenerating version data info...")
-			io.writefile("src/CommonLib/VersionData.hpp", string.format([[
-const char* BuildSystem = "%s";
-const char* BuildBranch = "%s";
-const char* BuildCommit = "%s";
-const char* BuildDate = "%s";
-]], system, branch, commitHash, os.date("%Y-%m-%d %H:%M:%S")))
-		end, 
+        	progress.show(opt.progress, "${color.build.target}updating version info")
+			io.writefile(targetfile, string.format([[
+std::string_view BuildSystem = "%s";
+std::string_view BuildBranch = "%s";
+std::string_view BuildCommit = "%s";
+std::string_view BuildCommitDate = "%s";
+]], system, branch, commitHash, commitDate))
+		end,
 		{
 			dependfile = dependfile, 
-			files = project.allfiles(), 
-			values = {system, branch, commitHash}
+			files = targetfile,
+			changed = target:is_rebuilt(),
+			values = {system, branch, commitHash, commitDate}
 		})
 	end)
 
