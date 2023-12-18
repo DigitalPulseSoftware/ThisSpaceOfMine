@@ -18,6 +18,7 @@ namespace tsom
 	TSOM_COMMONLIB_API extern std::string_view BuildCommit;
 	TSOM_COMMONLIB_API extern std::string_view BuildCommitDate;
 	TSOM_COMMONLIB_API std::string GetBuildInfo();
+	TSOM_COMMONLIB_API std::string GetVersionInfo();
 
 	constexpr std::uint32_t BuildVersion(std::uint32_t majorVersion, std::uint32_t minorVersion, std::uint32_t patchVersion)
 	{

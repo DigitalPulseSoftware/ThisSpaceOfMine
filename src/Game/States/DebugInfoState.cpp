@@ -4,7 +4,9 @@
 
 #include <Game/States/DebugInfoState.hpp>
 #include <Nazara/Utility/RichTextBuilder.hpp>
+#include <Nazara/Utility/SimpleTextDrawer.hpp>
 #include <Nazara/Widgets/LabelWidget.hpp>
+#include <CommonLib/Version.hpp>
 
 namespace tsom
 {
@@ -12,16 +14,25 @@ namespace tsom
 	WidgetState(stateData)
 	{
 		m_fpsEntity = stateData->canvas->Add<Nz::LabelWidget>();
+
+		m_versionEntity = stateData->canvas->Add<Nz::LabelWidget>();
+		m_versionEntity->UpdateText(Nz::SimpleTextDrawer::Draw(GetVersionInfo(), 18));
+		m_versionEntity->Resize(m_versionEntity->GetPreferredSize());
 	}
 
-	void DebugInfoState::Enter(Nz::StateMachine& /*fsm*/)
+	void DebugInfoState::Enter(Nz::StateMachine& fsm)
 	{
+		WidgetState::Enter(fsm);
+
 		m_fpsCounter = 0;
 		m_updateClock.Restart();
 	}
 
-	bool DebugInfoState::Update(Nz::StateMachine& /*fsm*/, Nz::Time /*elapsedTime*/)
+	bool DebugInfoState::Update(Nz::StateMachine& fsm, Nz::Time elapsedTime)
 	{
+		if (!WidgetState::Update(fsm, elapsedTime))
+			return false;
+
 		m_fpsCounter++;
 
 		if (m_updateClock.RestartIfOver(Nz::Time::Second()))
@@ -54,5 +65,6 @@ namespace tsom
 	void DebugInfoState::LayoutWidgets(const Nz::Vector2f& newSize)
 	{
 		m_fpsEntity->SetPosition(newSize - Nz::Vector2f(m_fpsEntity->GetSize()));
+		m_versionEntity->SetPosition(newSize.x - m_versionEntity->GetWidth(), 0.f);
 	}
 }

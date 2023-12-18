@@ -30,6 +30,7 @@ namespace tsom
 			void LayoutWidgets(const Nz::Vector2f& newSize) override;
 
 			Nz::LabelWidget* m_fpsEntity;
+			Nz::LabelWidget* m_versionEntity;
 			Nz::MillisecondClock m_updateClock;
 			Nz::RichTextDrawer m_textDrawer;
 			unsigned int m_fpsCounter;

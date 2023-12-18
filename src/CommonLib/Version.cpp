@@ -12,5 +12,10 @@ namespace tsom
 		return fmt::format("{} - {} ({}) - {}", BuildSystem, BuildBranch, BuildCommit, BuildCommitDate);
 	}
 
+	std::string GetVersionInfo()
+	{
+		return fmt::format("TSOM {}.{}.{} ({})", GameMajorVersion, GameMinorVersion, GamePatchVersion, BuildBranch);
+	}
+
 #include "VersionData.hpp"
 }
