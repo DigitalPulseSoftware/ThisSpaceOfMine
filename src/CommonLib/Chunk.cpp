@@ -55,7 +55,7 @@ namespace tsom
 					Nz::Vector3f dir = upRotation * (pos[i] - blockCenter);
 					Nz::Vector3f dirAbs = dir.GetAbs();
 
-					float mag;
+					float mag = 0.f;
 					Nz::Vector2f uv;
 					switch (texDirection) //< TODO: texture direction should be defined by dir to handle corners
 					{

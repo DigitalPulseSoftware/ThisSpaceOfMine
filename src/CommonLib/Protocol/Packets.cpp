@@ -28,6 +28,8 @@ namespace tsom
 
 			void Serialize(PacketSerializer& serializer, PlayerInputs& data)
 			{
+				serializer &= data.index;
+
 				serializer &= data.jump;
 				serializer &= data.moveBackward;
 				serializer &= data.moveForward;
@@ -135,6 +137,7 @@ namespace tsom
 		void Serialize(PacketSerializer& serializer, EntitiesStateUpdate& data)
 		{
 			serializer &= data.tickIndex;
+			serializer &= data.lastInputIndex;
 
 			serializer.SerializeArraySize(data.entities);
 			for (auto& entity : data.entities)

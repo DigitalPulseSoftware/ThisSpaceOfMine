@@ -214,6 +214,7 @@ namespace tsom
 
 		Packets::EntitiesStateUpdate stateUpdate;
 		stateUpdate.tickIndex = tickIndex;
+		stateUpdate.lastInputIndex = m_lastInputIndex;
 
 		for (const entt::handle& handle : m_movingEntities)
 		{

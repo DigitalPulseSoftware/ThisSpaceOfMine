@@ -8,11 +8,14 @@
 #define TSOM_COMMONLIB_PLAYERINPUTS_HPP
 
 #include <Nazara/Math/Angle.hpp>
+#include <CommonLib/InputIndex.hpp>
 
 namespace tsom
 {
 	struct PlayerInputs
 	{
+		InputIndex index;
+
 		bool jump = false;
 		bool moveForward = false;
 		bool moveBackward = false;

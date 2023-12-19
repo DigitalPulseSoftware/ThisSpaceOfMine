@@ -7,8 +7,14 @@
 namespace tsom
 {
 	inline SessionVisibilityHandler::SessionVisibilityHandler(NetworkSession* networkSession) :
+	m_lastInputIndex(0),
 	m_networkSession(networkSession)
 	{
+	}
+
+	inline void SessionVisibilityHandler::UpdateLastInputIndex(InputIndex inputIndex)
+	{
+		m_lastInputIndex = inputIndex;
 	}
 
 	inline std::size_t SessionVisibilityHandler::HandlerHasher::operator()(const entt::handle& handle) const

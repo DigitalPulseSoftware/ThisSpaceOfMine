@@ -31,7 +31,8 @@ namespace tsom
 	ClientSessionHandler::ClientSessionHandler(NetworkSession* session, Nz::EnttWorld& world) :
 	SessionHandler(session),
 	m_world(world),
-	m_ownPlayerIndex(InvalidPlayerIndex)
+	m_ownPlayerIndex(InvalidPlayerIndex),
+	m_lastInputIndex(0)
 	{
 		SetupHandlerTable(this);
 		SetupAttributeTable(s_packetAttributes);
@@ -101,6 +102,12 @@ namespace tsom
 
 	void ClientSessionHandler::HandlePacket(Packets::EntitiesStateUpdate&& stateUpdate)
 	{
+		if (stateUpdate.lastInputIndex != m_lastInputIndex)
+		{
+			OnInputHandled(stateUpdate.lastInputIndex);
+			m_lastInputIndex = stateUpdate.lastInputIndex;
+		}
+
 		for (auto& entityData : stateUpdate.entities)
 		{
 			entt::handle& entity = m_networkIdToEntity[entityData.entityId];
@@ -159,7 +166,7 @@ namespace tsom
 
 	void ClientSessionHandler::SetupEntity(entt::handle entity, Packets::Helper::PlayerControlledData&& entityData)
 	{
-		entity.emplace<MovementInterpolationComponent>(m_lastTickIndex);
+		//entity.emplace<MovementInterpolationComponent>(m_lastTickIndex);
 
 		auto collider = std::make_shared<Nz::JoltCapsuleCollider3D>(1.8f, 0.4f);
 		entity.emplace<Nz::JoltRigidBody3DComponent>(Nz::JoltRigidBody3D::DynamicSettings(collider, 0.f));

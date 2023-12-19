@@ -20,6 +20,8 @@ namespace tsom
 
 	void ServerPlayer::HandleInputs(const PlayerInputs& inputs)
 	{
+		m_visibilityHandler.UpdateLastInputIndex(inputs.index);
+
 		if (m_controller)
 			m_controller->SetInputs(inputs);
 	}

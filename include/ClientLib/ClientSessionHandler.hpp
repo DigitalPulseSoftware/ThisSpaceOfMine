@@ -46,6 +46,7 @@ namespace tsom
 			NazaraSignal(OnChunkDestroy, const Packets::ChunkDestroy& /*chunkDestroy*/);
 			NazaraSignal(OnChunkUpdate, const Packets::ChunkUpdate& /*gridUpdate*/);
 			NazaraSignal(OnControlledEntityChanged, entt::handle /*newEntity*/);
+			NazaraSignal(OnInputHandled, InputIndex /*lastInputIndex*/);
 			NazaraSignal(OnPlayerLeave, const std::string& /*playerName*/);
 			NazaraSignal(OnPlayerJoined, const std::string& /*playerName*/);
 
@@ -68,6 +69,7 @@ namespace tsom
 			Nz::EnttWorld& m_world;
 			Nz::UInt16 m_lastTickIndex;
 			Nz::UInt16 m_ownPlayerIndex;
+			InputIndex m_lastInputIndex;
 	};
 }
 

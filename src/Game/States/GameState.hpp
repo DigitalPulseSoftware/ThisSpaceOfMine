@@ -44,7 +44,7 @@ namespace tsom
 			GameState& operator=(GameState&&) = delete;
 
 		private:
-			void OnTick(Nz::Time elapsedTime);
+			void OnTick(Nz::Time elapsedTime, bool lastTick);
 			void SendInputs();
 			void UpdateMouseLock();
 
@@ -53,6 +53,7 @@ namespace tsom
 			NazaraSlot(ClientSessionHandler, OnChunkDestroy, m_onChunkDestroy);
 			NazaraSlot(ClientSessionHandler, OnChunkUpdate, m_onChunkUpdate);
 			NazaraSlot(ClientSessionHandler, OnControlledEntityChanged, m_onControlledEntityChanged);
+			NazaraSlot(ClientSessionHandler, OnInputHandled, m_onInputHandled);
 			NazaraSlot(ClientSessionHandler, OnPlayerLeave, m_onPlayerLeave);
 			NazaraSlot(ClientSessionHandler, OnPlayerJoined, m_onPlayerJoined);
 			NazaraSlot(Nz::Canvas, OnUnhandledKeyPressed, m_onUnhandledKeyPressed);
@@ -65,20 +66,29 @@ namespace tsom
 				entt::handle entity;
 			};
 
+			struct InputRotation
+			{
+				InputIndex inputIndex;
+				Nz::EulerAnglesf inputRotation;
+			};
+
 			std::shared_ptr<StateData> m_stateData;
 			std::size_t m_selectedBlock;
 			std::unique_ptr<ClientPlanet> m_planet;
 			std::unique_ptr<ClientChunkEntities> m_planetEntities;
 			std::unique_ptr<Chatbox> m_chatBox;
+			std::vector<InputRotation> m_predictedInputRotations;
 			std::vector<InventorySlot> m_inventorySlots;
 			entt::handle m_cameraEntity;
 			entt::handle m_controlledEntity;
 			entt::handle m_sunLightEntity;
 			entt::handle m_skyboxEntity;
-			Nz::EulerAnglesf m_cameraRotation;
+			Nz::EulerAnglesf m_predictedCameraRotation;
+			Nz::EulerAnglesf m_remainingCameraRotation;
 			Nz::Quaternionf m_upCorrection;
 			Nz::Time m_tickAccumulator;
 			Nz::Time m_tickDuration;
+			Nz::UInt8 m_nextInputIndex;
 			BlockIndex m_selectedBlockIndex;
 			EscapeMenu m_escapeMenu;
 			bool m_isMouseLocked;

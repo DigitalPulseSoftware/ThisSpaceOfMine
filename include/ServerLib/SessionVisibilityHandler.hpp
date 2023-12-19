@@ -8,6 +8,7 @@
 #define TSOM_SERVERLIB_SESSIONVISIBILITYHANDLER_HPP
 
 #include <CommonLib/Chunk.hpp>
+#include <CommonLib/PlayerInputs.hpp>
 #include <CommonLib/Protocol/Packets.hpp>
 #include <ServerLib/Export.hpp>
 #include <NazaraUtils/Bitset.hpp>
@@ -38,6 +39,8 @@ namespace tsom
 			void Dispatch(Nz::UInt16 tickIndex);
 
 			Chunk* GetChunkByIndex(std::size_t chunkIndex) const;
+
+			inline void UpdateLastInputIndex(InputIndex inputIndex);
 
 			SessionVisibilityHandler& operator=(const SessionVisibilityHandler&) = delete;
 			SessionVisibilityHandler& operator=(SessionVisibilityHandler&&) = delete;
@@ -81,6 +84,7 @@ namespace tsom
 			Nz::Bitset<Nz::UInt64> m_newlyHiddenChunk;
 			Nz::Bitset<Nz::UInt64> m_newlyVisibleChunk;
 			Nz::Bitset<Nz::UInt64> m_updatedChunk;
+			InputIndex m_lastInputIndex;
 			NetworkSession* m_networkSession;
 	};
 }

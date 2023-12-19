@@ -143,6 +143,7 @@ namespace tsom
 			};
 
 			Nz::UInt16 tickIndex;
+			InputIndex lastInputIndex;
 			std::vector<EntityData> entities;
 		};
 

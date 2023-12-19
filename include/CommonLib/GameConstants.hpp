@@ -9,11 +9,15 @@
 
 #include <NazaraUtils/Prerequisites.hpp>
 #include <Nazara/Core/Time.hpp>
+#include <Nazara/Math/Angle.hpp>
 
 namespace tsom::Constants
 {
 	constexpr Nz::Time TickDuration = Nz::Time::TickDuration(60);
 	constexpr Nz::UInt16 ServerPort = 29536;
+
+	// Player constants
+	constexpr Nz::DegreeAnglef PlayerRotationSpeed = 90.f;
 }
 
 #endif

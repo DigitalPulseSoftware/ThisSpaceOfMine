@@ -35,7 +35,8 @@ namespace tsom
 	m_tickAccumulator(Nz::Time::Zero()),
 	m_tickDuration(Constants::TickDuration),
 	m_escapeMenu(m_stateData->canvas),
-	m_isMouseLocked(true)
+	m_isMouseLocked(true),
+	m_nextInputIndex(1)
 	{
 		auto& filesystem = m_stateData->app->GetComponent<Nz::AppFilesystemComponent>();
 
@@ -180,11 +181,6 @@ namespace tsom
 		m_onControlledEntityChanged.Connect(m_stateData->sessionHandler->OnControlledEntityChanged, [&](entt::handle entity)
 		{
 			m_controlledEntity = entity;
-			if (m_controlledEntity)
-			{
-				auto& entityNode = entity.get<Nz::NodeComponent>();
-				m_cameraRotation = entityNode.GetRotation();
-			}
 		});
 
 		m_onChunkCreate.Connect(m_stateData->sessionHandler->OnChunkCreate, [&](const Packets::ChunkCreate& chunkCreate)
@@ -208,6 +204,22 @@ namespace tsom
 			Chunk* chunk = m_planet->GetChunkByNetworkIndex(chunkUpdate.chunkId);
 			for (auto&& [blockPos, blockIndex] : chunkUpdate.updates)
 				chunk->UpdateBlock({ blockPos.x, blockPos.y, blockPos.z }, Nz::SafeCast<BlockIndex>(blockIndex));
+		});
+
+		m_onInputHandled.Connect(m_stateData->sessionHandler->OnInputHandled, [&](InputIndex inputIndex)
+		{
+			// Remove processed inputs
+			auto it = std::find_if(m_predictedInputRotations.begin(), m_predictedInputRotations.end(), [&](const InputRotation& inputRotation)
+			{
+				return IsInputMoreRecent(inputRotation.inputIndex, inputIndex);
+			});
+			m_predictedInputRotations.erase(m_predictedInputRotations.begin(), it);
+
+			m_predictedCameraRotation.yaw = Nz::DegreeAnglef::Zero();
+			for (const InputRotation& predictedRotation : m_predictedInputRotations)
+				m_predictedCameraRotation.yaw += predictedRotation.inputRotation.yaw;
+
+			fmt::print("{0}\n", fmt::streamed(m_predictedCameraRotation.yaw));
 		});
 		
 		m_chatBox = std::make_unique<Chatbox>(*m_stateData->renderTarget, m_stateData->canvas);
@@ -279,6 +291,13 @@ namespace tsom
 					gfxComponent.AttachRenderable(std::move(colliderModel), 0x0000FFFF);
 					break;
 				}
+
+				case Nz::Keyboard::VKey::F3:
+				{
+					m_remainingCameraRotation.yaw -= Nz::DegreeAnglef(10.f);
+					break;
+				}
+
 
 				default:
 					break;
@@ -362,7 +381,8 @@ namespace tsom
 
 		Nz::WindowEventHandler& eventHandler = m_stateData->window->GetEventHandler();
 
-		m_cameraRotation = Nz::EulerAnglesf(-30.f, 0.f, 0.f);
+		m_predictedCameraRotation = Nz::EulerAnglesf::Zero();
+		m_remainingCameraRotation = Nz::EulerAnglesf(-30.f, 0.f, 0.f);
 		eventHandler.OnMouseMoved.Connect([&](const Nz::WindowEventHandler*, const Nz::WindowEvent::MouseMoveEvent& event)
 		{
 			if (!m_isMouseLocked)
@@ -372,11 +392,17 @@ namespace tsom
 			float sensitivity = 0.3f; // Sensibilité de la souris
 
 			// On modifie l'angle de la caméra grâce au déplacement relatif sur X de la souris
-			m_cameraRotation.yaw = m_cameraRotation.yaw - event.deltaX * sensitivity;
-			m_cameraRotation.yaw.Normalize();
+			m_remainingCameraRotation.yaw -= event.deltaX * sensitivity;
+			m_remainingCameraRotation.pitch -= event.deltaY * sensitivity;
+
+			m_predictedCameraRotation.pitch -= event.deltaY * sensitivity;
+			m_predictedCameraRotation.yaw -= event.deltaX * sensitivity;
+
+			//m_cameraRotation.yaw = m_cameraRotation.yaw - event.deltaX * sensitivity;
+			//m_cameraRotation.yaw.Normalize();
 
 			// Idem, mais pour éviter les problèmes de calcul de la matrice de vue, on restreint les angles
-			m_cameraRotation.pitch = Nz::Clamp(m_cameraRotation.pitch - event.deltaY * sensitivity, -89.f, 89.f);
+			//m_cameraRotation.pitch = Nz::Clamp(m_cameraRotation.pitch - event.deltaY * sensitivity, -89.f, 89.f);
 
 			//auto& playerRotNode = playerCamera.get<Nz::NodeComponent>();
 			//playerRotNode.SetRotation(camAngles);
@@ -499,8 +525,8 @@ namespace tsom
 		m_tickAccumulator += elapsedTime;
 		while (m_tickAccumulator >= m_tickDuration)
 		{
-			OnTick(m_tickDuration);
 			m_tickAccumulator -= m_tickDuration;
+			OnTick(m_tickDuration, m_tickAccumulator < m_tickDuration);
 		}
 
 		auto& debugDrawer = m_stateData->world->GetSystem<Nz::RenderSystem>().GetFramePipeline().GetDebugDrawer();
@@ -559,7 +585,7 @@ namespace tsom
 #else
 			cameraNode.SetPosition(characterNode.GetPosition() + characterNode.GetRotation() * (Nz::Vector3f::Up() * 1.6f));
 			//cameraNode.SetRotation(characterNode.GetRotation());
-			cameraNode.SetRotation(m_upCorrection * Nz::Quaternionf(m_cameraRotation));
+			cameraNode.SetRotation(characterNode.GetRotation() * Nz::Quaternionf(m_predictedCameraRotation));
 #endif
 		}
 
@@ -618,29 +644,22 @@ namespace tsom
 
 
 		m_controlledEntity = m_stateData->sessionHandler->GetControlledEntity();
-		if (m_controlledEntity)
-		{
-			auto& playerNode = m_controlledEntity.get<Nz::NodeComponent>();
-
-			Nz::Vector3f playerUp = playerNode.GetUp();
-			if (Nz::Vector3f previousUp = m_upCorrection * Nz::Vector3f::Up(); !previousUp.ApproxEqual(playerUp, 0.001f))
-			{
-				m_upCorrection = Nz::Quaternionf::RotationBetween(previousUp, playerUp) * m_upCorrection;
-				m_upCorrection.Normalize();
-			}
-		}
 
 		return true;
 	}
 
-	void GameState::OnTick(Nz::Time elapsedTime)
+	void GameState::OnTick(Nz::Time elapsedTime, bool lastTick)
 	{
-		SendInputs();
+		if (lastTick)
+			SendInputs();
 	}
 
 	void GameState::SendInputs()
 	{
 		Packets::UpdatePlayerInputs inputPacket;
+
+		inputPacket.inputs.index = m_nextInputIndex++;
+
 		if (m_isMouseLocked)
 		{
 			inputPacket.inputs.jump = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::Space);
@@ -653,8 +672,19 @@ namespace tsom
 
 		if (m_controlledEntity)
 		{
-			inputPacket.inputs.pitch = m_cameraRotation.pitch;
-			inputPacket.inputs.yaw = m_cameraRotation.yaw;
+			Nz::DegreeAnglef inputPitch = Nz::DegreeAnglef::Clamp(m_remainingCameraRotation.pitch, -Constants::PlayerRotationSpeed, Constants::PlayerRotationSpeed);
+			Nz::DegreeAnglef inputYaw = Nz::DegreeAnglef::Clamp(m_remainingCameraRotation.yaw, -Constants::PlayerRotationSpeed, Constants::PlayerRotationSpeed);
+
+			inputPacket.inputs.pitch = inputPitch;
+			inputPacket.inputs.yaw = inputYaw;
+
+			m_remainingCameraRotation.pitch -= inputPitch;
+			m_remainingCameraRotation.yaw -= inputYaw;
+
+			m_predictedInputRotations.push_back({
+				.inputIndex = inputPacket.inputs.index,
+				.inputRotation = Nz::EulerAnglesf(inputPacket.inputs.pitch, inputPacket.inputs.yaw, Nz::DegreeAnglef::Zero())
+			});
 		}
 
 		m_stateData->networkSession->SendPacket(inputPacket);

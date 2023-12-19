@@ -31,80 +31,39 @@ namespace tsom
 
 	void CharacterController::PostSimulate(Nz::JoltCharacter& character, float elapsedTime)
 	{
+		auto [charPos, charRot] = character.GetPositionAndRotation();
+		Nz::Vector3f characterPosition = charPos + charRot * Nz::Vector3f::Down() * 0.9f;
+		Nz::Vector3f charUp = character.GetUp();
+
+		Nz::Quaternionf newRotation = charRot;
+		Nz::Vector3f newUp = charUp;
+
+		// Update up vector if player is around a gravity well
 		if (m_planet)
 		{
-			auto [charPos, charRot] = character.GetPositionAndRotation();
-			Nz::Vector3f characterPosition = charPos + charRot * Nz::Vector3f::Down() * 0.9f;
-			Nz::Vector3f charUp = character.GetUp();
-
-			// Forward (rotation around up vector)
-			Nz::Quaternionf rotationAroundUp = Nz::Quaternionf(m_lastInputs.yaw, charUp);
-			Nz::Vector3f forward = rotationAroundUp * Nz::Vector3f::Forward();
-
-			Nz::Quaternionf newRotation = charRot;
-			if (Nz::Vector3f previousForward = charRot * Nz::Vector3f::Forward(); !previousForward.ApproxEqual(forward, 0.001f))
-			{
-				newRotation = Nz::Quaternionf::RotationBetween(previousForward, forward) * charRot;
-				newRotation.Normalize();
-			}
-
-			// Up
 			Nz::Vector3f targetUp = m_planet->ComputeUpDirection(characterPosition);
-			Nz::Vector3f newUp = Nz::Vector3f::RotateTowards(charUp, targetUp, Nz::DegreeAnglef(90.f) * elapsedTime);
+			newUp = Nz::Vector3f::RotateTowards(charUp, targetUp, Nz::DegreeAnglef(90.f) * elapsedTime);
 
-			if (Nz::Vector3f previousUp = newRotation * Nz::Vector3f::Up(); !previousUp.ApproxEqual(newUp, 0.001f))
+			if (Nz::Vector3f previousUp = newRotation * Nz::Vector3f::Up(); !previousUp.ApproxEqual(newUp, 0.00001f))
 			{
 				Nz::Quaternionf upCorrected = Nz::Quaternionf::RotationBetween(previousUp, newUp) * newRotation;
 				upCorrected.Normalize();
 
-				Nz::JoltPhysWorld3D& physWorld = character.GetPhysWorld();
-				bool doesHit = false;
-				float maxPenetrationDepth = -1.f;
-				Nz::Vector3f penetrationAxis;
-				physWorld.CollisionQuery(*character.GetCollider(), Nz::Matrix4f::Transform(charPos, upCorrected), Nz::Vector3f(1.05f), [&](const Nz::JoltPhysWorld3D::ShapeCollisionInfo& hitInfo) -> std::optional<float>
-				{
-					if (hitInfo.hitBody == &character)
-						return {};
-
-					doesHit = true;
-					if (hitInfo.penetrationDepth > maxPenetrationDepth)
-					{
-						maxPenetrationDepth = hitInfo.penetrationDepth;
-						penetrationAxis = hitInfo.penetrationAxis;
-					}
-
-					return 0.f;
-				});
-
-				if (doesHit)
-				{
-					Nz::Vector3f correctedPos = charPos + penetrationAxis * maxPenetrationDepth * 1.05f;
-
-					doesHit = false;
-					physWorld.CollisionQuery(*character.GetCollider(), Nz::Matrix4f::Transform(correctedPos, upCorrected), [&](const Nz::JoltPhysWorld3D::ShapeCollisionInfo& hitInfo) -> std::optional<float>
-					{
-						if (hitInfo.hitBody == &character)
-							return {};
-
-						doesHit = true;
-						return 0.f;
-					});
-
-					if (!doesHit)
-					{
-						charPos = correctedPos;
-						newRotation = upCorrected;
-					}
-				}
-				else
-					newRotation = upCorrected;
+				newRotation = upCorrected;
 			}
+		}
 
-			if (!Nz::Quaternionf::ApproxEqual(newRotation, charRot, 0.001f))
-			{
-				character.TeleportTo(charPos, newRotation);
-				character.SetUp(newUp);
-			}
+		// Yaw (rotation around up vector)
+		if (!m_lastInputs.yaw.ApproxEqual(Nz::RadianAnglef::Zero()))
+		{
+			newRotation = newRotation * Nz::Quaternionf(m_lastInputs.yaw, Nz::Vector3f::Up());
+			newRotation.Normalize();
+		}
+
+		if (!Nz::Quaternionf::ApproxEqual(newRotation, charRot, 0.00001f))
+		{
+			character.SetRotation(newRotation);
+			character.SetUp(newUp);
 		}
 	}
 
