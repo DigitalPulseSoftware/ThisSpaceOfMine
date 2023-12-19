@@ -166,8 +166,6 @@ namespace tsom
 
 	void ClientSessionHandler::SetupEntity(entt::handle entity, Packets::Helper::PlayerControlledData&& entityData)
 	{
-		//entity.emplace<MovementInterpolationComponent>(m_lastTickIndex);
-
 		auto collider = std::make_shared<Nz::JoltCapsuleCollider3D>(1.8f, 0.4f);
 		entity.emplace<Nz::JoltRigidBody3DComponent>(Nz::JoltRigidBody3D::DynamicSettings(collider, 0.f));
 
@@ -178,6 +176,8 @@ namespace tsom
 		}
 		else
 		{
+			entity.emplace<MovementInterpolationComponent>(m_lastTickIndex);
+
 			// Player model (collider for now)
 			std::shared_ptr<Nz::MaterialInstance> colliderMat = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic);
 			colliderMat->SetValueProperty("BaseColor", Nz::Color::Green());
