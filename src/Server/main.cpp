@@ -5,6 +5,7 @@
 #include <ServerLib/ServerInstanceAppComponent.hpp>
 #include <ServerLib/Session/InitialSessionHandler.hpp>
 #include <Main/Main.hpp>
+#include <fmt/color.h>
 
 int ServerMain(int argc, char* argv[])
 {
@@ -15,6 +16,8 @@ int ServerMain(int argc, char* argv[])
 	auto& instance = worldAppComponent.AddInstance();
 	auto& sessionManager = instance.AddSessionManager(tsom::Constants::ServerPort);
 	sessionManager.SetDefaultHandler<tsom::InitialSessionHandler>(std::ref(instance));
+
+	fmt::print(fg(fmt::color::lime_green), "server ready.\n");
 
 	return app.Run();
 }

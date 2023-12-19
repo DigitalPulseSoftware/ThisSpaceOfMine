@@ -5,6 +5,7 @@
 #include <Main/Main.hpp>
 #include <CommonLib/Version.hpp>
 #include <CommonLib/Utility/CrashHandler.hpp>
+#include <fmt/color.h>
 #include <fmt/format.h>
 #include <exception>
 
@@ -14,7 +15,7 @@
 
 int TSOMEntry(int argc, char* argv[], int(*mainFunc)(int argc, char* argv[]))
 {
-	fmt::print("TSOM {0}.{1}.{2} {3} ({4}) - {5}\n", tsom::GameMajorVersion, tsom::GameMinorVersion, tsom::GamePatchVersion, tsom::BuildBranch, tsom::BuildCommit, tsom::BuildCommitDate);
+	fmt::print(fg(fmt::color::white), "TSOM {0}.{1}.{2} {3} ({4}) - {5}\n", tsom::GameMajorVersion, tsom::GameMinorVersion, tsom::GamePatchVersion, tsom::BuildBranch, tsom::BuildCommit, tsom::BuildCommitDate);
 
 #ifdef NAZARA_PLATFORM_WINDOWS
 	if (IsDebuggerPresent())
