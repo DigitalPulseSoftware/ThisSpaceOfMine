@@ -218,8 +218,6 @@ namespace tsom
 			m_predictedCameraRotation.yaw = Nz::DegreeAnglef::Zero();
 			for (const InputRotation& predictedRotation : m_predictedInputRotations)
 				m_predictedCameraRotation.yaw += predictedRotation.inputRotation.yaw;
-
-			fmt::print("{0}\n", fmt::streamed(m_predictedCameraRotation.yaw));
 		});
 		
 		m_chatBox = std::make_unique<Chatbox>(*m_stateData->renderTarget, m_stateData->canvas);
@@ -381,8 +379,9 @@ namespace tsom
 
 		Nz::WindowEventHandler& eventHandler = m_stateData->window->GetEventHandler();
 
-		m_predictedCameraRotation = Nz::EulerAnglesf::Zero();
 		m_remainingCameraRotation = Nz::EulerAnglesf(-30.f, 0.f, 0.f);
+		m_predictedCameraRotation = m_remainingCameraRotation;
+
 		eventHandler.OnMouseMoved.Connect([&](const Nz::WindowEventHandler*, const Nz::WindowEvent::MouseMoveEvent& event)
 		{
 			if (!m_isMouseLocked)
@@ -391,21 +390,11 @@ namespace tsom
 			// Gestion de la caméra free-fly (Rotation)
 			float sensitivity = 0.3f; // Sensibilité de la souris
 
-			// On modifie l'angle de la caméra grâce au déplacement relatif sur X de la souris
 			m_remainingCameraRotation.yaw -= event.deltaX * sensitivity;
 			m_remainingCameraRotation.pitch -= event.deltaY * sensitivity;
 
 			m_predictedCameraRotation.pitch -= event.deltaY * sensitivity;
 			m_predictedCameraRotation.yaw -= event.deltaX * sensitivity;
-
-			//m_cameraRotation.yaw = m_cameraRotation.yaw - event.deltaX * sensitivity;
-			//m_cameraRotation.yaw.Normalize();
-
-			// Idem, mais pour éviter les problèmes de calcul de la matrice de vue, on restreint les angles
-			//m_cameraRotation.pitch = Nz::Clamp(m_cameraRotation.pitch - event.deltaY * sensitivity, -89.f, 89.f);
-
-			//auto& playerRotNode = playerCamera.get<Nz::NodeComponent>();
-			//playerRotNode.SetRotation(camAngles);
 		});
 
 		eventHandler.OnMouseButtonReleased.Connect([&](const Nz::WindowEventHandler*, const Nz::WindowEvent::MouseButtonEvent& event)
