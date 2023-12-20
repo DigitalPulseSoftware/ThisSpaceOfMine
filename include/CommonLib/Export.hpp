@@ -10,13 +10,13 @@
 #include <NazaraUtils/Prerequisites.hpp>
 
 #ifdef TSOM_COMMONLIB_STATIC
-    #define TSOM_COMMONLIB_API
+	#define TSOM_COMMONLIB_API
 #else
-    #ifdef TSOM_COMMONLIB_BUILD
-        #define TSOM_COMMONLIB_API NAZARA_EXPORT
-    #else
-        #define TSOM_COMMONLIB_API NAZARA_IMPORT
-    #endif
+	#ifdef TSOM_COMMONLIB_BUILD
+		#define TSOM_COMMONLIB_API NAZARA_EXPORT
+	#else
+		#define TSOM_COMMONLIB_API NAZARA_IMPORT
+	#endif
 #endif
 
 #endif

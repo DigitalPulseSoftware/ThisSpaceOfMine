@@ -1,7 +1,7 @@
 -- Should the CommonLib be compiled statically? (takes more space)
 option("commonlib_static", { default = false, defines = "TSOM_COMMONLIB_STATIC"})
 option("clientlib_static", { default = false, defines = "TSOM_CLIENTLIB_STATIC"})
-option("serverlib_static", { default = false,  defines = "TSOM_SERVERLIB_STATIC"})
+option("serverlib_static", { default = false, defines = "TSOM_SERVERLIB_STATIC"})
 
 add_repositories("nazara-repo https://github.com/NazaraEngine/xmake-repo.git")
 add_requires("nazaraengine >=2023.08.15", { configs = { debug = is_mode("debug"), with_symbols = true }})
@@ -12,7 +12,7 @@ if is_plat("windows") then
 	add_requires("stackwalker 5b0df7a4db8896f6b6dc45d36e383c52577e3c6b")
 end
 
-add_requireconfs("fmt", "stackwalker", { debug = is_mode("debug", "asan") })
+add_requireconfs("fmt", "stackwalker", { debug = is_mode("debug") })
 
 add_rules("mode.debug", "mode.releasedbg", "mode.release")
 add_rules("plugin.vsxmake.autoupdate")

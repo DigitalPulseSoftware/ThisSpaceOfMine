@@ -10,13 +10,13 @@
 #include <NazaraUtils/Prerequisites.hpp>
 
 #ifdef TSOM_CLIENTLIB_STATIC
-    #define TSOM_CLIENTLIB_API
+	#define TSOM_CLIENTLIB_API
 #else
-    #ifdef TSOM_CLIENTLIB_BUILD
-        #define TSOM_CLIENTLIB_API NAZARA_EXPORT
-    #else
-        #define TSOM_CLIENTLIB_API NAZARA_IMPORT
-    #endif
+	#ifdef TSOM_CLIENTLIB_BUILD
+		#define TSOM_CLIENTLIB_API NAZARA_EXPORT
+	#else
+		#define TSOM_CLIENTLIB_API NAZARA_IMPORT
+	#endif
 #endif
 
 #endif

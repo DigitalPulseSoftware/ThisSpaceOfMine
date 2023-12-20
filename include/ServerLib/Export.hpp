@@ -10,13 +10,13 @@
 #include <NazaraUtils/Prerequisites.hpp>
 
 #ifdef TSOM_SERVERLIB_STATIC
-    #define TSOM_SERVERLIB_API
+	#define TSOM_SERVERLIB_API
 #else
-    #ifdef TSOM_SERVERLIB_BUILD
-        #define TSOM_SERVERLIB_API NAZARA_EXPORT
-    #else
-        #define TSOM_SERVERLIB_API NAZARA_IMPORT
-    #endif
+	#ifdef TSOM_SERVERLIB_BUILD
+		#define TSOM_SERVERLIB_API NAZARA_EXPORT
+	#else
+		#define TSOM_SERVERLIB_API NAZARA_IMPORT
+	#endif
 #endif
 
 #endif
