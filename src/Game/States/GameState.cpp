@@ -208,6 +208,9 @@ namespace tsom
 
 		m_onInputHandled.Connect(m_stateData->sessionHandler->OnInputHandled, [&](InputIndex inputIndex)
 		{
+			if (m_predictedInputRotations.empty())
+				return;
+
 			// Remove processed inputs
 			auto it = std::find_if(m_predictedInputRotations.begin(), m_predictedInputRotations.end(), [&](const InputRotation& inputRotation)
 			{
@@ -218,6 +221,11 @@ namespace tsom
 			m_predictedCameraRotation.yaw = Nz::DegreeAnglef::Zero();
 			for (const InputRotation& predictedRotation : m_predictedInputRotations)
 				m_predictedCameraRotation.yaw += predictedRotation.inputRotation.yaw;
+
+			auto& characterNode = m_controlledEntity.get<Nz::NodeComponent>();
+
+			auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
+			cameraNode.SetRotation(Nz::Quaternionf::Normalize(characterNode.GetRotation()* Nz::Quaternionf(m_predictedCameraRotation)));
 		});
 		
 		m_chatBox = std::make_unique<Chatbox>(*m_stateData->renderTarget, m_stateData->canvas);
@@ -387,14 +395,16 @@ namespace tsom
 			if (!m_isMouseLocked)
 				return;
 
-			// Gestion de la caméra free-fly (Rotation)
-			float sensitivity = 0.3f; // Sensibilité de la souris
+			constexpr float sensitivity = 0.3f; // Mouse sensitivity
 
-			m_remainingCameraRotation.yaw -= event.deltaX * sensitivity;
-			m_remainingCameraRotation.pitch -= event.deltaY * sensitivity;
+			float pitchMod = -event.deltaY * sensitivity;
+			float yawMod = -event.deltaX * sensitivity;
 
-			m_predictedCameraRotation.pitch -= event.deltaY * sensitivity;
-			m_predictedCameraRotation.yaw -= event.deltaX * sensitivity;
+			m_remainingCameraRotation.pitch += pitchMod;
+			m_remainingCameraRotation.yaw += yawMod;
+
+			m_predictedCameraRotation.pitch += pitchMod;
+			m_predictedCameraRotation.yaw += yawMod;
 		});
 
 		eventHandler.OnMouseButtonReleased.Connect([&](const Nz::WindowEventHandler*, const Nz::WindowEvent::MouseButtonEvent& event)
@@ -574,7 +584,7 @@ namespace tsom
 #else
 			cameraNode.SetPosition(characterNode.GetPosition() + characterNode.GetRotation() * (Nz::Vector3f::Up() * 1.6f));
 			//cameraNode.SetRotation(characterNode.GetRotation());
-			cameraNode.SetRotation(characterNode.GetRotation() * Nz::Quaternionf(m_predictedCameraRotation));
+			cameraNode.SetRotation(Nz::Quaternionf::Normalize(characterNode.GetRotation() * Nz::Quaternionf(m_predictedCameraRotation)));
 #endif
 		}
 
@@ -661,19 +671,22 @@ namespace tsom
 
 		if (m_controlledEntity)
 		{
-			Nz::DegreeAnglef inputPitch = Nz::DegreeAnglef::Clamp(m_remainingCameraRotation.pitch, -Constants::PlayerRotationSpeed, Constants::PlayerRotationSpeed);
-			Nz::DegreeAnglef inputYaw = Nz::DegreeAnglef::Clamp(m_remainingCameraRotation.yaw, -Constants::PlayerRotationSpeed, Constants::PlayerRotationSpeed);
+			if (!m_remainingCameraRotation.pitch.ApproxEqual(Nz::DegreeAnglef::Zero()) || !m_remainingCameraRotation.yaw.ApproxEqual(Nz::DegreeAnglef::Zero()))
+			{
+				Nz::DegreeAnglef inputPitch = Nz::DegreeAnglef::Clamp(m_remainingCameraRotation.pitch, -Constants::PlayerRotationSpeed, Constants::PlayerRotationSpeed);
+				Nz::DegreeAnglef inputYaw = Nz::DegreeAnglef::Clamp(m_remainingCameraRotation.yaw, -Constants::PlayerRotationSpeed, Constants::PlayerRotationSpeed);
 
-			inputPacket.inputs.pitch = inputPitch;
-			inputPacket.inputs.yaw = inputYaw;
+				inputPacket.inputs.pitch = inputPitch;
+				inputPacket.inputs.yaw = inputYaw;
 
-			m_remainingCameraRotation.pitch -= inputPitch;
-			m_remainingCameraRotation.yaw -= inputYaw;
+				m_remainingCameraRotation.pitch -= inputPitch;
+				m_remainingCameraRotation.yaw -= inputYaw;
 
-			m_predictedInputRotations.push_back({
-				.inputIndex = inputPacket.inputs.index,
-				.inputRotation = Nz::EulerAnglesf(inputPacket.inputs.pitch, inputPacket.inputs.yaw, Nz::DegreeAnglef::Zero())
-			});
+				m_predictedInputRotations.push_back({
+					.inputIndex = inputPacket.inputs.index,
+					.inputRotation = Nz::EulerAnglesf(inputPacket.inputs.pitch, inputPacket.inputs.yaw, Nz::DegreeAnglef::Zero())
+				});
+			}
 		}
 
 		m_stateData->networkSession->SendPacket(inputPacket);
