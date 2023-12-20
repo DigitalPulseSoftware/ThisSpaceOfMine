@@ -13,6 +13,10 @@
 
 namespace tsom
 {
+	TSOM_COMMONLIB_API extern std::uint32_t GameMajorVersion;
+	TSOM_COMMONLIB_API extern std::uint32_t GameMinorVersion;
+	TSOM_COMMONLIB_API extern std::uint32_t GamePatchVersion;
+
 	TSOM_COMMONLIB_API extern std::string_view BuildSystem;
 	TSOM_COMMONLIB_API extern std::string_view BuildBranch;
 	TSOM_COMMONLIB_API extern std::string_view BuildCommit;
@@ -29,14 +33,9 @@ namespace tsom
 	{
 		majorVersion = (version >> 22) & 0x3FF;
 		minorVersion = (version >> 12) & 0x3FF;
-		patchVersion = (version >> 0) & 0xFFF;
+		patchVersion = (version >> 0)  & 0xFFF;
 	}
 
-	constexpr std::uint32_t GameMajorVersion = 0;
-	constexpr std::uint32_t GameMinorVersion = 0;
-	constexpr std::uint32_t GamePatchVersion = 1;
-
-	constexpr std::uint32_t GameVersion = BuildVersion(GameMajorVersion, GameMinorVersion, GamePatchVersion);
 }
 
 #include <CommonLib/Version.inl>

@@ -170,7 +170,7 @@ namespace tsom
 			std::ostringstream ss;
 			ss << std::fixed;
 
-			ss << "Game version: " << GameMajorVersion << "." << GameMinorVersion << "." << GamePatchVersion << " (" << GameVersion << ")" << "\n";
+			ss << "Game version: " << GetVersionInfo() << "\n";
 			ss << "Build info: " << GetBuildInfo() << "\n";
 
 			ss << "CPU: " << Nz::Core::Instance()->GetHardwareInfo().GetCpuBrandString() << "\n";

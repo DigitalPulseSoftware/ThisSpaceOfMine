@@ -20,7 +20,7 @@ add_rules("plugin.vsxmake.autoupdate")
 --set_policy("package.requires_lock", true)
 
 set_project("ThisSpaceOfMine")
-set_version("0.0.1")
+set_version("0.1.0")
 
 set_languages("cxx20")
 set_rundir(".")
@@ -56,6 +56,7 @@ target("CommonLib", function ()
 	end
 
 	before_build(function (target, opt)
+		import("core.base.semver")
 		import("core.project.depend")
 		import("detect.tools.find_git")
 		import("utils.progress")
@@ -98,22 +99,26 @@ target("CommonLib", function ()
 			}
 		}
 
+		local targetversion = semver.new(target:version())
 
 		local dependfile = target:dependfile("versioninfo")
 		depend.on_changed(function ()
-        	progress.show(opt.progress, "${color.build.target}updating version info")
+			progress.show(opt.progress, "${color.build.target}updating version info")
 			io.writefile(targetfile, string.format([[
+std::uint32_t GameMajorVersion = %s;
+std::uint32_t GameMinorVersion = %s;
+std::uint32_t GamePatchVersion = %s;
 std::string_view BuildSystem = "%s";
 std::string_view BuildBranch = "%s";
 std::string_view BuildCommit = "%s";
 std::string_view BuildCommitDate = "%s";
-]], system, branch, commitHash, commitDate))
+]], targetversion:major(), targetversion:minor(), targetversion:patch(), system, branch, commitHash, commitDate))
 		end,
 		{
 			dependfile = dependfile, 
 			files = targetfile,
 			changed = target:is_rebuilt(),
-			values = {system, branch, commitHash, commitDate}
+			values = {targetversion, system, branch, commitHash, commitDate}
 		})
 	end)
 
