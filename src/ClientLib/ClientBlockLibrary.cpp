@@ -76,7 +76,6 @@ namespace tsom
 
 			Nz::TextureViewInfo slotTexView = {
 				.viewType = Nz::ImageType::E2D,
-				.reinterpretFormat = Nz::PixelFormat::RGBA8, //< FIXME: Disable sRGB in UI?
 				.baseArrayLayer = blockData.texIndices[Direction::Up]
 			};
 

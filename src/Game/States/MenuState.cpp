@@ -51,7 +51,7 @@ namespace tsom
 		m_loginArea->SetTextColor(Nz::Color::Black());
 
 		m_connectButton = m_layout->Add<Nz::ButtonWidget>();
-		m_connectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Connect", 36, Nz::TextStyle_Regular, Nz::Color(0.13f)));
+		m_connectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Connect", 36, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
 		m_connectButton->OnButtonTrigger.Connect([this](const Nz::ButtonWidget*)
 		{
 			OnConnectPressed();

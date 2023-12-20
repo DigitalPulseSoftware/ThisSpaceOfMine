@@ -87,7 +87,7 @@ namespace tsom
 			slotMat->SetTextureProperty("BaseColorMap", m_stateData->blockLibrary->GetPreviewTexture(blockIndex));
 
 			slot.sprite = std::make_shared<Nz::Sprite>(std::move(slotMat));
-			slot.sprite->SetColor((active) ? Nz::Color::White() : Nz::Color::Gray());
+			slot.sprite->SetColor((active) ? Nz::Color::White() : Nz::Color::sRGBToLinear(Nz::Color::Gray()));
 			slot.sprite->SetSize({ InventoryTileSize, InventoryTileSize });
 
 			slot.entity = m_stateData->world->CreateEntity();
@@ -123,7 +123,7 @@ namespace tsom
 			m_selectedBlockIndex = m_stateData->blockLibrary->GetBlockIndex(s_selectableBlocks[m_selectedBlock]);
 
 			for (std::size_t i = 0; i < m_inventorySlots.size(); ++i)
-				m_inventorySlots[i].sprite->SetColor((i == m_selectedBlock) ? Nz::Color::White() : Nz::Color::Gray());
+				m_inventorySlots[i].sprite->SetColor((i == m_selectedBlock) ? Nz::Color::White() : Nz::Color::sRGBToLinear(Nz::Color::Gray()));
 		});
 
 		m_skyboxEntity = m_stateData->world->CreateEntity();

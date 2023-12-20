@@ -7,7 +7,7 @@ passlist "2D"
 
     attachment "ForwardOutput"
     {
-        format "RGBA8"
+        format "RGBA8_SRGB"
     }
 
     pass "UI Pass"
@@ -18,5 +18,21 @@ passlist "2D"
         flag "LightShadowing"
     }
 
-    output "ForwardOutput"
+    attachment "Gamma corrected"
+    {
+        format "RGBA8"
+    }
+
+    pass "Gamma correction"
+    {
+        impl "PostProcess"
+        {
+            Shader "PostProcess.GammaCorrection"
+        }
+
+        input "Input" "ForwardOutput"
+        output "Output" "Gamma corrected"
+    }
+
+    output "Gamma corrected"
 }
