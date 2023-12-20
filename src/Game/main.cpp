@@ -19,6 +19,7 @@
 #include <Game/States/GameState.hpp>
 #include <Game/States/MenuState.hpp>
 #include <Game/States/StateData.hpp>
+#include <fmt/color.h>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
@@ -27,7 +28,22 @@ int GameMain(int argc, char* argv[])
 	Nz::Application<Nz::Graphics, Nz::JoltPhysics3D, Nz::Network, Nz::Widgets> app(argc, argv);
 
 	auto& filesystem = app.AddComponent<Nz::AppFilesystemComponent>();
-	filesystem.Mount("assets", Nz::Utf8Path("assets"));
+
+	std::filesystem::path assetPath = Nz::Utf8Path("assets");
+	if (!std::filesystem::exists(assetPath))
+	{
+		fmt::print(fg(fmt::color::red), "assets are missing!\n");
+
+		Nz::MessageBox errorBox(Nz::MessageBoxType::Error, "Missing assets folder", "The assets folder was not found, it should be located next to the executable.");
+		errorBox.AddButton(0, Nz::MessageBoxStandardButton::Close);
+		if (auto result = errorBox.Show(); !result)
+			fmt::print(fg(fmt::color::red), "failed to open the error message box: {0}!\n", result.GetError());
+
+		return EXIT_FAILURE;
+	}
+
+	filesystem.Mount("assets", assetPath);
+
 
 	// Register a new SkyboxMaterial shader
 	Nz::Graphics::Instance()->GetShaderModuleResolver()->RegisterModuleDirectory(Nz::Utf8Path("assets/shaders"), true);
