@@ -23,6 +23,7 @@
 
 //#define FREEFLIGHT
 //#define THIRDPERSON
+#define DEBUG_ROTATION 0
 
 namespace tsom
 {
@@ -218,14 +219,38 @@ namespace tsom
 			});
 			m_predictedInputRotations.erase(m_predictedInputRotations.begin(), it);
 
+			auto& characterNode = m_controlledEntity.get<Nz::NodeComponent>();
+
+			auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
+
+#if DEBUG_ROTATION
+			Nz::Quaternionf currentRotation = cameraNode.GetRotation();
+#endif
+
 			m_predictedCameraRotation.yaw = Nz::DegreeAnglef::Zero();
 			for (const InputRotation& predictedRotation : m_predictedInputRotations)
 				m_predictedCameraRotation.yaw += predictedRotation.inputRotation.yaw;
 
-			auto& characterNode = m_controlledEntity.get<Nz::NodeComponent>();
+			Nz::Quaternionf newRotation = Nz::Quaternionf::Normalize(characterNode.GetRotation() * Nz::Quaternionf(m_predictedCameraRotation));
 
-			auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
-			cameraNode.SetRotation(Nz::Quaternionf::Normalize(characterNode.GetRotation()* Nz::Quaternionf(m_predictedCameraRotation)));
+#if DEBUG_ROTATION
+			Nz::Quaternionf err(newRotation.w - currentRotation.w, newRotation.x - currentRotation.x, newRotation.y - currentRotation.y, newRotation.z - currentRotation.z);
+			float errAcc = std::abs(err.w) + std::abs(err.x) + std::abs(err.y) + std::abs(err.z);
+			if (errAcc > 0.000001f)
+			{
+				fmt::print("RECONCILIATION ERROR\n");
+				fmt::print("Starting rotation: {0}\n", fmt::streamed(currentRotation));
+				for (const InputRotation& predictedRotation : m_predictedInputRotations)
+				{
+					fmt::print("Adding yaw: {0} from input {1}\n", predictedRotation.inputRotation.yaw.ToDegrees(), predictedRotation.inputIndex);
+				}
+				fmt::print("Giving rotation {0}\n", fmt::streamed(after));
+
+				fmt::print("Error: {0}\n------\n", fmt::streamed(err));
+			}
+#endif
+
+			cameraNode.SetRotation(newRotation);
 		});
 		
 		m_chatBox = std::make_unique<Chatbox>(*m_stateData->renderTarget, m_stateData->canvas);
@@ -300,7 +325,7 @@ namespace tsom
 
 				case Nz::Keyboard::VKey::F3:
 				{
-					m_remainingCameraRotation.yaw -= Nz::DegreeAnglef(10.f);
+					m_incomingCameraRotation.yaw -= Nz::DegreeAnglef(10.f);
 					break;
 				}
 
@@ -387,8 +412,9 @@ namespace tsom
 
 		Nz::WindowEventHandler& eventHandler = m_stateData->window->GetEventHandler();
 
-		m_remainingCameraRotation = Nz::EulerAnglesf(-30.f, 0.f, 0.f);
+		m_remainingCameraRotation = Nz::EulerAnglesf(0.f, 0.f, 0.f);
 		m_predictedCameraRotation = m_remainingCameraRotation;
+		m_incomingCameraRotation = Nz::EulerAnglesf::Zero();
 
 		eventHandler.OnMouseMoved.Connect([&](const Nz::WindowEventHandler*, const Nz::WindowEvent::MouseMoveEvent& event)
 		{
@@ -400,11 +426,8 @@ namespace tsom
 			float pitchMod = -event.deltaY * sensitivity;
 			float yawMod = -event.deltaX * sensitivity;
 
-			m_remainingCameraRotation.pitch += pitchMod;
-			m_remainingCameraRotation.yaw += yawMod;
-
-			m_predictedCameraRotation.pitch += pitchMod;
-			m_predictedCameraRotation.yaw += yawMod;
+			m_incomingCameraRotation.pitch += pitchMod;
+			m_incomingCameraRotation.yaw += yawMod;
 		});
 
 		eventHandler.OnMouseButtonReleased.Connect([&](const Nz::WindowEventHandler*, const Nz::WindowEvent::MouseButtonEvent& event)
@@ -671,6 +694,12 @@ namespace tsom
 
 		if (m_controlledEntity)
 		{
+			m_remainingCameraRotation.pitch += m_incomingCameraRotation.pitch;
+			m_remainingCameraRotation.yaw += m_incomingCameraRotation.yaw;
+
+			m_incomingCameraRotation.pitch = Nz::DegreeAnglef::Zero();
+			m_incomingCameraRotation.yaw = Nz::DegreeAnglef::Zero();
+
 			if (!m_remainingCameraRotation.pitch.ApproxEqual(Nz::DegreeAnglef::Zero()) || !m_remainingCameraRotation.yaw.ApproxEqual(Nz::DegreeAnglef::Zero()))
 			{
 				Nz::DegreeAnglef inputPitch = Nz::DegreeAnglef::Clamp(m_remainingCameraRotation.pitch, -Constants::PlayerRotationSpeed, Constants::PlayerRotationSpeed);
@@ -681,6 +710,9 @@ namespace tsom
 
 				m_remainingCameraRotation.pitch -= inputPitch;
 				m_remainingCameraRotation.yaw -= inputYaw;
+
+				m_predictedCameraRotation.pitch += inputPitch;
+				m_predictedCameraRotation.yaw += inputYaw;
 
 				m_predictedInputRotations.push_back({
 					.inputIndex = inputPacket.inputs.index,

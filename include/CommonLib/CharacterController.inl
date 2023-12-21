@@ -12,5 +12,6 @@ namespace tsom
 	inline void CharacterController::SetInputs(const PlayerInputs& inputs)
 	{
 		m_lastInputs = inputs;
+		m_allowInputRotation = true;
 	}
 }

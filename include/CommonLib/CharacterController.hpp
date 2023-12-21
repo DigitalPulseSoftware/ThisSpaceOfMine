@@ -43,6 +43,7 @@ namespace tsom
 			Nz::Vector3f m_groundPos;
 			PlayerInputs m_lastInputs;
 			const Planet* m_planet;
+			bool m_allowInputRotation;
 	};
 }
 

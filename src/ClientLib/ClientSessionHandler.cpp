@@ -102,12 +102,6 @@ namespace tsom
 
 	void ClientSessionHandler::HandlePacket(Packets::EntitiesStateUpdate&& stateUpdate)
 	{
-		if (stateUpdate.lastInputIndex != m_lastInputIndex)
-		{
-			OnInputHandled(stateUpdate.lastInputIndex);
-			m_lastInputIndex = stateUpdate.lastInputIndex;
-		}
-
 		for (auto& entityData : stateUpdate.entities)
 		{
 			entt::handle& entity = m_networkIdToEntity[entityData.entityId];
@@ -119,6 +113,12 @@ namespace tsom
 				auto& entityNode = entity.get<Nz::NodeComponent>();
 				entityNode.SetTransform(entityData.newStates.position, entityData.newStates.rotation);
 			}
+		}
+
+		if (stateUpdate.lastInputIndex != m_lastInputIndex)
+		{
+			OnInputHandled(stateUpdate.lastInputIndex);
+			m_lastInputIndex = stateUpdate.lastInputIndex;
 		}
 	}
 

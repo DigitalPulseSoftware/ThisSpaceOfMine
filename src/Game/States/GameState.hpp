@@ -83,8 +83,9 @@ namespace tsom
 			entt::handle m_controlledEntity;
 			entt::handle m_sunLightEntity;
 			entt::handle m_skyboxEntity;
-			Nz::EulerAnglesf m_predictedCameraRotation;
-			Nz::EulerAnglesf m_remainingCameraRotation;
+			Nz::EulerAnglesf m_incomingCameraRotation;  //< Accumulated rotation from inputs (will be applied on inputs)
+			Nz::EulerAnglesf m_predictedCameraRotation; //< Rotation sent to the server
+			Nz::EulerAnglesf m_remainingCameraRotation; //< Remaining rotation to send to the server (in case we rotate too fast)
 			Nz::Quaternionf m_upCorrection;
 			Nz::Time m_tickAccumulator;
 			Nz::Time m_tickDuration;

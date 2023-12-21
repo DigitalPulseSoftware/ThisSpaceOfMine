@@ -11,6 +11,8 @@
 #include <fmt/ostream.h>
 #include <fmt/std.h>
 
+#define DEBUG_ROTATION 0
+
 namespace fixme
 {
 	Nz::Vector3f ProjectVec3(const Nz::Vector3f& vector, const Nz::Vector3f& normal)
@@ -25,7 +27,8 @@ namespace tsom
 {
 	CharacterController::CharacterController() :
 	m_feetPosition(Nz::Vector3f::Down() * 1.8f * 0.5f),
-	m_planet(nullptr)
+	m_planet(nullptr),
+	m_allowInputRotation(false)
 	{
 	}
 
@@ -54,10 +57,18 @@ namespace tsom
 		}
 
 		// Yaw (rotation around up vector)
-		if (!m_lastInputs.yaw.ApproxEqual(Nz::RadianAnglef::Zero()))
+		if (!m_lastInputs.yaw.ApproxEqual(Nz::RadianAnglef::Zero()) && m_allowInputRotation) //< Don't apply the same rotation twice
 		{
+#if DEBUG_ROTATION
+			fmt::print("Applying yaw {0} to {1} from input {2}\n", m_lastInputs.yaw.ToDegrees(), fmt::streamed(newRotation), m_lastInputs.index);
+#endif
 			newRotation = newRotation * Nz::Quaternionf(m_lastInputs.yaw, Nz::Vector3f::Up());
 			newRotation.Normalize();
+#if DEBUG_ROTATION
+			fmt::print("Resulting in {0}\n----\n", fmt::streamed(newRotation));
+#endif
+
+			m_allowInputRotation = false;
 		}
 
 		if (!Nz::Quaternionf::ApproxEqual(newRotation, charRot, 0.00001f))
