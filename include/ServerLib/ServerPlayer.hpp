@@ -14,6 +14,7 @@
 #include <Nazara/Core/ObjectHandle.hpp>
 #include <entt/entt.hpp>
 #include <string>
+#include <vector>
 
 namespace tsom
 {
@@ -44,21 +45,24 @@ namespace tsom
 			inline SessionVisibilityHandler& GetVisibilityHandler();
 			inline const SessionVisibilityHandler& GetVisibilityHandler() const;
 
-			void HandleInputs(const PlayerInputs& inputs);
+			void PushInputs(const PlayerInputs& inputs);
 
 			void Respawn();
+
+			void Tick();
 
 			ServerPlayer& operator=(const ServerPlayer&) = delete;
 			ServerPlayer& operator=(ServerPlayer&&) = delete;
 
 		private:
-			PlayerIndex m_playerIndex;
 			std::shared_ptr<CharacterController> m_controller;
 			std::string m_nickname;
+			std::vector<PlayerInputs> m_inputQueue;
 			entt::handle m_controlledEntity;
 			NetworkSession* m_session;
 			SessionVisibilityHandler m_visibilityHandler;
 			ServerInstance& m_instance;
+			PlayerIndex m_playerIndex;
 	};
 }
 

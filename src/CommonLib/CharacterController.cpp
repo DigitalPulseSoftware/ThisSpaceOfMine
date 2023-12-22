@@ -26,7 +26,8 @@ namespace fixme
 namespace tsom
 {
 	CharacterController::CharacterController() :
-	m_feetPosition(Nz::Vector3f::Down() * 1.8f * 0.5f),
+	m_cameraRotation(Nz::EulerAnglesf::Zero()),
+	m_referenceRotation(Nz::Quaternionf::Identity()),
 	m_planet(nullptr),
 	m_allowInputRotation(false)
 	{
@@ -34,17 +35,17 @@ namespace tsom
 
 	void CharacterController::PostSimulate(Nz::JoltCharacter& character, float elapsedTime)
 	{
-		auto [charPos, charRot] = character.GetPositionAndRotation();
-		Nz::Vector3f characterPosition = charPos + charRot * Nz::Vector3f::Down() * 0.9f;
+		std::tie(m_characterPosition, m_characterRotation) = character.GetPositionAndRotation();
+		Nz::Vector3f characterBasePosition = m_characterPosition + m_referenceRotation * Nz::Vector3f::Down() * 0.9f;
 		Nz::Vector3f charUp = character.GetUp();
 
-		Nz::Quaternionf newRotation = charRot;
+		Nz::Quaternionf newRotation = m_referenceRotation;
 		Nz::Vector3f newUp = charUp;
 
 		// Update up vector if player is around a gravity well
 		if (m_planet)
 		{
-			Nz::Vector3f targetUp = m_planet->ComputeUpDirection(characterPosition);
+			Nz::Vector3f targetUp = m_planet->ComputeUpDirection(characterBasePosition);
 			newUp = Nz::Vector3f::RotateTowards(charUp, targetUp, Nz::DegreeAnglef(90.f) * elapsedTime);
 
 			if (Nz::Vector3f previousUp = newRotation * Nz::Vector3f::Up(); !previousUp.ApproxEqual(newUp, 0.00001f))
@@ -56,25 +57,35 @@ namespace tsom
 			}
 		}
 
+		m_referenceRotation = newRotation;
+
 		// Yaw (rotation around up vector)
-		if (!m_lastInputs.yaw.ApproxEqual(Nz::RadianAnglef::Zero()) && m_allowInputRotation) //< Don't apply the same rotation twice
+		if (m_allowInputRotation && (!m_lastInputs.pitch.ApproxEqual(Nz::RadianAnglef::Zero()) || !m_lastInputs.yaw.ApproxEqual(Nz::RadianAnglef::Zero()))) //< Don't apply the same rotation twice
 		{
 #if DEBUG_ROTATION
-			fmt::print("Applying yaw {0} to {1} from input {2}\n", m_lastInputs.yaw.ToDegrees(), fmt::streamed(newRotation), m_lastInputs.index);
+			fmt::print("Applying pitch:{0},yaw:{1} from input {2} to {3}", m_lastInputs.pitch.ToDegrees(), m_lastInputs.yaw.ToDegrees(), m_lastInputs.index, fmt::streamed(m_cameraRotation));
 #endif
-			newRotation = newRotation * Nz::Quaternionf(m_lastInputs.yaw, Nz::Vector3f::Up());
-			newRotation.Normalize();
+
+			m_cameraRotation.pitch = Nz::Clamp(m_cameraRotation.pitch + m_lastInputs.pitch, -89.f, 89.f);
+			m_cameraRotation.yaw += m_lastInputs.yaw;
+			m_cameraRotation.Normalize();
+
 #if DEBUG_ROTATION
-			fmt::print("Resulting in {0}\n----\n", fmt::streamed(newRotation));
+			fmt::print(" => {0}\n", fmt::streamed(m_cameraRotation));
 #endif
 
 			m_allowInputRotation = false;
 		}
 
-		if (!Nz::Quaternionf::ApproxEqual(newRotation, charRot, 0.00001f))
+		newRotation = m_referenceRotation * Nz::Quaternionf(m_cameraRotation.yaw, Nz::Vector3f::Up());
+		newRotation.Normalize();
+
+		if (!Nz::Quaternionf::ApproxEqual(newRotation, m_characterRotation, 0.00001f))
 		{
 			character.SetRotation(newRotation);
 			character.SetUp(newUp);
+
+			m_characterRotation = newRotation;
 		}
 	}
 

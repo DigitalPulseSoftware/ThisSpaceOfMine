@@ -46,7 +46,7 @@ namespace tsom
 			NazaraSignal(OnChunkDestroy, const Packets::ChunkDestroy& /*chunkDestroy*/);
 			NazaraSignal(OnChunkUpdate, const Packets::ChunkUpdate& /*gridUpdate*/);
 			NazaraSignal(OnControlledEntityChanged, entt::handle /*newEntity*/);
-			NazaraSignal(OnInputHandled, InputIndex /*lastInputIndex*/);
+			NazaraSignal(OnControlledEntityStateUpdate, InputIndex /*lastInputIndex*/, const Packets::EntitiesStateUpdate::ControlledCharacter& /*characterData*/);
 			NazaraSignal(OnPlayerLeave, const std::string& /*playerName*/);
 			NazaraSignal(OnPlayerJoined, const std::string& /*playerName*/);
 

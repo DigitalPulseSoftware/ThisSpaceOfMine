@@ -53,7 +53,7 @@ namespace tsom
 			NazaraSlot(ClientSessionHandler, OnChunkDestroy, m_onChunkDestroy);
 			NazaraSlot(ClientSessionHandler, OnChunkUpdate, m_onChunkUpdate);
 			NazaraSlot(ClientSessionHandler, OnControlledEntityChanged, m_onControlledEntityChanged);
-			NazaraSlot(ClientSessionHandler, OnInputHandled, m_onInputHandled);
+			NazaraSlot(ClientSessionHandler, OnControlledEntityStateUpdate, m_onControlledEntityStateUpdate);
 			NazaraSlot(ClientSessionHandler, OnPlayerLeave, m_onPlayerLeave);
 			NazaraSlot(ClientSessionHandler, OnPlayerJoined, m_onPlayerJoined);
 			NazaraSlot(Nz::Canvas, OnUnhandledKeyPressed, m_onUnhandledKeyPressed);
@@ -86,6 +86,7 @@ namespace tsom
 			Nz::EulerAnglesf m_incomingCameraRotation;  //< Accumulated rotation from inputs (will be applied on inputs)
 			Nz::EulerAnglesf m_predictedCameraRotation; //< Rotation sent to the server
 			Nz::EulerAnglesf m_remainingCameraRotation; //< Remaining rotation to send to the server (in case we rotate too fast)
+			Nz::Quaternionf m_referenceRotation;
 			Nz::Quaternionf m_upCorrection;
 			Nz::Time m_tickAccumulator;
 			Nz::Time m_tickDuration;

@@ -207,10 +207,9 @@ namespace tsom
 				chunk->UpdateBlock({ blockPos.x, blockPos.y, blockPos.z }, Nz::SafeCast<BlockIndex>(blockIndex));
 		});
 
-		m_onInputHandled.Connect(m_stateData->sessionHandler->OnInputHandled, [&](InputIndex inputIndex)
+		m_onControlledEntityStateUpdate.Connect(m_stateData->sessionHandler->OnControlledEntityStateUpdate, [&](InputIndex inputIndex, const Packets::EntitiesStateUpdate::ControlledCharacter& characterStates)
 		{
-			if (m_predictedInputRotations.empty())
-				return;
+			m_referenceRotation = characterStates.referenceRotation;
 
 			// Remove processed inputs
 			auto it = std::find_if(m_predictedInputRotations.begin(), m_predictedInputRotations.end(), [&](const InputRotation& inputRotation)
@@ -219,38 +218,52 @@ namespace tsom
 			});
 			m_predictedInputRotations.erase(m_predictedInputRotations.begin(), it);
 
-			auto& characterNode = m_controlledEntity.get<Nz::NodeComponent>();
-
 			auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
 
 #if DEBUG_ROTATION
-			Nz::Quaternionf currentRotation = cameraNode.GetRotation();
+			Nz::EulerAnglesf currentRotation = m_predictedCameraRotation;
 #endif
 
-			m_predictedCameraRotation.yaw = Nz::DegreeAnglef::Zero();
+			m_predictedCameraRotation = Nz::EulerAnglesf(characterStates.cameraPitch, characterStates.cameraYaw, 0.f);
 			for (const InputRotation& predictedRotation : m_predictedInputRotations)
+			{
+				m_predictedCameraRotation.pitch = Nz::Clamp(m_predictedCameraRotation.pitch + predictedRotation.inputRotation.pitch, -89.f, 89.f);
 				m_predictedCameraRotation.yaw += predictedRotation.inputRotation.yaw;
+				m_predictedCameraRotation.Normalize();
+			}
 
-			Nz::Quaternionf newRotation = Nz::Quaternionf::Normalize(characterNode.GetRotation() * Nz::Quaternionf(m_predictedCameraRotation));
+			Nz::Quaternionf characterRotation = m_referenceRotation * Nz::Quaternionf(m_predictedCameraRotation.yaw, Nz::Vector3f::Up());
+			characterRotation.Normalize();
+
+			auto& characterNode = m_controlledEntity.get<Nz::NodeComponent>();
+			characterNode.SetTransform(characterStates.position, characterRotation);
+
+			Nz::Quaternionf cameraRotation = m_referenceRotation * Nz::Quaternionf(m_predictedCameraRotation);
+			cameraRotation.Normalize();
+
+			//auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
+			cameraNode.SetRotation(cameraRotation);
 
 #if DEBUG_ROTATION
-			Nz::Quaternionf err(newRotation.w - currentRotation.w, newRotation.x - currentRotation.x, newRotation.y - currentRotation.y, newRotation.z - currentRotation.z);
-			float errAcc = std::abs(err.w) + std::abs(err.x) + std::abs(err.y) + std::abs(err.z);
-			if (errAcc > 0.000001f)
+			Nz::EulerAnglesf err = m_predictedCameraRotation - currentRotation;
+			float errAcc = std::abs(err.pitch.value) + std::abs(err.yaw.value) + std::abs(err.roll.value);
+			if (errAcc > 0.00001f)
 			{
 				fmt::print("RECONCILIATION ERROR\n");
-				fmt::print("Starting rotation: {0}\n", fmt::streamed(currentRotation));
+				m_predictedCameraRotation = Nz::EulerAnglesf(characterStates.cameraPitch, characterStates.cameraYaw, 0.f);
+				fmt::print("Starting rotation: {0}\n", fmt::streamed(m_predictedCameraRotation));
 				for (const InputRotation& predictedRotation : m_predictedInputRotations)
 				{
-					fmt::print("Adding yaw: {0} from input {1}\n", predictedRotation.inputRotation.yaw.ToDegrees(), predictedRotation.inputIndex);
+					m_predictedCameraRotation.pitch = Nz::Clamp(m_predictedCameraRotation.pitch + predictedRotation.inputRotation.pitch, -89.f, 89.f);
+					m_predictedCameraRotation.yaw += predictedRotation.inputRotation.yaw;
+					m_predictedCameraRotation.Normalize();
+					fmt::print("Adding {0} from input {1} which gives {2}\n", fmt::streamed(predictedRotation.inputRotation), predictedRotation.inputIndex, fmt::streamed(m_predictedCameraRotation));
 				}
-				fmt::print("Giving rotation {0}\n", fmt::streamed(after));
+				fmt::print("Giving final rotation {0}\n", fmt::streamed(m_predictedCameraRotation));
 
 				fmt::print("Error: {0}\n------\n", fmt::streamed(err));
 			}
 #endif
-
-			cameraNode.SetRotation(newRotation);
 		});
 		
 		m_chatBox = std::make_unique<Chatbox>(*m_stateData->renderTarget, m_stateData->canvas);
@@ -607,7 +620,14 @@ namespace tsom
 #else
 			cameraNode.SetPosition(characterNode.GetPosition() + characterNode.GetRotation() * (Nz::Vector3f::Up() * 1.6f));
 			//cameraNode.SetRotation(characterNode.GetRotation());
-			cameraNode.SetRotation(Nz::Quaternionf::Normalize(characterNode.GetRotation() * Nz::Quaternionf(m_predictedCameraRotation)));
+			//cameraNode.SetRotation(Nz::Quaternionf::Normalize(characterNode.GetRotation() * Nz::Quaternionf(m_predictedCameraRotation)));
+			cameraNode.SetRotation(Nz::Quaternionf::Normalize(characterNode.GetRotation()));
+
+			Nz::Quaternionf cameraRotation = m_referenceRotation * Nz::Quaternionf(m_predictedCameraRotation);
+			cameraRotation.Normalize();
+
+			auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
+			cameraNode.SetRotation(cameraRotation);
 #endif
 		}
 
@@ -711,8 +731,9 @@ namespace tsom
 				m_remainingCameraRotation.pitch -= inputPitch;
 				m_remainingCameraRotation.yaw -= inputYaw;
 
-				m_predictedCameraRotation.pitch += inputPitch;
+				m_predictedCameraRotation.pitch = Nz::Clamp(m_predictedCameraRotation.pitch + inputPitch, -89.f, 89.f);
 				m_predictedCameraRotation.yaw += inputYaw;
+				m_predictedCameraRotation.Normalize();
 
 				m_predictedInputRotations.push_back({
 					.inputIndex = inputPacket.inputs.index,

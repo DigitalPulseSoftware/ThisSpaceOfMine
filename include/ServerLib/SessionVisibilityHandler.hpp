@@ -18,6 +18,7 @@
 
 namespace tsom
 {
+	class CharacterController;
 	class NetworkSession;
 
 	class TSOM_SERVERLIB_API SessionVisibilityHandler
@@ -40,6 +41,7 @@ namespace tsom
 
 			Chunk* GetChunkByIndex(std::size_t chunkIndex) const;
 
+			inline void UpdateControlledEntity(entt::handle entity, CharacterController* controller);
 			inline void UpdateLastInputIndex(InputIndex inputIndex);
 
 			SessionVisibilityHandler& operator=(const SessionVisibilityHandler&) = delete;
@@ -84,7 +86,9 @@ namespace tsom
 			Nz::Bitset<Nz::UInt64> m_newlyHiddenChunk;
 			Nz::Bitset<Nz::UInt64> m_newlyVisibleChunk;
 			Nz::Bitset<Nz::UInt64> m_updatedChunk;
+			entt::handle m_controlledEntity;
 			InputIndex m_lastInputIndex;
+			CharacterController* m_controlledCharacter;
 			NetworkSession* m_networkSession;
 	};
 }

@@ -164,6 +164,11 @@ namespace tsom
 		for (auto&& sessionManagerPtr : m_sessionManagers)
 			sessionManagerPtr->Poll();
 
+		ForEachPlayer([&](ServerPlayer& serverPlayer)
+		{
+			serverPlayer.Tick();
+		});
+
 		if (m_planetEntities->DoesRequireUpdate())
 		{
 			Nz::HighPrecisionClock colliderClock;

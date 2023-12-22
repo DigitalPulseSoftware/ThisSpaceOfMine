@@ -3,6 +3,7 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ServerLib/SessionVisibilityHandler.hpp>
+#include <CommonLib/CharacterController.hpp>
 #include <CommonLib/NetworkSession.hpp>
 #include <NazaraUtils/Algorithm.hpp>
 #include <Nazara/Utility/Components/NodeComponent.hpp>
@@ -55,7 +56,7 @@ namespace tsom
 
 	void SessionVisibilityHandler::CreateEntity(entt::handle entity, CreateEntityData entityData)
 	{
-		if (entityData.isMoving)
+		if (entityData.isMoving && entity != m_controlledEntity)
 			m_movingEntities.emplace(entity);
 
 		m_createdEntities.emplace(entity, std::move(entityData));
@@ -216,6 +217,17 @@ namespace tsom
 		stateUpdate.tickIndex = tickIndex;
 		stateUpdate.lastInputIndex = m_lastInputIndex;
 
+		if (m_controlledCharacter)
+		{
+			const Nz::EulerAnglesf& cameraRotation = m_controlledCharacter->GetCameraRotation();
+
+			auto& controlledData = stateUpdate.controlledCharacter.emplace();
+			controlledData.cameraPitch = cameraRotation.pitch;
+			controlledData.cameraYaw = cameraRotation.yaw;
+			controlledData.position = m_controlledCharacter->GetCharacterPosition();
+			controlledData.referenceRotation = m_controlledCharacter->GetReferenceRotation();
+		}
+
 		for (const entt::handle& handle : m_movingEntities)
 		{
 			auto& entityData = stateUpdate.entities.emplace_back();
@@ -228,7 +240,7 @@ namespace tsom
 			entityData.newStates.rotation = entityNode.GetRotation();
 		}
 
-		if (!stateUpdate.entities.empty())
+		if (!stateUpdate.entities.empty() || stateUpdate.controlledCharacter.has_value())
 			m_networkSession->SendPacket(stateUpdate);
 	}
 }

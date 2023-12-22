@@ -76,7 +76,7 @@ namespace tsom
 
 	void PlayerSessionHandler::HandlePacket(Packets::UpdatePlayerInputs&& playerInputs)
 	{
-		m_player->HandleInputs(playerInputs.inputs);
+		m_player->PushInputs(playerInputs.inputs);
 	}
 
 	bool PlayerSessionHandler::CheckCanMineBlock(Chunk* chunk, const Nz::Vector3ui& blockIndices) const

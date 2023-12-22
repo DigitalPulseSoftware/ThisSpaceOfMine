@@ -115,11 +115,8 @@ namespace tsom
 			}
 		}
 
-		if (stateUpdate.lastInputIndex != m_lastInputIndex)
-		{
-			OnInputHandled(stateUpdate.lastInputIndex);
-			m_lastInputIndex = stateUpdate.lastInputIndex;
-		}
+		if (stateUpdate.controlledCharacter)
+			OnControlledEntityStateUpdate(stateUpdate.lastInputIndex, *stateUpdate.controlledCharacter);
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::GameData&& gameData)

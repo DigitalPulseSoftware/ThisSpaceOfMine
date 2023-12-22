@@ -28,6 +28,11 @@ namespace tsom
 			CharacterController(CharacterController&&) = delete;
 			~CharacterController() = default;
 
+			inline const Nz::EulerAnglesf& GetCameraRotation() const;
+			inline const Nz::Vector3f& GetCharacterPosition() const;
+			inline const Nz::Quaternionf& GetCharacterRotation() const;
+			inline const Nz::Quaternionf& GetReferenceRotation() const;
+
 			void PostSimulate(Nz::JoltCharacter& character, float elapsedTime) override;
 			void PreSimulate(Nz::JoltCharacter& character, float elapsedTime) override;
 
@@ -39,8 +44,10 @@ namespace tsom
 			CharacterController& operator=(CharacterController&&) = delete;
 
 		private:
-			Nz::Vector3f m_feetPosition;
-			Nz::Vector3f m_groundPos;
+			Nz::EulerAnglesf m_cameraRotation;
+			Nz::Quaternionf m_referenceRotation;
+			Nz::Quaternionf m_characterRotation;
+			Nz::Vector3f m_characterPosition;
 			PlayerInputs m_lastInputs;
 			const Planet* m_planet;
 			bool m_allowInputRotation;

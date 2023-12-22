@@ -8,8 +8,19 @@ namespace tsom
 {
 	inline SessionVisibilityHandler::SessionVisibilityHandler(NetworkSession* networkSession) :
 	m_lastInputIndex(0),
+	m_controlledCharacter(nullptr),
 	m_networkSession(networkSession)
 	{
+	}
+
+	inline void SessionVisibilityHandler::UpdateControlledEntity(entt::handle entity, CharacterController* controller)
+	{
+		if (m_controlledEntity)
+			m_movingEntities.insert(m_controlledEntity);
+
+		m_controlledEntity = entity;
+		m_controlledCharacter = controller;
+		m_movingEntities.erase(m_controlledEntity);
 	}
 
 	inline void SessionVisibilityHandler::UpdateLastInputIndex(InputIndex inputIndex)

@@ -139,11 +139,21 @@ namespace tsom
 			serializer &= data.tickIndex;
 			serializer &= data.lastInputIndex;
 
+			serializer.SerializePresence(data.controlledCharacter);
+
 			serializer.SerializeArraySize(data.entities);
 			for (auto& entity : data.entities)
 			{
 				serializer &= entity.entityId;
 				Helper::Serialize(serializer, entity.newStates);
+			}
+
+			if (data.controlledCharacter.has_value())
+			{
+				serializer &= data.controlledCharacter->position;
+				serializer &= data.controlledCharacter->referenceRotation;
+				serializer &= data.controlledCharacter->cameraPitch;
+				serializer &= data.controlledCharacter->cameraYaw;
 			}
 		}
 

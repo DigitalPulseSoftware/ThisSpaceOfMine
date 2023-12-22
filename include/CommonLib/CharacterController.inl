@@ -4,6 +4,26 @@
 
 namespace tsom
 {
+	inline const Nz::EulerAnglesf& CharacterController::GetCameraRotation() const
+	{
+		return m_cameraRotation;
+	}
+
+	inline const Nz::Vector3f& CharacterController::GetCharacterPosition() const
+	{
+		return m_characterPosition;
+	}
+
+	inline const Nz::Quaternionf& CharacterController::GetCharacterRotation() const
+	{
+		return m_characterRotation;
+	}
+
+	inline const Nz::Quaternionf& CharacterController::GetReferenceRotation() const
+	{
+		return m_referenceRotation;
+	}
+
 	inline void CharacterController::SetCurrentPlanet(const Planet* planet)
 	{
 		m_planet = planet;

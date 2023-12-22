@@ -18,12 +18,9 @@ namespace tsom
 		m_instance.DestroyPlayer(m_playerIndex);
 	}
 
-	void ServerPlayer::HandleInputs(const PlayerInputs& inputs)
+	void ServerPlayer::PushInputs(const PlayerInputs& inputs)
 	{
-		m_visibilityHandler.UpdateLastInputIndex(inputs.index);
-
-		if (m_controller)
-			m_controller->SetInputs(inputs);
+		m_inputQueue.push_back(inputs);
 	}
 
 	void ServerPlayer::Respawn()
@@ -44,6 +41,7 @@ namespace tsom
 
 		m_controller = std::make_shared<CharacterController>();
 		m_controller->SetCurrentPlanet(&m_instance.GetPlanet());
+		m_visibilityHandler.UpdateControlledEntity(m_controlledEntity, m_controller.get()); // TODO: Reset to nullptr when player entity is destroyed
 
 		auto& physicsSystem = m_instance.GetWorld().GetSystem<Nz::JoltPhysics3DSystem>();
 
@@ -57,5 +55,20 @@ namespace tsom
 		characterComponent.DisableSleeping();
 
 		m_controlledEntity.emplace<ServerPlayerControlledComponent>(CreateHandle());
+	}
+
+	void ServerPlayer::Tick()
+	{
+		if (!m_inputQueue.empty())
+		{
+			const PlayerInputs& inputs = m_inputQueue.front();
+
+			m_visibilityHandler.UpdateLastInputIndex(inputs.index);
+
+			if (m_controller)
+				m_controller->SetInputs(inputs);
+
+			m_inputQueue.erase(m_inputQueue.begin());
+		}
 	}
 }

@@ -136,6 +136,14 @@ namespace tsom
 
 		struct EntitiesStateUpdate
 		{
+			struct ControlledCharacter
+			{
+				Nz::DegreeAnglef cameraPitch;
+				Nz::DegreeAnglef cameraYaw;
+				Nz::Quaternionf referenceRotation;
+				Nz::Vector3f position;
+			};
+
 			struct EntityData
 			{
 				Helper::EntityId entityId;
@@ -144,6 +152,7 @@ namespace tsom
 
 			Nz::UInt16 tickIndex;
 			InputIndex lastInputIndex;
+			std::optional<ControlledCharacter> controlledCharacter;
 			std::vector<EntityData> entities;
 		};
 
