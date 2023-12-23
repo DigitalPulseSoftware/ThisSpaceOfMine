@@ -95,10 +95,6 @@ namespace tsom
 					std::string_view blockType;
 					if (depth <= 8)
 						blockType = "snow";
-					else if (depth <= 10)
-						blockType = "dirt";
-					else if (depth <= 15)
-						blockType = "grass";
 					else if (depth <= 20)
 						blockType = "dirt";
 					else
@@ -121,8 +117,12 @@ namespace tsom
 			}
 		}
 
+		BlockIndex dirtBlockIndex = blockLibrary.GetBlockIndex("dirt");
+		BlockIndex grassBlockIndex = blockLibrary.GetBlockIndex("grass");
+
 		siv::PerlinNoise perlin(42);
 
+		constexpr double scale = 0.02f;
 		constexpr std::size_t heightScale = 30;
 
 		// +X
@@ -130,15 +130,20 @@ namespace tsom
 		{
 			for (unsigned int y = 0; y < m_gridSize.y; ++y)
 			{
-				double height = perlin.normalizedOctave3D_01(0.0, y * 0.1, z * 0.1, 4);
+				double height = perlin.normalizedOctave3D_01(0.0, y * scale, z * scale, 4);
 
-				std::size_t depth = m_gridSize.x - height * heightScale;
+				unsigned int depth = m_gridSize.x - height * heightScale;
 				for (unsigned int x = m_gridSize.x - 1; x > depth; --x)
 				{
 					Nz::Vector3ui innerCoordinates;
 					Chunk& chunk = GetChunkByIndices({ x, y, z }, &innerCoordinates);
 					chunk.UpdateBlock(innerCoordinates, EmptyBlockIndex);
 				}
+
+				Nz::Vector3ui innerCoordinates;
+				Chunk& chunk = GetChunkByIndices({ depth, y, z }, &innerCoordinates);
+				if (chunk.GetBlockContent(innerCoordinates) == dirtBlockIndex)
+					chunk.UpdateBlock(innerCoordinates, grassBlockIndex);
 			}
 		}
 
@@ -147,15 +152,20 @@ namespace tsom
 		{
 			for (unsigned int x = 0; x < m_gridSize.x; ++x)
 			{
-				double height = perlin.normalizedOctave3D_01(x * 0.1, 0.0, z * 0.1, 4);
+				double height = perlin.normalizedOctave3D_01(x * scale, 0.0, z * scale, 4);
 
-				std::size_t depth = m_gridSize.y - height * heightScale;
+				unsigned int depth = m_gridSize.y - height * heightScale;
 				for (unsigned int y = m_gridSize.y - 1; y > depth; --y)
 				{
 					Nz::Vector3ui innerCoordinates;
 					Chunk& chunk = GetChunkByIndices({ x, y, z }, &innerCoordinates);
 					chunk.UpdateBlock(innerCoordinates, EmptyBlockIndex);
 				}
+
+				Nz::Vector3ui innerCoordinates;
+				Chunk& chunk = GetChunkByIndices({ x, depth, z }, &innerCoordinates);
+				if (chunk.GetBlockContent(innerCoordinates) == dirtBlockIndex)
+					chunk.UpdateBlock(innerCoordinates, grassBlockIndex);
 			}
 		}
 
@@ -164,15 +174,20 @@ namespace tsom
 		{
 			for (unsigned int x = 0; x < m_gridSize.x; ++x)
 			{
-				double height = perlin.normalizedOctave3D_01(x * 0.1, y * 0.1, 0.0, 4);
+				double height = perlin.normalizedOctave3D_01(x * scale, y * scale, 0.0, 4);
 
-				std::size_t depth = m_gridSize.z - height * heightScale;
+				unsigned int depth = m_gridSize.z - height * heightScale;
 				for (unsigned int z = m_gridSize.z - 1; z > depth; --z)
 				{
 					Nz::Vector3ui innerCoordinates;
 					Chunk& chunk = GetChunkByIndices({ x, y, z }, &innerCoordinates);
 					chunk.UpdateBlock(innerCoordinates, EmptyBlockIndex);
 				}
+
+				Nz::Vector3ui innerCoordinates;
+				Chunk& chunk = GetChunkByIndices({ x, y, depth }, &innerCoordinates);
+				if (chunk.GetBlockContent(innerCoordinates) == dirtBlockIndex)
+					chunk.UpdateBlock(innerCoordinates, grassBlockIndex);
 			}
 		}
 
@@ -181,15 +196,20 @@ namespace tsom
 		{
 			for (unsigned int y = 0; y < m_gridSize.y; ++y)
 			{
-				double height = perlin.normalizedOctave3D_01(m_gridSize.z * 0.1, (m_gridSize.y - y) * 0.1, (m_gridSize.z - z) * 0.1, 4);
+				double height = perlin.normalizedOctave3D_01(m_gridSize.z * scale, (m_gridSize.y - y) * scale, (m_gridSize.z - z) * scale, 4);
 
-				std::size_t depth = height * heightScale;
+				unsigned int depth = height * heightScale;
 				for (unsigned int x = 0; x < depth; ++x)
 				{
 					Nz::Vector3ui innerCoordinates;
 					Chunk& chunk = GetChunkByIndices({ x, y, z }, &innerCoordinates);
 					chunk.UpdateBlock(innerCoordinates, EmptyBlockIndex);
 				}
+
+				Nz::Vector3ui innerCoordinates;
+				Chunk& chunk = GetChunkByIndices({ depth, y, z }, &innerCoordinates);
+				if (chunk.GetBlockContent(innerCoordinates) == dirtBlockIndex)
+					chunk.UpdateBlock(innerCoordinates, grassBlockIndex);
 			}
 		}
 
@@ -198,15 +218,20 @@ namespace tsom
 		{
 			for (unsigned int x = 0; x < m_gridSize.x; ++x)
 			{
-				double height = perlin.normalizedOctave3D_01((m_gridSize.x - x) * 0.1, m_gridSize.y * 0.1, (m_gridSize.z - z) * 0.1, 4);
+				double height = perlin.normalizedOctave3D_01((m_gridSize.x - x) * scale, m_gridSize.y * scale, (m_gridSize.z - z) * scale, 4);
 
-				std::size_t depth = height * heightScale;
+				unsigned int depth = height * heightScale;
 				for (unsigned int y = 0; y < depth; ++y)
 				{
 					Nz::Vector3ui innerCoordinates;
 					Chunk& chunk = GetChunkByIndices({ x, y, z }, &innerCoordinates);
 					chunk.UpdateBlock(innerCoordinates, EmptyBlockIndex);
 				}
+
+				Nz::Vector3ui innerCoordinates;
+				Chunk& chunk = GetChunkByIndices({ x, depth, z }, &innerCoordinates);
+				if (chunk.GetBlockContent(innerCoordinates) == dirtBlockIndex)
+					chunk.UpdateBlock(innerCoordinates, grassBlockIndex);
 			}
 		}
 
@@ -215,15 +240,20 @@ namespace tsom
 		{
 			for (unsigned int x = 0; x < m_gridSize.x; ++x)
 			{
-				double height = perlin.normalizedOctave3D_01((m_gridSize.x - x) * 0.1, (m_gridSize.y - y) * 0.1, m_gridSize.z * 0.1, 4);
+				double height = perlin.normalizedOctave3D_01((m_gridSize.x - x) * scale, (m_gridSize.y - y) * scale, m_gridSize.z * scale, 4);
 
-				std::size_t depth = height * heightScale;
+				unsigned int depth = height * heightScale;
 				for (unsigned int z = 0; z < depth; ++z)
 				{
 					Nz::Vector3ui innerCoordinates;
 					Chunk& chunk = GetChunkByIndices({ x, y, z }, &innerCoordinates);
 					chunk.UpdateBlock(innerCoordinates, EmptyBlockIndex);
 				}
+
+				Nz::Vector3ui innerCoordinates;
+				Chunk& chunk = GetChunkByIndices({ x, y, depth }, &innerCoordinates);
+				if (chunk.GetBlockContent(innerCoordinates) == dirtBlockIndex)
+					chunk.UpdateBlock(innerCoordinates, grassBlockIndex);
 			}
 		}
 
