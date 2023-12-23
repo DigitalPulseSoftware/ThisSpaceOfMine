@@ -1,4 +1,6 @@
-#include <Nazara/Core.hpp>
+#include <Nazara/Core/Application.hpp>
+#include <Nazara/Core/Core.hpp>
+#include <Nazara/Core/SignalHandlerAppComponent.hpp>
 #include <Nazara/JoltPhysics3D/JoltPhysics3D.hpp>
 #include <Nazara/Network/Network.hpp>
 #include <CommonLib/GameConstants.hpp>
