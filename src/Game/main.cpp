@@ -32,6 +32,8 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
+NAZARA_REQUEST_DEDICATED_GPU()
+
 int GameMain(int argc, char* argv[])
 {
 	Nz::Application<Nz::Graphics, Nz::JoltPhysics3D, Nz::Network, Nz::Widgets> app(argc, argv);
