@@ -29,6 +29,7 @@ namespace tsom
 			Nz::Vector3f ComputeUpDirection(const Nz::Vector3f& position) const;
 
 			void GenerateChunks(BlockLibrary& blockLibrary);
+			void GeneratePlatform(BlockLibrary& blockLibrary, Direction upDirection, const Nz::Vector3ui& platformCenter);
 
 			inline Nz::Vector3f GetCenter() const override;
 			inline Chunk* GetChunk(std::size_t chunkIndex) override;

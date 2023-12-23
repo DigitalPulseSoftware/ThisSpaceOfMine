@@ -317,6 +317,65 @@ namespace tsom
 		}*/
 	}
 
+	void Planet::GeneratePlatform(BlockLibrary& blockLibrary, Direction upDirection, const Nz::Vector3ui& platformCenter)
+	{
+		constexpr int platformSize = 15;
+		constexpr unsigned int freeHeight = 10;
+
+		constexpr Nz::EnumArray<Direction, unsigned int> s_leftAxis = { 0, 0, 0, 1, 1, 0 };
+		constexpr Nz::EnumArray<Direction, unsigned int> s_forwardAxis = { 2, 1, 2, 0, 0, 1 };
+		constexpr Nz::EnumArray<Direction, unsigned int> s_upAxis = { 1, 2, 1, 2, 2, 2 };
+		constexpr Nz::EnumArray<Direction, int> s_leftDir = { -1, -1, -1, -1, 1, -1 };
+		constexpr Nz::EnumArray<Direction, int> s_forwardDir = { 1, 1, -1, -1, -1, -1 };
+		constexpr Nz::EnumArray<Direction, int> s_upDir = { 1, -1, -1, 1, -1, 1 };
+
+		Nz::Vector3ui coordinates = platformCenter;
+
+		unsigned int& xPos = coordinates[s_leftAxis[upDirection]];
+		xPos += s_leftDir[upDirection] * platformSize / 2;
+
+		unsigned int& yPos = coordinates[s_upAxis[upDirection]];
+
+		unsigned int& zPos = coordinates[s_forwardAxis[upDirection]];
+		zPos += -s_forwardDir[upDirection] * platformSize / 2;
+
+		BlockIndex borderBlockIndex = blockLibrary.GetBlockIndex("copper_block");
+		BlockIndex interiorBlockIndex = blockLibrary.GetBlockIndex("stone_bricks");
+
+		for (unsigned int y = 0; y < freeHeight; ++y)
+		{
+			unsigned int startingZ = zPos;
+			for (unsigned int z = 0; z < platformSize; ++z)
+			{
+				unsigned int startingX = xPos;
+				for (unsigned int x = 0; x < platformSize; ++x)
+				{
+					BlockIndex blockIndex;
+					if (y != 0)
+						blockIndex = EmptyBlockIndex;
+					else if (x == 0 || x == platformSize - 1)
+						blockIndex = borderBlockIndex;
+					else if (z == 0 || z == platformSize - 1)
+						blockIndex = borderBlockIndex;
+					else
+						blockIndex = interiorBlockIndex;
+
+					Nz::Vector3ui innerCoordinates;
+					Chunk& chunk = GetChunkByIndices(coordinates, &innerCoordinates);
+					chunk.UpdateBlock(innerCoordinates, blockIndex);
+
+					xPos += -s_leftDir[upDirection];
+				}
+
+				xPos = startingX;
+				zPos += s_forwardDir[upDirection];
+			}
+
+			yPos += s_upDir[upDirection];
+			zPos = startingZ;
+		}
+	}
+
 	void Planet::RemoveChunk(const Nz::Vector3ui& indices)
 	{
 		std::size_t index = GetChunkIndex(indices);
