@@ -321,27 +321,22 @@ namespace tsom
 	{
 		constexpr int platformSize = 15;
 		constexpr unsigned int freeHeight = 10;
-
-		constexpr Nz::EnumArray<Direction, unsigned int> s_leftAxis = { 0, 0, 0, 1, 1, 0 };
-		constexpr Nz::EnumArray<Direction, unsigned int> s_forwardAxis = { 2, 1, 2, 0, 0, 1 };
-		constexpr Nz::EnumArray<Direction, unsigned int> s_upAxis = { 1, 2, 1, 2, 2, 2 };
-		constexpr Nz::EnumArray<Direction, int> s_leftDir = { -1, -1, -1, -1, 1, -1 };
-		constexpr Nz::EnumArray<Direction, int> s_forwardDir = { 1, 1, -1, -1, -1, -1 };
-		constexpr Nz::EnumArray<Direction, int> s_upDir = { 1, -1, -1, 1, -1, 1 };
+		const DirectionAxis& dirAxis = s_dirAxis[upDirection];
 
 		Nz::Vector3ui coordinates = platformCenter;
 
-		unsigned int& xPos = coordinates[s_leftAxis[upDirection]];
-		xPos += s_leftDir[upDirection] * platformSize / 2;
+		unsigned int& xPos = coordinates[dirAxis.rightAxis];
+		xPos += -dirAxis.rightDir * platformSize / 2;
 
-		unsigned int& yPos = coordinates[s_upAxis[upDirection]];
+		unsigned int& yPos = coordinates[dirAxis.upAxis];
 
-		unsigned int& zPos = coordinates[s_forwardAxis[upDirection]];
-		zPos += -s_forwardDir[upDirection] * platformSize / 2;
+		unsigned int& zPos = coordinates[dirAxis.forwardAxis];
+		zPos += -dirAxis.forwardDir * platformSize / 2;
 
 		BlockIndex borderBlockIndex = blockLibrary.GetBlockIndex("copper_block");
 		BlockIndex interiorBlockIndex = blockLibrary.GetBlockIndex("stone_bricks");
 
+		Nz::Vector3ui originalCoordinates = coordinates;
 		for (unsigned int y = 0; y < freeHeight; ++y)
 		{
 			unsigned int startingZ = zPos;
@@ -353,9 +348,7 @@ namespace tsom
 					BlockIndex blockIndex;
 					if (y != 0)
 						blockIndex = EmptyBlockIndex;
-					else if (x == 0 || x == platformSize - 1)
-						blockIndex = borderBlockIndex;
-					else if (z == 0 || z == platformSize - 1)
+					else if (x == 0 || x == platformSize - 1 || z == 0 || z == platformSize - 1)
 						blockIndex = borderBlockIndex;
 					else
 						blockIndex = interiorBlockIndex;
@@ -364,14 +357,67 @@ namespace tsom
 					Chunk& chunk = GetChunkByIndices(coordinates, &innerCoordinates);
 					chunk.UpdateBlock(innerCoordinates, blockIndex);
 
-					xPos += -s_leftDir[upDirection];
+					xPos += dirAxis.rightDir;
 				}
 
 				xPos = startingX;
-				zPos += s_forwardDir[upDirection];
+				zPos += dirAxis.forwardDir;
 			}
 
-			yPos += s_upDir[upDirection];
+			if (yPos == 0 && dirAxis.upDir < 0)
+				break;
+
+			yPos += dirAxis.upDir;
+			zPos = startingZ;
+		}
+
+		// Bottom
+		BlockIndex planksBlockIndex = blockLibrary.GetBlockIndex("planks");
+
+		coordinates = originalCoordinates;
+		for (unsigned int y = 1; /*no cond*/; ++y)
+		{
+			yPos -= dirAxis.upDir;
+
+			bool hasEmpty = false;
+
+			unsigned int startingZ = zPos;
+			for (unsigned int z = 0; z < platformSize; ++z)
+			{
+				unsigned int startingX = xPos;
+				for (unsigned int x = 0; x < platformSize; ++x)
+				{
+					Nz::Vector3ui innerCoordinates;
+					Chunk& chunk = GetChunkByIndices(coordinates, &innerCoordinates);
+
+					xPos += dirAxis.rightDir;
+
+					BlockIndex blockIndex;
+					if (y % 3 == 0)
+					{
+						if (x != 0 && x != platformSize - 1 && z != 0 && z != platformSize - 1)
+							continue;
+					}
+					else
+					{
+						if (chunk.GetBlockContent(innerCoordinates) != EmptyBlockIndex)
+							continue;
+
+						if (x != 0 && x != platformSize - 1 || z != 0 && z != platformSize - 1)
+							continue;
+					}
+
+					hasEmpty = true;
+					chunk.UpdateBlock(innerCoordinates, planksBlockIndex);
+				}
+
+				xPos = startingX;
+				zPos += dirAxis.forwardDir;
+			}
+
+			if (!hasEmpty)
+				break;
+
 			zPos = startingZ;
 		}
 	}

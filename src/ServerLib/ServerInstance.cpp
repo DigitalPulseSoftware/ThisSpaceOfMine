@@ -28,8 +28,10 @@ namespace tsom
 
 		m_planet = std::make_unique<Planet>(Nz::Vector3ui(160), 2.f, 16.f, 9.81f);
 		m_planet->GenerateChunks(m_blockLibrary);
-		m_planet->GeneratePlatform(m_blockLibrary, tsom::Direction::Up, { 68, 109, 146 });
+		m_planet->GeneratePlatform(m_blockLibrary, tsom::Direction::Up, { 68, 109, 150 });
 		m_planet->GeneratePlatform(m_blockLibrary, tsom::Direction::Back, { 33, 148, 60 });
+		m_planet->GeneratePlatform(m_blockLibrary, tsom::Direction::Front, { 50, 12, 63 });
+		m_planet->GeneratePlatform(m_blockLibrary, tsom::Direction::Down, { 91, 92, 2 });
 
 		m_planetEntities = std::make_unique<ChunkEntities>(m_world, *m_planet, m_blockLibrary);
 	}

@@ -44,6 +44,25 @@ namespace tsom
 		Nz::Color::Cyan(),  //< Up
 	};
 
+	struct DirectionAxis
+	{
+		unsigned int forwardAxis;
+		unsigned int rightAxis;
+		unsigned int upAxis;
+		int forwardDir;
+		int rightDir;
+		int upDir;
+	};
+
+	constexpr Nz::EnumArray<Direction, DirectionAxis> s_dirAxis = {
+		DirectionAxis { 2, 0, 1,  1,  1,  1 }, //< Back
+		DirectionAxis { 1, 0, 2,  1,  1, -1 }, //< Down
+		DirectionAxis { 2, 0, 1, -1,  1, -1 }, //< Front
+		DirectionAxis { 0, 1, 0, -1,  1,  1 }, //< Left
+		DirectionAxis { 0, 1, 0, -1, -1, -1 }, //< Right
+		DirectionAxis { 1, 0, 2, -1,  1,  1 }, //< Up
+	};
+
 	constexpr Direction DirectionFromNormal(const Nz::Vector3f& outsideNormal);
 }
 
