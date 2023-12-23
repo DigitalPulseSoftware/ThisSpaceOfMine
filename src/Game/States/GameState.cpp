@@ -242,7 +242,9 @@ namespace tsom
 			cameraRotation.Normalize();
 
 			//auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
+#ifndef FREEFLIGHT
 			cameraNode.SetRotation(cameraRotation);
+#endif
 
 #if DEBUG_ROTATION
 			Nz::EulerAnglesf err = m_predictedCameraRotation - currentRotation;
