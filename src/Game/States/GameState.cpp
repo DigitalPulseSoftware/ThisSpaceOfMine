@@ -340,10 +340,20 @@ namespace tsom
 
 				case Nz::Keyboard::VKey::F3:
 				{
-					m_incomingCameraRotation.yaw -= Nz::DegreeAnglef(10.f);
+					auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
+					Nz::Vector3f pos = cameraNode.GetPosition();
+
+					Nz::Vector3f innerPos;
+					Chunk* chunk = m_planet->GetChunkByPosition(pos, &innerPos);
+					if (chunk)
+					{
+						std::optional<Nz::Vector3ui> innerCoordinates = chunk->ComputeCoordinates(innerPos);
+						if (innerCoordinates)
+							fmt::print("Current position = {0}\n", fmt::streamed(chunk->GetIndices() * Planet::ChunkSize + *innerCoordinates));
+					}
+
 					break;
 				}
-
 
 				default:
 					break;
