@@ -27,7 +27,7 @@
 
 namespace tsom
 {
-	constexpr std::array<std::string_view, 5> s_selectableBlocks = { "dirt", "grass", "stone", "snow", "debug" };
+	constexpr std::array<std::string_view, 7> s_selectableBlocks = { "dirt", "grass", "stone", "snow", "stone_bricks", "planks", "debug" };
 
 	GameState::GameState(std::shared_ptr<StateData> stateData) :
 	m_stateData(std::move(stateData)),

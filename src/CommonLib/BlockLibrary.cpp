@@ -59,6 +59,18 @@ namespace tsom
 		RegisterBlock("forcefield", {
 			.basePath = "blocks/frosted_ice_0",
 		});
+
+		RegisterBlock("planks", {
+			.basePath = "blocks/planks",
+		});
+
+		RegisterBlock("stone_bricks", {
+			.basePath = "blocks/stone_bricks",
+		});
+
+		RegisterBlock("copper_block", {
+			.basePath = "blocks/copper_block",
+		});
 	}
 
 	BlockIndex BlockLibrary::RegisterBlock(std::string name, BlockInfo blockInfo)
