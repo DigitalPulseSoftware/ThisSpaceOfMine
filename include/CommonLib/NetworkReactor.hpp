@@ -9,7 +9,7 @@
 
 #include <CommonLib/Export.hpp>
 #include <Nazara/Network/ENetHost.hpp>
-#include <concurrentqueue/concurrentqueue.h>
+#include <concurrentqueue.h>
 #include <atomic>
 #include <functional>
 #include <thread>
