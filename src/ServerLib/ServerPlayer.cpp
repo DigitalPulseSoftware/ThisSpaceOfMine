@@ -4,6 +4,7 @@
 
 #include <ServerLib/ServerPlayer.hpp>
 #include <CommonLib/CharacterController.hpp>
+#include <CommonLib/GameConstants.hpp>
 #include <CommonLib/Components/PlanetGravityComponent.hpp>
 #include <ServerLib/ServerInstance.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
@@ -25,7 +26,7 @@ namespace tsom
 
 	void ServerPlayer::Respawn()
 	{
-		constexpr Nz::Vector3f position = Nz::Vector3f::Up() * 165.f + Nz::Vector3f::Backward() * 5.f;
+		constexpr Nz::Vector3f position = Nz::Vector3f::Up() * 80.f + Nz::Vector3f::Backward() * 5.f;
 		const Nz::Quaternionf rotation = Nz::EulerAnglesf(0.f, 0.f, 0.f);
 
 		if (m_controlledEntity)
@@ -37,7 +38,7 @@ namespace tsom
 		auto& planetGravity = m_controlledEntity.emplace<PlanetGravityComponent>();
 		planetGravity.planet = &m_instance.GetPlanet();
 
-		auto collider = std::make_shared<Nz::JoltCapsuleCollider3D>(1.8f, 0.4f);
+		auto collider = std::make_shared<Nz::JoltCapsuleCollider3D>(Constants::PlayerColliderHeight, Constants::PlayerColliderRadius);
 
 		m_controller = std::make_shared<CharacterController>();
 		m_controller->SetCurrentPlanet(&m_instance.GetPlanet());

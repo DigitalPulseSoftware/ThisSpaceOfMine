@@ -3,6 +3,7 @@
 // For conditions of distribution and use, see copyright notice in Config.hpp
 
 #include <ClientLib/ClientChunkEntities.hpp>
+#include <ClientLib/RenderConstants.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/AppFilesystemComponent.hpp>
 #include <Nazara/Graphics/GraphicalMesh.hpp>
@@ -182,7 +183,7 @@ namespace tsom
 
 		auto& gfxComponent = m_chunkEntities[chunkId].emplace<Nz::GraphicsComponent>();
 		if (model)
-			gfxComponent.AttachRenderable(std::move(model), 0x0000FFFF);
+			gfxComponent.AttachRenderable(std::move(model), tsom::Constants::RenderMask3D);
 
 		UpdateChunkDebugCollider(chunkId);
 	}
@@ -196,7 +197,7 @@ namespace tsom
 		auto& gfxComponent = m_chunkEntities[chunkId].get_or_emplace<Nz::GraphicsComponent>();
 		gfxComponent.Clear();
 		if (model)
-			gfxComponent.AttachRenderable(std::move(model), 0x0000FFFF);
+			gfxComponent.AttachRenderable(std::move(model), tsom::Constants::RenderMask3D);
 
 		UpdateChunkDebugCollider(chunkId);
 	}
@@ -227,7 +228,7 @@ namespace tsom
 				colliderModel->SetMaterial(i, colliderMat);
 
 			auto& gfxComponent = m_chunkEntities[chunkId].get_or_emplace<Nz::GraphicsComponent>();
-			gfxComponent.AttachRenderable(std::move(colliderModel), 0x0000FFFF);
+			gfxComponent.AttachRenderable(std::move(colliderModel), tsom::Constants::RenderMask3D);
 	}
 #endif
 	}

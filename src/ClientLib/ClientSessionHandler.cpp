@@ -4,7 +4,9 @@
 
 #include <ClientLib/ClientSessionHandler.hpp>
 #include <ClientLib/Components/MovementInterpolationComponent.hpp>
+#include <CommonLib/GameConstants.hpp>
 #include <CommonLib/Components/EntityOwnerComponent.hpp>
+#include <ClientLib/RenderConstants.hpp>
 #include <Nazara/Core/EnttWorld.hpp>
 #include <Nazara/Graphics/Graphics.hpp>
 #include <Nazara/Graphics/MaterialInstance.hpp>
@@ -163,19 +165,13 @@ namespace tsom
 
 	void ClientSessionHandler::SetupEntity(entt::handle entity, Packets::Helper::PlayerControlledData&& entityData)
 	{
-		auto collider = std::make_shared<Nz::JoltCapsuleCollider3D>(1.8f, 0.4f);
+		auto collider = std::make_shared<Nz::JoltCapsuleCollider3D>(Constants::PlayerColliderHeight, Constants::PlayerColliderRadius);
 		entity.emplace<Nz::JoltRigidBody3DComponent>(Nz::JoltRigidBody3D::DynamicSettings(collider, 0.f));
 
-		if (entityData.controllingPlayerId == m_ownPlayerIndex)
-		{
-			m_playerControlledEntity = entity;
-			OnControlledEntityChanged(entity);
-		}
-		else
-		{
-			entity.emplace<MovementInterpolationComponent>(m_lastTickIndex);
 
-			// Player model (collider for now)
+		// Player model (collider for now)
+		if (!m_playerModel)
+		{
 			std::shared_ptr<Nz::MaterialInstance> colliderMat = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic);
 			colliderMat->SetValueProperty("BaseColor", Nz::Color::Green());
 			colliderMat->UpdatePassesStates([](Nz::RenderStates& states)
@@ -187,42 +183,50 @@ namespace tsom
 			std::shared_ptr<Nz::Mesh> colliderMesh = Nz::Mesh::Build(collider->GenerateDebugMesh());
 			std::shared_ptr<Nz::GraphicalMesh> colliderGraphicalMesh = Nz::GraphicalMesh::BuildFromMesh(*colliderMesh);
 
-			std::shared_ptr<Nz::Model> colliderModel = std::make_shared<Nz::Model>(colliderGraphicalMesh);
-			for (std::size_t i = 0; i < colliderModel->GetSubMeshCount(); ++i)
-				colliderModel->SetMaterial(i, colliderMat);
-
-			auto& gfx = entity.emplace<Nz::GraphicsComponent>();
-			gfx.AttachRenderable(std::move(colliderModel), 0x0000FFFF);
-
-			// Floating name
-			std::shared_ptr<Nz::TextSprite> textSprite = std::make_shared<Nz::TextSprite>();
-
-			if (const PlayerInfo* playerInfo = FetchPlayerInfo(entityData.controllingPlayerId))
-				textSprite->Update(Nz::SimpleTextDrawer::Draw(playerInfo->nickname, 48), 0.01f);
-			else
-				textSprite->Update(Nz::SimpleTextDrawer::Draw("<disconnected>", 48), 0.01f);
-
-			entt::handle frontTextEntity = m_world.CreateEntity();
-			{
-				auto& textNode = frontTextEntity.emplace<Nz::NodeComponent>();
-				textNode.SetParent(entity);
-				textNode.SetPosition(-textSprite->GetAABB().width * 0.5f, 1.5f, 0.f);
-
-				frontTextEntity.emplace<Nz::GraphicsComponent>(textSprite);
-			}
-			entity.get_or_emplace<EntityOwnerComponent>().Register(frontTextEntity);
-
-			entt::handle backTextEntity = m_world.CreateEntity();
-			{
-				auto& textNode = backTextEntity.emplace<Nz::NodeComponent>();
-				textNode.SetParent(entity);
-				textNode.SetPosition(textSprite->GetAABB().width * 0.5f, 1.5f, 0.f);
-				textNode.SetRotation(Nz::EulerAnglesf(0.f, Nz::TurnAnglef(0.5f), 0.f));
-
-				backTextEntity.emplace<Nz::GraphicsComponent>(std::move(textSprite));
-			}
-
-			entity.get_or_emplace<EntityOwnerComponent>().Register(backTextEntity);
+			m_playerModel = std::make_shared<Nz::Model>(colliderGraphicalMesh);
+			for (std::size_t i = 0; i < m_playerModel->GetSubMeshCount(); ++i)
+				m_playerModel->SetMaterial(i, colliderMat);
 		}
+
+		auto& gfx = entity.emplace<Nz::GraphicsComponent>();
+		gfx.AttachRenderable(m_playerModel, tsom::Constants::RenderMaskPlayer);
+
+		// Floating name
+		std::shared_ptr<Nz::TextSprite> textSprite = std::make_shared<Nz::TextSprite>();
+
+		if (const PlayerInfo* playerInfo = FetchPlayerInfo(entityData.controllingPlayerId))
+			textSprite->Update(Nz::SimpleTextDrawer::Draw(playerInfo->nickname, 48), 0.01f);
+		else
+			textSprite->Update(Nz::SimpleTextDrawer::Draw("<disconnected>", 48), 0.01f);
+
+		entt::handle frontTextEntity = m_world.CreateEntity();
+		{
+			auto& textNode = frontTextEntity.emplace<Nz::NodeComponent>();
+			textNode.SetParent(entity);
+			textNode.SetPosition(-textSprite->GetAABB().width * 0.5f, 1.5f, 0.f);
+
+			frontTextEntity.emplace<Nz::GraphicsComponent>(textSprite);
+		}
+		entity.get_or_emplace<EntityOwnerComponent>().Register(frontTextEntity);
+
+		entt::handle backTextEntity = m_world.CreateEntity();
+		{
+			auto& textNode = backTextEntity.emplace<Nz::NodeComponent>();
+			textNode.SetParent(entity);
+			textNode.SetPosition(textSprite->GetAABB().width * 0.5f, 1.5f, 0.f);
+			textNode.SetRotation(Nz::EulerAnglesf(0.f, Nz::TurnAnglef(0.5f), 0.f));
+
+			backTextEntity.emplace<Nz::GraphicsComponent>(std::move(textSprite));
+		}
+
+		entity.get_or_emplace<EntityOwnerComponent>().Register(backTextEntity);
+
+		if (entityData.controllingPlayerId == m_ownPlayerIndex)
+		{
+			m_playerControlledEntity = entity;
+			OnControlledEntityChanged(entity);
+		}
+		else
+			entity.emplace<MovementInterpolationComponent>(m_lastTickIndex);
 	}
 }

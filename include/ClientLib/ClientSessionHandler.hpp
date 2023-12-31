@@ -17,6 +17,7 @@
 namespace Nz
 {
 	class EnttWorld;
+	class Model;
 }
 
 namespace tsom
@@ -65,6 +66,7 @@ namespace tsom
 
 			entt::handle m_playerControlledEntity;
 			tsl::hopscotch_map<Nz::UInt32, entt::handle> m_networkIdToEntity;
+			std::shared_ptr<Nz::Model> m_playerModel;
 			std::vector<std::optional<PlayerInfo>> m_players; //< FIXME: Nz::SparseVector
 			Nz::EnttWorld& m_world;
 			Nz::UInt16 m_lastTickIndex;

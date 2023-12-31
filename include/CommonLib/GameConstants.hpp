@@ -17,6 +17,12 @@ namespace tsom::Constants
 	constexpr Nz::UInt16 ServerPort = 29536;
 
 	// Player constants
+	constexpr float PlayerColliderRadius = 0.3f;
+	constexpr float PlayerColliderHeight = 1.8f - PlayerColliderRadius * 2.f;
+	constexpr float PlayerJumpPower = 5.f;
+	constexpr float PlayerSprintSpeed = 8.f;
+	constexpr float PlayerWalkSpeed = 5.f;
+	constexpr Nz::DegreeAnglef GravityMaxRotationSpeed = 180.f;
 	constexpr Nz::DegreeAnglef PlayerRotationSpeed = 90.f;
 }
 

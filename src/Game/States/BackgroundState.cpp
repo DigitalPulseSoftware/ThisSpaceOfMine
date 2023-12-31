@@ -3,6 +3,7 @@
 // For conditions of distribution and use, see copyright notice in Config.hpp
 
 #include <Game/States/BackgroundState.hpp>
+#include <ClientLib/RenderConstants.hpp>
 #include <Nazara/Core/AppFilesystemComponent.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/Primitive.hpp>
@@ -11,7 +12,6 @@
 #include <Nazara/Graphics/PropertyHandler/TexturePropertyHandler.hpp>
 #include <Nazara/Graphics/PropertyHandler/UniformValuePropertyHandler.hpp>
 #include <Nazara/Utility.hpp>
-#include <Nazara/Widgets.hpp>
 #include <random>
 
 namespace tsom
@@ -33,7 +33,7 @@ namespace tsom
 
 			auto& cameraComponent = m_camera.emplace<Nz::CameraComponent>(GetStateData().renderTarget, std::move(skyboxPasses), Nz::ProjectionType::Perspective);
 			cameraComponent.UpdateFOV(Nz::DegreeAnglef(45.f));
-			cameraComponent.UpdateRenderMask(0x0000FFFF);
+			cameraComponent.UpdateRenderMask(tsom::Constants::RenderMask3D);
 			cameraComponent.UpdateRenderOrder(-1);
 		}
 

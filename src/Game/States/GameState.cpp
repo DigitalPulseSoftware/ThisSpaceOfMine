@@ -9,6 +9,7 @@
 #include <CommonLib/NetworkSession.hpp>
 #include <CommonLib/Components/PlanetGravityComponent.hpp>
 #include <ClientLib/Chatbox.hpp>
+#include <ClientLib/RenderConstants.hpp>
 #include <Nazara/Core.hpp>
 #include <Nazara/Graphics.hpp>
 #include <Nazara/Graphics/PropertyHandler/TexturePropertyHandler.hpp>
@@ -53,11 +54,15 @@ namespace tsom
 
 			auto& cameraComponent = m_cameraEntity.emplace<Nz::CameraComponent>(m_stateData->renderTarget, std::move(passList));
 			cameraComponent.UpdateClearColor(Nz::Color::Gray());
-			cameraComponent.UpdateRenderMask(0x0000FFFF);
+			#if defined(FREEFLIGHT) || defined(THIRDPERSON)
+			cameraComponent.UpdateRenderMask(tsom::Constants::RenderMask3D);
+			#else
+			cameraComponent.UpdateRenderMask(tsom::Constants::RenderMask3D & ~tsom::Constants::RenderMaskPlayer);
+			#endif
 			cameraComponent.UpdateZNear(0.1f);
 		}
 
-		m_planet = std::make_unique<ClientPlanet>(Nz::Vector3ui(160), 2.f, 16.f, 9.81f);
+		m_planet = std::make_unique<ClientPlanet>(Nz::Vector3ui(160), 1.f, 16.f, 9.81f);
 
 		m_sunLightEntity = m_stateData->world->CreateEntity();
 		{
@@ -65,7 +70,7 @@ namespace tsom
 			m_sunLightEntity.emplace<Nz::NodeComponent>(Nz::Vector3f::Zero(), Nz::EulerAnglesf(-30.f, 80.f, 0.f));
 
 			auto& lightComponent = m_sunLightEntity.emplace<Nz::LightComponent>();
-			auto& dirLight = lightComponent.AddLight<Nz::DirectionalLight>(0x0000FFFF);
+			auto& dirLight = lightComponent.AddLight<Nz::DirectionalLight>(tsom::Constants::RenderMask3D);
 			dirLight.UpdateAmbientFactor(0.05f);
 			dirLight.EnableShadowCasting(true);
 			dirLight.UpdateShadowMapSize(4096);
@@ -93,7 +98,7 @@ namespace tsom
 
 			slot.entity = m_stateData->world->CreateEntity();
 			slot.entity.emplace<Nz::DisabledComponent>();
-			slot.entity.emplace<Nz::GraphicsComponent>(slot.sprite, 0xFFFF0000);
+			slot.entity.emplace<Nz::GraphicsComponent>(slot.sprite, tsom::Constants::RenderMaskUI);
 
 			auto& entityNode = slot.entity.emplace<Nz::NodeComponent>();
 			entityNode.SetPosition(offset, 5.f);
@@ -170,7 +175,7 @@ namespace tsom
 			skyboxModel->SetMaterial(0, skyboxMat);
 
 			// Attach the model to the entity
-			m_skyboxEntity.emplace<Nz::GraphicsComponent>(std::move(skyboxModel), 0x0000FFFF);
+			m_skyboxEntity.emplace<Nz::GraphicsComponent>(std::move(skyboxModel), tsom::Constants::RenderMask3D);
 
 			// Setup entity position and attach it to the camera (position only, camera rotation does not impact skybox)
 			auto& skyboxNode = m_skyboxEntity.emplace<Nz::NodeComponent>();
@@ -224,6 +229,7 @@ namespace tsom
 			Nz::EulerAnglesf currentRotation = m_predictedCameraRotation;
 #endif
 
+			// Reconciliate
 			m_predictedCameraRotation = Nz::EulerAnglesf(characterStates.cameraPitch, characterStates.cameraYaw, 0.f);
 			for (const InputRotation& predictedRotation : m_predictedInputRotations)
 			{
@@ -312,7 +318,7 @@ namespace tsom
 				{
 					auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
 
-					auto primitive = Nz::Primitive::IcoSphere(2.f, 1);
+					auto primitive = Nz::Primitive::IcoSphere(1.f, 2);
 
 					auto geom = Nz::JoltCollider3D::Build(primitive);
 
@@ -334,7 +340,7 @@ namespace tsom
 						colliderModel->SetMaterial(i, colliderMat);
 
 					auto& gfxComponent = debugEntity.get_or_emplace<Nz::GraphicsComponent>();
-					gfxComponent.AttachRenderable(std::move(colliderModel), 0x0000FFFF);
+					gfxComponent.AttachRenderable(std::move(colliderModel), tsom::Constants::RenderMask3D);
 					break;
 				}
 
@@ -630,7 +636,7 @@ namespace tsom
 			cameraNode.SetPosition(characterNode.GetPosition() + characterNode.GetRotation() * (Nz::Vector3f::Up() * 3.f + Nz::Vector3f::Backward() * 2.f));
 			cameraNode.SetRotation(characterNode.GetRotation() * Nz::EulerAnglesf(-30.f, 0.f, 0.f));
 #else
-			cameraNode.SetPosition(characterNode.GetPosition() + characterNode.GetRotation() * (Nz::Vector3f::Up() * 1.6f));
+			cameraNode.SetPosition(characterNode.GetPosition() + characterNode.GetRotation() * (Nz::Vector3f::Up() * 0.6f));
 			//cameraNode.SetRotation(characterNode.GetRotation());
 			//cameraNode.SetRotation(Nz::Quaternionf::Normalize(characterNode.GetRotation() * Nz::Quaternionf(m_predictedCameraRotation)));
 			cameraNode.SetRotation(Nz::Quaternionf::Normalize(characterNode.GetRotation()));

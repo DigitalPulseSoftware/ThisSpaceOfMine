@@ -4,6 +4,7 @@
 
 #include <CommonLib/CharacterController.hpp>
 #include <CommonLib/Direction.hpp>
+#include <CommonLib/GameConstants.hpp>
 #include <CommonLib/Planet.hpp>
 #include <Nazara/JoltPhysics3D/JoltPhysWorld3D.hpp>
 #include <Nazara/JoltPhysics3D/JoltRigidBody3D.hpp>
@@ -43,10 +44,10 @@ namespace tsom
 		Nz::Vector3f newUp = charUp;
 
 		// Update up vector if player is around a gravity well
-		if (m_planet)
+		if (m_planet && m_planet->GetGravityFactor(m_characterPosition) > 0.3f)
 		{
 			Nz::Vector3f targetUp = m_planet->ComputeUpDirection(characterBasePosition);
-			newUp = Nz::Vector3f::RotateTowards(charUp, targetUp, Nz::DegreeAnglef(90.f) * elapsedTime);
+			newUp = Nz::Vector3f::RotateTowards(charUp, targetUp, Constants::GravityMaxRotationSpeed * elapsedTime);
 
 			if (Nz::Vector3f previousUp = newRotation * Nz::Vector3f::Up(); !previousUp.ApproxEqual(newUp, 0.00001f))
 			{
@@ -104,7 +105,7 @@ namespace tsom
 			if (m_lastInputs.jump)
 			{
 				if (character.IsOnGround())
-					velocity += up * 10.f;
+					velocity += up * Constants::PlayerJumpPower;
 			}
 
 			// Restrict movement around up
@@ -119,12 +120,6 @@ namespace tsom
 		else
 			movementRotation = character.GetRotation() * Nz::Quaternionf(Nz::EulerAnglesf(m_lastInputs.pitch, 0.f, 0.f));
 
-		float moveSpeed = 49.3f * 0.2f;
-
-		if (m_lastInputs.sprint)
-			moveSpeed *= 2.f;
-
-		bool isMoving = false;
 
 		Nz::Vector3f desiredVelocity = Nz::Vector3f::Zero();
 		if (m_lastInputs.moveForward)
@@ -146,6 +141,8 @@ namespace tsom
 		}
 		else
 			character.SetFriction(1.f);
+
+		float moveSpeed = (m_lastInputs.sprint) ? Constants::PlayerSprintSpeed : Constants::PlayerWalkSpeed;
 
 		desiredVelocity = movementRotation * desiredVelocity * moveSpeed;
 		desiredVelocity += fixme::ProjectVec3(velocity, up);

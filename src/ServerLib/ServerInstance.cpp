@@ -26,7 +26,7 @@ namespace tsom
 		physicsSystem.GetPhysWorld().SetGravity(Nz::Vector3f::Zero());
 		physicsSystem.GetPhysWorld().RegisterStepListener(&m_gravitySystem);
 
-		m_planet = std::make_unique<Planet>(Nz::Vector3ui(160), 2.f, 16.f, 9.81f);
+		m_planet = std::make_unique<Planet>(Nz::Vector3ui(160), 1.f, 16.f, 9.81f);
 		m_planet->GenerateChunks(m_blockLibrary);
 		m_planet->GeneratePlatform(m_blockLibrary, tsom::Direction::Up, { 68, 109, 150 });
 		m_planet->GeneratePlatform(m_blockLibrary, tsom::Direction::Back, { 33, 148, 60 });
@@ -179,7 +179,7 @@ namespace tsom
 		{
 			Nz::HighPrecisionClock colliderClock;
 			m_planetEntities->Update();
-			fmt::print("built planet collider in {}\n", fmt::streamed(colliderClock.GetElapsedTime()));
+			fmt::print("updated planet collider in {}\n", fmt::streamed(colliderClock.GetElapsedTime()));
 		}
 
 		m_world.Update(elapsedTime);

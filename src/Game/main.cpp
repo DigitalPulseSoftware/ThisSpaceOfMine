@@ -17,6 +17,7 @@
 #include <Nazara/Widgets/Widgets.hpp>
 #include <Main/Main.hpp>
 #include <ClientLib/ClientBlockLibrary.hpp>
+#include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Systems/MovementInterpolationSystem.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/NetworkReactor.hpp>
@@ -96,11 +97,11 @@ int GameMain(int argc, char* argv[])
 
 		auto& cameraComponent = camera2D.emplace<Nz::CameraComponent>(renderTarget, std::move(passList), Nz::ProjectionType::Orthographic);
 		cameraComponent.UpdateClearColor(Nz::Color(0.f, 0.f, 0.f, 0.f));
-		cameraComponent.UpdateRenderMask(0xFFFF0000);
+		cameraComponent.UpdateRenderMask(tsom::Constants::RenderMask2D);
 		cameraComponent.UpdateRenderOrder(1);
 	}
 
-	Nz::Canvas canvas(world.GetRegistry(), window.GetEventHandler(), window.GetCursorController().CreateHandle(), 0xFFFF0000);
+	Nz::Canvas canvas(world.GetRegistry(), window.GetEventHandler(), window.GetCursorController().CreateHandle(), tsom::Constants::RenderMaskUI);
 	canvas.Resize(Nz::Vector2f(window.GetSize()));
 	window.GetEventHandler().OnResized.Connect([&](const Nz::WindowEventHandler* /*eventHandler*/, const Nz::WindowEvent::SizeEvent& sizeEvent)
 	{
