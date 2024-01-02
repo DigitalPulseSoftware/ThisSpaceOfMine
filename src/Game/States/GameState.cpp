@@ -57,7 +57,7 @@ namespace tsom
 			#if defined(FREEFLIGHT) || defined(THIRDPERSON)
 			cameraComponent.UpdateRenderMask(tsom::Constants::RenderMask3D);
 			#else
-			cameraComponent.UpdateRenderMask(tsom::Constants::RenderMask3D & ~tsom::Constants::RenderMaskPlayer);
+			cameraComponent.UpdateRenderMask(tsom::Constants::RenderMask3D & ~tsom::Constants::RenderMaskLocalPlayer);
 			#endif
 			cameraComponent.UpdateZNear(0.1f);
 		}

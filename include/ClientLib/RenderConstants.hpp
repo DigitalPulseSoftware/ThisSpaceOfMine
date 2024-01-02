@@ -14,7 +14,8 @@ namespace tsom::Constants
 	constexpr Nz::UInt32 RenderMask2D = 0xFFFF0000;
 	constexpr Nz::UInt32 RenderMaskUI = 0x00010000;
 	constexpr Nz::UInt32 RenderMask3D = 0x0000FFFF;
-	constexpr Nz::UInt32 RenderMaskPlayer = 0x00000001;
+	constexpr Nz::UInt32 RenderMaskLocalPlayer = 0x00000001;
+	constexpr Nz::UInt32 RenderMaskOtherPlayer = 0x00000002;
 }
 
 #endif

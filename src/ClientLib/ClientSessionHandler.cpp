@@ -168,7 +168,6 @@ namespace tsom
 		auto collider = std::make_shared<Nz::JoltCapsuleCollider3D>(Constants::PlayerColliderHeight, Constants::PlayerColliderRadius);
 		entity.emplace<Nz::JoltRigidBody3DComponent>(Nz::JoltRigidBody3D::DynamicSettings(collider, 0.f));
 
-
 		// Player model (collider for now)
 		if (!m_playerModel)
 		{
@@ -189,7 +188,7 @@ namespace tsom
 		}
 
 		auto& gfx = entity.emplace<Nz::GraphicsComponent>();
-		gfx.AttachRenderable(m_playerModel, tsom::Constants::RenderMaskPlayer);
+		gfx.AttachRenderable(m_playerModel, (entityData.controllingPlayerId == m_ownPlayerIndex) ? tsom::Constants::RenderMaskLocalPlayer : tsom::Constants::RenderMaskOtherPlayer);
 
 		// Floating name
 		std::shared_ptr<Nz::TextSprite> textSprite = std::make_shared<Nz::TextSprite>();
