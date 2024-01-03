@@ -361,6 +361,20 @@ namespace tsom
 					break;
 				}
 
+				case Nz::Keyboard::VKey::F4:
+				{
+					auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
+
+					entt::handle debugEntity = m_stateData->world->CreateEntity();
+					debugEntity.emplace<Nz::NodeComponent>(cameraNode.GetPosition(), cameraNode.GetRotation());
+					auto& debugLight = debugEntity.emplace<Nz::LightComponent>();
+
+					auto& spotLight = debugLight.AddLight<Nz::SpotLight>();
+					spotLight.EnableShadowCasting(true);
+					spotLight.UpdateShadowMapSize(1024);
+					break;
+				}
+
 				default:
 					break;
 			}
