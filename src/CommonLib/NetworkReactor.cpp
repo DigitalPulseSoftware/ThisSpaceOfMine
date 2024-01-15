@@ -145,20 +145,20 @@ namespace tsom
 		// Then, force a disconnection for every remaining peer
 		for (Nz::ENetPeer* peer : m_clients)
 		{
-			if (peer)
-			{
-				switch (peer->GetState())
-				{
-					case Nz::ENetPeerState::AcknowledgingDisconnect:
-					case Nz::ENetPeerState::Disconnected:
-					case Nz::ENetPeerState::Disconnecting:
-					case Nz::ENetPeerState::Zombie:
-							break;
+			if (!peer)
+				continue;
 
-					default:
-						peer->Disconnect(0); //< FIXME: DisconnectLater doesn't seem to work here
-						break;
-				}
+			switch (peer->GetState())
+			{
+				case Nz::ENetPeerState::AcknowledgingDisconnect:
+				case Nz::ENetPeerState::Disconnected:
+				case Nz::ENetPeerState::Disconnecting:
+				case Nz::ENetPeerState::Zombie:
+					break;
+
+				default:
+					peer->Disconnect(0); //< FIXME: DisconnectLater doesn't seem to work here
+					break;
 			}
 		}
 
@@ -172,6 +172,7 @@ namespace tsom
 				switch (event.type)
 				{
 					case Nz::ENetEventType::Disconnect:
+					case Nz::ENetEventType::DisconnectTimeout:
 					{
 						Nz::UInt16 peerId = event.peer->GetPeerId();
 						m_clients[peerId] = nullptr;

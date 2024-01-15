@@ -26,7 +26,7 @@ namespace tsom
 	{
 		public:
 			ClientSessionHandler(NetworkSession* session, Nz::EnttWorld& world);
-			~ClientSessionHandler() = default;
+			~ClientSessionHandler();
 
 			inline entt::handle GetControlledEntity() const;
 

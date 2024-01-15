@@ -30,29 +30,28 @@ namespace tsom
 {
 	constexpr std::array<std::string_view, 7> s_selectableBlocks = { "dirt", "grass", "stone", "snow", "stone_bricks", "planks", "debug" };
 
-	GameState::GameState(std::shared_ptr<StateData> stateData) :
-	m_stateData(std::move(stateData)),
+	GameState::GameState(std::shared_ptr<StateData> stateDataPtr) :
+	WidgetState(std::move(stateDataPtr)),
 	m_selectedBlock(0),
 	m_upCorrection(Nz::Quaternionf::Identity()),
 	m_tickAccumulator(Nz::Time::Zero()),
 	m_tickDuration(Constants::TickDuration),
-	m_escapeMenu(m_stateData->canvas),
+	m_escapeMenu(GetStateData().canvas),
 	m_isMouseLocked(true),
 	m_nextInputIndex(1)
 	{
-		auto& filesystem = m_stateData->app->GetComponent<Nz::AppFilesystemComponent>();
+		auto& stateData = GetStateData();
+		auto& filesystem = stateData.app->GetComponent<Nz::AppFilesystemComponent>();
 
-		Nz::Vector2f screenSize = Nz::Vector2f(m_stateData->renderTarget->GetSize());
+		Nz::Vector2f screenSize = Nz::Vector2f(stateData.renderTarget->GetSize());
 
-		m_cameraEntity = m_stateData->world->CreateEntity();
+		m_cameraEntity = CreateEntity();
 		{
-			m_cameraEntity.emplace<Nz::DisabledComponent>();
-
 			auto& cameraNode = m_cameraEntity.emplace<Nz::NodeComponent>();
 
 			auto passList = filesystem.Load<Nz::PipelinePassList>("assets/3d.passlist");
 
-			auto& cameraComponent = m_cameraEntity.emplace<Nz::CameraComponent>(m_stateData->renderTarget, std::move(passList));
+			auto& cameraComponent = m_cameraEntity.emplace<Nz::CameraComponent>(stateData.renderTarget, std::move(passList));
 			cameraComponent.UpdateClearColor(Nz::Color::Gray());
 			#if defined(FREEFLIGHT) || defined(THIRDPERSON)
 			cameraComponent.UpdateRenderMask(tsom::Constants::RenderMask3D);
@@ -64,9 +63,8 @@ namespace tsom
 
 		m_planet = std::make_unique<ClientPlanet>(Nz::Vector3ui(160), 1.f, 16.f, 9.81f);
 
-		m_sunLightEntity = m_stateData->world->CreateEntity();
+		m_sunLightEntity = CreateEntity();
 		{
-			m_sunLightEntity.emplace<Nz::DisabledComponent>();
 			m_sunLightEntity.emplace<Nz::NodeComponent>(Nz::Vector3f::Zero(), Nz::EulerAnglesf(-30.f, 80.f, 0.f));
 
 			auto& lightComponent = m_sunLightEntity.emplace<Nz::LightComponent>();
@@ -78,7 +76,7 @@ namespace tsom
 
 		constexpr float InventoryTileSize = 96.f;
 
-		const auto& blockColorMap = m_stateData->blockLibrary->GetBaseColorTexture();
+		const auto& blockColorMap = stateData.blockLibrary->GetBaseColorTexture();
 
 		float offset = screenSize.x / 2.f - (s_selectableBlocks.size() * (InventoryTileSize + 5.f)) * 0.5f;
 		for (std::string_view blockName : s_selectableBlocks)
@@ -87,17 +85,16 @@ namespace tsom
 
 			auto& slot = m_inventorySlots.emplace_back();
 
-			BlockIndex blockIndex = m_stateData->blockLibrary->GetBlockIndex(blockName);
+			BlockIndex blockIndex = stateData.blockLibrary->GetBlockIndex(blockName);
 
 			std::shared_ptr<Nz::MaterialInstance> slotMat = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic);
-			slotMat->SetTextureProperty("BaseColorMap", m_stateData->blockLibrary->GetPreviewTexture(blockIndex));
+			slotMat->SetTextureProperty("BaseColorMap", stateData.blockLibrary->GetPreviewTexture(blockIndex));
 
 			slot.sprite = std::make_shared<Nz::Sprite>(std::move(slotMat));
 			slot.sprite->SetColor((active) ? Nz::Color::White() : Nz::Color::sRGBToLinear(Nz::Color::Gray()));
 			slot.sprite->SetSize({ InventoryTileSize, InventoryTileSize });
 
-			slot.entity = m_stateData->world->CreateEntity();
-			slot.entity.emplace<Nz::DisabledComponent>();
+			slot.entity = CreateEntity();
 			slot.entity.emplace<Nz::GraphicsComponent>(slot.sprite, tsom::Constants::RenderMaskUI);
 
 			auto& entityNode = slot.entity.emplace<Nz::NodeComponent>();
@@ -105,9 +102,9 @@ namespace tsom
 			offset += (InventoryTileSize + 5.f);
 		}
 
-		m_selectedBlockIndex = m_stateData->blockLibrary->GetBlockIndex(s_selectableBlocks[m_selectedBlock]);
+		m_selectedBlockIndex = stateData.blockLibrary->GetBlockIndex(s_selectableBlocks[m_selectedBlock]);
 
-		m_mouseWheelMovedSlot.Connect(m_stateData->window->GetEventHandler().OnMouseWheelMoved, [&](const Nz::WindowEventHandler* /*eventHandler*/, const Nz::WindowEvent::MouseWheelEvent& event)
+		m_mouseWheelMovedSlot.Connect(stateData.window->GetEventHandler().OnMouseWheelMoved, [&](const Nz::WindowEventHandler* /*eventHandler*/, const Nz::WindowEvent::MouseWheelEvent& event)
 		{
 			if (!m_isMouseLocked)
 				return;
@@ -126,16 +123,14 @@ namespace tsom
 					m_selectedBlock = s_selectableBlocks.size() - 1;
 			}
 
-			m_selectedBlockIndex = m_stateData->blockLibrary->GetBlockIndex(s_selectableBlocks[m_selectedBlock]);
+			m_selectedBlockIndex = stateData.blockLibrary->GetBlockIndex(s_selectableBlocks[m_selectedBlock]);
 
 			for (std::size_t i = 0; i < m_inventorySlots.size(); ++i)
 				m_inventorySlots[i].sprite->SetColor((i == m_selectedBlock) ? Nz::Color::White() : Nz::Color::sRGBToLinear(Nz::Color::Gray()));
 		});
 
-		m_skyboxEntity = m_stateData->world->CreateEntity();
+		m_skyboxEntity = CreateEntity();
 		{
-			m_skyboxEntity.emplace<Nz::DisabledComponent>();
-
 			// Create a new material (custom properties + shaders) for the skybox
 			Nz::MaterialSettings skyboxSettings;
 			skyboxSettings.AddValueProperty<Nz::Color>("BaseColor", Nz::Color::White());
@@ -183,13 +178,13 @@ namespace tsom
 			skyboxNode.SetParent(m_cameraEntity);
 		}
 		
-		m_controlledEntity = m_stateData->sessionHandler->GetControlledEntity();
-		m_onControlledEntityChanged.Connect(m_stateData->sessionHandler->OnControlledEntityChanged, [&](entt::handle entity)
+		m_controlledEntity = stateData.sessionHandler->GetControlledEntity();
+		m_onControlledEntityChanged.Connect(stateData.sessionHandler->OnControlledEntityChanged, [&](entt::handle entity)
 		{
 			m_controlledEntity = entity;
 		});
 
-		m_onChunkCreate.Connect(m_stateData->sessionHandler->OnChunkCreate, [&](const Packets::ChunkCreate& chunkCreate)
+		m_onChunkCreate.Connect(stateData.sessionHandler->OnChunkCreate, [&](const Packets::ChunkCreate& chunkCreate)
 		{
 			Nz::Vector3ui indices(chunkCreate.chunkLocX, chunkCreate.chunkLocY, chunkCreate.chunkLocZ);
 
@@ -200,19 +195,19 @@ namespace tsom
 			});
 		});
 		
-		m_onChunkDestroy.Connect(m_stateData->sessionHandler->OnChunkDestroy, [&](const Packets::ChunkDestroy& chunkDestroy)
+		m_onChunkDestroy.Connect(stateData.sessionHandler->OnChunkDestroy, [&](const Packets::ChunkDestroy& chunkDestroy)
 		{
 			m_planet->RemoveChunk(chunkDestroy.chunkId);
 		});
 
-		m_onChunkUpdate.Connect(m_stateData->sessionHandler->OnChunkUpdate, [&](const Packets::ChunkUpdate& chunkUpdate)
+		m_onChunkUpdate.Connect(stateData.sessionHandler->OnChunkUpdate, [&](const Packets::ChunkUpdate& chunkUpdate)
 		{
 			Chunk* chunk = m_planet->GetChunkByNetworkIndex(chunkUpdate.chunkId);
 			for (auto&& [blockPos, blockIndex] : chunkUpdate.updates)
 				chunk->UpdateBlock({ blockPos.x, blockPos.y, blockPos.z }, Nz::SafeCast<BlockIndex>(blockIndex));
 		});
 
-		m_onControlledEntityStateUpdate.Connect(m_stateData->sessionHandler->OnControlledEntityStateUpdate, [&](InputIndex inputIndex, const Packets::EntitiesStateUpdate::ControlledCharacter& characterStates)
+		m_onControlledEntityStateUpdate.Connect(stateData.sessionHandler->OnControlledEntityStateUpdate, [&](InputIndex inputIndex, const Packets::EntitiesStateUpdate::ControlledCharacter& characterStates)
 		{
 			m_referenceRotation = characterStates.referenceRotation;
 
@@ -274,17 +269,19 @@ namespace tsom
 #endif
 		});
 		
-		m_chatBox = std::make_unique<Chatbox>(*m_stateData->renderTarget, m_stateData->canvas);
+		m_chatBox = std::make_unique<Chatbox>(*stateData.renderTarget, stateData.canvas);
 		m_chatBox->OnChatMessage.Connect([&](const std::string& message)
 		{
 			Packets::SendChatMessage messagePacket;
 			messagePacket.message = message;
 
-			m_stateData->networkSession->SendPacket(messagePacket);
+			stateData.networkSession->SendPacket(messagePacket);
 		});
 		
-		m_onUnhandledKeyPressed.Connect(m_stateData->canvas->OnUnhandledKeyPressed, [this](const Nz::WindowEventHandler*, const Nz::WindowEvent::KeyEvent& event)
+		m_onUnhandledKeyPressed.Connect(stateData.canvas->OnUnhandledKeyPressed, [this](const Nz::WindowEventHandler*, const Nz::WindowEvent::KeyEvent& event)
 		{
+			auto& stateData = GetStateData();
+
 			switch (event.virtualKey)
 			{
 				case Nz::Keyboard::VKey::Escape:
@@ -325,7 +322,7 @@ namespace tsom
 					Nz::JoltRigidBody3D::DynamicSettings dynSettings(geom, 10.f);
 					dynSettings.allowSleeping = false;
 
-					entt::handle debugEntity = m_stateData->world->CreateEntity();
+					entt::handle debugEntity = stateData.world->CreateEntity();
 					debugEntity.emplace<PlanetGravityComponent>().planet = m_planet.get();
 					debugEntity.emplace<Nz::NodeComponent>(cameraNode.GetPosition());
 					debugEntity.emplace<Nz::JoltRigidBody3DComponent>(dynSettings);
@@ -365,7 +362,7 @@ namespace tsom
 				{
 					auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
 
-					entt::handle debugEntity = m_stateData->world->CreateEntity();
+					entt::handle debugEntity = stateData.world->CreateEntity();
 					debugEntity.emplace<Nz::NodeComponent>(cameraNode.GetPosition(), cameraNode.GetRotation());
 					auto& debugLight = debugEntity.emplace<Nz::LightComponent>();
 
@@ -380,7 +377,7 @@ namespace tsom
 			}
 		});
 
-		m_onChatMessage.Connect(m_stateData->sessionHandler->OnChatMessage, [this](const std::string& message, const std::string& senderName)
+		m_onChatMessage.Connect(stateData.sessionHandler->OnChatMessage, [this](const std::string& message, const std::string& senderName)
 		{
 			if (!senderName.empty())
 			{
@@ -404,7 +401,7 @@ namespace tsom
 			}
 		});
 
-		m_onPlayerLeave.Connect(m_stateData->sessionHandler->OnPlayerLeave, [this](const std::string& playerName)
+		m_onPlayerLeave.Connect(stateData.sessionHandler->OnPlayerLeave, [this](const std::string& playerName)
 		{
 			m_chatBox->PrintMessage({
 				{
@@ -414,7 +411,7 @@ namespace tsom
 			});
 		});
 
-		m_onPlayerJoined.Connect(m_stateData->sessionHandler->OnPlayerJoined, [this](const std::string& playerName)
+		m_onPlayerJoined.Connect(stateData.sessionHandler->OnPlayerJoined, [this](const std::string& playerName)
 		{
 			m_chatBox->PrintMessage({
 				{
@@ -426,12 +423,12 @@ namespace tsom
 
 		m_escapeMenu.OnDisconnect.Connect([this](EscapeMenu* /*menu*/)
 		{
-			m_stateData->networkSession->Disconnect();
+			GetStateData().networkSession->Disconnect();
 		});
 
 		m_escapeMenu.OnQuitApp.Connect([this](EscapeMenu* /*menu*/)
 		{
-			m_stateData->app->Quit();
+			GetStateData().app->Quit();
 		});
 	}
 
@@ -439,32 +436,31 @@ namespace tsom
 	{
 	}
 
-	void GameState::Enter(Nz::StateMachine& /*fsm*/)
+	void GameState::Enter(Nz::StateMachine& fsm)
 	{
+		WidgetState::Enter(fsm);
+
 #ifdef FREEFLIGHT
 		auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
 		cameraNode.SetPosition(Nz::Vector3f::Up() * (m_planet->GetGridDimensions().z * m_planet->GetTileSize() * 0.5f + 1.f));
 #endif
 
-		m_cameraEntity.remove<Nz::DisabledComponent>();
-		m_sunLightEntity.remove<Nz::DisabledComponent>();
-		m_skyboxEntity.remove<Nz::DisabledComponent>();
+		auto& stateData = GetStateData();
 
-		for (auto& inventorySlot : m_inventorySlots)
-			inventorySlot.entity.remove<Nz::DisabledComponent>();
-
-		m_planetEntities = std::make_unique<ClientChunkEntities>(*m_stateData->app, *m_stateData->world, *m_planet, *m_stateData->blockLibrary);
-
-		Nz::WindowEventHandler& eventHandler = m_stateData->window->GetEventHandler();
+		m_planetEntities = std::make_unique<ClientChunkEntities>(*stateData.app, *stateData.world, *m_planet, *stateData.blockLibrary);
 
 		m_remainingCameraRotation = Nz::EulerAnglesf(0.f, 0.f, 0.f);
 		m_predictedCameraRotation = m_remainingCameraRotation;
 		m_incomingCameraRotation = Nz::EulerAnglesf::Zero();
 
-		eventHandler.OnMouseMoved.Connect([&](const Nz::WindowEventHandler*, const Nz::WindowEvent::MouseMoveEvent& event)
+		Nz::WindowEventHandler& eventHandler = stateData.window->GetEventHandler();
+
+		m_mouseMovedSlot.Connect(eventHandler.OnMouseMoved, [&](const Nz::WindowEventHandler*, const Nz::WindowEvent::MouseMoveEvent& event)
 		{
 			if (!m_isMouseLocked)
 				return;
+
+			auto& stateData = GetStateData();
 
 			constexpr float sensitivity = 0.3f; // Mouse sensitivity
 
@@ -473,15 +469,34 @@ namespace tsom
 
 			m_incomingCameraRotation.pitch += pitchMod;
 			m_incomingCameraRotation.yaw += yawMod;
+
+#ifdef FREEFLIGHT
+			// Gestion de la caméra free-fly (Rotation)
+			float sensitivity = 0.3f; // Sensibilité de la souris
+
+			// On modifie l'angle de la caméra grâce au déplacement relatif sur X de la souris
+			camAngles.yaw = camAngles.yaw - event.deltaX * sensitivity;
+			camAngles.yaw.Normalize();
+
+			// Idem, mais pour éviter les problèmes de calcul de la matrice de vue, on restreint les angles
+			camAngles.pitch = Nz::Clamp(camAngles.pitch - event.deltaY * sensitivity, -89.f, 89.f);
+
+			/*auto& playerRotNode = registry.get<Nz::NodeComponent>(playerRotation);
+			playerRotNode.SetRotation(camAngles);*/
+			auto& playerRotNode = m_cameraEntity.get<Nz::NodeComponent>();
+			playerRotNode.SetRotation(camAngles);
+#endif
 		});
 
-		eventHandler.OnMouseButtonReleased.Connect([&](const Nz::WindowEventHandler*, const Nz::WindowEvent::MouseButtonEvent& event)
+		m_mouseButtonReleasedSlot.Connect(eventHandler.OnMouseButtonReleased, [&](const Nz::WindowEventHandler*, const Nz::WindowEvent::MouseButtonEvent& event)
 		{
 			if (!m_isMouseLocked)
 				return;
 
 			if (event.button != Nz::Mouse::Left && event.button != Nz::Mouse::Right)
 				return;
+
+			auto& stateData = GetStateData();
 
 			Nz::Vector3f hitPos, hitNormal;
 			auto filter = [&](const Nz::JoltPhysics3DSystem::RaycastHit& hitInfo) -> std::optional<float>
@@ -496,7 +511,7 @@ namespace tsom
 
 			auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
 
-			auto& physSystem = m_stateData->world->GetSystem<Nz::JoltPhysics3DSystem>();
+			auto& physSystem = stateData.world->GetSystem<Nz::JoltPhysics3DSystem>();
 			if (physSystem.RaycastQuery(cameraNode.GetPosition(), cameraNode.GetPosition() + cameraNode.GetForward() * 10.f, filter))
 			{
 				if (event.button == Nz::Mouse::Left)
@@ -517,7 +532,7 @@ namespace tsom
 					mineBlock.voxelLoc.y = coordinates->y;
 					mineBlock.voxelLoc.z = coordinates->z;
 
-					m_stateData->networkSession->SendPacket(mineBlock);
+					stateData.networkSession->SendPacket(mineBlock);
 				}
 				else
 				{
@@ -538,55 +553,33 @@ namespace tsom
 					placeBlock.voxelLoc.z = coordinates->z;
 					placeBlock.newContent = Nz::SafeCast<Nz::UInt8>(m_selectedBlockIndex);
 
-					m_stateData->networkSession->SendPacket(placeBlock);
+					stateData.networkSession->SendPacket(placeBlock);
 				}
 			}
 		});
 
-#ifdef FREEFLIGHT
-		eventHandler.OnMouseMoved.Connect([&, camAngles = Nz::EulerAnglesf(0.f, 0.f, 0.f)](const Nz::WindowEventHandler*, const Nz::WindowEvent::MouseMoveEvent& event) mutable
-		{
-			if (!m_isMouseLocked)
-				return;
-
-			// Gestion de la caméra free-fly (Rotation)
-			float sensitivity = 0.3f; // Sensibilité de la souris
-
-			// On modifie l'angle de la caméra grâce au déplacement relatif sur X de la souris
-			camAngles.yaw = camAngles.yaw - event.deltaX * sensitivity;
-			camAngles.yaw.Normalize();
-
-			// Idem, mais pour éviter les problèmes de calcul de la matrice de vue, on restreint les angles
-			camAngles.pitch = Nz::Clamp(camAngles.pitch - event.deltaY * sensitivity, -89.f, 89.f);
-
-			/*auto& playerRotNode = registry.get<Nz::NodeComponent>(playerRotation);
-			playerRotNode.SetRotation(camAngles);*/
-			auto& playerRotNode = m_cameraEntity.get<Nz::NodeComponent>();
-			playerRotNode.SetRotation(camAngles);
-		});
-#endif
-
 		UpdateMouseLock();
 	}
 
-	void GameState::Leave(Nz::StateMachine& /*fsm*/)
+	void GameState::Leave(Nz::StateMachine& fsm)
 	{
+		WidgetState::Leave(fsm);
+
 		Nz::Mouse::SetRelativeMouseMode(false);
 
 		m_chatBox->Close();
-
 		m_planetEntities.reset();
-
-		m_cameraEntity.emplace<Nz::DisabledComponent>();
-		m_sunLightEntity.emplace<Nz::DisabledComponent>();
-		m_skyboxEntity.emplace<Nz::DisabledComponent>();
-
-		for (auto& inventorySlot : m_inventorySlots)
-			inventorySlot.entity.emplace<Nz::DisabledComponent>();
 	}
 
-	bool GameState::Update(Nz::StateMachine& /*fsm*/, Nz::Time elapsedTime)
+	bool GameState::Update(Nz::StateMachine& fsm, Nz::Time elapsedTime)
 	{
+		if (!WidgetState::Update(fsm, elapsedTime))
+			return false;
+
+		auto& stateData = GetStateData();
+		if (!stateData.networkSession)
+			return true;
+
 		m_planetEntities->Update();
 
 		m_tickAccumulator += elapsedTime;
@@ -596,7 +589,7 @@ namespace tsom
 			OnTick(m_tickDuration, m_tickAccumulator < m_tickDuration);
 		}
 
-		auto& debugDrawer = m_stateData->world->GetSystem<Nz::RenderSystem>().GetFramePipeline().GetDebugDrawer();
+		auto& debugDrawer = stateData.world->GetSystem<Nz::RenderSystem>().GetFramePipeline().GetDebugDrawer();
 		//debugDrawer.DrawLine(Nz::Vector3f::Zero(), Nz::Vector3f::Forward() * 20.f, Nz::Color::Green());
 		//debugDrawer.DrawLine(Nz::Vector3f::Zero(), Nz::Vector3f::Left() * 20.f, Nz::Color::Green());
 		//debugDrawer.DrawLine(Nz::Vector3f::Left() * 20.f, Nz::Vector3f::Left() * 20.f + Nz::Vector3f::Forward() * 10.f, Nz::Color::Green());
@@ -628,8 +621,8 @@ namespace tsom
 				cameraNode.Move(Nz::Vector3f::Right() * cameraSpeed * updateTime, Nz::CoordSys::Local);
 		}
 #else
-		if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::F1) && m_stateData->networkSession->IsConnected())
-			m_stateData->networkSession->Disconnect();
+		if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::F1) && stateData.networkSession->IsConnected())
+			stateData.networkSession->Disconnect();
 
 		if (m_controlledEntity)
 		{
@@ -667,7 +660,7 @@ namespace tsom
 
 		// Raycast
 		{
-			auto& physSystem = m_stateData->world->GetSystem<Nz::JoltPhysics3DSystem>();
+			auto& physSystem = stateData.world->GetSystem<Nz::JoltPhysics3DSystem>();
 			Nz::Vector3f hitPos, hitNormal;
 			if (physSystem.RaycastQuery(cameraNode.GetPosition(), cameraNode.GetPosition() + cameraNode.GetForward() * 10.f, [&](const Nz::JoltPhysics3DSystem::RaycastHit& hitInfo) -> std::optional<float>
 				{
@@ -717,7 +710,7 @@ namespace tsom
 		}
 
 
-		m_controlledEntity = m_stateData->sessionHandler->GetControlledEntity();
+		m_controlledEntity = stateData.sessionHandler->GetControlledEntity();
 
 		return true;
 	}
@@ -774,7 +767,7 @@ namespace tsom
 			}
 		}
 
-		m_stateData->networkSession->SendPacket(inputPacket);
+		GetStateData().networkSession->SendPacket(inputPacket);
 	}
 
 	void GameState::UpdateMouseLock()

@@ -40,6 +40,13 @@ namespace tsom
 		SetupAttributeTable(s_packetAttributes);
 	}
 
+	ClientSessionHandler::~ClientSessionHandler()
+	{
+		for (auto it = m_networkIdToEntity.begin(); it != m_networkIdToEntity.end(); ++it)
+			it.value().destroy();
+		m_networkIdToEntity.clear();
+	}
+
 	void ClientSessionHandler::HandlePacket(Packets::AuthResponse&& authResponse)
 	{
 		fmt::print("Auth response\n");

@@ -16,6 +16,7 @@
 #include <ClientLib/ClientChunkEntities.hpp>
 #include <ClientLib/ClientSessionHandler.hpp>
 #include <ClientLib/EscapeMenu.hpp>
+#include <Game/States/WidgetState.hpp>
 #include <entt/entt.hpp>
 #include <array>
 #include <functional>
@@ -28,7 +29,7 @@ namespace tsom
 	class Chatbox;
 	struct StateData;
 
-	class GameState : public Nz::State
+	class GameState : public WidgetState
 	{
 		public:
 			GameState(std::shared_ptr<StateData> stateData);
@@ -58,6 +59,8 @@ namespace tsom
 			NazaraSlot(ClientSessionHandler, OnPlayerJoined, m_onPlayerJoined);
 			NazaraSlot(Nz::Canvas, OnUnhandledKeyPressed, m_onUnhandledKeyPressed);
 			NazaraSlot(Nz::Canvas, OnUnhandledKeyReleased, m_onUnhandledKeyReleased);
+			NazaraSlot(Nz::WindowEventHandler, OnMouseButtonReleased, m_mouseButtonReleasedSlot);
+			NazaraSlot(Nz::WindowEventHandler, OnMouseMoved, m_mouseMovedSlot);
 			NazaraSlot(Nz::WindowEventHandler, OnMouseWheelMoved, m_mouseWheelMovedSlot);
 
 			struct InventorySlot
@@ -72,7 +75,6 @@ namespace tsom
 				Nz::EulerAnglesf inputRotation;
 			};
 
-			std::shared_ptr<StateData> m_stateData;
 			std::size_t m_selectedBlock;
 			std::unique_ptr<ClientPlanet> m_planet;
 			std::unique_ptr<ClientChunkEntities> m_planetEntities;

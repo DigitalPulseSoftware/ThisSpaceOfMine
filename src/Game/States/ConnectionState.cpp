@@ -113,8 +113,12 @@ namespace tsom
 			else
 			{
 				m_nextState = m_previousState;
-				m_nextStateTimer = Nz::Time::Milliseconds(200);
+				m_nextStateTimer = Nz::Time::Milliseconds(100);
 			}
+
+			auto& stateData = GetStateData();
+			stateData.networkSession = nullptr;
+			stateData.sessionHandler = nullptr;
 
 			fmt::print("Disconnected from server\n");
 			m_serverSession.reset();
