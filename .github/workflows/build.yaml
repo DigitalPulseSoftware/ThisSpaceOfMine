@@ -97,7 +97,7 @@ jobs:
     - name: Archive result
       uses: ihiroky/archive-action@v1
       with:
-        root_dir: dest
+        root_dir: dest/bin
         file_path: ${{ env.OUTPUT_FILE }}
         verbose: true
 
