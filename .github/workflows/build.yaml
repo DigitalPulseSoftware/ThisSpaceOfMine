@@ -101,14 +101,34 @@ jobs:
         file_path: ${{ env.OUTPUT_FILE }}
         verbose: true
 
+    - name: Compute checksum of archive
+      run: |
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          sha256sum -b "$OUTPUT_FILE" > "$OUTPUT_FILE.sha256"
+        else
+          shasum -a 256 -b "$OUTPUT_FILE" > "$OUTPUT_FILE.sha256"
+        fi
+      shell: bash
+
     # Nightly tags (for commits to dev branch)
-    - name: Upload binaries to release (Branch)
+    - name: Upload binaries to release (Dev)
       uses: svenstaro/upload-release-action@v2
       if: ${{ (github.ref == 'refs/heads/dev') && github.event_name == 'push' }}
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: ${{ env.OUTPUT_FILE }}
         asset_name: ${{ env.OUTPUT_FILE }}
+        tag: "0.0.0-nightly"
+        overwrite: true
+        body: "Dev branch"
+
+    - name: Upload checksum to release (Dev)
+      uses: svenstaro/upload-release-action@v2
+      if: ${{ (github.ref == 'refs/heads/dev') && github.event_name == 'push' }}
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: ${{ env.OUTPUT_FILE }}.sha256
+        asset_name: ${{ env.OUTPUT_FILE }}.sha256
         tag: "0.0.0-nightly"
         overwrite: true
         body: "Dev branch"
@@ -121,6 +141,17 @@ jobs:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: ${{ env.OUTPUT_FILE }}
         asset_name: ${{ env.OUTPUT_FILE }}
+        tag: ${{ github.ref }}
+        overwrite: true
+        body: Version ${{ github.ref }}
+
+    - name: Upload binaries to release (Tag)
+      uses: svenstaro/upload-release-action@v2
+      if: ${{ startsWith(github.event.ref, 'refs/tags/') && matrix.mode == 'releasedbg' }}
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: ${{ env.OUTPUT_FILE }}.sha256
+        asset_name: ${{ env.OUTPUT_FILE }}.sha256
         tag: ${{ github.ref }}
         overwrite: true
         body: Version ${{ github.ref }}
