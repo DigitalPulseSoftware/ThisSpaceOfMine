@@ -120,7 +120,6 @@ jobs:
         asset_name: ${{ env.OUTPUT_FILE }}
         tag: "0.0.0-nightly"
         overwrite: true
-        body: "Dev branch"
 
     - name: Upload checksum to release (Dev)
       uses: svenstaro/upload-release-action@v2
@@ -143,9 +142,8 @@ jobs:
         asset_name: ${{ env.OUTPUT_FILE }}
         tag: ${{ github.ref }}
         overwrite: true
-        body: Version ${{ github.ref }}
 
-    - name: Upload binaries to release (Tag)
+    - name: Upload checksum to release (Tag)
       uses: svenstaro/upload-release-action@v2
       if: ${{ startsWith(github.event.ref, 'refs/tags/') && matrix.mode == 'releasedbg' }}
       with:
@@ -154,4 +152,3 @@ jobs:
         asset_name: ${{ env.OUTPUT_FILE }}.sha256
         tag: ${{ github.ref }}
         overwrite: true
-        body: Version ${{ github.ref }}
