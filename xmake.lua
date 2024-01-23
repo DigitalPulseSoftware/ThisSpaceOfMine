@@ -6,7 +6,7 @@ option("serverlib_static", { default = false, defines = "TSOM_SERVERLIB_STATIC"}
 add_repositories("nazara-repo https://github.com/NazaraEngine/xmake-repo.git")
 add_requires("nazaraengine >=2023.08.15", { configs = { debug = is_mode("debug"), symbols = true }})
 add_requires("fmt", { configs = { header_only = false }})
-add_requires("concurrentqueue", "hopscotch-map", "nlohmann_json", "perlinnoise")
+add_requires("semver", "concurrentqueue", "hopscotch-map", "nlohmann_json", "perlinnoise")
 
 if is_plat("windows") then
 	add_requires("stackwalker 5b0df7a4db8896f6b6dc45d36e383c52577e3c6b")
@@ -48,7 +48,7 @@ target("CommonLib", function ()
 	add_options("commonlib_static")
 
 	add_packages("nazaraengine", { components = { "joltphysics3d", "network", "utility" }, public = true })
-	add_packages("concurrentqueue", "fmt", "hopscotch-map", "nlohmann_json", { public = true })
+	add_packages("concurrentqueue", "semver", "fmt", "hopscotch-map", "nlohmann_json", { public = true })
 	add_packages("perlinnoise")
 
 	if is_plat("windows") then
@@ -101,6 +101,8 @@ target("CommonLib", function ()
 
 		local targetversion = semver.new(target:version())
 
+		local buildconf = string.format("%s_%s", target:plat(), target:arch())
+
 		local dependfile = target:dependfile("versioninfo")
 		depend.on_changed(function ()
 			progress.show(opt.progress, "${color.build.target}updating version info")
@@ -108,17 +110,18 @@ target("CommonLib", function ()
 std::uint32_t GameMajorVersion = %s;
 std::uint32_t GameMinorVersion = %s;
 std::uint32_t GamePatchVersion = %s;
+std::string_view BuildConfig = "%s";
 std::string_view BuildSystem = "%s";
 std::string_view BuildBranch = "%s";
 std::string_view BuildCommit = "%s";
 std::string_view BuildCommitDate = "%s";
-]], targetversion:major(), targetversion:minor(), targetversion:patch(), system, branch, commitHash, commitDate))
+]], targetversion:major(), targetversion:minor(), targetversion:patch(), buildconf, system, branch, commitHash, commitDate))
 		end,
 		{
 			dependfile = dependfile, 
 			files = targetfile,
 			changed = target:is_rebuilt(),
-			values = {targetversion, system, branch, commitHash, commitDate}
+			values = {targetversion, buildconf, system, branch, commitHash, commitDate}
 		})
 	end)
 

@@ -8,12 +8,16 @@
 #define TSOM_CLIENT_STATES_MENUSTATE_HPP
 
 #include <Game/States/WidgetState.hpp>
+#include <Game/States/UpdateInfo.hpp>
+#include <string>
 
 namespace Nz
 {
 	class BoxLayout;
 	class ButtonWidget;
+	class LabelWidget;
 	class TextAreaWidget;
+	class WebService;
 }
 
 namespace tsom
@@ -26,15 +30,24 @@ namespace tsom
 			MenuState(std::shared_ptr<StateData> stateData, std::shared_ptr<ConnectionState> connectionState);
 			~MenuState() = default;
 
+			void Enter(Nz::StateMachine& fsm) override;
 			bool Update(Nz::StateMachine& fsm, Nz::Time elapsedTime) override;
 
 		private:
+			void CheckVersion();
 			void LayoutWidgets(const Nz::Vector2f& newSize) override;
 			void OnConnectPressed();
+			void OnUpdatePressed();
 
+			std::optional<UpdateInfo> m_newVersionInfo;
+			std::shared_ptr<Nz::State> m_nextState;
+			std::shared_ptr<Nz::WebService> m_webService;
 			std::weak_ptr<ConnectionState> m_connectionState;
 			Nz::BoxLayout* m_layout;
+			Nz::BoxLayout* m_updateLayout;
 			Nz::ButtonWidget* m_connectButton;
+			Nz::ButtonWidget* m_updateButton;
+			Nz::LabelWidget* m_updateLabel;
 			Nz::TextAreaWidget* m_serverAddressArea;
 			Nz::TextAreaWidget* m_loginArea;
 			bool m_autoConnect;

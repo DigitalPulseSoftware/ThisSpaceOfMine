@@ -129,7 +129,8 @@ int GameMain(int argc, char* argv[])
 	//Nz::StateMachine fsm(std::move(gameState));
 	app.AddUpdaterFunc([&](Nz::Time time)
 	{
-		fsm.Update(time);
+		if (!fsm.Update(time))
+			app.Quit();
 	});
 
 	return app.Run();

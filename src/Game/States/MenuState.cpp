@@ -5,15 +5,47 @@
 #include <Game/States/MenuState.hpp>
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/GameState.hpp>
+#include <Game/States/UpdateState.hpp>
 #include <CommonLib/GameConstants.hpp>
+#include <CommonLib/Version.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/StateMachine.hpp>
 #include <Nazara/Network/Algorithm.hpp>
 #include <Nazara/Network/IpAddress.hpp>
+#include <Nazara/Network/Network.hpp>
+#include <Nazara/Network/WebRequest.hpp>
+#include <Nazara/Network/WebService.hpp>
 #include <Nazara/Utility/SimpleTextDrawer.hpp>
 #include <Nazara/Widgets.hpp>
 #include <fmt/color.h>
 #include <fmt/format.h>
+#include <nlohmann/json.hpp>
+#include <semver.hpp>
+#include <optional>
+
+namespace nlohmann
+{
+	template<>
+	struct adl_serializer<tsom::UpdateInfo::DownloadInfo>
+	{
+		static void from_json(const nlohmann::json& json, tsom::UpdateInfo::DownloadInfo& downloadInfo)
+		{
+			downloadInfo.downloadUrl = json["download_url"];
+			downloadInfo.size = json["size"];
+			downloadInfo.sha256 = json.value("sha256", "");
+		}
+	};
+
+	template<>
+	struct adl_serializer<semver::version>
+	{
+		static void from_json(const nlohmann::json& json, semver::version& downloadInfo)
+		{
+			std::string_view versionStr = json;
+			downloadInfo.from_string(versionStr);
+		}
+	};
+}
 
 namespace tsom
 {
@@ -52,23 +84,117 @@ namespace tsom
 
 		m_connectButton = m_layout->Add<Nz::ButtonWidget>();
 		m_connectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Connect", 36, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
+		m_connectButton->SetMaximumWidth(m_connectButton->GetPreferredWidth() * 1.5f);
 		m_connectButton->OnButtonTrigger.Connect([this](const Nz::ButtonWidget*)
 		{
 			OnConnectPressed();
 		});
 
+		m_updateLayout = CreateWidget<Nz::BoxLayout>(Nz::BoxLayoutOrientation::TopToBottom);
+
+		m_updateLabel = m_updateLayout->Add<Nz::LabelWidget>();
+		m_updateLabel->UpdateText(Nz::SimpleTextDrawer::Draw("A new version is available!", 18));
+
+		m_updateButton = m_updateLayout->Add<Nz::ButtonWidget>();
+		m_updateButton->UpdateText(Nz::SimpleTextDrawer::Draw("Update game", 18, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
+		m_updateButton->SetMaximumWidth(m_updateButton->GetPreferredWidth());
+		m_updateButton->OnButtonTrigger.Connect([this](const Nz::ButtonWidget*)
+		{
+			OnUpdatePressed();
+		});
+
 		m_autoConnect = cmdParams.HasFlag("auto-connect");
+	}
+
+	void MenuState::Enter(Nz::StateMachine& fsm)
+	{
+		WidgetState::Enter(fsm);
+
+		CheckVersion();
 	}
 
 	bool MenuState::Update(Nz::StateMachine& fsm, Nz::Time elapsedTime)
 	{
+		if (m_nextState)
+		{
+			fsm.ChangeState(std::move(m_nextState));
+			return true;
+		}
+
 		if (m_autoConnect)
 		{
 			OnConnectPressed();
 			m_autoConnect = false;
 		}
 
+		if (m_webService)
+			m_webService->Poll();
+
 		return true;
+	}
+
+	void MenuState::CheckVersion()
+	{
+		if (!m_webService)
+			m_webService = Nz::Network::Instance()->InstantiateWebService();
+
+		std::string versionUrl = fmt::format("http://tsom-api.digitalpulse.software/game_version?platform={}", BuildConfig);
+
+		m_updateLayout->Hide();
+		m_newVersionInfo.reset();
+
+		auto request = m_webService->CreateGetRequest(versionUrl, [this](Nz::WebRequestResult&& result)
+		{
+			if (!result.HasSucceeded() || result.GetStatusCode() != 200)
+			{
+				fmt::print(fg(fmt::color::red), "failed to get version update\n");
+				return;
+			}
+
+			semver::version newAssetVersion;
+			semver::version newGameVersion;
+			UpdateInfo::DownloadInfo assetInfo;
+			UpdateInfo::DownloadInfo gameBinariesInfo;
+			UpdateInfo::DownloadInfo updaterInfo;
+
+			try
+			{
+				nlohmann::json json = nlohmann::json::parse(result.GetBody());
+
+				newAssetVersion = json["assets_version"];
+				newGameVersion = json["version"];
+				assetInfo = json["assets"];
+				gameBinariesInfo = json["binaries"];
+				updaterInfo = json["updater"];
+			}
+			catch (const std::exception& e)
+			{
+				fmt::print(fg(fmt::color::red), "failed to parse version data: {}\n", e.what());
+				return;
+			}
+
+			semver::version currentGameVersion(GameMajorVersion, GameMinorVersion, GamePatchVersion);
+
+			if (newGameVersion > currentGameVersion)
+			{
+				m_newVersionInfo.emplace(UpdateInfo{
+					.assets = std::move(assetInfo),
+					.version = newGameVersion.to_string(),
+					.binaries = std::move(gameBinariesInfo),
+					.updater = std::move(updaterInfo)
+				});
+
+				fmt::print(fg(fmt::color::yellow), "new version available: {}\n", m_newVersionInfo->version);
+				m_updateButton->UpdateText(Nz::SimpleTextDrawer::Draw("Update game to " + m_newVersionInfo->version, 18, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
+				m_updateButton->SetMaximumWidth(m_updateButton->GetPreferredWidth());
+
+				m_updateLayout->Show();
+			}
+		});
+
+		request->SetServiceName("TSOM Version Check");
+
+		m_webService->QueueRequest(std::move(request));
 	}
 
 	void MenuState::LayoutWidgets(const Nz::Vector2f& newSize)
@@ -76,6 +202,9 @@ namespace tsom
 		m_layout->Resize({ newSize.x * 0.2f, m_layout->GetPreferredHeight() });
 		m_layout->CenterHorizontal();
 		m_layout->SetPosition(m_layout->GetPosition().x, newSize.y * 0.2f - m_layout->GetSize().y / 2.f);
+
+		m_updateLayout->Resize({ std::max(m_updateLabel->GetPreferredWidth(), m_updateButton->GetPreferredWidth()), m_updateLabel->GetPreferredHeight() * 2.f + m_updateButton->GetPreferredHeight() });
+		m_updateLayout->SetPosition(newSize * Nz::Vector2f(0.9f, 0.1f) - m_updateButton->GetSize() * 0.5f);
 	}
 
 	void MenuState::OnConnectPressed()
@@ -107,5 +236,14 @@ namespace tsom
 
 		if (auto connectionState = m_connectionState.lock())
 			connectionState->Connect(serverAddress, m_loginArea->GetText(), shared_from_this());
+	}
+
+	void MenuState::OnUpdatePressed()
+	{
+		if (!m_newVersionInfo)
+			return;
+
+		m_nextState = std::make_shared<UpdateState>(GetStateDataPtr(), shared_from_this(), m_webService, std::move(*m_newVersionInfo));
+		m_newVersionInfo.reset();
 	}
 }
