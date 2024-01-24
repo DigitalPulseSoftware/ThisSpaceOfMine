@@ -41,8 +41,7 @@ namespace nlohmann
 	{
 		static void from_json(const nlohmann::json& json, semver::version& downloadInfo)
 		{
-			std::string_view versionStr = json;
-			downloadInfo.from_string(versionStr);
+			downloadInfo.from_string(json.template get<std::string_view>());
 		}
 	};
 }
