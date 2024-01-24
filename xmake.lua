@@ -21,7 +21,7 @@ add_rules("plugin.vsxmake.autoupdate")
 --set_policy("package.requires_lock", true)
 
 set_project("ThisSpaceOfMine")
-set_version("0.1.0")
+set_version("0.1.1")
 
 set_languages("cxx20")
 set_rundir(".")
