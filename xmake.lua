@@ -7,6 +7,7 @@ add_repositories("nazara-repo https://github.com/NazaraEngine/xmake-repo.git")
 add_requires("nazaraengine >=2023.08.15", { configs = { debug = is_mode("debug"), symbols = true }})
 add_requires("fmt", { configs = { header_only = false }})
 add_requires("semver", "concurrentqueue", "hopscotch-map", "nlohmann_json", "perlinnoise")
+add_requires("libcurl", { configs = { shared = true }, system = false })
 
 if is_plat("windows") then
 	add_requires("stackwalker 5b0df7a4db8896f6b6dc45d36e383c52577e3c6b")
@@ -188,6 +189,7 @@ target("TSOMGame", function ()
 	add_rpathdirs("@executable_path")
 
 	add_packages("nazaraengine", { components = { "widgets" }, public = true })
+	add_packages("libcurl", { links = {} })
 end)
 
 target("TSOMServer", function ()
