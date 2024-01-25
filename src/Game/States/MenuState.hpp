@@ -17,7 +17,6 @@ namespace Nz
 	class ButtonWidget;
 	class LabelWidget;
 	class TextAreaWidget;
-	class WebService;
 }
 
 namespace tsom
@@ -41,7 +40,6 @@ namespace tsom
 
 			std::optional<UpdateInfo> m_newVersionInfo;
 			std::shared_ptr<Nz::State> m_nextState;
-			std::shared_ptr<Nz::WebService> m_webService;
 			std::weak_ptr<ConnectionState> m_connectionState;
 			Nz::BoxLayout* m_layout;
 			Nz::BoxLayout* m_updateLayout;

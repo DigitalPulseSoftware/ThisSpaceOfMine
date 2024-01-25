@@ -7,6 +7,7 @@
 #include <Nazara/Core/File.hpp>
 #include <Nazara/Core/Process.hpp>
 #include <Nazara/Core/StateMachine.hpp>
+#include <Nazara/Network/WebServiceAppComponent.hpp>
 #include <Nazara/Utility/SimpleTextDrawer.hpp>
 #include <Nazara/Widgets/BoxLayout.hpp>
 #include <Nazara/Widgets/ButtonWidget.hpp>
@@ -46,10 +47,9 @@ namespace tsom
 		}
 	}
 
-	UpdateState::UpdateState(std::shared_ptr<StateData> stateData, std::shared_ptr<Nz::State> previousState, std::shared_ptr<Nz::WebService> webService, UpdateInfo updateInfo) :
+	UpdateState::UpdateState(std::shared_ptr<StateData> stateData, std::shared_ptr<Nz::State> previousState, UpdateInfo updateInfo) :
 	WidgetState(stateData),
 	m_previousState(std::move(previousState)),
-	m_webService(std::move(webService)),
 	m_updateInfo(std::move(updateInfo)),
 	m_isCancelled(false)
 	{
@@ -96,8 +96,6 @@ namespace tsom
 
 	bool UpdateState::Update(Nz::StateMachine& fsm, Nz::Time elapsedTime)
 	{
-		m_webService->Poll();
-
 		bool isDone = std::all_of(m_pendingDownloads.begin(), m_pendingDownloads.end(), [](const PendingDownload& pendingDownload)
 		{
 			return pendingDownload.isFinished;
@@ -134,6 +132,15 @@ namespace tsom
 
 	void UpdateState::StartDownload(PendingDownload& pendingDownload)
 	{
+		auto* webService = GetStateData().app->TryGetComponent<Nz::WebServiceAppComponent>();
+		if (!webService)
+		{
+			// We shouldn't get in this state without web service, so this is just a fail-safe
+			pendingDownload.isFinished = true;
+			m_isCancelled = true;
+			return;
+		}
+
 		std::filesystem::path path = Nz::Utf8Path(pendingDownload.name);
 		path += Nz::Utf8Path(pendingDownload.info->downloadUrl).extension();
 
@@ -141,48 +148,46 @@ namespace tsom
 
 		std::shared_ptr<Nz::File> file = std::make_shared<Nz::File>(path, Nz::OpenMode::Write);
 
-		auto downloadRequest = m_webService->CreateGetRequest(pendingDownload.info->downloadUrl, [this, file, &pendingDownload](Nz::WebRequestResult&& result)
+		webService->QueueRequest([&](Nz::WebRequest& request)
 		{
-			pendingDownload.isFinished = true;
+			request.SetupGet();
+			request.SetURL(pendingDownload.info->downloadUrl);
 
-			if (!result.HasSucceeded())
+			request.SetResultCallback([this, file, &pendingDownload](Nz::WebRequestResult&& result)
 			{
-				fmt::print(fg(fmt::color::red), "failed to download {0}: {1}\n", pendingDownload.name, result.GetErrorMessage());
-				file->Delete();
-				return;
-			}
+				pendingDownload.isFinished = true;
 
-			fmt::print(fg(fmt::color::green), "{} download succeeded!\n", pendingDownload.name);
-		});
+				if (!result.HasSucceeded())
+				{
+					fmt::print(fg(fmt::color::red), "failed to download {0}: {1}\n", pendingDownload.name, result.GetErrorMessage());
+					file->Delete();
+					return;
+				}
 
-		downloadRequest->SetDataCallback([this, file](const void* data, std::size_t length) mutable
-		{
-			if (file->Write(data, length) != length)
-				return false;
+				fmt::print(fg(fmt::color::green), "{} download succeeded!\n", pendingDownload.name);
+			});
+
+			request.SetOptions(Nz::WebRequestOption::FailOnError | Nz::WebRequestOption::FollowRedirects);
+
+			request.SetProgressCallback([this, &pendingDownload](std::size_t bytesReceived, std::size_t bytesTotal)
+			{
+				if (m_isCancelled)
+					return false;
+
+				if (bytesTotal != 0 && bytesTotal != pendingDownload.info->size)
+				{
+					fmt::print(fg(fmt::color::green), "error when downloading {0}: file size ({1}) doesn't match expected size ({2})!\n", pendingDownload.name, FormatSize(bytesTotal), FormatSize(pendingDownload.info->size));
+					return false;
+				}
+
+				pendingDownload.downloadedSize = bytesReceived;
+				UpdateProgressBar();
+
+				return true;
+			});
 
 			return true;
 		});
-
-		downloadRequest->SetOptions(Nz::WebRequestOption::FailOnError | Nz::WebRequestOption::FollowRedirects);
-
-		downloadRequest->SetProgressCallback([this, &pendingDownload](std::size_t bytesReceived, std::size_t bytesTotal)
-		{
-			if (m_isCancelled)
-				return false;
-
-			if (bytesTotal != 0 && bytesTotal != pendingDownload.info->size)
-			{
-				fmt::print(fg(fmt::color::green), "error when downloading {0}: file size ({1}) doesn't match expected size ({2})!\n", pendingDownload.name, FormatSize(bytesTotal), FormatSize(pendingDownload.info->size));
-				return false;
-			}
-
-			pendingDownload.downloadedSize = bytesReceived;
-			UpdateProgressBar();
-
-			return true;
-		});
-
-		m_webService->QueueRequest(std::move(downloadRequest));
 	}
 
 	void UpdateState::StartUpdate()

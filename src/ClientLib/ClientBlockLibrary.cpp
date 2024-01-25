@@ -4,7 +4,7 @@
 
 #include <ClientLib/ClientBlockLibrary.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
-#include <Nazara/Core/AppFilesystemComponent.hpp>
+#include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <Nazara/Renderer/RenderDevice.hpp>
 #include <Nazara/Utility/Image.hpp>
 
@@ -12,7 +12,7 @@ namespace tsom
 {
 	void ClientBlockLibrary::BuildTexture()
 	{
-		auto& fs = m_applicationBase.GetComponent<Nz::AppFilesystemComponent>();
+		auto& fs = m_applicationBase.GetComponent<Nz::FilesystemAppComponent>();
 
 		std::size_t sliceCount = m_textureIndices.size() + 1;
 

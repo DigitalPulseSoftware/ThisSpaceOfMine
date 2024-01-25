@@ -9,7 +9,6 @@
 
 #include <Game/States/WidgetState.hpp>
 #include <Game/States/UpdateInfo.hpp>
-#include <Nazara/Network/WebService.hpp>
 #include <NazaraUtils/FixedVector.hpp>
 #include <string>
 
@@ -26,7 +25,7 @@ namespace tsom
 	class UpdateState : public WidgetState
 	{
 		public:
-			UpdateState(std::shared_ptr<StateData> stateData, std::shared_ptr<Nz::State> previousState, std::shared_ptr<Nz::WebService> webService, UpdateInfo updateInfo);
+			UpdateState(std::shared_ptr<StateData> stateData, std::shared_ptr<Nz::State> previousState, UpdateInfo updateInfo);
 			~UpdateState() = default;
 
 			void Enter(Nz::StateMachine& fsm) override;
@@ -56,7 +55,6 @@ namespace tsom
 			Nz::LabelWidget* m_progressionLabel;
 			Nz::ProgressBarWidget* m_progressBar;
 			std::shared_ptr<Nz::State> m_previousState;
-			std::shared_ptr<Nz::WebService> m_webService;
 			UpdateInfo m_updateInfo;
 			bool m_isCancelled;
 			bool m_hasUpdateStarted;

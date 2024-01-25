@@ -41,7 +41,7 @@ namespace tsom
 	m_nextInputIndex(1)
 	{
 		auto& stateData = GetStateData();
-		auto& filesystem = stateData.app->GetComponent<Nz::AppFilesystemComponent>();
+		auto& filesystem = stateData.app->GetComponent<Nz::FilesystemAppComponent>();
 
 		Nz::Vector2f screenSize = Nz::Vector2f(stateData.renderTarget->GetSize());
 

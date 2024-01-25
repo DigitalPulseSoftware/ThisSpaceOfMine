@@ -23,6 +23,7 @@ add_rules("plugin.vsxmake.autoupdate")
 set_project("ThisSpaceOfMine")
 set_version("0.1.1")
 
+set_exceptions("cxx")
 set_languages("cxx20")
 set_rundir(".")
 add_includedirs("include", "src")

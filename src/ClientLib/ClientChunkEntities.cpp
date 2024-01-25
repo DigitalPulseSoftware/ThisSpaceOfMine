@@ -5,7 +5,7 @@
 #include <ClientLib/ClientChunkEntities.hpp>
 #include <ClientLib/RenderConstants.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
-#include <Nazara/Core/AppFilesystemComponent.hpp>
+#include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <Nazara/Graphics/GraphicalMesh.hpp>
 #include <Nazara/Graphics/Graphics.hpp>
 #include <Nazara/Graphics/MaterialInstance.hpp>
@@ -24,7 +24,7 @@ namespace tsom
 	ClientChunkEntities::ClientChunkEntities(Nz::ApplicationBase& app, Nz::EnttWorld& world, ChunkContainer& chunkContainer, const ClientBlockLibrary& blockLibrary) :
 	ChunkEntities(world, chunkContainer, blockLibrary, NoInit{})
 	{
-		auto& filesystem = app.GetComponent<Nz::AppFilesystemComponent>();
+		auto& filesystem = app.GetComponent<Nz::FilesystemAppComponent>();
 
 		Nz::TextureSamplerInfo blockSampler;
 		blockSampler.anisotropyLevel = 16;

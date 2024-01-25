@@ -4,7 +4,7 @@
 
 #include <Game/States/BackgroundState.hpp>
 #include <ClientLib/RenderConstants.hpp>
-#include <Nazara/Core/AppFilesystemComponent.hpp>
+#include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/Primitive.hpp>
 #include <Nazara/Core/StateMachine.hpp>
@@ -19,7 +19,7 @@ namespace tsom
 	BackgroundState::BackgroundState(std::shared_ptr<StateData> stateData) :
 	WidgetState(stateData)
 	{
-		auto& filesystem = stateData->app->GetComponent<Nz::AppFilesystemComponent>();
+		auto& filesystem = stateData->app->GetComponent<Nz::FilesystemAppComponent>();
 
 		m_camera = CreateEntity();
 		{

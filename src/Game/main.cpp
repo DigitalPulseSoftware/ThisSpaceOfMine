@@ -1,6 +1,6 @@
 #include <Nazara/Core/Application.hpp>
-#include <Nazara/Core/AppEntitySystemComponent.hpp>
-#include <Nazara/Core/AppFilesystemComponent.hpp>
+#include <Nazara/Core/EntitySystemAppComponent.hpp>
+#include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <Nazara/Core/StateMachine.hpp>
 #include <Nazara/Graphics/Graphics.hpp>
 #include <Nazara/Graphics/RenderWindow.hpp>
@@ -9,7 +9,8 @@
 #include <Nazara/JoltPhysics3D/JoltPhysics3D.hpp>
 #include <Nazara/JoltPhysics3D/Systems/JoltPhysics3DSystem.hpp>
 #include <Nazara/Network/Network.hpp>
-#include <Nazara/Platform/AppWindowingComponent.hpp>
+#include <Nazara/Network/WebServiceAppComponent.hpp>
+#include <Nazara/Platform/WindowingAppComponent.hpp>
 #include <Nazara/Platform/MessageBox.hpp>
 #include <Nazara/Platform/Platform.hpp>
 #include <Nazara/Renderer/GpuSwitch.hpp>
@@ -39,7 +40,7 @@ int GameMain(int argc, char* argv[])
 {
 	Nz::Application<Nz::Graphics, Nz::JoltPhysics3D, Nz::Network, Nz::Widgets> app(argc, argv);
 
-	auto& filesystem = app.AddComponent<Nz::AppFilesystemComponent>();
+	auto& filesystem = app.AddComponent<Nz::FilesystemAppComponent>();
 
 	std::filesystem::path assetPath = Nz::Utf8Path("assets");
 	if (!std::filesystem::exists(assetPath))
@@ -60,10 +61,19 @@ int GameMain(int argc, char* argv[])
 	// Register a new SkyboxMaterial shader
 	Nz::Graphics::Instance()->GetShaderModuleResolver()->RegisterModuleDirectory(Nz::Utf8Path("assets/shaders"), true);
 
-	auto& windowComponent = app.AddComponent<Nz::AppWindowingComponent>();
+	auto& windowComponent = app.AddComponent<Nz::WindowingAppComponent>();
 	auto& window = windowComponent.CreateWindow(Nz::VideoMode(1920, 1080), "This Space Of Mine");
 
-	auto& ecsComponent = app.AddComponent<Nz::AppEntitySystemComponent>();
+	auto& ecsComponent = app.AddComponent<Nz::EntitySystemAppComponent>();
+
+	try
+	{
+		app.AddComponent<Nz::WebServiceAppComponent>();
+	}
+	catch (const std::exception& e)
+	{
+		fmt::print(fg(fmt::color::red), "failed to enable web services (automatic update will be disabled): {0}!\n", e.what());
+	}
 
 	auto& world = ecsComponent.AddWorld<Nz::EnttWorld>();
 
