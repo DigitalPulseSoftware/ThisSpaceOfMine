@@ -3,15 +3,16 @@
 // For conditions of distribution and use, see copyright notice in Config.hpp
 
 #include <ClientLib/Chatbox.hpp>
+#include <CommonLib/GameConstants.hpp>
 #include <Nazara/Graphics/RenderTarget.hpp>
 #include <Nazara/Utility/Font.hpp>
-#include <Nazara/Widgets.hpp>
+#include <Nazara/Widgets/RichTextAreaWidget.hpp>
+#include <Nazara/Widgets/ScrollAreaWidget.hpp>
+#include <Nazara/Widgets/TextAreaWidget.hpp>
 #include <fmt/format.h>
 
 namespace tsom
 {
-	static constexpr std::size_t maxChatLines = 100;
-
 	Chatbox::Chatbox(Nz::RenderTarget& renderTarget, Nz::Canvas* canvas) :
 	m_chatEnteringBox(nullptr)
 	{
@@ -40,6 +41,7 @@ namespace tsom
 		m_chatEnteringBox->SetTextColor(Nz::Color::Black());
 		//m_chatEnteringBox->SetTextFont(chatboxFont);
 		m_chatEnteringBox->Hide();
+		m_chatEnteringBox->SetMaximumTextLength(Constants::ChatMaxMessageLength);
 
 		// Connect every slot
 		m_onTargetChangeSizeSlot.Connect(renderTarget.OnRenderTargetSizeChange, this, &Chatbox::OnRenderTargetSizeChange);
@@ -104,7 +106,7 @@ namespace tsom
 		}
 
 		m_chatLines.emplace_back(std::move(message));
-		if (m_chatLines.size() > maxChatLines)
+		if (m_chatLines.size() > Constants::ChatMaxLines)
 			m_chatLines.erase(m_chatLines.begin());
 
 		Refresh();

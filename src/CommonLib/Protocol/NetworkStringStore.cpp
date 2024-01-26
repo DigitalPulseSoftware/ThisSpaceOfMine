@@ -12,7 +12,7 @@ namespace tsom
 		packet.startId = firstId;
 		packet.strings.reserve(m_strings.size() - firstId);
 		for (Nz::UInt32 i = firstId; i < m_strings.size(); ++i)
-			packet.strings.push_back(m_strings[i]);
+			packet.strings.emplace_back(m_strings[i]);
 
 		return packet;
 	}

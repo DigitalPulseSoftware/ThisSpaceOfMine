@@ -79,6 +79,7 @@ namespace tsom
 		m_loginArea->SetCharacterSize(24);
 		m_loginArea->SetText(std::string(nickname));
 		m_loginArea->SetTextColor(Nz::Color::Black());
+		m_loginArea->SetMaximumTextLength(Constants::PlayerMaxNicknameLength);
 
 		m_connectButton = m_layout->Add<Nz::ButtonWidget>();
 		m_connectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Connect", 36, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));

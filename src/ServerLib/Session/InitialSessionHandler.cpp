@@ -25,7 +25,7 @@ namespace tsom
 
 	void InitialSessionHandler::HandlePacket(Packets::AuthRequest&& authRequest)
 	{
-		fmt::print("auth request from {}\n", authRequest.nickname);
+		fmt::print("auth request from {}\n", static_cast<std::string_view>(authRequest.nickname));
 
 		ServerPlayer* player = m_instance.CreatePlayer(GetSession(), std::move(authRequest.nickname));
 

@@ -16,7 +16,12 @@ namespace tsom::Constants
 	constexpr Nz::Time TickDuration = Nz::Time::TickDuration(60);
 	constexpr Nz::UInt16 ServerPort = 29536;
 
+	// Chat constants
+	constexpr std::size_t ChatMaxLines = 100;
+	constexpr std::size_t ChatMaxMessageLength = 256;
+
 	// Player constants
+	constexpr std::size_t PlayerMaxNicknameLength = 16;
 	constexpr float PlayerColliderRadius = 0.3f;
 	constexpr float PlayerColliderHeight = 1.8f - PlayerColliderRadius * 2.f;
 	constexpr float PlayerJumpPower = 5.f;

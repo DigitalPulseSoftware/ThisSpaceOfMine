@@ -11,10 +11,12 @@
 #include <Nazara/Math/Quaternion.hpp>
 #include <Nazara/Math/Vector3.hpp>
 #include <CommonLib/Export.hpp>
+#include <CommonLib/GameConstants.hpp>
 #include <CommonLib/PlayerIndex.hpp>
 #include <CommonLib/PlayerInputs.hpp>
 #include <CommonLib/Protocol/CompressedInteger.hpp>
 #include <CommonLib/Protocol/PacketSerializer.hpp>
+#include <CommonLib/Protocol/SecuredString.hpp>
 
 namespace tsom
 {
@@ -69,7 +71,7 @@ namespace tsom
 
 		struct AuthRequest
 		{
-			std::string nickname;
+			SecuredString<Constants::PlayerMaxNicknameLength> nickname;
 		};
 
 		struct AuthResponse
@@ -81,7 +83,7 @@ namespace tsom
 		struct ChatMessage
 		{
 			std::optional<PlayerIndex> playerIndex;
-			std::string message;
+			SecuredString<1024> message; //< Don't use Constants::ChatMaxMessageLength to allow larger messages in some cases
 		};
 
 		struct ChunkCreate
@@ -161,7 +163,7 @@ namespace tsom
 			struct PlayerData
 			{
 				PlayerIndex index;
-				std::string nickname;
+				SecuredString<Constants::PlayerMaxNicknameLength> nickname;
 			};
 
 			std::vector<PlayerData> players;
@@ -177,7 +179,7 @@ namespace tsom
 		struct NetworkStrings
 		{
 			CompressedUnsigned<Nz::UInt32> startId;
-			std::vector<std::string> strings;
+			std::vector<SecuredString<1024>> strings;
 		};
 
 		struct PlaceBlock
@@ -190,7 +192,7 @@ namespace tsom
 		struct PlayerJoin
 		{
 			PlayerIndex index;
-			std::string nickname;
+			SecuredString<Constants::PlayerMaxNicknameLength> nickname;
 		};
 
 		struct PlayerLeave
@@ -200,7 +202,7 @@ namespace tsom
 
 		struct SendChatMessage
 		{
-			std::string message;
+			SecuredString<Constants::ChatMaxMessageLength> message;
 		};
 
 		struct UpdatePlayerInputs

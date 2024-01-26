@@ -65,7 +65,7 @@ namespace tsom
 
 	void PlayerSessionHandler::HandlePacket(Packets::SendChatMessage&& playerChat)
 	{
-		if (playerChat.message == "/respawn")
+		if (static_cast<std::string_view>(playerChat.message) == "/respawn")
 		{
 			m_player->Respawn();
 			return;
