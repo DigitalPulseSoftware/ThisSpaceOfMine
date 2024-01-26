@@ -122,7 +122,7 @@ namespace tsom
 				auto it = std::lower_bound(visibleChunk.chunkUpdatePacket.updates.begin(), visibleChunk.chunkUpdatePacket.updates.end(), indices, comp);
 				if (it == visibleChunk.chunkUpdatePacket.updates.end() || Nz::Vector3ui(it->voxelLoc.x, it->voxelLoc.y, it->voxelLoc.z) != indices)
 				{
-					visibleChunk.chunkUpdatePacket.updates.push_back({
+					visibleChunk.chunkUpdatePacket.updates.insert(it, {
 						Packets::Helper::VoxelLocation{ Nz::SafeCast<Nz::UInt8>(indices.x), Nz::SafeCast<Nz::UInt8>(indices.y), Nz::SafeCast<Nz::UInt8>(indices.z) },
 						Nz::SafeCast<Nz::UInt8>(newBlock)
 					});
