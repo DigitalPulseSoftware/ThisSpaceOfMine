@@ -41,7 +41,7 @@ namespace tsom
 		m_chatEnteringBox->SetTextColor(Nz::Color::Black());
 		//m_chatEnteringBox->SetTextFont(chatboxFont);
 		m_chatEnteringBox->Hide();
-		m_chatEnteringBox->SetMaximumTextLength(Constants::ChatMaxMessageLength);
+		m_chatEnteringBox->SetMaximumTextLength(Constants::ChatMaxPlayerMessageLength);
 
 		// Connect every slot
 		m_onTargetChangeSizeSlot.Connect(renderTarget.OnRenderTargetSizeChange, this, &Chatbox::OnRenderTargetSizeChange);

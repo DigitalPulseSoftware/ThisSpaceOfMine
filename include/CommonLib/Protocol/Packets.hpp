@@ -83,7 +83,7 @@ namespace tsom
 		struct ChatMessage
 		{
 			std::optional<PlayerIndex> playerIndex;
-			SecuredString<1024> message; //< Don't use Constants::ChatMaxMessageLength to allow larger messages in some cases
+			SecuredString<Constants::ChatMaxMessageLength> message;
 		};
 
 		struct ChunkCreate
@@ -202,7 +202,7 @@ namespace tsom
 
 		struct SendChatMessage
 		{
-			SecuredString<Constants::ChatMaxMessageLength> message;
+			SecuredString<Constants::ChatMaxPlayerMessageLength> message;
 		};
 
 		struct UpdatePlayerInputs

@@ -10,15 +10,19 @@
 #include <NazaraUtils/Prerequisites.hpp>
 #include <Nazara/Core/Time.hpp>
 #include <Nazara/Math/Angle.hpp>
+#include <CommonLib/Version.hpp>
 
 namespace tsom::Constants
 {
-	constexpr Nz::Time TickDuration = Nz::Time::TickDuration(60);
-	constexpr Nz::UInt16 ServerPort = 29536;
-
 	// Chat constants
 	constexpr std::size_t ChatMaxLines = 100;
-	constexpr std::size_t ChatMaxMessageLength = 256;
+	constexpr std::size_t ChatMaxMessageLength = 1024;
+	constexpr std::size_t ChatMaxPlayerMessageLength = 256;
+
+	// Network constants
+	constexpr Nz::Time TickDuration = Nz::Time::TickDuration(60);
+	constexpr Nz::UInt32 ProtocolRequiredClientVersion = BuildVersion(0, 1, 2);
+	constexpr Nz::UInt32 ServerPort = 29536;
 
 	// Player constants
 	constexpr std::size_t PlayerMaxNicknameLength = 16;
