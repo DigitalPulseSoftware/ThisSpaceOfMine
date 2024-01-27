@@ -49,8 +49,10 @@ namespace tsom
 
 	void ClientSessionHandler::HandlePacket(Packets::AuthResponse&& authResponse)
 	{
-		fmt::print("Auth response\n");
-		m_ownPlayerIndex = authResponse.ownPlayerIndex;
+		if (authResponse.authResult.IsOk())
+			m_ownPlayerIndex = authResponse.ownPlayerIndex;
+
+		OnAuthResponse(authResponse);
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::ChatMessage&& chatMessage)

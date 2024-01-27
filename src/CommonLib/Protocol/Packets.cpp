@@ -11,6 +11,17 @@ namespace tsom
 #include <CommonLib/Protocol/PacketList.hpp>
 	};
 
+	std::string_view ToString(AuthError authError)
+	{
+		switch (authError)
+		{
+			case AuthError::ServerIsOutdated: return "Server is outdated";
+			case AuthError::UpgradeRequired: return "Game version upgrade required";
+		}
+
+		return "<unknown authentication error>";
+	}
+
 	namespace Packets
 	{
 		namespace Helper
@@ -51,13 +62,17 @@ namespace tsom
 
 		void Serialize(PacketSerializer& serializer, AuthRequest& data)
 		{
+			serializer &= data.gameVersion;
 			serializer &= data.nickname;
 		}
 
 		void Serialize(PacketSerializer& serializer, AuthResponse& data)
 		{
-			serializer &= data.succeeded;
-			serializer &= data.ownPlayerIndex;
+			serializer &= data.authResult;
+			if (data.authResult.IsOk())
+			{
+				serializer &= data.ownPlayerIndex;
+			}
 		}
 
 		void Serialize(PacketSerializer& serializer, ChatMessage& data)

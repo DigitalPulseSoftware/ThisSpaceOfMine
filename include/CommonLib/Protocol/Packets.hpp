@@ -7,6 +7,7 @@
 #ifndef TSOM_COMMONLIB_NETWORK_PACKETS_HPP
 #define TSOM_COMMONLIB_NETWORK_PACKETS_HPP
 
+#include <NazaraUtils/Result.hpp>
 #include <NazaraUtils/TypeList.hpp>
 #include <Nazara/Math/Quaternion.hpp>
 #include <Nazara/Math/Vector3.hpp>
@@ -37,6 +38,14 @@ namespace tsom
 	template<typename T> static constexpr std::size_t PacketIndex = Nz::TypeListFind<PacketTypes, T>;
 
 	TSOM_COMMONLIB_API extern std::array<std::string_view, PacketCount> PacketNames;
+
+	enum class AuthError : Nz::UInt8
+	{
+		ServerIsOutdated = 0,
+		UpgradeRequired = 1,
+	};
+
+	TSOM_COMMONLIB_API std::string_view ToString(AuthError authError);
 
 	namespace Packets
 	{
@@ -71,12 +80,15 @@ namespace tsom
 
 		struct AuthRequest
 		{
+			Nz::UInt32 gameVersion;
 			SecuredString<Constants::PlayerMaxNicknameLength> nickname;
 		};
 
 		struct AuthResponse
 		{
-			bool succeeded;
+			Nz::Result<void, AuthError> authResult = Nz::Err(AuthError::UpgradeRequired); // To allow type to be default constructed
+
+			// Only present if authentication succeeded
 			PlayerIndex ownPlayerIndex;
 		};
 

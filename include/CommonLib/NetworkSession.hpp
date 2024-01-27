@@ -28,7 +28,7 @@ namespace tsom
 			NetworkSession(NetworkSession&&) = delete;
 			~NetworkSession();
 
-			void Disconnect();
+			void Disconnect(DisconnectionType type = DisconnectionType::Normal);
 
 			inline std::size_t GetPeerId() const;
 			inline SessionHandler* GetSessionHandler();

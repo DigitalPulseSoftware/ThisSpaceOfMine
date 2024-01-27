@@ -10,8 +10,10 @@
 #define TSOM_NETWORK_PACKET_LAST(Name) TSOM_NETWORK_PACKET(Name)
 #endif
 
+// Keep these two in order to keep their opcode stable (as they're responsible for protocol version check)
 TSOM_NETWORK_PACKET(AuthRequest)
 TSOM_NETWORK_PACKET(AuthResponse)
+
 TSOM_NETWORK_PACKET(ChatMessage)
 TSOM_NETWORK_PACKET(ChunkCreate)
 TSOM_NETWORK_PACKET(ChunkDestroy)

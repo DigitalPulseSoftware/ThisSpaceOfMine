@@ -18,4 +18,6 @@ namespace tsom
 	}
 
 #include "VersionData.hpp"
+
+	std::uint32_t GameVersion = BuildVersion(GameMajorVersion, GameMinorVersion, GamePatchVersion);
 }

@@ -81,6 +81,80 @@ namespace tsom
 			m_buffer << data;
 	}
 
+	template<EnumType E>
+	void PacketSerializer::Serialize(E& data)
+	{
+		using UT = std::underlying_type_t<E>;
+
+		if (!IsWriting())
+		{
+			UT enumValue;
+			Serialize(enumValue);
+
+			data = static_cast<E>(enumValue);
+		}
+		else
+			Serialize(static_cast<UT>(data));
+	}
+
+	template<typename Value, typename Error>
+	void PacketSerializer::Serialize(Nz::Result<Value, Error>& result)
+	{
+		bool isOk;
+		if (IsWriting())
+			isOk = result.IsOk();
+
+		Serialize(isOk);
+		if (IsWriting())
+		{
+			if (isOk)
+				Serialize(result.GetValue());
+			else
+				Serialize(result.GetError());
+		}
+		else
+		{
+			if (isOk)
+			{
+				Value val;
+				Serialize(val);
+
+				result = Nz::Ok(std::move(val));
+			}
+			else
+			{
+				Error err;
+				Serialize(err);
+
+				result = Nz::Err(std::move(err));
+			}
+		}
+	}
+
+	template<typename Error>
+	void PacketSerializer::Serialize(Nz::Result<void, Error>& result)
+	{
+		bool isOk;
+		if (IsWriting())
+			isOk = result.IsOk();
+
+		Serialize(isOk);
+		if (isOk)
+			result = Nz::Ok();
+		else
+		{
+			if (IsWriting())
+				Serialize(result.GetError());
+			else
+			{
+				Error err;
+				Serialize(err);
+
+				result = Nz::Err(std::move(err));
+			}
+		}
+	}
+
 	template<typename DataType>
 	void PacketSerializer::Serialize(std::optional<DataType>& opt)
 	{

@@ -16,6 +16,7 @@ namespace tsom
 	TSOM_COMMONLIB_API extern std::uint32_t GameMajorVersion;
 	TSOM_COMMONLIB_API extern std::uint32_t GameMinorVersion;
 	TSOM_COMMONLIB_API extern std::uint32_t GamePatchVersion;
+	TSOM_COMMONLIB_API extern std::uint32_t GameVersion;
 
 	TSOM_COMMONLIB_API extern std::string_view BuildConfig;
 	TSOM_COMMONLIB_API extern std::string_view BuildSystem;

@@ -7,6 +7,9 @@
 #include <ServerLib/ServerPlayer.hpp>
 #include <ServerLib/ServerInstance.hpp>
 #include <ServerLib/Session/PlayerSessionHandler.hpp>
+#include <CommonLib/GameConstants.hpp>
+#include <CommonLib/Version.hpp>
+#include <fmt/color.h>
 #include <fmt/format.h>
 
 namespace tsom
@@ -25,12 +28,39 @@ namespace tsom
 
 	void InitialSessionHandler::HandlePacket(Packets::AuthRequest&& authRequest)
 	{
-		fmt::print("auth request from {}\n", static_cast<std::string_view>(authRequest.nickname));
+		std::uint32_t majorVersion, minorVersion, patchVersion;
+		DecodeVersion(authRequest.gameVersion, majorVersion, minorVersion, patchVersion);
+
+		fmt::print("Auth request from {0} (version {1}.{2}.{3})\n", static_cast<std::string_view>(authRequest.nickname), majorVersion, minorVersion, patchVersion);
+
+		auto FailAuth = [&](AuthError err)
+		{
+			Packets::AuthResponse response;
+			response.authResult = Nz::Err(err);
+
+			GetSession()->SendPacket(response);
+
+			GetSession()->Disconnect(DisconnectionType::Later);
+		};
+
+		if (authRequest.gameVersion < Constants::ProtocolRequiredClientVersion)
+		{
+			fmt::print(fg(fmt::color::red), "{0} authentication failed (version is too old)\n", static_cast<std::string_view>(authRequest.nickname));
+			return FailAuth(AuthError::UpgradeRequired);
+		}
+
+		if (authRequest.gameVersion > GameVersion)
+		{
+			fmt::print(fg(fmt::color::red), "{0} authentication failed (version is more recent than server's)\n", static_cast<std::string_view>(authRequest.nickname));
+			return FailAuth(AuthError::ServerIsOutdated);
+		}
+
+		fmt::print("{0} authenticated\n", static_cast<std::string_view>(authRequest.nickname));
 
 		ServerPlayer* player = m_instance.CreatePlayer(GetSession(), std::move(authRequest.nickname));
 
 		Packets::AuthResponse response;
-		response.succeeded = true;
+		response.authResult = Nz::Ok();
 		response.ownPlayerIndex = player->GetPlayerIndex();
 
 		GetSession()->SendPacket(response);

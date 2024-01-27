@@ -17,11 +17,11 @@ namespace tsom
 
 	NetworkSession::~NetworkSession() = default;
 
-	void NetworkSession::Disconnect()
+	void NetworkSession::Disconnect(DisconnectionType type)
 	{
 		assert(m_peerId != NetworkReactor::InvalidPeerId);
 
-		m_reactor.DisconnectPeer(m_peerId);
+		m_reactor.DisconnectPeer(m_peerId, 0, type);
 	}
 
 	void NetworkSession::HandlePacket(Nz::NetPacket&& netPacket)

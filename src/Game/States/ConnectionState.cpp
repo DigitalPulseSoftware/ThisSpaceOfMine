@@ -51,12 +51,31 @@ namespace tsom
 		std::size_t peerId = reactor->ConnectTo(serverAddress);
 		m_serverSession.emplace(*reactor, peerId, serverAddress);
 		ClientSessionHandler& sessionHandler = m_serverSession->SetupHandler<ClientSessionHandler>(*GetStateData().world);
+		ConnectSignal(sessionHandler.OnAuthResponse, [this](const Packets::AuthResponse& authResponse)
+		{
+			if (authResponse.authResult.IsOk())
+			{
+				UpdateStatus(Nz::SimpleTextDrawer::Draw("Authenticated", 36));
+
+				m_nextState = std::move(m_connectedState);
+				m_nextStateTimer = Nz::Time::Milliseconds(500);
+			}
+			else
+			{
+				UpdateStatus(Nz::SimpleTextDrawer::Draw(fmt::format("Authentication failed: {0}", ToString(authResponse.authResult.GetError())), 36, Nz::TextStyle_Regular, Nz::Color::Red()));
+
+				m_nextState = m_previousState;
+				m_nextStateTimer = Nz::Time::Seconds(3);
+
+				Disconnect();
+			}
+		});
 
 		auto& stateData = GetStateData();
 		stateData.networkSession = &m_serverSession.value();
 		stateData.sessionHandler = &sessionHandler;
 
-		UpdateStatus(Nz::SimpleTextDrawer::Draw("Connecting to " + serverAddress.ToString() + "...", 48));
+		UpdateStatus(Nz::SimpleTextDrawer::Draw(fmt::format("Connecting to {0}...", serverAddress.ToString()), 36));
 
 		m_connectedState = std::make_shared<GameState>(GetStateDataPtr());
 	}
@@ -87,15 +106,13 @@ namespace tsom
 			if (!m_serverSession || m_serverSession->GetPeerId() != peerIndex)
 				return;
 
-			UpdateStatus(Nz::SimpleTextDrawer::Draw("Authenticating...", 48));
+			UpdateStatus(Nz::SimpleTextDrawer::Draw("Authenticating...", 36));
 
 			Packets::AuthRequest request;
+			request.gameVersion = GameVersion;
 			request.nickname = m_nickname;
 
 			m_serverSession->SendPacket(request);
-
-			m_nextState = std::move(m_connectedState);
-			m_nextStateTimer = Nz::Time::Milliseconds(500);
 		};
 
 		auto DisconnectionHandler = [&](std::size_t peerIndex, [[maybe_unused]] Nz::UInt32 data, bool timeout)
@@ -103,17 +120,20 @@ namespace tsom
 			if (!m_serverSession || m_serverSession->GetPeerId() != peerIndex)
 				return;
 
-			if (timeout)
+			if (m_nextStateTimer < Nz::Time::Zero())
 			{
-				UpdateStatus(Nz::SimpleTextDrawer::Draw("Connection lost.", 48, Nz::TextStyle_Regular, Nz::Color::Red()));
+				if (timeout)
+				{
+					UpdateStatus(Nz::SimpleTextDrawer::Draw("Connection lost.", 48, Nz::TextStyle_Regular, Nz::Color::Red()));
 
-				m_nextState = m_previousState;
-				m_nextStateTimer = Nz::Time::Milliseconds(2000);
-			}
-			else
-			{
-				m_nextState = m_previousState;
-				m_nextStateTimer = Nz::Time::Milliseconds(100);
+					m_nextState = m_previousState;
+					m_nextStateTimer = Nz::Time::Milliseconds(2000);
+				}
+				else
+				{
+					m_nextState = m_previousState;
+					m_nextStateTimer = Nz::Time::Milliseconds(100);
+				}
 			}
 
 			auto& stateData = GetStateData();

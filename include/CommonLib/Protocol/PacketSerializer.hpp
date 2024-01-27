@@ -8,13 +8,17 @@
 #define TSOM_COMMONLIB_NETWORK_PACKETSERIALIZER_HPP
 
 #include <CommonLib/Export.hpp>
+#include <NazaraUtils/Result.hpp>
 #include <Nazara/Core/ByteStream.hpp>
 #include <optional>
+#include <type_traits>
 #include <variant>
 #include <vector>
 
 namespace tsom
 {
+	template<typename T> concept EnumType = std::is_enum_v<T>;
+
 	class TSOM_COMMONLIB_API PacketSerializer
 	{
 		public:
@@ -30,6 +34,9 @@ namespace tsom
 			inline void Write(const void* ptr, std::size_t size);
 
 			template<typename DataType> void Serialize(DataType& data);
+			template<EnumType E> void Serialize(E& data);
+			template<typename Value, typename Error> void Serialize(Nz::Result<Value, Error>& result);
+			template<typename Error> void Serialize(Nz::Result<void, Error>& result);
 			template<typename DataType> void Serialize(std::optional<DataType>& opt);
 			template<typename F, typename... Types> void Serialize(std::variant<Types...>& variant, F&& functor);
 			template<typename DataType> void Serialize(std::vector<DataType>& dataVec);
