@@ -2,6 +2,7 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
+#include <Nazara/Core/ErrorFlags.hpp>
 #include <fmt/format.h>
 #include <type_traits>
 
@@ -29,7 +30,17 @@ namespace tsom
 						PacketType unserializedPacket;
 
 						PacketSerializer serializer(packet, false);
-						Packets::Serialize(serializer, unserializedPacket);
+						try
+						{
+							Nz::ErrorFlags errFlags(Nz::ErrorMode::Silent | Nz::ErrorMode::ThrowException);
+							Packets::Serialize(serializer, unserializedPacket);
+						}
+						catch (const std::exception&)
+						{
+							constexpr std::size_t packetIndex = Nz::TypeListFind<PacketTypes, PacketType>;
+							static_cast<Handler&>(sessionHandler).OnDeserializationError(packetIndex);
+							return;
+						}
 
 						static_cast<Handler&>(sessionHandler).HandlePacket(std::move(unserializedPacket));
 					};

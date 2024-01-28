@@ -23,6 +23,10 @@ namespace tsom
 
 			void HandlePacket(Packets::AuthRequest&& authRequest);
 
+			void OnDeserializationError(std::size_t packetIndex);
+			void OnUnexpectedPacket(std::size_t packetIndex);
+			void OnUnknownOpcode(Nz::UInt8 opcode);
+
 		private:
 			ServerInstance& m_instance;
 	};

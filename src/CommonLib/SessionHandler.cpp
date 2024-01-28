@@ -19,15 +19,25 @@ namespace tsom
 
 		if (opcode >= handlerTable.size())
 		{
-			fmt::print("Received corrupted packet\n");
+			OnUnknownOpcode(opcode);
 			return;
 		}
 
 		(*m_handlerTable)[opcode](*this, std::move(netPacket));
 	}
 
+	void SessionHandler::OnDeserializationError(std::size_t packetIndex)
+	{
+		fmt::print("Serialization error of packet of type {}\n", PacketNames[packetIndex]);
+	}
+
 	void SessionHandler::OnUnexpectedPacket(std::size_t packetIndex)
 	{
 		fmt::print("Received unexpected packet of type {}\n", PacketNames[packetIndex]);
+	}
+
+	void SessionHandler::OnUnknownOpcode(Nz::UInt8 opcode)
+	{
+		fmt::print("Received packet with unknown opcode {}\n", +opcode);
 	}
 }

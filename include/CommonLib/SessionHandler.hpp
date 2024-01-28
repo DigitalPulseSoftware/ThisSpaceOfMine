@@ -39,7 +39,9 @@ namespace tsom
 
 			void HandlePacket(Nz::NetPacket&& netPacket);
 
+			virtual void OnDeserializationError(std::size_t packetIndex);
 			virtual void OnUnexpectedPacket(std::size_t packetIndex);
+			virtual void OnUnknownOpcode(Nz::UInt8 opcode);
 
 			SessionHandler& operator=(const SessionHandler&) = delete;
 			SessionHandler& operator=(SessionHandler&&) = delete;

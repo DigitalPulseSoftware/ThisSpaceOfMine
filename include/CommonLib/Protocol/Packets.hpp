@@ -41,6 +41,7 @@ namespace tsom
 
 	enum class AuthError : Nz::UInt8
 	{
+		ProtocolError = 2,
 		ServerIsOutdated = 0,
 		UpgradeRequired = 1,
 	};

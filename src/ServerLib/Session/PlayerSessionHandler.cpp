@@ -79,6 +79,24 @@ namespace tsom
 		m_player->PushInputs(playerInputs.inputs);
 	}
 
+	void PlayerSessionHandler::OnDeserializationError(std::size_t packetIndex)
+	{
+		fmt::print("failed to deserialize unexpected packet {1} from peer {0}\n", GetSession()->GetPeerId(), PacketNames[packetIndex]);
+		GetSession()->Disconnect(DisconnectionType::Kick);
+	}
+
+	void PlayerSessionHandler::OnUnexpectedPacket(std::size_t packetIndex)
+	{
+		fmt::print("received unexpected packet {1} from peer {0}\n", GetSession()->GetPeerId(), PacketNames[packetIndex]);
+		GetSession()->Disconnect(DisconnectionType::Kick);
+	}
+
+	void PlayerSessionHandler::OnUnknownOpcode(Nz::UInt8 opcode)
+	{
+		fmt::print("received unknown packet (opcode: {1}) from peer {0}\n", GetSession()->GetPeerId(), +opcode);
+		GetSession()->Disconnect(DisconnectionType::Kick);
+	}
+
 	bool PlayerSessionHandler::CheckCanMineBlock(Chunk* chunk, const Nz::Vector3ui& blockIndices) const
 	{
 		Nz::Vector3ui chunkSize = chunk->GetSize();

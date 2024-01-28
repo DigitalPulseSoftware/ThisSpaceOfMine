@@ -72,4 +72,37 @@ namespace tsom
 
 		player->Respawn();
 	}
+
+	void InitialSessionHandler::OnDeserializationError(std::size_t packetIndex)
+	{
+		if (packetIndex == PacketIndex<Packets::AuthRequest>)
+		{
+			fmt::print("failed to deserialize Auth packet from peer {0}\n", GetSession()->GetPeerId());
+
+			Packets::AuthResponse response;
+			response.authResult = Nz::Err(AuthError::ProtocolError);
+
+			GetSession()->SendPacket(response);
+
+			GetSession()->Disconnect(DisconnectionType::Later);
+			return;
+		}
+		else
+		{
+			fmt::print("failed to deserialize unexpected packet {1} from peer {0}\n", GetSession()->GetPeerId(), PacketNames[packetIndex]);
+			GetSession()->Disconnect(DisconnectionType::Kick);
+		}
+	}
+
+	void InitialSessionHandler::OnUnexpectedPacket(std::size_t packetIndex)
+	{
+		fmt::print("received unexpected packet {1} from peer {0}\n", GetSession()->GetPeerId(), PacketNames[packetIndex]);
+		GetSession()->Disconnect(DisconnectionType::Kick);
+	}
+
+	void InitialSessionHandler::OnUnknownOpcode(Nz::UInt8 opcode)
+	{
+		fmt::print("received unknown packet (opcode: {1}) from peer {0}\n", GetSession()->GetPeerId(), +opcode);
+		GetSession()->Disconnect(DisconnectionType::Kick);
+	}
 }
