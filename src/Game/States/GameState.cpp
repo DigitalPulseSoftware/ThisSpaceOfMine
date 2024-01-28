@@ -218,8 +218,6 @@ namespace tsom
 			});
 			m_predictedInputRotations.erase(m_predictedInputRotations.begin(), it);
 
-			auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
-
 #if DEBUG_ROTATION
 			Nz::EulerAnglesf currentRotation = m_predictedCameraRotation;
 #endif
@@ -242,7 +240,7 @@ namespace tsom
 			Nz::Quaternionf cameraRotation = m_referenceRotation * Nz::Quaternionf(m_predictedCameraRotation);
 			cameraRotation.Normalize();
 
-			//auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
+			auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
 #ifndef FREEFLIGHT
 			cameraNode.SetRotation(cameraRotation);
 #endif
@@ -471,15 +469,16 @@ namespace tsom
 			m_incomingCameraRotation.yaw += yawMod;
 
 #ifdef FREEFLIGHT
-			// Gestion de la caméra free-fly (Rotation)
-			float sensitivity = 0.3f; // Sensibilité de la souris
+			static Nz::EulerAnglesf camAngles = Nz::EulerAnglesf::Zero();
 
+			// Gestion de la caméra free-fly (Rotation)
+			// 
 			// On modifie l'angle de la caméra grâce au déplacement relatif sur X de la souris
-			camAngles.yaw = camAngles.yaw - event.deltaX * sensitivity;
+			camAngles.yaw = camAngles.yaw + yawMod;
 			camAngles.yaw.Normalize();
 
 			// Idem, mais pour éviter les problèmes de calcul de la matrice de vue, on restreint les angles
-			camAngles.pitch = Nz::Clamp(camAngles.pitch - event.deltaY * sensitivity, -89.f, 89.f);
+			camAngles.pitch = Nz::Clamp(camAngles.pitch + pitchMod, -89.f, 89.f);
 
 			/*auto& playerRotNode = registry.get<Nz::NodeComponent>(playerRotation);
 			playerRotNode.SetRotation(camAngles);*/
