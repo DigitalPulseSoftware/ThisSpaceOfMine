@@ -10,6 +10,7 @@
 #include <CommonLib/Version.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/StateMachine.hpp>
+#include <Nazara/Core/StringExt.hpp>
 #include <Nazara/Network/Algorithm.hpp>
 #include <Nazara/Network/IpAddress.hpp>
 #include <Nazara/Network/Network.hpp>
@@ -214,9 +215,10 @@ namespace tsom
 			return;
 		}
 
-		if (m_loginArea->GetText().empty())
+		std::string login = std::string(Nz::Trim(m_loginArea->GetText(), Nz::UnicodeAware{}));
+		if (login.empty())
 		{
-			fmt::print(fg(fmt::color::red), "missing login\n");
+			fmt::print(fg(fmt::color::red), "login cannot be blank\n");
 			return;
 		}
 
@@ -234,7 +236,7 @@ namespace tsom
 		fmt::print("connecting to {}...\n", serverAddress.ToString());
 
 		if (auto connectionState = m_connectionState.lock())
-			connectionState->Connect(serverAddress, m_loginArea->GetText(), shared_from_this());
+			connectionState->Connect(serverAddress, login, shared_from_this());
 	}
 
 	void MenuState::OnUpdatePressed()

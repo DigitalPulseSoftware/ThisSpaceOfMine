@@ -55,6 +55,13 @@ namespace tsom
 			return FailAuth(AuthError::ServerIsOutdated);
 		}
 
+		std::string_view login = Nz::Trim(authRequest.nickname, Nz::UnicodeAware{});
+		if (login.empty() || login != authRequest.nickname)
+		{
+			fmt::print(fg(fmt::color::red), "{0} nickname hasn't been trimmed\n", static_cast<std::string_view>(authRequest.nickname));
+			return FailAuth(AuthError::ProtocolError);
+		}
+
 		fmt::print("{0} authenticated\n", static_cast<std::string_view>(authRequest.nickname));
 
 		ServerPlayer* player = m_instance.CreatePlayer(GetSession(), std::move(authRequest.nickname));
