@@ -63,7 +63,7 @@ namespace tsom
 
 	void Planet::GenerateChunks(BlockLibrary& blockLibrary)
 	{
-		constexpr std::size_t freeSpace = 10;
+		constexpr std::size_t freeSpace = 30;
 
 		for (unsigned int z = 0; z < m_chunkCount.z; ++z)
 		{
@@ -92,16 +92,21 @@ namespace tsom
 						m_gridSize.z - z - 1,
 					});
 
+					if (depth < freeSpace / 2)
+						continue;
+
+					depth -= freeSpace / 2;
+
 					std::string_view blockType;
-					if (depth <= 8)
+					if (depth <= 3)
 						blockType = "snow";
-					else if (depth <= 20)
+					else if (depth <= 25)
 						blockType = "dirt";
 					else
 						blockType = (dis(rand)) ? "stone" : "stone_mossy";
 
-					if (x >= m_gridSize.x / 2 - 2 && x < m_gridSize.x / 2 + 1 &&
-					    y >= m_gridSize.y / 2 - 2 && y < m_gridSize.y / 2 + 1)
+					if (x >= m_gridSize.x / 2 - 3 && x < m_gridSize.x / 2 + 2 &&
+					    y >= m_gridSize.y / 2 - 3 && y < m_gridSize.y / 2 + 2)
 					{
 						blockType = "empty";
 					}
@@ -117,13 +122,14 @@ namespace tsom
 			}
 		}
 
+
 		BlockIndex dirtBlockIndex = blockLibrary.GetBlockIndex("dirt");
 		BlockIndex grassBlockIndex = blockLibrary.GetBlockIndex("grass");
 
 		siv::PerlinNoise perlin(42);
 
 		constexpr double scale = 0.02f;
-		constexpr std::size_t heightScale = 30;
+		constexpr std::size_t heightScale = 10 + freeSpace;
 
 		// +X
 		for (unsigned int z = 0; z < m_gridSize.z; ++z)

@@ -5,10 +5,10 @@
 namespace tsom
 {
 	inline ChunkContainer::ChunkContainer(const Nz::Vector3ui& gridSize, float tileSize) :
-	m_chunkCount(Nz::Vector3ui((gridSize + Nz::Vector3ui(ChunkSize - 1)) / ChunkSize)),
-	m_gridSize(gridSize),
+	m_gridSize((gridSize + Nz::Vector3ui(ChunkSize - 1)) / Nz::Vector3ui(ChunkSize) * Nz::Vector3ui(ChunkSize)),
 	m_tileSize(tileSize)
 	{
+		m_chunkCount = m_gridSize / ChunkSize;
 	}
 
 	inline std::size_t ChunkContainer::GetChunkIndex(const Nz::Vector3ui& indices) const

@@ -26,7 +26,7 @@ namespace tsom
 
 	void ServerPlayer::Respawn()
 	{
-		constexpr Nz::Vector3f position = Nz::Vector3f::Up() * 80.f + Nz::Vector3f::Backward() * 5.f;
+		constexpr Nz::Vector3f position = Nz::Vector3f::Up() * 100.f + Nz::Vector3f::Backward() * 5.f;
 		const Nz::Quaternionf rotation = Nz::EulerAnglesf(0.f, 0.f, 0.f);
 
 		if (m_controlledEntity)
