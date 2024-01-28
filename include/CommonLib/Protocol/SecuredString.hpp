@@ -13,7 +13,7 @@
 
 namespace tsom
 {
-	template<std::size_t N>
+	template<std::size_t N, bool CodepointLimit = true>
 	class SecuredString
 	{
 		static_assert(N > 0);
@@ -47,8 +47,8 @@ namespace tsom
 
 namespace Nz
 {
-	template<std::size_t N> bool Serialize(SerializationContext& context, const tsom::SecuredString<N>& value, TypeTag<tsom::SecuredString<N>>);
-	template<std::size_t N> bool Unserialize(SerializationContext& context, tsom::SecuredString<N>* value, TypeTag<tsom::SecuredString<N>>);
+	template<std::size_t N, bool CodepointLimit> bool Serialize(SerializationContext& context, const tsom::SecuredString<N, CodepointLimit>& value, TypeTag<tsom::SecuredString<N>>);
+	template<std::size_t N, bool CodepointLimit> bool Unserialize(SerializationContext& context, tsom::SecuredString<N, CodepointLimit>* value, TypeTag<tsom::SecuredString<N>>);
 }
 
 #include <CommonLib/Protocol/SecuredString.inl>
