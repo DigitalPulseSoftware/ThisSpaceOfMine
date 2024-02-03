@@ -167,6 +167,14 @@ namespace tsom
 				fmt::print(fg(fmt::color::green), "{} download succeeded!\n", pendingDownload.name);
 			});
 
+			request.SetDataCallback([this, file](const void* data, std::size_t length) mutable
+			{
+				if (file->Write(data, length) != length)
+					return false;
+
+				return true;
+			});
+
 			request.SetOptions(Nz::WebRequestOption::FailOnError | Nz::WebRequestOption::FollowRedirects);
 
 			request.SetProgressCallback([this, &pendingDownload](std::size_t bytesReceived, std::size_t bytesTotal)
