@@ -131,7 +131,7 @@ namespace tsom
 			Chunk* chunk = m_planet->GetChunk(i);
 			Nz::Vector3ui chunkIndices = chunk->GetIndices();
 
-			Nz::File chunkFile(savePath / Nz::Utf8Path(std::format("{}_{}_{}.chunk", chunkIndices.x, chunkIndices.y, chunkIndices.z)), Nz::OpenMode::Read);
+			Nz::File chunkFile(savePath / Nz::Utf8Path(fmt::format("{}_{}_{}.chunk", chunkIndices.x, chunkIndices.y, chunkIndices.z)), Nz::OpenMode::Read);
 			if (!chunkFile.IsOpen())
 				continue;
 
@@ -251,7 +251,7 @@ namespace tsom
 			Nz::ByteStream byteStream(&byteArray);
 			m_planet->GetChunk(chunkIndices).Serialize(m_blockLibrary, byteStream);
 
-			if (!Nz::File::WriteWhole(savePath / Nz::Utf8Path(std::format("{}_{}_{}.chunk", chunkIndices.x, chunkIndices.y, chunkIndices.z)), byteArray.GetBuffer(), byteArray.GetSize()))
+			if (!Nz::File::WriteWhole(savePath / Nz::Utf8Path(fmt::format("{}_{}_{}.chunk", chunkIndices.x, chunkIndices.y, chunkIndices.z)), byteArray.GetBuffer(), byteArray.GetSize()))
 				fmt::print(stderr, "failed to save chunk {}\n", fmt::streamed(chunkIndices));
 		}
 		m_dirtyChunks.clear();
