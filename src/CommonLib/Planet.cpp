@@ -98,9 +98,9 @@ namespace tsom
 					depth -= freeSpace / 2;
 
 					std::string_view blockType;
-					if (depth <= 3)
+					if (depth <= 1)
 						blockType = "snow";
-					else if (depth <= 25)
+					else if (depth <= 12)
 						blockType = "dirt";
 					else
 						blockType = (dis(rand)) ? "stone" : "stone_mossy";
