@@ -5,6 +5,7 @@
 #include <Game/States/GameState.hpp>
 #include <Game/States/StateData.hpp>
 #include <CommonLib/GameConstants.hpp>
+#include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/PlayerInputs.hpp>
 #include <CommonLib/NetworkSession.hpp>
 #include <CommonLib/Components/PlanetGravityComponent.hpp>

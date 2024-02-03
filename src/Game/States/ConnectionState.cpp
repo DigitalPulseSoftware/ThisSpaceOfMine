@@ -7,6 +7,7 @@
 #include <Game/States/GameState.hpp>
 #include <ClientLib/ClientSessionHandler.hpp>
 #include <CommonLib/SessionHandler.hpp>
+#include <CommonLib/Version.hpp>
 #include <Nazara/Core/StateMachine.hpp>
 #include <Nazara/Utility/SimpleTextDrawer.hpp>
 #include <Nazara/Widgets/LabelWidget.hpp>

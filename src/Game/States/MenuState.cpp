@@ -7,6 +7,7 @@
 #include <Game/States/GameState.hpp>
 #include <Game/States/UpdateState.hpp>
 #include <CommonLib/GameConstants.hpp>
+#include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/Version.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/StateMachine.hpp>

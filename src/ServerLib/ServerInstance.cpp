@@ -3,7 +3,7 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ServerLib/ServerInstance.hpp>
-#include <CommonLib/GameConstants.hpp>
+#include <CommonLib/InternalConstants.hpp>
 #include <ServerLib/NetworkedEntitiesSystem.hpp>
 #include <Nazara/JoltPhysics3D/Systems/JoltPhysics3DSystem.hpp>
 #include <Nazara/Utility/Components.hpp>

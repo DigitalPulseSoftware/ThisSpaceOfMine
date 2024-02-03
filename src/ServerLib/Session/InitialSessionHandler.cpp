@@ -7,7 +7,7 @@
 #include <ServerLib/ServerPlayer.hpp>
 #include <ServerLib/ServerInstance.hpp>
 #include <ServerLib/Session/PlayerSessionHandler.hpp>
-#include <CommonLib/GameConstants.hpp>
+#include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/Version.hpp>
 #include <fmt/color.h>
 #include <fmt/format.h>

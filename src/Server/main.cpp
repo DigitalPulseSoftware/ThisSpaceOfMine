@@ -3,7 +3,7 @@
 #include <Nazara/Core/SignalHandlerAppComponent.hpp>
 #include <Nazara/JoltPhysics3D/JoltPhysics3D.hpp>
 #include <Nazara/Network/Network.hpp>
-#include <CommonLib/GameConstants.hpp>
+#include <CommonLib/InternalConstants.hpp>
 #include <ServerLib/ServerInstanceAppComponent.hpp>
 #include <ServerLib/Session/InitialSessionHandler.hpp>
 #include <Main/Main.hpp>

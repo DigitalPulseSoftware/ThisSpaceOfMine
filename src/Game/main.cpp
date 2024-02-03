@@ -21,6 +21,7 @@
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Systems/MovementInterpolationSystem.hpp>
 #include <CommonLib/GameConstants.hpp>
+#include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/NetworkReactor.hpp>
 #include <CommonLib/Protocol/Packets.hpp>
 #include <CommonLib/Systems/PlanetGravitySystem.hpp>
