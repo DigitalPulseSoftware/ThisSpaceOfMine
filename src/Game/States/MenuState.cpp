@@ -31,8 +31,8 @@ namespace nlohmann
 	{
 		static void from_json(const nlohmann::json& json, tsom::UpdateInfo::DownloadInfo& downloadInfo)
 		{
-			downloadInfo.downloadUrl = json["download_url"];
-			downloadInfo.size = json["size"];
+			downloadInfo.downloadUrl = json.at("download_url");
+			downloadInfo.size = json.at("size");
 			downloadInfo.sha256 = json.value("sha256", "");
 		}
 	};
@@ -160,11 +160,11 @@ namespace tsom
 				{
 					nlohmann::json json = nlohmann::json::parse(result.GetBody());
 
-					newAssetVersion = json["assets_version"];
-					newGameVersion = json["version"];
-					assetInfo = json["assets"];
-					gameBinariesInfo = json["binaries"];
-					updaterInfo = json["updater"];
+					newAssetVersion = json.at("assets_version");
+					newGameVersion = json.at("version");
+					assetInfo = json.at("assets");
+					gameBinariesInfo = json.at("binaries");
+					updaterInfo = json.at("updater");
 				}
 				catch (const std::exception& e)
 				{
@@ -189,6 +189,8 @@ namespace tsom
 
 					m_updateLayout->Show();
 				}
+				else
+					fmt::print("no new version available\n");
 			});
 
 			return true;
