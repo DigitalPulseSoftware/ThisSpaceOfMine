@@ -5,8 +5,11 @@
 #include <ServerLib/ServerInstance.hpp>
 #include <CommonLib/InternalConstants.hpp>
 #include <ServerLib/NetworkedEntitiesSystem.hpp>
+#include <Nazara/Core/File.hpp>
 #include <Nazara/JoltPhysics3D/Systems/JoltPhysics3DSystem.hpp>
 #include <Nazara/Utility/Components.hpp>
+#include <NazaraUtils/PathUtils.hpp>
+#include <fmt/color.h>
 #include <fmt/format.h>
 #include <fmt/std.h>
 #include <memory>
@@ -34,12 +37,20 @@ namespace tsom
 		m_planet->GeneratePlatform(m_blockLibrary, tsom::Direction::Left, { 8, 87, 111 });
 		m_planet->GeneratePlatform(m_blockLibrary, tsom::Direction::Right, { 173, 41, 89 });
 		m_planet->GeneratePlatform(m_blockLibrary, tsom::Direction::Down, { 121, 92, 2 });
+		LoadChunks();
+
+		m_planet->OnChunkUpdated.Connect([this](ChunkContainer* /*planet*/, Chunk* chunk)
+		{
+			m_dirtyChunks.insert(chunk->GetIndices());
+		});
 
 		m_planetEntities = std::make_unique<ChunkEntities>(m_world, *m_planet, m_blockLibrary);
 	}
 
 	ServerInstance::~ServerInstance()
 	{
+		OnSave();
+
 		m_sessionManagers.clear();
 		m_players.Clear();
 	}
@@ -99,6 +110,40 @@ namespace tsom
 		{
 			OnTick(m_tickDuration);
 			m_tickAccumulator -= m_tickDuration;
+		}
+
+		if (m_saveClock.RestartIfOver(Constants::SaveInterval))
+			OnSave();
+	}
+
+	void ServerInstance::LoadChunks()
+	{
+		std::filesystem::path savePath = Nz::Utf8Path(Constants::SaveDirectory);
+		if (!std::filesystem::is_directory(savePath))
+		{
+			fmt::print("save directory {0} doesn't exist, not loading chunks\n", savePath);
+			return;
+		}
+
+		std::size_t chunkCount = m_planet->GetChunkCount();
+		for (std::size_t i = 0; i < chunkCount; ++i)
+		{
+			Chunk* chunk = m_planet->GetChunk(i);
+			Nz::Vector3ui chunkIndices = chunk->GetIndices();
+
+			Nz::File chunkFile(savePath / Nz::Utf8Path(std::format("{}_{}_{}.chunk", chunkIndices.x, chunkIndices.y, chunkIndices.z)), Nz::OpenMode::Read);
+			if (!chunkFile.IsOpen())
+				continue;
+
+			try
+			{
+				Nz::ByteStream fileStream(&chunkFile);
+				chunk->Unserialize(m_blockLibrary, fileStream);
+			}
+			catch (const std::exception& e)
+			{
+				fmt::print(stderr, fg(fmt::color::red), "failed to load chunk {}: {}\n", fmt::streamed(chunkIndices), e.what());
+			}
 		}
 	}
 
@@ -185,5 +230,30 @@ namespace tsom
 		m_world.Update(elapsedTime);
 
 		OnNetworkTick();
+	}
+
+	void ServerInstance::OnSave()
+	{
+		if (m_dirtyChunks.empty())
+			return;
+
+		fmt::print("saving {} dirty chunks...\n", m_dirtyChunks.size());
+
+		std::filesystem::path savePath = Nz::Utf8Path(Constants::SaveDirectory);
+		if (!std::filesystem::is_directory(savePath))
+			std::filesystem::create_directories(savePath);
+
+		Nz::ByteArray byteArray;
+		for (const Nz::Vector3ui& chunkIndices : m_dirtyChunks)
+		{
+			byteArray.Clear();
+
+			Nz::ByteStream byteStream(&byteArray);
+			m_planet->GetChunk(chunkIndices).Serialize(m_blockLibrary, byteStream);
+
+			if (!Nz::File::WriteWhole(savePath / Nz::Utf8Path(std::format("{}_{}_{}.chunk", chunkIndices.x, chunkIndices.y, chunkIndices.z)), byteArray.GetBuffer(), byteArray.GetSize()))
+				fmt::print(stderr, "failed to save chunk {}\n", fmt::streamed(chunkIndices));
+		}
+		m_dirtyChunks.clear();
 	}
 }

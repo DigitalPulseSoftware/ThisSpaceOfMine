@@ -80,6 +80,7 @@ namespace tsom
 		auto& blockData = m_blocks.emplace_back();
 		blockData.hasCollisions = blockInfo.hasCollisions;
 		blockData.permeability = blockInfo.permeability;
+		blockData.name = name;
 
 		unsigned int baseTexIndex;
 		if (!blockInfo.basePath.empty())

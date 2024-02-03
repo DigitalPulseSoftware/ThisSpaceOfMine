@@ -18,6 +18,7 @@
 #include <Nazara/Core/Clock.hpp>
 #include <Nazara/Core/EnttWorld.hpp>
 #include <memory>
+#include <unordered_set>
 #include <vector>
 
 namespace tsom
@@ -50,8 +51,10 @@ namespace tsom
 			ServerInstance& operator=(ServerInstance&&) = delete;
 
 		private:
+			void LoadChunks();
 			void OnNetworkTick();
 			void OnTick(Nz::Time elapsedTime);
+			void OnSave();
 
 			struct BlockUpdate
 			{
@@ -63,11 +66,13 @@ namespace tsom
 			Nz::UInt16 m_tickIndex;
 			std::unique_ptr<Planet> m_planet;
 			std::unique_ptr<ChunkEntities> m_planetEntities;
+			std::unordered_set<Nz::Vector3ui /*chunkIndex*/> m_dirtyChunks;
 			std::vector<std::unique_ptr<NetworkSessionManager>> m_sessionManagers;
 			Nz::Bitset<> m_disconnectedPlayers;
 			Nz::Bitset<> m_newPlayers;
 			Nz::EnttWorld m_world;
 			Nz::MemoryPool<ServerPlayer> m_players;
+			Nz::MillisecondClock m_saveClock;
 			Nz::Time m_tickAccumulator;
 			Nz::Time m_tickDuration;
 			BlockLibrary m_blockLibrary;

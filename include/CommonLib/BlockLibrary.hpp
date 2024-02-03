@@ -49,6 +49,7 @@ namespace tsom
 
 			struct BlockData
 			{
+				std::string name;
 				Nz::EnumArray<Direction, unsigned int> texIndices;
 				bool hasCollisions;
 				float permeability;

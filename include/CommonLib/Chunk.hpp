@@ -23,6 +23,7 @@
 
 namespace Nz
 {
+	class ByteStream;
 	class JoltCollider3D;
 	struct VertexStruct_XYZ_Color_UV;
 }
@@ -64,6 +65,9 @@ namespace tsom
 
 			template<typename F> void InitBlocks(F&& func);
 
+			virtual void Serialize(const BlockLibrary& blockLibrary, Nz::ByteStream& byteStream);
+			virtual void Unserialize(const BlockLibrary& blockLibrary, Nz::ByteStream& byteStream);
+
 			inline void UpdateBlock(const Nz::Vector3ui& indices, BlockIndex cellType);
 
 			Chunk& operator=(const Chunk&) = delete;
@@ -82,7 +86,10 @@ namespace tsom
 			};
 
 		protected:
-			std::vector<BlockIndex> m_cells;
+			void OnBlockReset();
+
+			std::vector<BlockIndex> m_blocks;
+			std::vector<Nz::UInt16> m_blockTypeCount;
 			Nz::Bitset<Nz::UInt64> m_collisionCellMask;
 			Nz::Vector3ui m_indices;
 			Nz::Vector3ui m_size;

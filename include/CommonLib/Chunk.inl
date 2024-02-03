@@ -7,13 +7,15 @@
 namespace tsom
 {
 	inline Chunk::Chunk(ChunkContainer& owner, const Nz::Vector3ui& indices, const Nz::Vector3ui& size, float cellSize) :
-	m_cells(size.x * size.y * size.z, EmptyBlockIndex),
-	m_collisionCellMask(m_cells.size(), false),
+	m_blocks(size.x * size.y * size.z, EmptyBlockIndex),
+	m_collisionCellMask(m_blocks.size(), false),
 	m_indices(indices),
 	m_size(size),
 	m_owner(owner),
 	m_blockSize(cellSize)
 	{
+		m_blockTypeCount.resize(EmptyBlockIndex + 1);
+		m_blockTypeCount[EmptyBlockIndex] = m_blocks.size();
 	}
 
 	inline const Nz::Bitset<Nz::UInt64>& Chunk::GetCollisionCellMask() const
@@ -38,7 +40,7 @@ namespace tsom
 
 	inline BlockIndex Chunk::GetBlockContent(unsigned int blockIndex) const
 	{
-		return m_cells[blockIndex];
+		return m_blocks[blockIndex];
 	}
 
 	inline BlockIndex Chunk::GetBlockContent(const Nz::Vector3ui& indices) const
@@ -48,7 +50,7 @@ namespace tsom
 
 	inline std::size_t Chunk::GetBlockCount() const
 	{
-		return m_cells.size();
+		return m_blocks.size();
 	}
 
 	inline float Chunk::GetBlockSize() const
@@ -68,7 +70,7 @@ namespace tsom
 
 	inline const BlockIndex* Chunk::GetContent() const
 	{
-		return m_cells.data();
+		return m_blocks.data();
 	}
 
 	inline std::optional<BlockIndex> Chunk::GetNeighborBlock(Nz::Vector3ui indices, const Nz::Vector3i& offsets) const
@@ -165,16 +167,22 @@ namespace tsom
 	template<typename F>
 	void Chunk::InitBlocks(F&& func)
 	{
-		func(m_cells.data());
-		for (std::size_t blockIndex = 0; blockIndex < m_cells.size(); ++blockIndex)
-			m_collisionCellMask[blockIndex] = (m_cells[blockIndex] != EmptyBlockIndex);
+		func(m_blocks.data());
+		OnBlockReset();
 	}
 
 	inline void Chunk::UpdateBlock(const Nz::Vector3ui& indices, BlockIndex newBlock)
 	{
 		unsigned int blockIndex = GetBlockIndex(indices);
-		m_cells[blockIndex] = newBlock;
+		BlockIndex oldContent = m_blocks[blockIndex];
+		m_blocks[blockIndex] = newBlock;
 		m_collisionCellMask[blockIndex] = (newBlock != EmptyBlockIndex);
+
+		m_blockTypeCount[oldContent]--;
+		if (newBlock >= m_blockTypeCount.size())
+			m_blockTypeCount.resize(newBlock + 1);
+
+		m_blockTypeCount[newBlock]++;
 
 		OnBlockUpdated(this, indices, newBlock);
 	}

@@ -1,6 +1,7 @@
 assets/*
 !assets/*.passlist
 !assets/shaders
+saves/
 
 # xmake-related files
 .xmake/*

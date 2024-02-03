@@ -4,7 +4,9 @@
 
 #include <CommonLib/Chunk.hpp>
 #include <CommonLib/BlockLibrary.hpp>
+#include <CommonLib/InternalConstants.hpp>
 #include <NazaraUtils/EnumArray.hpp>
+#include <Nazara/Core/ByteStream.hpp>
 #include <Nazara/Utility/VertexStruct.hpp>
 #include <cassert>
 #include <numeric>
@@ -136,6 +138,118 @@ namespace tsom
 						DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::NearRightTop], corners[Nz::BoxCorner::FarRightTop], corners[Nz::BoxCorner::NearRightBottom], corners[Nz::BoxCorner::FarRightBottom] });
 				}
 			}
+		}
+	}
+
+	void Chunk::Serialize(const BlockLibrary& blockLibrary, Nz::ByteStream& byteStream)
+	{
+		byteStream << Constants::ChunkBinaryVersion;
+		byteStream << m_size;
+
+		std::vector<BlockIndex> serializationIndices(m_blockTypeCount.size());
+		Nz::UInt16 nextUniqueIndex = 0;
+
+		for (BlockIndex i = 0; i < m_blockTypeCount.size(); ++i)
+		{
+			if (m_blockTypeCount[i] == 0)
+				continue;
+
+			serializationIndices[i] = nextUniqueIndex++;
+		}
+
+		byteStream << Nz::SafeCast<Nz::UInt16>(nextUniqueIndex);
+		for (BlockIndex i = 0; i < m_blockTypeCount.size(); ++i)
+		{
+			if (m_blockTypeCount[i] == 0)
+				continue;
+
+			byteStream << blockLibrary.GetBlockData(i).name;
+		}
+
+		// nextUniqueIndex is the number of bits required to store all the different block types used
+		if (nextUniqueIndex > 8)
+		{
+			for (BlockIndex blockIndex : m_blocks)
+				byteStream << static_cast<Nz::UInt16>(serializationIndices[blockIndex]);
+		}
+		else
+		{
+			for (BlockIndex blockIndex : m_blocks)
+				byteStream << static_cast<Nz::UInt8>(serializationIndices[blockIndex]);
+		}
+	}
+
+	void Chunk::Unserialize(const BlockLibrary& blockLibrary, Nz::ByteStream& byteStream)
+	{
+		Nz::UInt32 chunkBinaryVersion;
+		byteStream >> chunkBinaryVersion;
+
+		if (chunkBinaryVersion != Constants::ChunkBinaryVersion)
+			throw std::runtime_error("incompatible chunk version");
+
+		Nz::Vector3ui chunkSize;
+		byteStream >> chunkSize;
+
+		if (chunkSize != m_size)
+			throw std::runtime_error("incompatible chunk size");
+
+		std::vector<BlockIndex> deserializationIndices;
+
+		Nz::UInt16 blockTypeCount;
+		byteStream >> blockTypeCount;
+
+		deserializationIndices.reserve(blockTypeCount);
+
+		std::string blockName;
+		for (Nz::UInt16 i = 0; i < blockTypeCount; ++i)
+		{
+			byteStream >> blockName;
+
+			BlockIndex blockIndex = blockLibrary.GetBlockIndex(blockName);
+			if (blockIndex == InvalidBlockIndex)
+				throw std::runtime_error("unknown block " + blockName);
+
+			deserializationIndices.push_back(blockIndex);
+		}
+
+		std::vector<BlockIndex> blocks(m_blocks.size());
+		if (blockTypeCount > 8)
+		{
+			for (BlockIndex& blockIndex : blocks)
+			{
+				Nz::UInt16 value;
+				byteStream >> value;
+
+				blockIndex = deserializationIndices[value];
+			}
+		}
+		else
+		{
+			for (BlockIndex& blockIndex : blocks)
+			{
+				Nz::UInt8 value;
+				byteStream >> value;
+
+				blockIndex = deserializationIndices[value];
+			}
+		}
+
+		m_blocks = std::move(blocks);
+		OnBlockReset();
+	}
+
+	void Chunk::OnBlockReset()
+	{
+		std::fill(m_blockTypeCount.begin(), m_blockTypeCount.end(), 0);
+		for (std::size_t blockIndex = 0; blockIndex < m_blocks.size(); ++blockIndex)
+		{
+			BlockIndex blockContent = m_blocks[blockIndex];
+			m_collisionCellMask[blockIndex] = (blockContent != EmptyBlockIndex);
+
+			if (blockContent >= m_blockTypeCount.size())
+				m_blockTypeCount.resize(blockContent + 1);
+
+			m_blockTypeCount[blockContent]++;
 		}
 	}
 }
