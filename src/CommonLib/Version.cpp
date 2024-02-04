@@ -14,7 +14,11 @@ namespace tsom
 
 	std::string GetVersionInfo()
 	{
-		return fmt::format("TSOM {}.{}.{} ({})", GameMajorVersion, GameMinorVersion, GamePatchVersion, BuildBranch);
+		// HEAD is the detected branch when releasing
+		if (BuildBranch != "release" && BuildBranch != "HEAD")
+			return fmt::format("TSOM {}.{}.{} ({})", GameMajorVersion, GameMinorVersion, GamePatchVersion, BuildBranch);
+		else
+			return fmt::format("TSOM {}.{}.{}", GameMajorVersion, GameMinorVersion, GamePatchVersion, BuildBranch);
 	}
 
 #include "VersionData.hpp"
