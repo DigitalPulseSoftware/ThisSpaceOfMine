@@ -176,12 +176,16 @@ namespace tsom
 
 				if (newGameVersion > currentGameVersion)
 				{
+					std::optional<UpdateInfo::DownloadInfo> assets;
+					if (newAssetVersion > currentGameVersion)
+						assets = std::move(assetInfo);
+
 					m_newVersionInfo.emplace(UpdateInfo{
-						.assets = std::move(assetInfo),
+						.assets = std::move(assets),
 						.version = newGameVersion.to_string(),
 						.binaries = std::move(gameBinariesInfo),
 						.updater = std::move(updaterInfo)
-						});
+					});
 
 					fmt::print(fg(fmt::color::yellow), "new version available: {}\n", m_newVersionInfo->version);
 					m_updateButton->UpdateText(Nz::SimpleTextDrawer::Draw("Update game to " + m_newVersionInfo->version, 18, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
