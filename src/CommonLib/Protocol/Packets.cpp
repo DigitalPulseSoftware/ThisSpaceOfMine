@@ -80,14 +80,7 @@ namespace tsom
 		{
 			serializer &= data.message;
 
-			bool hasPlayer;
-			if (serializer.IsWriting())
-				hasPlayer = data.playerIndex.has_value();
-
-			serializer &= hasPlayer;
-			if (!serializer.IsWriting() && hasPlayer)
-				data.playerIndex.emplace();
-
+			serializer.SerializePresence(data.playerIndex);
 			serializer.Serialize(data.playerIndex);
 		}
 
