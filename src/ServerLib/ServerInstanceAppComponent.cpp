@@ -3,12 +3,17 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ServerLib/ServerInstanceAppComponent.hpp>
+#include <thread>
 
 namespace tsom
 {
 	void ServerInstanceAppComponent::Update(Nz::Time elapsedTime)
 	{
-		for (auto& worldPtr : m_instances)
-			worldPtr->Update(elapsedTime);
+		Nz::Time nextUpdateTime = Nz::Time::Second();
+		for (auto& instancePtr : m_instances)
+			nextUpdateTime = std::min(nextUpdateTime, instancePtr->Update(elapsedTime));
+
+		if (nextUpdateTime > Nz::Time::Milliseconds(5))
+			std::this_thread::sleep_for(nextUpdateTime.AsDuration<std::chrono::milliseconds>());
 	}
 }

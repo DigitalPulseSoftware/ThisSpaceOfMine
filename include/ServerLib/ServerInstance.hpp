@@ -45,7 +45,7 @@ namespace tsom
 			inline const Planet& GetPlanet() const;
 			inline Nz::EnttWorld& GetWorld();
 
-			void Update(Nz::Time elapsedTime);
+			Nz::Time Update(Nz::Time elapsedTime);
 
 			ServerInstance& operator=(const ServerInstance&) = delete;
 			ServerInstance& operator=(ServerInstance&&) = delete;

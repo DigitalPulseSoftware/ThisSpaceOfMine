@@ -103,8 +103,18 @@ namespace tsom
 		m_players.Free(playerIndex);
 	}
 
-	void ServerInstance::Update(Nz::Time elapsedTime)
+	Nz::Time ServerInstance::Update(Nz::Time elapsedTime)
 	{
+		if (m_saveClock.RestartIfOver(Constants::SaveInterval))
+			OnSave();
+
+		for (auto&& sessionManagerPtr : m_sessionManagers)
+			sessionManagerPtr->Poll();
+
+		// No player? Pause instance for 100ms
+		if (m_players.begin() == m_players.end())
+			return Nz::Time::Milliseconds(100);
+
 		m_tickAccumulator += elapsedTime;
 		while (m_tickAccumulator >= m_tickDuration)
 		{
@@ -112,8 +122,7 @@ namespace tsom
 			m_tickAccumulator -= m_tickDuration;
 		}
 
-		if (m_saveClock.RestartIfOver(Constants::SaveInterval))
-			OnSave();
+		return m_tickDuration - m_tickAccumulator;
 	}
 
 	void ServerInstance::LoadChunks()
@@ -211,9 +220,6 @@ namespace tsom
 	void ServerInstance::OnTick(Nz::Time elapsedTime)
 	{
 		m_tickIndex++;
-
-		for (auto&& sessionManagerPtr : m_sessionManagers)
-			sessionManagerPtr->Poll();
 
 		ForEachPlayer([&](ServerPlayer& serverPlayer)
 		{
