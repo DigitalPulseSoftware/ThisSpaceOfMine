@@ -16,10 +16,6 @@ add_requires("fmt", { configs = { header_only = false }})
 add_requires("semver", "concurrentqueue", "hopscotch-map", "nlohmann_json", "perlinnoise")
 add_requires("libcurl", { configs = { shared = true }, system = false })
 
-if os.getenv("CI") then
-	add_requireconfs("**", "*.**", { system = false })
-end
-
 if is_plat("windows") then
 	add_requires("stackwalker 5b0df7a4db8896f6b6dc45d36e383c52577e3c6b")
 end
