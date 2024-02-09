@@ -16,8 +16,8 @@ namespace Nz
 {
 	class ButtonWidget;
 	class BoxLayout;
-	class LabelWidget;
 	class ProgressBarWidget;
+	class SimpleLabelWidget;
 }
 
 namespace tsom
@@ -51,9 +51,9 @@ namespace tsom
 			Nz::BoxLayout* m_layout;
 			Nz::ButtonWidget* m_cancelButton;
 			Nz::FixedVector<PendingDownload, 3> m_pendingDownloads;
-			Nz::LabelWidget* m_downloadLabel;
-			Nz::LabelWidget* m_progressionLabel;
 			Nz::ProgressBarWidget* m_progressBar;
+			Nz::SimpleLabelWidget* m_downloadLabel;
+			Nz::SimpleLabelWidget* m_progressionLabel;
 			std::shared_ptr<Nz::State> m_previousState;
 			UpdateInfo m_updateInfo;
 			bool m_isCancelled;

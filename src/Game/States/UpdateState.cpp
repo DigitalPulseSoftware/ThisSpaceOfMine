@@ -11,8 +11,8 @@
 #include <Nazara/Utility/SimpleTextDrawer.hpp>
 #include <Nazara/Widgets/BoxLayout.hpp>
 #include <Nazara/Widgets/ButtonWidget.hpp>
-#include <Nazara/Widgets/LabelWidget.hpp>
 #include <Nazara/Widgets/ProgressBarWidget.hpp>
+#include <Nazara/Widgets/SimpleLabelWidget.hpp>
 #include <fmt/color.h>
 #include <fmt/core.h>
 #include <numeric>
@@ -55,16 +55,18 @@ namespace tsom
 	{
 		m_layout = CreateWidget<Nz::BoxLayout>(Nz::BoxLayoutOrientation::TopToBottom);
 
-		m_downloadLabel = m_layout->Add<Nz::LabelWidget>();
-		m_downloadLabel->UpdateText(Nz::SimpleTextDrawer::Draw("Downloading assets...", 24));
+		m_downloadLabel = m_layout->Add<Nz::SimpleLabelWidget>();
+		m_downloadLabel->SetCharacterSize(24);
+		m_downloadLabel->SetText("Downloading assets...");
 		m_downloadLabel->Resize(m_downloadLabel->GetPreferredSize());
 		m_downloadLabel->SetMaximumWidth(m_downloadLabel->GetWidth());
 
 		m_progressBar = m_layout->Add<Nz::ProgressBarWidget>();
 		m_progressBar->SetMaximumHeight(64.f);
 
-		m_progressionLabel = m_progressBar->Add<Nz::LabelWidget>();
-		m_progressionLabel->UpdateText(Nz::SimpleTextDrawer::Draw("Starting download...", 24));
+		m_progressionLabel = m_progressBar->Add<Nz::SimpleLabelWidget>();
+		m_progressionLabel->SetCharacterSize(24);
+		m_progressionLabel->SetText("Starting download...");
 		m_progressionLabel->Resize(m_progressionLabel->GetPreferredSize());
 
 		// Set first download as the updater
@@ -245,7 +247,7 @@ namespace tsom
 
 		m_progressBar->SetFraction(float(totalDownloaded) / float(totalSize));
 
-		m_progressionLabel->UpdateText(Nz::SimpleTextDrawer::Draw(fmt::format("Downloading {0} file(s) - {1} / {2}", activeDownloadCount, FormatSize(totalDownloaded), FormatSize(totalSize)), 24));
+		m_progressionLabel->SetText(fmt::format("Downloading {0} file(s) - {1} / {2}", activeDownloadCount, FormatSize(totalDownloaded), FormatSize(totalSize)));
 		m_progressionLabel->Resize(m_progressionLabel->GetPreferredSize());
 		m_progressionLabel->Center();
 	}
