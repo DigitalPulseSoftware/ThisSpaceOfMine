@@ -24,12 +24,17 @@ namespace tsom
 			std::optional<Nz::Vector3ui> ComputeCoordinates(const Nz::Vector3f& position) const override;
 			Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> ComputeVoxelCorners(const Nz::Vector3ui& indices) const override;
 
+			void DeformNormals(Nz::SparsePtr<Nz::Vector3f> normals, const Nz::Vector3f& referenceNormal, Nz::SparsePtr<const Nz::Vector3f> positions, std::size_t vertexCount) const override;
+			void DeformNormalsAndTangents(Nz::SparsePtr<Nz::Vector3f> normals, Nz::SparsePtr<Nz::Vector3f> tangents, const Nz::Vector3f& referenceNormal, Nz::SparsePtr<const Nz::Vector3f> positions, std::size_t vertexCount) const override;
+			bool DeformPositions(Nz::SparsePtr<Nz::Vector3f> positions, std::size_t positionCount) const override;
+
 			inline void UpdateDeformationRadius(float deformationRadius);
 
 			DeformedChunk& operator=(const DeformedChunk&) = delete;
 			DeformedChunk& operator=(DeformedChunk&&) = delete;
 
 			static Nz::Vector3f DeformPosition(const Nz::Vector3f& position, const Nz::Vector3f& deformationCenter, float deformationRadius);
+			static Nz::Quaternionf GetNormalDeformation(const Nz::Vector3f& position, const Nz::Vector3f& faceNormal, const Nz::Vector3f& deformationCenter, float deformationRadius);
 
 		private:
 			Nz::Vector3f m_deformationCenter;
