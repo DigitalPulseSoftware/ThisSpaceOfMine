@@ -132,4 +132,31 @@ namespace tsom
 
 		return corners;
 	}
+
+	void DeformedChunk::DeformNormals(Nz::SparsePtr<Nz::Vector3f> normals, const Nz::Vector3f& referenceNormal, Nz::SparsePtr<const Nz::Vector3f> positions, std::size_t vertexCount) const
+	{
+		for (std::size_t i = 0; i < vertexCount; ++i)
+		{
+			Nz::Quaternionf rotation = GetNormalDeformation(positions[i], referenceNormal, m_deformationCenter, m_deformationRadius);
+			normals[i] = rotation * normals[i];
+		}
+	}
+
+	void DeformedChunk::DeformNormalsAndTangents(Nz::SparsePtr<Nz::Vector3f> normals, Nz::SparsePtr<Nz::Vector3f> tangents, const Nz::Vector3f& referenceNormal, Nz::SparsePtr<const Nz::Vector3f> positions, std::size_t vertexCount) const
+	{
+		for (std::size_t i = 0; i < vertexCount; ++i)
+		{
+			Nz::Quaternionf rotation = GetNormalDeformation(positions[i], referenceNormal, m_deformationCenter, m_deformationRadius);
+			normals[i] = rotation * normals[i];
+			tangents[i] = rotation * tangents[i];
+		}
+	}
+
+	bool DeformedChunk::DeformPositions(Nz::SparsePtr<Nz::Vector3f> positions, std::size_t positionCount) const
+	{
+		for (std::size_t i = 0; i < positionCount; ++i)
+			positions[i] = DeformPosition(positions[i], m_deformationCenter, m_deformationRadius);
+
+		return true;
+	}
 }

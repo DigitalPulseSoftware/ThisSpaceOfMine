@@ -45,14 +45,6 @@ namespace tsom
 		return pos;
 	}
 
-	Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> FlatChunk::ComputeVoxelCorners(const Nz::Vector3ui& indices) const
-	{
-		Nz::Vector3f blockPos = (Nz::Vector3f(indices) - Nz::Vector3f(m_size) * 0.5f) * m_blockSize;
-
-		Nz::Boxf box(blockPos.x, blockPos.z, blockPos.y, m_blockSize, m_blockSize, m_blockSize);
-		return box.GetCorners();
-	}
-
 	void FlatChunk::BuildCollider(const Nz::Vector3ui& dims, Nz::Bitset<Nz::UInt64> collisionCellMask, Nz::FunctionRef<void(const Nz::Boxf& box)> callback)
 	{
 		auto GetBlockLocalIndex = [&](const Nz::Vector3ui& indices)

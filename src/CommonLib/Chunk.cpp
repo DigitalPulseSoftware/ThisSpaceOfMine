@@ -24,6 +24,14 @@ namespace tsom
 			VertexAttributes vertexAttributes = addVertices(pos.size());
 			assert(vertexAttributes.position);
 
+			indices.push_back(vertexAttributes.firstIndex);
+			indices.push_back(vertexAttributes.firstIndex + 2);
+			indices.push_back(vertexAttributes.firstIndex + 1);
+
+			indices.push_back(vertexAttributes.firstIndex + 1);
+			indices.push_back(vertexAttributes.firstIndex + 2);
+			indices.push_back(vertexAttributes.firstIndex + 3);
+
 			for (std::size_t i = 0; i < pos.size(); ++i)
 				vertexAttributes.position[i] = pos[i];
 
@@ -36,9 +44,17 @@ namespace tsom
 					vertexAttributes.normal[i] = faceDirection;
 			}
 
+			if (vertexAttributes.tangent)
+			{
+				Nz::Vector3f edgeCenter = (pos[0] + pos[1]) * 0.5f;
+				Nz::Vector3f tangent = Nz::Vector3f::Normalize(edgeCenter - faceCenter);
+
+				for (std::size_t i = 0; i < pos.size(); ++i)
+					vertexAttributes.tangent[i] = tangent;
+			}
+
 			if (vertexAttributes.uv)
 			{
-				// Get face up vector
 				Nz::Vector3f faceUp = s_dirNormals[DirectionFromNormal(Nz::Vector3f::Normalize(faceCenter - gravityCenter))];
 
 				// Make up the rotation from the face up to the regular up
@@ -92,13 +108,14 @@ namespace tsom
 				}
 			}
 
-			indices.push_back(vertexAttributes.firstIndex);
-			indices.push_back(vertexAttributes.firstIndex + 2);
-			indices.push_back(vertexAttributes.firstIndex + 1);
-
-			indices.push_back(vertexAttributes.firstIndex + 1);
-			indices.push_back(vertexAttributes.firstIndex + 2);
-			indices.push_back(vertexAttributes.firstIndex + 3);
+			// deform positions after generating UV
+			if (DeformPositions(vertexAttributes.position, pos.size()))
+			{
+				if (vertexAttributes.normal && vertexAttributes.tangent)
+					DeformNormalsAndTangents(vertexAttributes.normal, vertexAttributes.tangent, faceDirection, vertexAttributes.position, pos.size());
+				else if (vertexAttributes.normal)
+					DeformNormals(vertexAttributes.normal, faceDirection, vertexAttributes.position, pos.size());
+			}
 		};
 
 		// Find and lock all neighbor chunks to avoid discrepancies between chunks
@@ -183,7 +200,8 @@ namespace tsom
 
 					const auto& blockData = m_blockLibrary.GetBlockData(blockIndex);
 
-					Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> corners = ComputeVoxelCorners({ x, y, z });
+					// Get unaltered voxel corners and deform them next
+					Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> corners = Chunk::ComputeVoxelCorners({ x, y, z });
 
 					Nz::Vector3f blockCenter = std::accumulate(corners.begin(), corners.end(), Nz::Vector3f::Zero()) / corners.size();
 
@@ -247,6 +265,32 @@ namespace tsom
 				}
 			}
 		}
+	}
+
+	Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> Chunk::ComputeVoxelCorners(const Nz::Vector3ui& indices) const
+	{
+		float fX = indices.x * m_blockSize;
+		float fY = indices.y * m_blockSize;
+		float fZ = indices.z * m_blockSize;
+
+		Nz::Boxf box(fX, fZ, fY, m_blockSize, m_blockSize, m_blockSize);
+		return box.GetCorners();
+	}
+
+	void Chunk::DeformNormals(Nz::SparsePtr<Nz::Vector3f> normals, const Nz::Vector3f& referenceNormal, Nz::SparsePtr<const Nz::Vector3f> positions, std::size_t vertexCount) const
+	{
+		/* nothing to do */
+	}
+
+	void Chunk::DeformNormalsAndTangents(Nz::SparsePtr<Nz::Vector3f> normals, Nz::SparsePtr<Nz::Vector3f> tangents, const Nz::Vector3f& referenceNormal, Nz::SparsePtr<const Nz::Vector3f> positions, std::size_t vertexCount) const
+	{
+		/* nothing to do */
+	}
+
+	bool Chunk::DeformPositions(Nz::SparsePtr<Nz::Vector3f> /*positions*/, std::size_t /*positionCount*/) const
+	{
+		/* nothing to do */
+		return false;
 	}
 
 	void Chunk::Deserialize(Nz::ByteStream& byteStream)
