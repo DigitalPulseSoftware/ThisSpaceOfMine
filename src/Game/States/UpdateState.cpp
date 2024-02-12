@@ -8,7 +8,7 @@
 #include <Nazara/Core/Process.hpp>
 #include <Nazara/Core/StateMachine.hpp>
 #include <Nazara/Network/WebServiceAppComponent.hpp>
-#include <Nazara/Utility/SimpleTextDrawer.hpp>
+#include <Nazara/TextRenderer/SimpleTextDrawer.hpp>
 #include <Nazara/Widgets/BoxLayout.hpp>
 #include <Nazara/Widgets/ButtonWidget.hpp>
 #include <Nazara/Widgets/ProgressBarWidget.hpp>

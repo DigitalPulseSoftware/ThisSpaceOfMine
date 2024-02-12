@@ -9,7 +9,7 @@
 #include <CommonLib/SessionHandler.hpp>
 #include <CommonLib/Version.hpp>
 #include <Nazara/Core/StateMachine.hpp>
-#include <Nazara/Utility/SimpleTextDrawer.hpp>
+#include <Nazara/TextRenderer/SimpleTextDrawer.hpp>
 #include <Nazara/Widgets/LabelWidget.hpp>
 #include <fmt/format.h>
 

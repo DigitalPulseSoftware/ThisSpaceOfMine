@@ -2,19 +2,20 @@
 #include <Nazara/Core/EntitySystemAppComponent.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <Nazara/Core/StateMachine.hpp>
+#include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Graphics/Graphics.hpp>
 #include <Nazara/Graphics/RenderWindow.hpp>
 #include <Nazara/Graphics/Components/CameraComponent.hpp>
 #include <Nazara/Graphics/Systems/RenderSystem.hpp>
-#include <Nazara/JoltPhysics3D/JoltPhysics3D.hpp>
-#include <Nazara/JoltPhysics3D/Systems/JoltPhysics3DSystem.hpp>
+#include <Nazara/Physics3D/Physics3D.hpp>
+#include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <Nazara/Network/Network.hpp>
 #include <Nazara/Network/WebServiceAppComponent.hpp>
 #include <Nazara/Platform/WindowingAppComponent.hpp>
 #include <Nazara/Platform/MessageBox.hpp>
 #include <Nazara/Platform/Platform.hpp>
 #include <Nazara/Renderer/GpuSwitch.hpp>
-#include <Nazara/Utility/Components/NodeComponent.hpp>
+#include <Nazara/TextRenderer/TextRenderer.hpp>
 #include <Nazara/Widgets/Widgets.hpp>
 #include <Main/Main.hpp>
 #include <ClientLib/ClientBlockLibrary.hpp>
@@ -39,7 +40,7 @@ NAZARA_REQUEST_DEDICATED_GPU()
 
 int GameMain(int argc, char* argv[])
 {
-	Nz::Application<Nz::Graphics, Nz::JoltPhysics3D, Nz::Network, Nz::Widgets> app(argc, argv);
+	Nz::Application<Nz::Graphics, Nz::Physics3D, Nz::Network, Nz::TextRenderer, Nz::Widgets> app(argc, argv);
 
 	auto& filesystem = app.AddComponent<Nz::FilesystemAppComponent>();
 
@@ -92,7 +93,7 @@ int GameMain(int argc, char* argv[])
 
 	tsom::PlanetGravitySystem planetGravity(world.GetRegistry());
 
-	auto& physicsSystem = world.AddSystem<Nz::JoltPhysics3DSystem>();
+	auto& physicsSystem = world.AddSystem<Nz::Physics3DSystem>();
 	physicsSystem.GetPhysWorld().SetGravity(Nz::Vector3f::Zero());
 	physicsSystem.GetPhysWorld().SetStepSize(tsom::Constants::TickDuration);
 	physicsSystem.GetPhysWorld().RegisterStepListener(&planetGravity);

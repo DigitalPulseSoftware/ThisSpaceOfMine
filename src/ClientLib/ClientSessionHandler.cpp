@@ -13,10 +13,10 @@
 #include <Nazara/Graphics/Model.hpp>
 #include <Nazara/Graphics/TextSprite.hpp>
 #include <Nazara/Graphics/Components/GraphicsComponent.hpp>
-#include <Nazara/JoltPhysics3D/JoltCollider3D.hpp>
-#include <Nazara/JoltPhysics3D/Components/JoltRigidBody3DComponent.hpp>
-#include <Nazara/Utility/SimpleTextDrawer.hpp>
-#include <Nazara/Utility/Components/NodeComponent.hpp>
+#include <Nazara/Physics3D/Collider3D.hpp>
+#include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
+#include <Nazara/TextRenderer/SimpleTextDrawer.hpp>
+#include <Nazara/Core/Components/NodeComponent.hpp>
 #include <fmt/color.h>
 #include <fmt/format.h>
 
@@ -174,8 +174,8 @@ namespace tsom
 
 	void ClientSessionHandler::SetupEntity(entt::handle entity, Packets::Helper::PlayerControlledData&& entityData)
 	{
-		auto collider = std::make_shared<Nz::JoltCapsuleCollider3D>(Constants::PlayerColliderHeight, Constants::PlayerColliderRadius);
-		entity.emplace<Nz::JoltRigidBody3DComponent>(Nz::JoltRigidBody3D::DynamicSettings(collider, 0.f));
+		auto collider = std::make_shared<Nz::CapsuleCollider3D>(Constants::PlayerColliderHeight, Constants::PlayerColliderRadius);
+		entity.emplace<Nz::RigidBody3DComponent>(Nz::RigidBody3D::DynamicSettings(collider, 0.f));
 
 		// Player model (collider for now)
 		if (!m_playerModel)

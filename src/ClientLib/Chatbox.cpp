@@ -5,7 +5,7 @@
 #include <ClientLib/Chatbox.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <Nazara/Graphics/RenderTarget.hpp>
-#include <Nazara/Utility/Font.hpp>
+#include <Nazara/TextRenderer/Font.hpp>
 #include <Nazara/Widgets/RichTextAreaWidget.hpp>
 #include <Nazara/Widgets/ScrollAreaWidget.hpp>
 #include <Nazara/Widgets/TextAreaWidget.hpp>

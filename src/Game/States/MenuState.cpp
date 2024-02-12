@@ -16,7 +16,7 @@
 #include <Nazara/Network/IpAddress.hpp>
 #include <Nazara/Network/Network.hpp>
 #include <Nazara/Network/WebServiceAppComponent.hpp>
-#include <Nazara/Utility/SimpleTextDrawer.hpp>
+#include <Nazara/TextRenderer/SimpleTextDrawer.hpp>
 #include <Nazara/Widgets.hpp>
 #include <fmt/color.h>
 #include <fmt/format.h>

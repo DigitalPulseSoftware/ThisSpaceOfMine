@@ -8,8 +8,8 @@
 #include <CommonLib/FlatChunk.hpp>
 #include <CommonLib/Utility/SignedDistanceFunctions.hpp>
 #include <Nazara/Math/Ray.hpp>
-#include <Nazara/JoltPhysics3D/JoltCollider3D.hpp>
-#include <Nazara/Utility/VertexStruct.hpp>
+#include <Nazara/Physics3D/Collider3D.hpp>
+#include <Nazara/Core/VertexStruct.hpp>
 #include <fmt/format.h>
 #include <PerlinNoise.hpp>
 #include <random>

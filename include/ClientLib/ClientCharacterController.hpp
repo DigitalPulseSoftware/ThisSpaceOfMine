@@ -25,7 +25,7 @@ namespace tsom
 			ClientCharacterController(ClientCharacterController&&) = delete;
 			~ClientCharacterController() = default;
 
-			void DebugDraw(Nz::JoltCharacter& character, Nz::DebugDrawer& debugDrawer);
+			void DebugDraw(Nz::PhysCharacter3D& character, Nz::DebugDrawer& debugDrawer);
 
 			ClientCharacterController& operator=(const ClientCharacterController&) = delete;
 			ClientCharacterController& operator=(ClientCharacterController&&) = delete;

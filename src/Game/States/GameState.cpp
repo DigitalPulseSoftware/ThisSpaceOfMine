@@ -11,15 +11,28 @@
 #include <CommonLib/Components/PlanetGravityComponent.hpp>
 #include <ClientLib/Chatbox.hpp>
 #include <ClientLib/RenderConstants.hpp>
-#include <Nazara/Core.hpp>
-#include <Nazara/Graphics.hpp>
+#include <Nazara/Core/ApplicationBase.hpp>
+#include <Nazara/Core/FilesystemAppComponent.hpp>
+#include <Nazara/Core/PrimitiveList.hpp>
+#include <Nazara/Core/Components/NodeComponent.hpp>
+#include <Nazara/Graphics/DirectionalLight.hpp>
+#include <Nazara/Graphics/FramePipeline.hpp>
+#include <Nazara/Graphics/PointLight.hpp>
+#include <Nazara/Graphics/Material.hpp>
+#include <Nazara/Graphics/MaterialInstance.hpp>
+#include <Nazara/Graphics/Model.hpp>
+#include <Nazara/Graphics/PipelinePassList.hpp>
+#include <Nazara/Graphics/SpotLight.hpp>
+#include <Nazara/Graphics/Components/CameraComponent.hpp>
+#include <Nazara/Graphics/Components/LightComponent.hpp>
+#include <Nazara/Graphics/Systems/RenderSystem.hpp>
 #include <Nazara/Graphics/PropertyHandler/TexturePropertyHandler.hpp>
 #include <Nazara/Graphics/PropertyHandler/UniformValuePropertyHandler.hpp>
-#include <Nazara/JoltPhysics3D.hpp>
 #include <Nazara/Math/Ray.hpp>
 #include <Nazara/Platform/Window.hpp>
 #include <Nazara/Platform/WindowEventHandler.hpp>
-#include <Nazara/Utility.hpp>
+#include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
+#include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
@@ -316,15 +329,15 @@ namespace tsom
 
 					auto primitive = Nz::Primitive::IcoSphere(1.f, 2);
 
-					auto geom = Nz::JoltCollider3D::Build(primitive);
+					auto geom = Nz::Collider3D::Build(primitive);
 
-					Nz::JoltRigidBody3D::DynamicSettings dynSettings(geom, 10.f);
+					Nz::RigidBody3D::DynamicSettings dynSettings(geom, 10.f);
 					dynSettings.allowSleeping = false;
 
 					entt::handle debugEntity = stateData.world->CreateEntity();
 					debugEntity.emplace<PlanetGravityComponent>().planet = m_planet.get();
 					debugEntity.emplace<Nz::NodeComponent>(cameraNode.GetPosition());
-					debugEntity.emplace<Nz::JoltRigidBody3DComponent>(dynSettings);
+					debugEntity.emplace<Nz::RigidBody3DComponent>(dynSettings);
 
 					std::shared_ptr<Nz::MaterialInstance> colliderMat = Nz::MaterialInstance::Instantiate(Nz::MaterialType::PhysicallyBased);
 
@@ -499,7 +512,7 @@ namespace tsom
 			auto& stateData = GetStateData();
 
 			Nz::Vector3f hitPos, hitNormal;
-			auto filter = [&](const Nz::JoltPhysics3DSystem::RaycastHit& hitInfo) -> std::optional<float>
+			auto filter = [&](const Nz::Physics3DSystem::RaycastHit& hitInfo) -> std::optional<float>
 			{
 				//if (hitInfo.hitEntity != m_planetEntity)
 				//	return std::nullopt;
@@ -511,7 +524,7 @@ namespace tsom
 
 			auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
 
-			auto& physSystem = stateData.world->GetSystem<Nz::JoltPhysics3DSystem>();
+			auto& physSystem = stateData.world->GetSystem<Nz::Physics3DSystem>();
 			if (physSystem.RaycastQuery(cameraNode.GetPosition(), cameraNode.GetPosition() + cameraNode.GetForward() * 10.f, filter))
 			{
 				if (event.button == Nz::Mouse::Left)
@@ -660,9 +673,9 @@ namespace tsom
 
 		// Raycast
 		{
-			auto& physSystem = stateData.world->GetSystem<Nz::JoltPhysics3DSystem>();
+			auto& physSystem = stateData.world->GetSystem<Nz::Physics3DSystem>();
 			Nz::Vector3f hitPos, hitNormal;
-			if (physSystem.RaycastQuery(cameraNode.GetPosition(), cameraNode.GetPosition() + cameraNode.GetForward() * 10.f, [&](const Nz::JoltPhysics3DSystem::RaycastHit& hitInfo) -> std::optional<float>
+			if (physSystem.RaycastQuery(cameraNode.GetPosition(), cameraNode.GetPosition() + cameraNode.GetForward() * 10.f, [&](const Nz::Physics3DSystem::RaycastHit& hitInfo) -> std::optional<float>
 				{
 					//if (hitInfo.hitEntity != m_planetEntity)
 					//	return std::nullopt;

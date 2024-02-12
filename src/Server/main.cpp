@@ -1,7 +1,7 @@
 #include <Nazara/Core/Application.hpp>
 #include <Nazara/Core/Core.hpp>
 #include <Nazara/Core/SignalHandlerAppComponent.hpp>
-#include <Nazara/JoltPhysics3D/JoltPhysics3D.hpp>
+#include <Nazara/Physics3D/Physics3D.hpp>
 #include <Nazara/Network/Network.hpp>
 #include <CommonLib/InternalConstants.hpp>
 #include <ServerLib/ServerInstanceAppComponent.hpp>
@@ -11,7 +11,7 @@
 
 int ServerMain(int argc, char* argv[])
 {
-	Nz::Application<Nz::Core, Nz::JoltPhysics3D, Nz::Network> app(argc, argv);
+	Nz::Application<Nz::Core, Nz::Physics3D, Nz::Network> app(argc, argv);
 	app.AddComponent<Nz::SignalHandlerAppComponent>();
 	auto& worldAppComponent = app.AddComponent<tsom::ServerInstanceAppComponent>();
 

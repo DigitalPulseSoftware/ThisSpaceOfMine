@@ -6,8 +6,8 @@
 #include <CommonLib/InternalConstants.hpp>
 #include <ServerLib/NetworkedEntitiesSystem.hpp>
 #include <Nazara/Core/File.hpp>
-#include <Nazara/JoltPhysics3D/Systems/JoltPhysics3DSystem.hpp>
-#include <Nazara/Utility/Components.hpp>
+#include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
+#include <Nazara/Core/Components.hpp>
 #include <NazaraUtils/PathUtils.hpp>
 #include <fmt/color.h>
 #include <fmt/format.h>
@@ -24,7 +24,7 @@ namespace tsom
 	m_gravitySystem(m_world)
 	{
 		m_world.AddSystem<NetworkedEntitiesSystem>(*this);
-		auto& physicsSystem = m_world.AddSystem<Nz::JoltPhysics3DSystem>();
+		auto& physicsSystem = m_world.AddSystem<Nz::Physics3DSystem>();
 		physicsSystem.GetPhysWorld().SetStepSize(m_tickDuration);
 		physicsSystem.GetPhysWorld().SetGravity(Nz::Vector3f::Zero());
 		physicsSystem.GetPhysWorld().RegisterStepListener(&m_gravitySystem);

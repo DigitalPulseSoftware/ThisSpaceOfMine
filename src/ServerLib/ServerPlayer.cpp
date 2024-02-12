@@ -9,8 +9,8 @@
 #include <ServerLib/ServerInstance.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
 #include <ServerLib/Components/ServerPlayerControlledComponent.hpp>
-#include <Nazara/JoltPhysics3D/Systems/JoltPhysics3DSystem.hpp>
-#include <Nazara/Utility/Components/NodeComponent.hpp>
+#include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
+#include <Nazara/Core/Components/NodeComponent.hpp>
 
 namespace tsom
 {
@@ -38,20 +38,20 @@ namespace tsom
 		auto& planetGravity = m_controlledEntity.emplace<PlanetGravityComponent>();
 		planetGravity.planet = &m_instance.GetPlanet();
 
-		auto collider = std::make_shared<Nz::JoltCapsuleCollider3D>(Constants::PlayerColliderHeight, Constants::PlayerColliderRadius);
+		auto collider = std::make_shared<Nz::CapsuleCollider3D>(Constants::PlayerColliderHeight, Constants::PlayerColliderRadius);
 
 		m_controller = std::make_shared<CharacterController>();
 		m_controller->SetCurrentPlanet(&m_instance.GetPlanet());
 		m_visibilityHandler.UpdateControlledEntity(m_controlledEntity, m_controller.get()); // TODO: Reset to nullptr when player entity is destroyed
 
-		auto& physicsSystem = m_instance.GetWorld().GetSystem<Nz::JoltPhysics3DSystem>();
+		auto& physicsSystem = m_instance.GetWorld().GetSystem<Nz::Physics3DSystem>();
 
-		Nz::JoltCharacterComponent::Settings characterSettings;
+		Nz::PhysCharacter3DComponent::Settings characterSettings;
 		characterSettings.collider = collider;
 		characterSettings.position = position;
 		characterSettings.rotation = rotation;
 
-		auto& characterComponent = m_controlledEntity.emplace<Nz::JoltCharacterComponent>(std::move(characterSettings));
+		auto& characterComponent = m_controlledEntity.emplace<Nz::PhysCharacter3DComponent>(std::move(characterSettings));
 		characterComponent.SetImpl(m_controller);
 		characterComponent.DisableSleeping();
 

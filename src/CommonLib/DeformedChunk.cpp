@@ -4,15 +4,15 @@
 
 #include <CommonLib/DeformedChunk.hpp>
 #include <CommonLib/Utility/SignedDistanceFunctions.hpp>
-#include <Nazara/JoltPhysics3D/JoltCollider3D.hpp>
+#include <Nazara/Physics3D/Collider3D.hpp>
 #include <Nazara/Math/Ray.hpp>
-#include <Nazara/Utility/VertexStruct.hpp>
+#include <Nazara/Core/VertexStruct.hpp>
 #include <fmt/format.h>
 #include <fmt/std.h>
 
 namespace tsom
 {
-	std::shared_ptr<Nz::JoltCollider3D> DeformedChunk::BuildCollider(const BlockLibrary& blockManager) const
+	std::shared_ptr<Nz::Collider3D> DeformedChunk::BuildCollider(const BlockLibrary& blockManager) const
 	{
 		std::vector<Nz::UInt32> indices;
 		std::vector<Nz::Vector3f> positions;
@@ -32,7 +32,7 @@ namespace tsom
 		if (indices.empty())
 			return nullptr;
 
-		return std::make_shared<Nz::JoltMeshCollider3D>(&positions[0], positions.size(), indices.data(), indices.size());
+		return std::make_shared<Nz::MeshCollider3D>(&positions[0], positions.size(), indices.data(), indices.size());
 	}
 
 	std::optional<Nz::Vector3ui> DeformedChunk::ComputeCoordinates(const Nz::Vector3f& position) const

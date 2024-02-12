@@ -6,7 +6,7 @@
 #include <CommonLib/CharacterController.hpp>
 #include <CommonLib/NetworkSession.hpp>
 #include <NazaraUtils/Algorithm.hpp>
-#include <Nazara/Utility/Components/NodeComponent.hpp>
+#include <Nazara/Core/Components/NodeComponent.hpp>
 
 namespace tsom
 {

@@ -3,7 +3,7 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ClientLib/EscapeMenu.hpp>
-#include <Nazara/Utility/SimpleTextDrawer.hpp>
+#include <Nazara/TextRenderer/SimpleTextDrawer.hpp>
 
 namespace tsom
 {

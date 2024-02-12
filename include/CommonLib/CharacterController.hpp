@@ -9,7 +9,7 @@
 
 #include <CommonLib/Export.hpp>
 #include <CommonLib/PlayerInputs.hpp>
-#include <Nazara/JoltPhysics3D/JoltCharacter.hpp>
+#include <Nazara/Physics3D/PhysCharacter3D.hpp>
 #include <Nazara/Math/Box.hpp>
 #include <Nazara/Math/Quaternion.hpp>
 #include <Nazara/Math/Vector3.hpp>
@@ -20,7 +20,7 @@ namespace tsom
 {
 	class Planet;
 
-	class TSOM_COMMONLIB_API CharacterController : public Nz::JoltCharacterImpl
+	class TSOM_COMMONLIB_API CharacterController : public Nz::PhysCharacter3DImpl
 	{
 		public:
 			CharacterController();
@@ -33,8 +33,8 @@ namespace tsom
 			inline const Nz::Quaternionf& GetCharacterRotation() const;
 			inline const Nz::Quaternionf& GetReferenceRotation() const;
 
-			void PostSimulate(Nz::JoltCharacter& character, float elapsedTime) override;
-			void PreSimulate(Nz::JoltCharacter& character, float elapsedTime) override;
+			void PostSimulate(Nz::PhysCharacter3D& character, float elapsedTime) override;
+			void PreSimulate(Nz::PhysCharacter3D& character, float elapsedTime) override;
 
 			inline void SetCurrentPlanet(const Planet* planet);
 

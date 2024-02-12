@@ -24,7 +24,7 @@
 namespace Nz
 {
 	class ByteStream;
-	class JoltCollider3D;
+	class Collider3D;
 	struct VertexStruct_XYZ_Color_UV;
 }
 
@@ -43,7 +43,7 @@ namespace tsom
 			Chunk(Chunk&&) = delete;
 			virtual ~Chunk();
 
-			virtual std::shared_ptr<Nz::JoltCollider3D> BuildCollider(const BlockLibrary& blockManager) const = 0;
+			virtual std::shared_ptr<Nz::Collider3D> BuildCollider(const BlockLibrary& blockManager) const = 0;
 			virtual void BuildMesh(const BlockLibrary& blockManager, std::vector<Nz::UInt32>& indices, const Nz::Vector3f& center, const Nz::FunctionRef<VertexAttributes(Nz::UInt32 count)>& addVertices) const;
 
 			virtual std::optional<Nz::Vector3ui> ComputeCoordinates(const Nz::Vector3f& position) const = 0;

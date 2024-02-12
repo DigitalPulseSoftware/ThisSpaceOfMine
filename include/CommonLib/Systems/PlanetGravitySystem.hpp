@@ -10,12 +10,12 @@
 #include <CommonLib/Export.hpp>
 #include <NazaraUtils/TypeList.hpp>
 #include <Nazara/Core/Time.hpp>
-#include <Nazara/JoltPhysics3D/JoltPhysicsStepListener.hpp>
+#include <Nazara/Physics3D/PhysWorld3DStepListener.hpp>
 #include <entt/fwd.hpp>
 
 namespace tsom
 {
-	class TSOM_COMMONLIB_API PlanetGravitySystem : public Nz::JoltPhysicsStepListener
+	class TSOM_COMMONLIB_API PlanetGravitySystem : public Nz::PhysWorld3DStepListener
 	{
 		public:
 			inline PlanetGravitySystem(entt::registry& registry);

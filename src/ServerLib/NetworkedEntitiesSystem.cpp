@@ -7,9 +7,9 @@
 #include <ServerLib/Components/NetworkedComponent.hpp>
 #include <ServerLib/Components/ServerPlayerControlledComponent.hpp>
 #include <Nazara/Core/Components/DisabledComponent.hpp>
-#include <Nazara/JoltPhysics3D/Components/JoltCharacterComponent.hpp>
-#include <Nazara/JoltPhysics3D/Components/JoltRigidBody3DComponent.hpp>
-#include <Nazara/Utility/Components/NodeComponent.hpp>
+#include <Nazara/Physics3D/Components/PhysCharacter3DComponent.hpp>
+#include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
+#include <Nazara/Core/Components/NodeComponent.hpp>
 
 namespace tsom
 {
@@ -55,7 +55,7 @@ namespace tsom
 
 	SessionVisibilityHandler::CreateEntityData NetworkedEntitiesSystem::BuildCreateEntityData(entt::entity entity) const
 	{
-		bool isMoving = m_registry.try_get<Nz::JoltCharacterComponent>(entity) || m_registry.try_get<Nz::JoltRigidBody3DComponent>(entity);
+		bool isMoving = m_registry.try_get<Nz::PhysCharacter3DComponent>(entity) || m_registry.try_get<Nz::RigidBody3DComponent>(entity);
 
 		auto& entityNode = m_registry.get<Nz::NodeComponent>(entity);
 

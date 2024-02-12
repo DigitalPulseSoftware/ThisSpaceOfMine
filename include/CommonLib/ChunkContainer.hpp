@@ -14,7 +14,7 @@
 
 namespace Nz
 {
-	class JoltCollider3D;
+	class Collider3D;
 }
 
 namespace tsom

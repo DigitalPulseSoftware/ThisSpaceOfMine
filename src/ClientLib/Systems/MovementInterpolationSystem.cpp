@@ -5,7 +5,7 @@
 #include <ClientLib/Systems/MovementInterpolationSystem.hpp>
 #include <ClientLib/Components/MovementInterpolationComponent.hpp>
 #include <Nazara/Core/Components/DisabledComponent.hpp>
-#include <Nazara/Utility/Components/NodeComponent.hpp>
+#include <Nazara/Core/Components/NodeComponent.hpp>
 
 namespace tsom
 {

@@ -5,8 +5,8 @@
 #include <ClientLib/ClientBlockLibrary.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
+#include <Nazara/Core/Image.hpp>
 #include <Nazara/Renderer/RenderDevice.hpp>
-#include <Nazara/Utility/Image.hpp>
 
 namespace tsom
 {

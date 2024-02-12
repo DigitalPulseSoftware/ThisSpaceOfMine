@@ -7,7 +7,7 @@
 #include <CommonLib/InternalConstants.hpp>
 #include <NazaraUtils/EnumArray.hpp>
 #include <Nazara/Core/ByteStream.hpp>
-#include <Nazara/Utility/VertexStruct.hpp>
+#include <Nazara/Core/VertexStruct.hpp>
 #include <cassert>
 #include <numeric>
 

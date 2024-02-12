@@ -7,7 +7,7 @@
 
 namespace tsom
 {
-	void ClientCharacterController::DebugDraw(Nz::JoltCharacter& character, Nz::DebugDrawer& debugDrawer)
+	void ClientCharacterController::DebugDraw(Nz::PhysCharacter3D& character, Nz::DebugDrawer& debugDrawer)
 	{
 		Nz::Vector3f characterPosition = character.GetPosition() + character.GetRotation() * Nz::Vector3f::Down() * 0.9f;
 		

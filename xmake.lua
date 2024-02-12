@@ -56,7 +56,7 @@ target("CommonLib", function ()
 	add_defines("TSOM_COMMONLIB_BUILD")
 	add_options("commonlib_static")
 
-	add_packages("nazaraengine", { components = { "joltphysics3d", "network", "utility" }, public = true })
+	add_packages("nazaraengine", { components = { "physics3d", "network" }, public = true })
 	add_packages("concurrentqueue", "semver", "fmt", "hopscotch-map", "nlohmann_json", { public = true })
 	add_packages("perlinnoise")
 
@@ -245,6 +245,4 @@ target("TSOMServer", function ()
 	add_files("src/Server/**.cpp")
 
 	add_rpathdirs("@executable_path")
-
-	add_packages("nazaraengine", { components = { "core" } })
 end)

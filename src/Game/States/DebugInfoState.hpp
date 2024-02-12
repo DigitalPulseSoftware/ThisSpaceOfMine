@@ -8,7 +8,7 @@
 #define TSOM_CLIENT_STATES_DEBUGINFOSTATE_HPP
 
 #include <Game/States/WidgetState.hpp>
-#include <Nazara/Utility/RichTextDrawer.hpp>
+#include <Nazara/TextRenderer/RichTextDrawer.hpp>
 
 namespace Nz
 {

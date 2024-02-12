@@ -6,8 +6,8 @@
 #include <CommonLib/Direction.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/Planet.hpp>
-#include <Nazara/JoltPhysics3D/JoltPhysWorld3D.hpp>
-#include <Nazara/JoltPhysics3D/JoltRigidBody3D.hpp>
+#include <Nazara/Physics3D/PhysWorld3D.hpp>
+#include <Nazara/Physics3D/RigidBody3D.hpp>
 #include <array>
 #include <fmt/ostream.h>
 #include <fmt/std.h>
@@ -34,7 +34,7 @@ namespace tsom
 	{
 	}
 
-	void CharacterController::PostSimulate(Nz::JoltCharacter& character, float elapsedTime)
+	void CharacterController::PostSimulate(Nz::PhysCharacter3D& character, float elapsedTime)
 	{
 		std::tie(m_characterPosition, m_characterRotation) = character.GetPositionAndRotation();
 		Nz::Vector3f characterBasePosition = m_characterPosition + m_referenceRotation * Nz::Vector3f::Down() * 0.9f;
@@ -90,7 +90,7 @@ namespace tsom
 		}
 	}
 
-	void CharacterController::PreSimulate(Nz::JoltCharacter& character, float elapsedTime)
+	void CharacterController::PreSimulate(Nz::PhysCharacter3D& character, float elapsedTime)
 	{
 		Nz::Vector3f velocity = character.GetLinearVelocity();
 		Nz::Vector3f up = character.GetUp();

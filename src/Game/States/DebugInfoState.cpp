@@ -3,8 +3,8 @@
 // For conditions of distribution and use, see copyright notice in Config.hpp
 
 #include <Game/States/DebugInfoState.hpp>
-#include <Nazara/Utility/RichTextBuilder.hpp>
-#include <Nazara/Utility/SimpleTextDrawer.hpp>
+#include <Nazara/TextRenderer/RichTextBuilder.hpp>
+#include <Nazara/TextRenderer/SimpleTextDrawer.hpp>
 #include <Nazara/Widgets/LabelWidget.hpp>
 #include <CommonLib/Version.hpp>
 

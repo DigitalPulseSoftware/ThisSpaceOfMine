@@ -5,8 +5,8 @@
 #include <CommonLib/ChunkEntities.hpp>
 #include <CommonLib/BlockLibrary.hpp>
 #include <Nazara/Core/EnttWorld.hpp>
-#include <Nazara/JoltPhysics3D/Components/JoltRigidBody3DComponent.hpp>
-#include <Nazara/Utility/Components/NodeComponent.hpp>
+#include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
+#include <Nazara/Core/Components/NodeComponent.hpp>
 #include <cassert>
 
 namespace tsom
@@ -64,7 +64,7 @@ namespace tsom
 	{
 		m_chunkEntities[chunkId] = m_world.CreateEntity();
 		m_chunkEntities[chunkId].emplace<Nz::NodeComponent>(m_chunkContainer.GetChunkOffset(chunk->GetIndices()));
-		m_chunkEntities[chunkId].emplace<Nz::JoltRigidBody3DComponent>(Nz::JoltRigidBody3D::StaticSettings(chunk->BuildCollider(m_blockLibrary)));
+		m_chunkEntities[chunkId].emplace<Nz::RigidBody3DComponent>(Nz::RigidBody3D::StaticSettings(chunk->BuildCollider(m_blockLibrary)));
 	}
 
 	void ChunkEntities::DestroyChunkEntity(std::size_t chunkId)
@@ -88,9 +88,9 @@ namespace tsom
 		const Chunk* chunk = m_chunkContainer.GetChunk(chunkId);
 		assert(chunk);
 
-		std::shared_ptr<Nz::JoltCollider3D> newCollider = chunk->BuildCollider(m_blockLibrary);
+		std::shared_ptr<Nz::Collider3D> newCollider = chunk->BuildCollider(m_blockLibrary);
 
-		auto& rigidBody = m_chunkEntities[chunkId].get<Nz::JoltRigidBody3DComponent>();
+		auto& rigidBody = m_chunkEntities[chunkId].get<Nz::RigidBody3DComponent>();
 		rigidBody.SetGeom(std::move(newCollider), false);
 	}
 }

@@ -4,14 +4,14 @@
 
 #include <CommonLib/FlatChunk.hpp>
 #include <NazaraUtils/Bitset.hpp>
-#include <Nazara/JoltPhysics3D/JoltCollider3D.hpp>
+#include <Nazara/Physics3D/Collider3D.hpp>
 #include <fmt/format.h>
 
 namespace tsom
 {
-	std::shared_ptr<Nz::JoltCollider3D> FlatChunk::BuildCollider(const BlockLibrary& /*blockManager*/) const
+	std::shared_ptr<Nz::Collider3D> FlatChunk::BuildCollider(const BlockLibrary& /*blockManager*/) const
 	{
-		std::vector<Nz::JoltCompoundCollider3D::ChildCollider> childColliders;
+		std::vector<Nz::CompoundCollider3D::ChildCollider> childColliders;
 
 		Nz::Bitset<Nz::UInt64> availableBlocks = GetCollisionCellMask();
 
@@ -81,7 +81,7 @@ namespace tsom
 
 			auto& childCollider = childColliders.emplace_back();
 			childCollider.offset = startOffset * m_blockSize + size * 0.5f;
-			childCollider.collider = std::make_shared<Nz::JoltBoxCollider3D>(size);
+			childCollider.collider = std::make_shared<Nz::BoxCollider3D>(size);
 
 			startPos.reset();
 		};
@@ -109,7 +109,7 @@ namespace tsom
 		if (childColliders.empty())
 			return {};
 
-		return std::make_shared<Nz::JoltCompoundCollider3D>(std::move(childColliders));
+		return std::make_shared<Nz::CompoundCollider3D>(std::move(childColliders));
 	}
 
 	std::optional<Nz::Vector3ui> FlatChunk::ComputeCoordinates(const Nz::Vector3f& position) const

@@ -5,8 +5,8 @@
 #include <ServerLib/Session/PlayerSessionHandler.hpp>
 #include <ServerLib/ServerInstance.hpp>
 #include <CommonLib/BlockIndex.hpp>
-#include <Nazara/JoltPhysics3D/JoltCollider3D.hpp>
-#include <Nazara/JoltPhysics3D/Systems/JoltPhysics3DSystem.hpp>
+#include <Nazara/Physics3D/Collider3D.hpp>
+#include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <numeric>
 
 namespace tsom
@@ -121,15 +121,15 @@ namespace tsom
 			return false;
 
 		// Check that nothing blocks the way
-		Nz::JoltBoxCollider3D boxCollider(Nz::Vector3f(chunk->GetBlockSize() * 0.75f)); // Test a smaller block to allow a bit of overlap
+		Nz::BoxCollider3D boxCollider(Nz::Vector3f(chunk->GetBlockSize() * 0.75f)); // Test a smaller block to allow a bit of overlap
 
 		auto corners = chunk->ComputeVoxelCorners(blockIndices);
 		Nz::Vector3f blockCenter = std::accumulate(corners.begin(), corners.end(), Nz::Vector3f::Zero()) / corners.size();
 		Nz::Vector3f offset = chunk->GetContainer().GetChunkOffset(chunk->GetIndices());
 
 		auto& instance = m_player->GetServerInstance();
-		auto& physicsSystem = instance.GetWorld().GetSystem<Nz::JoltPhysics3DSystem>();
-		bool doesCollide = physicsSystem.CollisionQuery(boxCollider, Nz::Matrix4f::Translate(offset + blockCenter), [](const Nz::JoltPhysics3DSystem::ShapeCollisionInfo& hitInfo) -> std::optional<float>
+		auto& physicsSystem = instance.GetWorld().GetSystem<Nz::Physics3DSystem>();
+		bool doesCollide = physicsSystem.CollisionQuery(boxCollider, Nz::Matrix4f::Translate(offset + blockCenter), [](const Nz::Physics3DSystem::ShapeCollisionInfo& hitInfo) -> std::optional<float>
 		{
 			return hitInfo.penetrationDepth;
 		});

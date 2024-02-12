@@ -19,7 +19,7 @@ namespace tsom
 			DeformedChunk(DeformedChunk&&) = delete;
 			~DeformedChunk() = default;
 
-			std::shared_ptr<Nz::JoltCollider3D> BuildCollider(const BlockLibrary& blockManager) const override;
+			std::shared_ptr<Nz::Collider3D> BuildCollider(const BlockLibrary& blockManager) const override;
 
 			std::optional<Nz::Vector3ui> ComputeCoordinates(const Nz::Vector3f& position) const override;
 			Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> ComputeVoxelCorners(const Nz::Vector3ui& indices) const override;

@@ -15,9 +15,9 @@
 #include <Nazara/Graphics/PropertyHandler/UniformValuePropertyHandler.hpp>
 #include <Nazara/Graphics/PropertyHandler/TexturePropertyHandler.hpp>
 #include <Nazara/Graphics/Components/GraphicsComponent.hpp>
-#include <Nazara/JoltPhysics3D/Components/JoltRigidBody3DComponent.hpp>
-#include <Nazara/Utility/IndexBuffer.hpp>
-#include <Nazara/Utility/VertexBuffer.hpp>
+#include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
+#include <Nazara/Core/IndexBuffer.hpp>
+#include <Nazara/Core/VertexBuffer.hpp>
 
 namespace tsom
 {
@@ -207,8 +207,8 @@ namespace tsom
 #if 0
 		std::shared_ptr<Nz::Model> colliderModel;
 		{
-			auto& rigidBodyComponent = m_chunkEntities[chunkId].get<Nz::JoltRigidBody3DComponent>();
-			const std::shared_ptr<Nz::JoltCollider3D>& geom = rigidBodyComponent.GetGeom();
+			auto& rigidBodyComponent = m_chunkEntities[chunkId].get<Nz::RigidBody3DComponent>();
+			const std::shared_ptr<Nz::Collider3D>& geom = rigidBodyComponent.GetGeom();
 			if (!geom)
 				return;
 
