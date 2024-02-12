@@ -72,17 +72,11 @@ target("CommonLib", function ()
 		local ok = try
 		{
 			function ()
-				local git = find_git()
-				if git then
-					local tag = os.iorunv(git, {"describe", "--abbrev=0", "--tags"}):trim()
-					local version = semver.new(tag)
-					target:set("version", version:shortstr())
-					print("detected version " .. version:shortstr())
-				else
-					print("git not found")
-				end
+				local git = assert(find_git(), "git not found")
+				local tag = os.iorunv(git, {"describe", "--abbrev=0", "--tags"}):trim()
+				local version = semver.new(tag)
+				target:set("version", version:shortstr())
 			end,
-
 			catch
 			{
 				function (err)
@@ -116,14 +110,10 @@ target("CommonLib", function ()
 		local ok = try
 		{
 			function ()
-				local git = find_git()
-				if git then
-					branch = os.iorunv(git, {"rev-parse", "--abbrev-ref", "HEAD"}):trim()
-					commitHash = os.iorunv(git, {"describe", "--always", "--tags", "--long"}):trim()
-					commitDate = os.iorunv(git, {"show", "--no-patch", "--format=%ci", commitHash}):trim()
-				else
-					os.raise("git not found")
-				end
+				local git = assert(find_git(), "git not found")
+				branch = os.iorunv(git, {"rev-parse", "--abbrev-ref", "HEAD"}):trim()
+				commitHash = os.iorunv(git, {"describe", "--always", "--tags", "--long"}):trim()
+				commitDate = os.iorunv(git, {"show", "--no-patch", "--format=%ci", commitHash}):trim()
 
 				return true
 			end,
@@ -142,7 +132,7 @@ target("CommonLib", function ()
 
 		local dependfile = target:dependfile("versioninfo")
 		depend.on_changed(function ()
-			progress.show(opt.progress, "${color.build.target}updating version info")
+			progress.show(opt.progress, "${color.build.target}updating version info (%s on %s@%s)", targetversion:shortstr(), commitHash, branch)
 			io.writefile(targetfile, string.format([[
 std::uint32_t GameMajorVersion = %s;
 std::uint32_t GameMinorVersion = %s;
