@@ -1,11 +1,11 @@
-// Copyright (C) 2023 Jérôme Leclercq
+// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #pragma once
 
-#ifndef TSOM_SERVERLIB_NETWORKEDENTITIESYSTEM_HPP
-#define TSOM_SERVERLIB_NETWORKEDENTITIESYSTEM_HPP
+#ifndef TSOM_SERVERLIB_NETWORKEDENTITIESSYSTEM_HPP
+#define TSOM_SERVERLIB_NETWORKEDENTITIESSYSTEM_HPP
 
 #include <ServerLib/Export.hpp>
 #include <ServerLib/SessionVisibilityHandler.hpp>
@@ -56,4 +56,4 @@ namespace tsom
 
 #include <ServerLib/NetworkedEntitiesSystem.inl>
 
-#endif
+#endif // TSOM_SERVERLIB_NETWORKEDENTITIESSYSTEM_HPP

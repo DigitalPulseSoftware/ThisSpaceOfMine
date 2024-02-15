@@ -1,5 +1,5 @@
-// Copyright (C) 2020 Jérôme Leclercq
-// This file is part of the "Burgwar" project
+// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #pragma once
@@ -48,4 +48,4 @@ namespace tsom
 
 #include <ClientLib/EscapeMenu.inl>
 
-#endif
+#endif // TSOM_CLIENTLIB_ESCAPEMENU_HPP

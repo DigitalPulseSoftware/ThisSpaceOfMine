@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Jérôme Leclercq
+// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -83,7 +83,7 @@ namespace tsom
 #endif
 
 		using WinHandle = std::unique_ptr<std::remove_pointer_t<HANDLE>, HandleCloser>;
-	
+
 		void GenerateCrashdump(const wchar_t* filename, EXCEPTION_POINTERS* e)
 		{
 			WinHandle dumpFile(CreateFileW(filename, GENERIC_WRITE, FILE_SHARE_READ, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0));

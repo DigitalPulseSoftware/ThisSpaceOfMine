@@ -1,6 +1,6 @@
-// Copyright (C) 2023 Jérôme "Lynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com) (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
-// For conditions of distribution and use, see copyright notice in Config.hpp
+// For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <Nazara/Math/Box.hpp>
 
@@ -158,7 +158,7 @@ namespace tsom
 	{
 		return m_indices;
 	}
-	
+
 	inline const Nz::Vector3ui& Chunk::GetSize() const
 	{
 		return m_size;

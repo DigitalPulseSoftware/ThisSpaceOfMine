@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Jérôme Leclercq
+// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -26,7 +26,7 @@ namespace tsom
 			template<typename... Args> ServerInstance& AddInstance(Args&&... args);
 
 			void Update(Nz::Time elapsedTime) override;
-			
+	
 			ServerInstanceAppComponent& operator=(const ServerInstanceAppComponent&) = delete;
 			ServerInstanceAppComponent& operator=(ServerInstanceAppComponent&&) = delete;
 
@@ -37,4 +37,4 @@ namespace tsom
 
 #include <ServerLib/ServerInstanceAppComponent.inl>
 
-#endif
+#endif // TSOM_SERVERLIB_SERVERINSTANCEAPPCOMPONENT_HPP

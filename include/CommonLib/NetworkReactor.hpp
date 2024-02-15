@@ -1,11 +1,11 @@
-// Copyright (C) 2023 Jérôme Leclercq
+// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #pragma once
 
-#ifndef TSOM_COMMONLIB_NETWORK_REACTOR_HPP
-#define TSOM_COMMONLIB_NETWORK_REACTOR_HPP
+#ifndef TSOM_COMMONLIB_NETWORKREACTOR_HPP
+#define TSOM_COMMONLIB_NETWORKREACTOR_HPP
 
 #include <CommonLib/Export.hpp>
 #include <Nazara/Network/ENetHost.hpp>
@@ -64,7 +64,7 @@ namespace tsom
 			};
 
 			static constexpr std::size_t InvalidPeerId = std::numeric_limits<std::size_t>::max();
-	
+
 		private:
 			void EnsureProperDisconnection(const moodycamel::ProducerToken& producterToken, moodycamel::ConsumerToken& token);
 			void HandleConnectionRequests(moodycamel::ConsumerToken& token);
@@ -149,4 +149,4 @@ namespace tsom
 
 #include <CommonLib/NetworkReactor.inl>
 
-#endif
+#endif // TSOM_COMMONLIB_NETWORKREACTOR_HPP

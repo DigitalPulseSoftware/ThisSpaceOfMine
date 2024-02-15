@@ -1,6 +1,6 @@
-// Copyright (C) 2023 Jérôme "Lynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com) (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
-// For conditions of distribution and use, see copyright notice in Config.hpp
+// For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ClientLib/Chatbox.hpp>
 #include <CommonLib/GameConstants.hpp>
@@ -128,7 +128,7 @@ namespace tsom
 		m_chatboxScrollArea->Resize({ size.x / 3.f, size.y / 3.f });
 		m_chatboxScrollArea->SetPosition({ 5.f, m_chatEnteringBox->GetPosition().y + m_chatEnteringBox->GetHeight() + 5.f, 0.f });
 	}
-	
+
 	void Chatbox::Refresh()
 	{
 		m_chatBox->Clear();

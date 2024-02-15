@@ -1,6 +1,6 @@
-// Copyright (C) 2023 Jérôme "Lynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com) (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
-// For conditions of distribution and use, see copyright notice in Config.hpp
+// For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <Game/States/GameState.hpp>
 #include <Game/States/StateData.hpp>
@@ -191,7 +191,7 @@ namespace tsom
 			skyboxNode.SetInheritRotation(false);
 			skyboxNode.SetParent(m_cameraEntity);
 		}
-		
+
 		m_controlledEntity = stateData.sessionHandler->GetControlledEntity();
 		m_onControlledEntityChanged.Connect(stateData.sessionHandler->OnControlledEntityChanged, [&](entt::handle entity)
 		{
@@ -208,7 +208,7 @@ namespace tsom
 					*blocks++ = Nz::SafeCast<BlockIndex>(blockContent);
 			});
 		});
-		
+
 		m_onChunkDestroy.Connect(stateData.sessionHandler->OnChunkDestroy, [&](const Packets::ChunkDestroy& chunkDestroy)
 		{
 			m_planet->RemoveChunk(chunkDestroy.chunkId);
@@ -280,7 +280,7 @@ namespace tsom
 			}
 #endif
 		});
-		
+
 		m_chatBox = std::make_unique<Chatbox>(*stateData.renderTarget, stateData.canvas);
 		m_chatBox->OnChatMessage.Connect([&](const std::string& message)
 		{
@@ -289,7 +289,7 @@ namespace tsom
 
 			stateData.networkSession->SendPacket(messagePacket);
 		});
-		
+
 		m_onUnhandledKeyPressed.Connect(stateData.canvas->OnUnhandledKeyPressed, [this](const Nz::WindowEventHandler*, const Nz::WindowEvent::KeyEvent& event)
 		{
 			auto& stateData = GetStateData();
@@ -486,7 +486,7 @@ namespace tsom
 			static Nz::EulerAnglesf camAngles = Nz::EulerAnglesf::Zero();
 
 			// Gestion de la caméra free-fly (Rotation)
-			// 
+			//
 			// On modifie l'angle de la caméra grâce au déplacement relatif sur X de la souris
 			camAngles.yaw = camAngles.yaw + yawMod;
 			camAngles.yaw.Normalize();

@@ -1,6 +1,6 @@
-// Copyright (C) 2023 Jérôme "Lynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com) (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
-// For conditions of distribution and use, see copyright notice in Config.hpp
+// For conditions of distribution and use, see copyright notice in LICENSE
 
 #pragma once
 
@@ -70,4 +70,4 @@ namespace tsom
 
 #include <ClientLib/Chatbox.inl>
 
-#endif
+#endif // TSOM_CLIENTLIB_CHATBOX_HPP

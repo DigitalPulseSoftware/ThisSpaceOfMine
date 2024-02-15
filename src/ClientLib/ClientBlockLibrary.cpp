@@ -1,6 +1,6 @@
-// Copyright (C) 2023 Jérôme "Lynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com) (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
-// For conditions of distribution and use, see copyright notice in Config.hpp
+// For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ClientLib/ClientBlockLibrary.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
@@ -60,7 +60,7 @@ namespace tsom
 			.height = texSize,
 			.width = texSize,
 		}, normalArray.GetConstPixels(), true);
-		
+
 		m_detailTexture = m_renderDevice.InstantiateTexture(Nz::TextureInfo{
 			.pixelFormat = Nz::PixelFormat::RGBA8,
 			.type = Nz::ImageType::E2D_Array,
