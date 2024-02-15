@@ -7,10 +7,10 @@
 #ifndef TSOM_GAME_STATES_CONNECTIONSTATE_HPP
 #define TSOM_GAME_STATES_CONNECTIONSTATE_HPP
 
-#include <Game/States/StateData.hpp>
-#include <Game/States/WidgetState.hpp>
 #include <CommonLib/NetworkReactor.hpp>
 #include <CommonLib/NetworkSession.hpp>
+#include <Game/States/StateData.hpp>
+#include <Game/States/WidgetState.hpp>
 #include <NazaraUtils/FixedVector.hpp>
 
 namespace Nz

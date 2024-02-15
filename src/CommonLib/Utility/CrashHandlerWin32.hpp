@@ -7,6 +7,8 @@
 #ifndef TSOM_COMMONLIB_UTILITY_CRASHHANDLERWIN32_HPP
 #define TSOM_COMMONLIB_UTILITY_CRASHHANDLERWIN32_HPP
 
+// no include reorder
+
 #include <CommonLib/Utility/CrashHandler.hpp>
 #include <Nazara/Core/DynLib.hpp>
 #include <windows.h>

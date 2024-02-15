@@ -5,9 +5,9 @@
 #include <ServerLib/ServerInstance.hpp>
 #include <CommonLib/InternalConstants.hpp>
 #include <ServerLib/NetworkedEntitiesSystem.hpp>
+#include <Nazara/Core/Components.hpp>
 #include <Nazara/Core/File.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
-#include <Nazara/Core/Components.hpp>
 #include <NazaraUtils/PathUtils.hpp>
 #include <fmt/color.h>
 #include <fmt/format.h>

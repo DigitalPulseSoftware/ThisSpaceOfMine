@@ -8,9 +8,9 @@
 #define TSOM_CLIENTLIB_ESCAPEMENU_HPP
 
 #include <ClientLib/Export.hpp>
-#include <NazaraUtils/Signal.hpp>
 #include <Nazara/Widgets/ButtonWidget.hpp>
 #include <Nazara/Widgets/Canvas.hpp>
+#include <NazaraUtils/Signal.hpp>
 
 namespace tsom
 {

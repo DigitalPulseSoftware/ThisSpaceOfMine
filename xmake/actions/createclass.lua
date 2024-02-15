@@ -130,7 +130,7 @@ sourceTemplate = [[
 
 #include <%MODULE_NAME%/%CLASS_PATH%.hpp>
 
-namespace Nz
+namespace tsom
 {
 }
 ]]

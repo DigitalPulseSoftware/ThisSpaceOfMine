@@ -7,8 +7,8 @@
 #ifndef TSOM_CLIENTLIB_CLIENTCHUNKENTITIES_HPP
 #define TSOM_CLIENTLIB_CLIENTCHUNKENTITIES_HPP
 
-#include <CommonLib/ChunkEntities.hpp>
 #include <ClientLib/ClientBlockLibrary.hpp>
+#include <CommonLib/ChunkEntities.hpp>
 #include <Nazara/Core/Color.hpp>
 #include <tsl/hopscotch_map.h>
 

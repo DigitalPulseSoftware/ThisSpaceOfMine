@@ -7,8 +7,8 @@
 #ifndef TSOM_GAME_STATES_MENUSTATE_HPP
 #define TSOM_GAME_STATES_MENUSTATE_HPP
 
-#include <Game/States/WidgetState.hpp>
 #include <Game/States/UpdateInfo.hpp>
+#include <Game/States/WidgetState.hpp>
 #include <string>
 
 namespace Nz

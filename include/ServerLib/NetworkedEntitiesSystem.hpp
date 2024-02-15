@@ -9,9 +9,9 @@
 
 #include <ServerLib/Export.hpp>
 #include <ServerLib/SessionVisibilityHandler.hpp>
+#include <Nazara/Core/Time.hpp>
 #include <NazaraUtils/FunctionRef.hpp>
 #include <NazaraUtils/TypeList.hpp>
-#include <Nazara/Core/Time.hpp>
 #include <entt/entt.hpp>
 #include <tsl/hopscotch_set.h>
 

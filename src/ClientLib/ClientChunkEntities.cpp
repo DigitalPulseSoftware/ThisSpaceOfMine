@@ -6,18 +6,18 @@
 #include <ClientLib/RenderConstants.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
+#include <Nazara/Core/IndexBuffer.hpp>
+#include <Nazara/Core/VertexBuffer.hpp>
 #include <Nazara/Graphics/GraphicalMesh.hpp>
 #include <Nazara/Graphics/Graphics.hpp>
 #include <Nazara/Graphics/MaterialInstance.hpp>
 #include <Nazara/Graphics/Model.hpp>
 #include <Nazara/Graphics/PredefinedMaterials.hpp>
-#include <Nazara/Graphics/PropertyHandler/OptionValuePropertyHandler.hpp>
-#include <Nazara/Graphics/PropertyHandler/UniformValuePropertyHandler.hpp>
-#include <Nazara/Graphics/PropertyHandler/TexturePropertyHandler.hpp>
 #include <Nazara/Graphics/Components/GraphicsComponent.hpp>
+#include <Nazara/Graphics/PropertyHandler/OptionValuePropertyHandler.hpp>
+#include <Nazara/Graphics/PropertyHandler/TexturePropertyHandler.hpp>
+#include <Nazara/Graphics/PropertyHandler/UniformValuePropertyHandler.hpp>
 #include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
-#include <Nazara/Core/IndexBuffer.hpp>
-#include <Nazara/Core/VertexBuffer.hpp>
 
 namespace tsom
 {

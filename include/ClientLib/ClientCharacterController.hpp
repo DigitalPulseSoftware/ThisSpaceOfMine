@@ -7,8 +7,8 @@
 #ifndef TSOM_CLIENTLIB_CLIENTCHARACTERCONTROLLER_HPP
 #define TSOM_CLIENTLIB_CLIENTCHARACTERCONTROLLER_HPP
 
-#include <CommonLib/CharacterController.hpp>
 #include <ClientLib/Export.hpp>
+#include <CommonLib/CharacterController.hpp>
 
 namespace Nz
 {

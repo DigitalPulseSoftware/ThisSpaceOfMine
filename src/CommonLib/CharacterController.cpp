@@ -8,9 +8,9 @@
 #include <CommonLib/Planet.hpp>
 #include <Nazara/Physics3D/PhysWorld3D.hpp>
 #include <Nazara/Physics3D/RigidBody3D.hpp>
-#include <array>
 #include <fmt/ostream.h>
 #include <fmt/std.h>
+#include <array>
 
 #define DEBUG_ROTATION 0
 

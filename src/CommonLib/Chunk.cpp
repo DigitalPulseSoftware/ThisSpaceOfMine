@@ -5,9 +5,9 @@
 #include <CommonLib/Chunk.hpp>
 #include <CommonLib/BlockLibrary.hpp>
 #include <CommonLib/InternalConstants.hpp>
-#include <NazaraUtils/EnumArray.hpp>
 #include <Nazara/Core/ByteStream.hpp>
 #include <Nazara/Core/VertexStruct.hpp>
+#include <NazaraUtils/EnumArray.hpp>
 #include <cassert>
 #include <numeric>
 

@@ -3,8 +3,8 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ServerLib/Session/PlayerSessionHandler.hpp>
-#include <ServerLib/ServerInstance.hpp>
 #include <CommonLib/BlockIndex.hpp>
+#include <ServerLib/ServerInstance.hpp>
 #include <Nazara/Physics3D/Collider3D.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <numeric>

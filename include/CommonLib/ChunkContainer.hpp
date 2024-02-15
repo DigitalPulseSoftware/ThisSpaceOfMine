@@ -7,10 +7,10 @@
 #ifndef TSOM_COMMONLIB_CHUNKCONTAINER_HPP
 #define TSOM_COMMONLIB_CHUNKCONTAINER_HPP
 
-#include <CommonLib/Chunk.hpp>
 #include <CommonLib/Export.hpp>
-#include <NazaraUtils/Signal.hpp>
+#include <CommonLib/Chunk.hpp>
 #include <Nazara/Math/Vector3.hpp>
+#include <NazaraUtils/Signal.hpp>
 
 namespace Nz
 {

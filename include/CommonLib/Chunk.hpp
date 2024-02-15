@@ -7,16 +7,16 @@
 #ifndef TSOM_COMMONLIB_CHUNK_HPP
 #define TSOM_COMMONLIB_CHUNK_HPP
 
+#include <CommonLib/Export.hpp>
 #include <CommonLib/BlockIndex.hpp>
 #include <CommonLib/Direction.hpp>
-#include <CommonLib/Export.hpp>
+#include <Nazara/Core/Color.hpp>
+#include <Nazara/Math/Matrix4.hpp>
 #include <NazaraUtils/Bitset.hpp>
 #include <NazaraUtils/EnumArray.hpp>
 #include <NazaraUtils/FunctionRef.hpp>
 #include <NazaraUtils/Signal.hpp>
 #include <NazaraUtils/SparsePtr.hpp>
-#include <Nazara/Core/Color.hpp>
-#include <Nazara/Math/Matrix4.hpp>
 #include <memory>
 #include <optional>
 #include <vector>

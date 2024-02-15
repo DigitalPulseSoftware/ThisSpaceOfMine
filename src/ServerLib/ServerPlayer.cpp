@@ -9,8 +9,8 @@
 #include <ServerLib/ServerInstance.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
 #include <ServerLib/Components/ServerPlayerControlledComponent.hpp>
-#include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
+#include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 
 namespace tsom
 {

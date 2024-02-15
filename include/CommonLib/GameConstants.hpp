@@ -7,8 +7,8 @@
 #ifndef TSOM_COMMONLIB_GAMECONSTANTS_HPP
 #define TSOM_COMMONLIB_GAMECONSTANTS_HPP
 
-#include <NazaraUtils/Prerequisites.hpp>
 #include <Nazara/Math/Angle.hpp>
+#include <NazaraUtils/Prerequisites.hpp>
 
 namespace tsom::Constants
 {

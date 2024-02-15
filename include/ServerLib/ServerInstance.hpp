@@ -8,15 +8,15 @@
 #define TSOM_SERVERLIB_SERVERINSTANCE_HPP
 
 #include <CommonLib/BlockLibrary.hpp>
-#include <CommonLib/Planet.hpp>
-#include <CommonLib/NetworkSessionManager.hpp>
 #include <CommonLib/ChunkEntities.hpp>
+#include <CommonLib/NetworkSessionManager.hpp>
+#include <CommonLib/Planet.hpp>
 #include <CommonLib/Systems/PlanetGravitySystem.hpp>
 #include <ServerLib/ServerPlayer.hpp>
-#include <NazaraUtils/Bitset.hpp>
-#include <NazaraUtils/MemoryPool.hpp>
 #include <Nazara/Core/Clock.hpp>
 #include <Nazara/Core/EnttWorld.hpp>
+#include <NazaraUtils/Bitset.hpp>
+#include <NazaraUtils/MemoryPool.hpp>
 #include <memory>
 #include <unordered_set>
 #include <vector>

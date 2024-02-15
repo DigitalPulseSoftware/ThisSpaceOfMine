@@ -9,10 +9,10 @@
 
 #include <CommonLib/Export.hpp>
 #include <CommonLib/PlayerInputs.hpp>
-#include <Nazara/Physics3D/PhysCharacter3D.hpp>
 #include <Nazara/Math/Box.hpp>
 #include <Nazara/Math/Quaternion.hpp>
 #include <Nazara/Math/Vector3.hpp>
+#include <Nazara/Physics3D/PhysCharacter3D.hpp>
 #include <entt/entt.hpp>
 #include <optional>
 

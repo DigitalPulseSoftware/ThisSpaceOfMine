@@ -10,8 +10,8 @@
 #include <CommonLib/Export.hpp>
 #include <CommonLib/NetworkReactor.hpp>
 #include <CommonLib/SessionHandler.hpp>
-#include <Nazara/Network/IpAddress.hpp>
 #include <Nazara/Network/ENetPacket.hpp>
+#include <Nazara/Network/IpAddress.hpp>
 
 namespace Nz
 {

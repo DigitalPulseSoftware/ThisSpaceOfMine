@@ -3,12 +3,13 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <Game/States/MenuState.hpp>
-#include <Game/States/ConnectionState.hpp>
-#include <Game/States/GameState.hpp>
-#include <Game/States/UpdateState.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/Version.hpp>
+#include <Game/States/ConnectionState.hpp>
+#include <Game/States/GameState.hpp>
+#include <Game/States/UpdateState.hpp>
+#include <Nazara/Widgets.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/StateMachine.hpp>
 #include <Nazara/Core/StringExt.hpp>
@@ -17,11 +18,10 @@
 #include <Nazara/Network/Network.hpp>
 #include <Nazara/Network/WebServiceAppComponent.hpp>
 #include <Nazara/TextRenderer/SimpleTextDrawer.hpp>
-#include <Nazara/Widgets.hpp>
+#include <semver.hpp>
 #include <fmt/color.h>
 #include <fmt/format.h>
 #include <nlohmann/json.hpp>
-#include <semver.hpp>
 #include <optional>
 
 namespace nlohmann

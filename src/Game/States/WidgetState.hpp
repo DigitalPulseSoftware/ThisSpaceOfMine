@@ -7,10 +7,10 @@
 #ifndef TSOM_GAME_STATES_WIDGETSTATE_HPP
 #define TSOM_GAME_STATES_WIDGETSTATE_HPP
 
+#include <Game/States/StateData.hpp>
 #include <Nazara/Core/EnttWorld.hpp>
 #include <Nazara/Core/State.hpp>
 #include <Nazara/Widgets/Canvas.hpp>
-#include <Game/States/StateData.hpp>
 #include <functional>
 #include <memory>
 #include <vector>

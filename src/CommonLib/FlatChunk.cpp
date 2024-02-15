@@ -3,8 +3,8 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/FlatChunk.hpp>
-#include <NazaraUtils/Bitset.hpp>
 #include <Nazara/Physics3D/Collider3D.hpp>
+#include <NazaraUtils/Bitset.hpp>
 #include <fmt/format.h>
 
 namespace tsom
@@ -42,7 +42,7 @@ namespace tsom
 					break;
 			}
 			endY--;
-	
+
 			// Try to grow on Z
 			for (endZ += 1; endZ < m_size.z; ++endZ)
 			{

@@ -2,14 +2,14 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
-#include <Nazara/Core/Application.hpp>
-#include <Nazara/Core/Core.hpp>
-#include <Nazara/Core/SignalHandlerAppComponent.hpp>
-#include <Nazara/Physics3D/Physics3D.hpp>
-#include <Nazara/Network/Network.hpp>
 #include <CommonLib/InternalConstants.hpp>
 #include <ServerLib/ServerInstanceAppComponent.hpp>
 #include <ServerLib/Session/InitialSessionHandler.hpp>
+#include <Nazara/Core/Application.hpp>
+#include <Nazara/Core/Core.hpp>
+#include <Nazara/Core/SignalHandlerAppComponent.hpp>
+#include <Nazara/Network/Network.hpp>
+#include <Nazara/Physics3D/Physics3D.hpp>
 #include <Main/Main.hpp>
 #include <fmt/color.h>
 

@@ -3,8 +3,8 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/NetworkSession.hpp>
-#include <CommonLib/SessionHandler.hpp>
 #include <CommonLib/NetworkSessionManager.hpp>
+#include <CommonLib/SessionHandler.hpp>
 
 namespace tsom
 {

@@ -7,8 +7,8 @@
 #ifndef TSOM_COMMONLIB_PLAYERINPUTS_HPP
 #define TSOM_COMMONLIB_PLAYERINPUTS_HPP
 
-#include <Nazara/Math/Angle.hpp>
 #include <CommonLib/InputIndex.hpp>
+#include <Nazara/Math/Angle.hpp>
 
 namespace tsom
 {

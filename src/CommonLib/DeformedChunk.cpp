@@ -4,9 +4,9 @@
 
 #include <CommonLib/DeformedChunk.hpp>
 #include <CommonLib/Utility/SignedDistanceFunctions.hpp>
-#include <Nazara/Physics3D/Collider3D.hpp>
-#include <Nazara/Math/Ray.hpp>
 #include <Nazara/Core/VertexStruct.hpp>
+#include <Nazara/Math/Ray.hpp>
+#include <Nazara/Physics3D/Collider3D.hpp>
 #include <fmt/format.h>
 #include <fmt/std.h>
 

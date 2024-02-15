@@ -3,34 +3,34 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <Game/States/GameState.hpp>
-#include <Game/States/StateData.hpp>
-#include <CommonLib/GameConstants.hpp>
-#include <CommonLib/InternalConstants.hpp>
-#include <CommonLib/PlayerInputs.hpp>
-#include <CommonLib/NetworkSession.hpp>
-#include <CommonLib/Components/PlanetGravityComponent.hpp>
 #include <ClientLib/Chatbox.hpp>
 #include <ClientLib/RenderConstants.hpp>
+#include <CommonLib/GameConstants.hpp>
+#include <CommonLib/InternalConstants.hpp>
+#include <CommonLib/NetworkSession.hpp>
+#include <CommonLib/PlayerInputs.hpp>
+#include <CommonLib/Components/PlanetGravityComponent.hpp>
+#include <Game/States/StateData.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <Nazara/Core/PrimitiveList.hpp>
-#include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Graphics/DirectionalLight.hpp>
 #include <Nazara/Graphics/FramePipeline.hpp>
-#include <Nazara/Graphics/PointLight.hpp>
 #include <Nazara/Graphics/Material.hpp>
 #include <Nazara/Graphics/MaterialInstance.hpp>
 #include <Nazara/Graphics/Model.hpp>
 #include <Nazara/Graphics/PipelinePassList.hpp>
+#include <Nazara/Graphics/PointLight.hpp>
 #include <Nazara/Graphics/SpotLight.hpp>
-#include <Nazara/Graphics/Components/CameraComponent.hpp>
-#include <Nazara/Graphics/Components/LightComponent.hpp>
-#include <Nazara/Graphics/Systems/RenderSystem.hpp>
-#include <Nazara/Graphics/PropertyHandler/TexturePropertyHandler.hpp>
-#include <Nazara/Graphics/PropertyHandler/UniformValuePropertyHandler.hpp>
 #include <Nazara/Math/Ray.hpp>
 #include <Nazara/Platform/Window.hpp>
 #include <Nazara/Platform/WindowEventHandler.hpp>
+#include <Nazara/Core/Components/NodeComponent.hpp>
+#include <Nazara/Graphics/Components/CameraComponent.hpp>
+#include <Nazara/Graphics/Components/LightComponent.hpp>
+#include <Nazara/Graphics/PropertyHandler/TexturePropertyHandler.hpp>
+#include <Nazara/Graphics/PropertyHandler/UniformValuePropertyHandler.hpp>
+#include <Nazara/Graphics/Systems/RenderSystem.hpp>
 #include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <fmt/format.h>
@@ -515,7 +515,7 @@ namespace tsom
 			auto filter = [&](const Nz::Physics3DSystem::RaycastHit& hitInfo) -> std::optional<float>
 			{
 				//if (hitInfo.hitEntity != m_planetEntity)
-				//	return std::nullopt;
+				//  return std::nullopt;
 
 				hitPos = hitInfo.hitPosition;
 				hitNormal = hitInfo.hitNormal;
@@ -678,7 +678,7 @@ namespace tsom
 			if (physSystem.RaycastQuery(cameraNode.GetPosition(), cameraNode.GetPosition() + cameraNode.GetForward() * 10.f, [&](const Nz::Physics3DSystem::RaycastHit& hitInfo) -> std::optional<float>
 				{
 					//if (hitInfo.hitEntity != m_planetEntity)
-					//	return std::nullopt;
+					//  return std::nullopt;
 
 					hitPos = hitInfo.hitPosition;
 					hitNormal = hitInfo.hitNormal;

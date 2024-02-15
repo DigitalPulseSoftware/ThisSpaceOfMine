@@ -5,8 +5,8 @@
 #include <CommonLib/ChunkEntities.hpp>
 #include <CommonLib/BlockLibrary.hpp>
 #include <Nazara/Core/EnttWorld.hpp>
-#include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
+#include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
 #include <cassert>
 
 namespace tsom

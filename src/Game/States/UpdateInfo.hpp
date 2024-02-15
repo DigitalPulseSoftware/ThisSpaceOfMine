@@ -7,6 +7,7 @@
 #ifndef TSOM_GAME_STATES_UPDATEINFO_HPP
 #define TSOM_GAME_STATES_UPDATEINFO_HPP
 
+#include <NazaraUtils/Prerequisites.hpp>
 #include <optional>
 #include <string>
 

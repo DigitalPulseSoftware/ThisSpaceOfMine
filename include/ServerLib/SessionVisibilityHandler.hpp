@@ -7,10 +7,10 @@
 #ifndef TSOM_SERVERLIB_SESSIONVISIBILITYHANDLER_HPP
 #define TSOM_SERVERLIB_SESSIONVISIBILITYHANDLER_HPP
 
+#include <ServerLib/Export.hpp>
 #include <CommonLib/Chunk.hpp>
 #include <CommonLib/PlayerInputs.hpp>
 #include <CommonLib/Protocol/Packets.hpp>
-#include <ServerLib/Export.hpp>
 #include <NazaraUtils/Bitset.hpp>
 #include <entt/entt.hpp>
 #include <tsl/hopscotch_map.h>

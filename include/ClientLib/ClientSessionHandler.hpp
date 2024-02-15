@@ -7,10 +7,10 @@
 #ifndef TSOM_CLIENTLIB_CLIENTSESSIONHANDLER_HPP
 #define TSOM_CLIENTLIB_CLIENTSESSIONHANDLER_HPP
 
-#include <NazaraUtils/Signal.hpp>
 #include <ClientLib/Export.hpp>
 #include <CommonLib/SessionHandler.hpp>
 #include <CommonLib/Protocol/Packets.hpp>
+#include <NazaraUtils/Signal.hpp>
 #include <entt/entt.hpp>
 #include <tsl/hopscotch_map.h>
 

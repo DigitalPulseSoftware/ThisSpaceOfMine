@@ -26,7 +26,7 @@ namespace tsom
 			template<typename... Args> ServerInstance& AddInstance(Args&&... args);
 
 			void Update(Nz::Time elapsedTime) override;
-	
+
 			ServerInstanceAppComponent& operator=(const ServerInstanceAppComponent&) = delete;
 			ServerInstanceAppComponent& operator=(ServerInstanceAppComponent&&) = delete;
 

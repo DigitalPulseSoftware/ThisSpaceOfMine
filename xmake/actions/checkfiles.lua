@@ -37,6 +37,9 @@ end
 
 local function ComputeHeaderFile(filePath)
 	local headerPath = filePath:gsub("[\\/]", "/")
+	if headerPath:startswith("src/") then
+		headerPath = headerPath:sub(5)
+	end
 	headerPath = headerPath:sub(1, headerPath:find("%..+$") - 1) .. ".hpp"
 
 	return headerPath
@@ -56,6 +59,11 @@ local systemHeaders = {
 	["winsock2.h"] = true,
 	["ws2tcpip.h"] = true,
 }
+
+local function IsProjectHeader(header)
+	local folder = header:match("^(.-)/")
+	return modules[folder] ~= nil
+end
 
 local function IsSystemHeader(header)
 	if systemHeaders[header:lower()] then
@@ -399,11 +407,11 @@ on_run(function ()
 		Name = "inclusion order",
 		Check = function (moduleName)
 			local files = table.join(
-				os.files("include/Nazara/" .. moduleName .. "/**.hpp"),
-				os.files("include/Nazara/" .. moduleName .. "/**.inl"),
-				os.files("src/Nazara/" .. moduleName .. "/**.hpp"),
-				os.files("src/Nazara/" .. moduleName .. "/**.inl"),
-				os.files("src/Nazara/" .. moduleName .. "/**.cpp")
+				os.files("include/" .. moduleName .. "/**.hpp"),
+				os.files("include/" .. moduleName .. "/**.inl"),
+				os.files("src/" .. moduleName .. "/**.hpp"),
+				os.files("src/" .. moduleName .. "/**.inl"),
+				os.files("src/" .. moduleName .. "/**.cpp")
 			)
 
 			local fixes = {}
@@ -435,28 +443,26 @@ on_run(function ()
 					end
 				end
 
-				local debugIncludeModule = moduleName ~= "Math" and moduleName or "Core"
-
 				local includeList = {}
 				local shouldReorder = false
 				for i = 1, #inclusions do
 					local order
 					if inclusions[i].path == headerPath then
 						order = 0 -- own include comes first
-					elseif inclusions[i].path == "NazaraUtils/Prerequisites.hpp" then
-						order = 1 -- top engine includes
-					elseif inclusions[i].path == "Nazara/" .. debugIncludeModule .. "/Debug.hpp" then
-						order = 6 -- debug include
+					elseif inclusions[i].path:endswith("Export.hpp") then
+						order = 1 -- export include
+					elseif IsProjectHeader(inclusions[i].path) then
+						order = 2 -- own module
 					elseif inclusions[i].path:match("^NazaraUtils/") then
-						order = 2.1 -- NazaraUtils
+						order = 3.1 -- NazaraUtils
 					elseif inclusions[i].path:match("^Nazara/") then
-						order = 2 -- engine includes
+						order = 3 -- Nazara
 					elseif IsSystemHeader(inclusions[i].path) then
-						order = 5 -- system includes
+						order = 6 -- system includes
 					elseif inclusions[i].path:match(".+%.hp?p?") then
-						order = 3 -- thirdparty includes
+						order = 4 -- thirdparty includes
 					else
-						order = 4 -- standard includes
+						order = 5 -- standard includes
 					end
 
 					table.insert(includeList, {
@@ -473,12 +479,6 @@ on_run(function ()
 						if folderA and folderB then
 							if folderA ~= folderB then
 								return folderA < folderB
-							end
-
-							local moduleA = a.path:match("^Nazara/(.-)/")
-							local moduleB = b.path:match("^Nazara/(.-)/")
-							if moduleA ~= moduleB then
-								return moduleA < moduleB
 							end
 						end
 

@@ -7,8 +7,8 @@
 #ifndef TSOM_GAME_STATES_UPDATESTATE_HPP
 #define TSOM_GAME_STATES_UPDATESTATE_HPP
 
-#include <Game/States/WidgetState.hpp>
 #include <Game/States/UpdateInfo.hpp>
+#include <Game/States/WidgetState.hpp>
 #include <NazaraUtils/FixedVector.hpp>
 #include <string>
 

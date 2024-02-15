@@ -7,9 +7,9 @@
 #ifndef TSOM_COMMONLIB_DIRECTION_HPP
 #define TSOM_COMMONLIB_DIRECTION_HPP
 
-#include <NazaraUtils/EnumArray.hpp>
 #include <Nazara/Core/Color.hpp>
 #include <Nazara/Math/Vector3.hpp>
+#include <NazaraUtils/EnumArray.hpp>
 
 namespace tsom
 {

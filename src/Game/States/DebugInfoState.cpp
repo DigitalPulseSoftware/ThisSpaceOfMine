@@ -3,10 +3,10 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <Game/States/DebugInfoState.hpp>
+#include <CommonLib/Version.hpp>
 #include <Nazara/TextRenderer/RichTextBuilder.hpp>
 #include <Nazara/TextRenderer/SimpleTextDrawer.hpp>
 #include <Nazara/Widgets/LabelWidget.hpp>
-#include <CommonLib/Version.hpp>
 
 namespace tsom
 {

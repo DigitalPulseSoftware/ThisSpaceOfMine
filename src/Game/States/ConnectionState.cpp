@@ -3,11 +3,11 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <Game/States/ConnectionState.hpp>
-#include <Game/States/BackgroundState.hpp>
-#include <Game/States/GameState.hpp>
 #include <ClientLib/ClientSessionHandler.hpp>
 #include <CommonLib/SessionHandler.hpp>
 #include <CommonLib/Version.hpp>
+#include <Game/States/BackgroundState.hpp>
+#include <Game/States/GameState.hpp>
 #include <Nazara/Core/StateMachine.hpp>
 #include <Nazara/TextRenderer/SimpleTextDrawer.hpp>
 #include <Nazara/Widgets/LabelWidget.hpp>

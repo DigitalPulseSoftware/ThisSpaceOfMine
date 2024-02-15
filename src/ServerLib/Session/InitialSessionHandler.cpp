@@ -3,12 +3,12 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ServerLib/Session/InitialSessionHandler.hpp>
-#include <ServerLib/NetworkedEntitiesSystem.hpp>
-#include <ServerLib/ServerPlayer.hpp>
-#include <ServerLib/ServerInstance.hpp>
-#include <ServerLib/Session/PlayerSessionHandler.hpp>
 #include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/Version.hpp>
+#include <ServerLib/NetworkedEntitiesSystem.hpp>
+#include <ServerLib/ServerInstance.hpp>
+#include <ServerLib/ServerPlayer.hpp>
+#include <ServerLib/Session/PlayerSessionHandler.hpp>
 #include <fmt/color.h>
 #include <fmt/format.h>
 

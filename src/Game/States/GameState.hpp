@@ -7,16 +7,16 @@
 #ifndef TSOM_GAME_STATES_GAMESTATE_HPP
 #define TSOM_GAME_STATES_GAMESTATE_HPP
 
+#include <ClientLib/ClientChunkEntities.hpp>
+#include <ClientLib/ClientPlanet.hpp>
+#include <ClientLib/ClientSessionHandler.hpp>
+#include <ClientLib/EscapeMenu.hpp>
+#include <Game/States/WidgetState.hpp>
 #include <Nazara/Core/State.hpp>
 #include <Nazara/Core/Time.hpp>
 #include <Nazara/Math/EulerAngles.hpp>
 #include <Nazara/Platform/WindowEventHandler.hpp>
 #include <Nazara/Widgets/Canvas.hpp>
-#include <ClientLib/ClientPlanet.hpp>
-#include <ClientLib/ClientChunkEntities.hpp>
-#include <ClientLib/ClientSessionHandler.hpp>
-#include <ClientLib/EscapeMenu.hpp>
-#include <Game/States/WidgetState.hpp>
 #include <entt/entt.hpp>
 #include <array>
 #include <functional>

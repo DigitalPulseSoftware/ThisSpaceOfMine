@@ -9,8 +9,8 @@
 
 #include <ServerLib/Export.hpp>
 #include <CommonLib/SessionHandler.hpp>
-#include <ServerLib/ServerPlayer.hpp>
 #include <CommonLib/Protocol/Packets.hpp>
+#include <ServerLib/ServerPlayer.hpp>
 
 namespace tsom
 {

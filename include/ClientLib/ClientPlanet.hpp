@@ -7,8 +7,8 @@
 #ifndef TSOM_CLIENTLIB_CLIENTPLANET_HPP
 #define TSOM_CLIENTLIB_CLIENTPLANET_HPP
 
-#include <CommonLib/Planet.hpp>
 #include <ClientLib/Export.hpp>
+#include <CommonLib/Planet.hpp>
 #include <tsl/hopscotch_map.h>
 
 namespace tsom

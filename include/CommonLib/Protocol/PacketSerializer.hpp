@@ -8,8 +8,8 @@
 #define TSOM_COMMONLIB_PROTOCOL_PACKETSERIALIZER_HPP
 
 #include <CommonLib/Export.hpp>
-#include <NazaraUtils/Result.hpp>
 #include <Nazara/Core/ByteStream.hpp>
+#include <NazaraUtils/Result.hpp>
 #include <optional>
 #include <type_traits>
 #include <variant>

@@ -7,9 +7,9 @@
 #ifndef TSOM_COMMONLIB_INTERNALCONSTANTS_HPP
 #define TSOM_COMMONLIB_INTERNALCONSTANTS_HPP
 
-#include <NazaraUtils/Prerequisites.hpp>
-#include <Nazara/Core/Time.hpp>
 #include <CommonLib/Version.hpp>
+#include <Nazara/Core/Time.hpp>
+#include <NazaraUtils/Prerequisites.hpp>
 #include <string_view>
 
 namespace tsom::Constants

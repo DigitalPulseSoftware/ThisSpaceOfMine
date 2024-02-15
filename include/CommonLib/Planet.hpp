@@ -7,9 +7,9 @@
 #ifndef TSOM_COMMONLIB_PLANET_HPP
 #define TSOM_COMMONLIB_PLANET_HPP
 
+#include <CommonLib/Export.hpp>
 #include <CommonLib/ChunkContainer.hpp>
 #include <CommonLib/Direction.hpp>
-#include <CommonLib/Export.hpp>
 #include <NazaraUtils/FunctionRef.hpp>
 #include <memory>
 #include <vector>

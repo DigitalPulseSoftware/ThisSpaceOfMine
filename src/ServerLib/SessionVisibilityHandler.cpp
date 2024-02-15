@@ -5,8 +5,8 @@
 #include <ServerLib/SessionVisibilityHandler.hpp>
 #include <CommonLib/CharacterController.hpp>
 #include <CommonLib/NetworkSession.hpp>
-#include <NazaraUtils/Algorithm.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
+#include <NazaraUtils/Algorithm.hpp>
 
 namespace tsom
 {

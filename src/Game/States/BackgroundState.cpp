@@ -4,15 +4,15 @@
 
 #include <Game/States/BackgroundState.hpp>
 #include <ClientLib/RenderConstants.hpp>
-#include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
+#include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <Nazara/Core/Primitive.hpp>
 #include <Nazara/Core/StateMachine.hpp>
-#include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Graphics/Material.hpp>
 #include <Nazara/Graphics/MaterialInstance.hpp>
 #include <Nazara/Graphics/Model.hpp>
 #include <Nazara/Graphics/PipelinePassList.hpp>
+#include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Graphics/Components/CameraComponent.hpp>
 #include <Nazara/Graphics/PropertyHandler/TexturePropertyHandler.hpp>
 #include <Nazara/Graphics/PropertyHandler/UniformValuePropertyHandler.hpp>

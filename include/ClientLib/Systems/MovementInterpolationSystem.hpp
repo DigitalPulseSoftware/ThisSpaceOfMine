@@ -8,8 +8,8 @@
 #define TSOM_CLIENTLIB_SYSTEMS_MOVEMENTINTERPOLATIONSYSTEM_HPP
 
 #include <ClientLib/Export.hpp>
-#include <NazaraUtils/TypeList.hpp>
 #include <Nazara/Core/Time.hpp>
+#include <NazaraUtils/TypeList.hpp>
 #include <entt/entt.hpp>
 
 namespace Nz

@@ -7,10 +7,6 @@
 #ifndef TSOM_COMMONLIB_PROTOCOL_PACKETS_HPP
 #define TSOM_COMMONLIB_PROTOCOL_PACKETS_HPP
 
-#include <NazaraUtils/Result.hpp>
-#include <NazaraUtils/TypeList.hpp>
-#include <Nazara/Math/Quaternion.hpp>
-#include <Nazara/Math/Vector3.hpp>
 #include <CommonLib/Export.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/PlayerIndex.hpp>
@@ -18,6 +14,10 @@
 #include <CommonLib/Protocol/CompressedInteger.hpp>
 #include <CommonLib/Protocol/PacketSerializer.hpp>
 #include <CommonLib/Protocol/SecuredString.hpp>
+#include <Nazara/Math/Quaternion.hpp>
+#include <Nazara/Math/Vector3.hpp>
+#include <NazaraUtils/Result.hpp>
+#include <NazaraUtils/TypeList.hpp>
 
 namespace tsom
 {

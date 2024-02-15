@@ -2,9 +2,9 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
+#include <CommonLib/Protocol/CompressedInteger.hpp>
 #include <CommonLib/Protocol/PacketSerializer.hpp>
 #include <NazaraUtils/TypeList.hpp>
-#include <CommonLib/Protocol/CompressedInteger.hpp>
 #include <cassert>
 #include <stdexcept>
 

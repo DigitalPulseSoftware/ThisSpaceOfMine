@@ -8,12 +8,12 @@
 #define TSOM_CLIENTLIB_CHATBOX_HPP
 
 #include <ClientLib/Export.hpp>
-#include <NazaraUtils/Signal.hpp>
 #include <Nazara/Graphics/RenderTarget.hpp>
 #include <Nazara/Widgets/Canvas.hpp>
 #include <Nazara/Widgets/RichTextAreaWidget.hpp>
 #include <Nazara/Widgets/ScrollAreaWidget.hpp>
 #include <Nazara/Widgets/TextAreaWidget.hpp>
+#include <NazaraUtils/Signal.hpp>
 #include <variant>
 
 namespace tsom

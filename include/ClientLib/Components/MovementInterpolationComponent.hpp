@@ -8,9 +8,9 @@
 #define TSOM_CLIENTLIB_COMPONENTS_MOVEMENTINTERPOLATIONCOMPONENT_HPP
 
 #include <ClientLib/Export.hpp>
-#include <NazaraUtils/FixedVector.hpp>
 #include <Nazara/Math/Quaternion.hpp>
 #include <Nazara/Math/Vector3.hpp>
+#include <NazaraUtils/FixedVector.hpp>
 
 namespace tsom
 {

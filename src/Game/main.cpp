@@ -2,26 +2,6 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
-#include <Nazara/Core/Application.hpp>
-#include <Nazara/Core/EntitySystemAppComponent.hpp>
-#include <Nazara/Core/FilesystemAppComponent.hpp>
-#include <Nazara/Core/StateMachine.hpp>
-#include <Nazara/Core/Components/NodeComponent.hpp>
-#include <Nazara/Graphics/Graphics.hpp>
-#include <Nazara/Graphics/RenderWindow.hpp>
-#include <Nazara/Graphics/Components/CameraComponent.hpp>
-#include <Nazara/Graphics/Systems/RenderSystem.hpp>
-#include <Nazara/Physics3D/Physics3D.hpp>
-#include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
-#include <Nazara/Network/Network.hpp>
-#include <Nazara/Network/WebServiceAppComponent.hpp>
-#include <Nazara/Platform/WindowingAppComponent.hpp>
-#include <Nazara/Platform/MessageBox.hpp>
-#include <Nazara/Platform/Platform.hpp>
-#include <Nazara/Renderer/GpuSwitch.hpp>
-#include <Nazara/TextRenderer/TextRenderer.hpp>
-#include <Nazara/Widgets/Widgets.hpp>
-#include <Main/Main.hpp>
 #include <ClientLib/ClientBlockLibrary.hpp>
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Systems/MovementInterpolationSystem.hpp>
@@ -36,6 +16,26 @@
 #include <Game/States/GameState.hpp>
 #include <Game/States/MenuState.hpp>
 #include <Game/States/StateData.hpp>
+#include <Nazara/Core/Application.hpp>
+#include <Nazara/Core/EntitySystemAppComponent.hpp>
+#include <Nazara/Core/FilesystemAppComponent.hpp>
+#include <Nazara/Core/StateMachine.hpp>
+#include <Nazara/Graphics/Graphics.hpp>
+#include <Nazara/Graphics/RenderWindow.hpp>
+#include <Nazara/Network/Network.hpp>
+#include <Nazara/Network/WebServiceAppComponent.hpp>
+#include <Nazara/Physics3D/Physics3D.hpp>
+#include <Nazara/Platform/MessageBox.hpp>
+#include <Nazara/Platform/Platform.hpp>
+#include <Nazara/Platform/WindowingAppComponent.hpp>
+#include <Nazara/Renderer/GpuSwitch.hpp>
+#include <Nazara/TextRenderer/TextRenderer.hpp>
+#include <Nazara/Widgets/Widgets.hpp>
+#include <Nazara/Core/Components/NodeComponent.hpp>
+#include <Nazara/Graphics/Components/CameraComponent.hpp>
+#include <Nazara/Graphics/Systems/RenderSystem.hpp>
+#include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
+#include <Main/Main.hpp>
 #include <fmt/color.h>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
