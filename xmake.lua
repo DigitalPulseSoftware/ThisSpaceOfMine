@@ -1,3 +1,5 @@
+includes("xmake/actions/*.lua")
+
 -- Options
 option("commonlib_static", { default = false, defines = "TSOM_COMMONLIB_STATIC"})
 option("clientlib_static", { default = false, defines = "TSOM_CLIENTLIB_STATIC"})
