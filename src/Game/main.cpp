@@ -67,8 +67,25 @@ int GameMain(int argc, char* argv[])
 	// Register a new SkyboxMaterial shader
 	Nz::Graphics::Instance()->GetShaderModuleResolver()->RegisterModuleDirectory(Nz::Utf8Path("assets/shaders"), true);
 
+	auto& commandLineParams = app.GetCommandLineParameters();
+	unsigned int windowWidth = 1920;
+	unsigned int windowHeight = 1080;
+
+	std::string_view param;
+	if (commandLineParams.GetParameter("width", &param))
+	{
+		if (auto err = std::from_chars(param.data(), param.data() + param.size(), windowWidth); err.ec != std::errc{})
+			fmt::print(fg(fmt::color::red), "failed to parse width commandline parameter ({}) as number\n", param);
+	}
+
+	if (commandLineParams.GetParameter("height", &param))
+	{
+		if (auto err = std::from_chars(param.data(), param.data() + param.size(), windowHeight); err.ec != std::errc{})
+			fmt::print(fg(fmt::color::red), "failed to parse height commandline parameter ({}) as number\n", param);
+	}
+
 	auto& windowComponent = app.AddComponent<Nz::WindowingAppComponent>();
-	auto& window = windowComponent.CreateWindow(Nz::VideoMode(1920, 1080), "This Space Of Mine");
+	auto& window = windowComponent.CreateWindow(Nz::VideoMode(windowWidth, windowHeight), "This Space Of Mine");
 
 	auto& ecsComponent = app.AddComponent<Nz::EntitySystemAppComponent>();
 
@@ -86,7 +103,7 @@ int GameMain(int argc, char* argv[])
 	auto& renderSystem = world.AddSystem<Nz::RenderSystem>();
 
 	Nz::SwapchainParameters swapchainParams;
-	if (app.GetCommandLineParameters().HasFlag("no-vsync"))
+	if (commandLineParams.HasFlag("no-vsync"))
 		swapchainParams.presentMode = { Nz::PresentMode::Mailbox, Nz::PresentMode::Immediate };
 	else
 		swapchainParams.presentMode = { Nz::PresentMode::RelaxedVerticalSync, Nz::PresentMode::VerticalSync };
