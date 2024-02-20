@@ -82,7 +82,7 @@ end)
 headerTemplate = [[
 // Copyright (C) %COPYRIGHT%
 // This file is part of the "This Space Of Mine" project
-// For conditions of distribution and use, see copyright notice in Config.hpp
+// For conditions of distribution and use, see copyright notice in LICENSE
 
 #pragma once
 
