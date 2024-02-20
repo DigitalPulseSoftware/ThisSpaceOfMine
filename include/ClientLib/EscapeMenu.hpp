@@ -39,6 +39,8 @@ namespace tsom
 
 			void Layout();
 
+			NazaraSlot(Nz::BaseWidget, OnWidgetResized, m_onCanvasResizedSlot);
+
 			Nz::ButtonWidget* m_closeMenuButton;
 			Nz::ButtonWidget* m_disconnectButton;
 			Nz::ButtonWidget* m_quitAppButton;

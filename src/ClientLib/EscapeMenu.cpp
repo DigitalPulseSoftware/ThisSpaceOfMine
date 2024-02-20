@@ -37,6 +37,11 @@ namespace tsom
 			OnQuitApp(this);
 		});
 
+		// Connect slots
+		m_onCanvasResizedSlot.Connect(canvas->OnWidgetResized, [this](const Nz::BaseWidget*, const Nz::Vector2f&)
+		{
+			Layout();
+		});
 		Layout();
 
 		Hide();
