@@ -39,6 +39,7 @@
 #include <fmt/color.h>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
+#include <charconv>
 
 NAZARA_REQUEST_DEDICATED_GPU()
 
