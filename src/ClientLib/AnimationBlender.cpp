@@ -57,11 +57,6 @@ namespace tsom
 		}
 	}
 
-	inline void AnimationBlender::UpdateBlendingFactorIncrease(float increasePerSecond)
-	{
-		m_blendingFactorIncrease = increasePerSecond;
-	}
-
 	void AnimationBlender::Refresh()
 	{
 		for (std::size_t i = 0; i < m_points.size(); ++i)

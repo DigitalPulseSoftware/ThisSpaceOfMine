@@ -20,4 +20,9 @@ namespace tsom
 
 		Refresh();
 	}
+
+	inline void AnimationBlender::UpdateBlendingFactorIncrease(float increasePerSecond)
+	{
+		m_blendingFactorIncrease = increasePerSecond;
+	}
 }
