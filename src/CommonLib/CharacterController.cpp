@@ -14,16 +14,6 @@
 
 #define DEBUG_ROTATION 0
 
-namespace fixme
-{
-	Nz::Vector3f ProjectVec3(const Nz::Vector3f& vector, const Nz::Vector3f& normal)
-	{
-		float sqrLen = normal.GetSquaredLength();
-		float dot = vector.DotProduct(normal);
-		return normal * dot / sqrLen;
-	}
-}
-
 namespace tsom
 {
 	CharacterController::CharacterController() :
@@ -145,7 +135,7 @@ namespace tsom
 		float moveSpeed = (m_lastInputs.sprint) ? Constants::PlayerSprintSpeed : Constants::PlayerWalkSpeed;
 
 		desiredVelocity = movementRotation * desiredVelocity * moveSpeed;
-		desiredVelocity += fixme::ProjectVec3(velocity, up);
+		desiredVelocity += velocity.Project(up);
 
 		float desiredImpact = (character.IsOnGround()) ? 0.25f : 0.1f;
 

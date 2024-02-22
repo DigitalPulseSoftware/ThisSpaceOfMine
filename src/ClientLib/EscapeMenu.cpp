@@ -95,7 +95,7 @@ namespace tsom
 		{
 			cursor -= button->GetHeight();
 
-			button->SetPosition(0.f, cursor);
+			button->SetPosition({ 0.f, cursor });
 			button->CenterHorizontal();
 
 			cursor -= buttonPadding;

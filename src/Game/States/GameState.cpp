@@ -112,7 +112,7 @@ namespace tsom
 			slot.entity.emplace<Nz::GraphicsComponent>(slot.sprite, tsom::Constants::RenderMaskUI);
 
 			auto& entityNode = slot.entity.emplace<Nz::NodeComponent>();
-			entityNode.SetPosition(offset, 5.f);
+			entityNode.SetPosition({ offset, 5.f });
 			offset += (InventoryTileSize + 5.f);
 		}
 
@@ -619,19 +619,19 @@ namespace tsom
 		if (m_isMouseLocked)
 		{
 			if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::Space))
-				cameraNode.Move(Nz::Vector3f::Up() * cameraSpeed * updateTime, Nz::CoordSys::Global);
+				cameraNode.MoveGlobal(Nz::Vector3f::Up() * cameraSpeed * updateTime);
 
 			if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::Z))
-				cameraNode.Move(Nz::Vector3f::Forward() * cameraSpeed * updateTime, Nz::CoordSys::Local);
+				cameraNode.Move(Nz::Vector3f::Forward() * cameraSpeed * updateTime);
 
 			if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::S))
-				cameraNode.Move(Nz::Vector3f::Backward() * cameraSpeed * updateTime, Nz::CoordSys::Local);
+				cameraNode.Move(Nz::Vector3f::Backward() * cameraSpeed * updateTime);
 
 			if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::Q))
-				cameraNode.Move(Nz::Vector3f::Left() * cameraSpeed * updateTime, Nz::CoordSys::Local);
+				cameraNode.Move(Nz::Vector3f::Left() * cameraSpeed * updateTime);
 
 			if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::D))
-				cameraNode.Move(Nz::Vector3f::Right() * cameraSpeed * updateTime, Nz::CoordSys::Local);
+				cameraNode.Move(Nz::Vector3f::Right() * cameraSpeed * updateTime);
 		}
 #else
 		if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::F1) && stateData.networkSession->IsConnected())

@@ -65,6 +65,6 @@ namespace tsom
 	void DebugInfoState::LayoutWidgets(const Nz::Vector2f& newSize)
 	{
 		m_fpsEntity->SetPosition(newSize - Nz::Vector2f(m_fpsEntity->GetSize()));
-		m_versionEntity->SetPosition(newSize.x - m_versionEntity->GetWidth(), 0.f);
+		m_versionEntity->SetPosition({ newSize.x - m_versionEntity->GetWidth(), 0.f });
 	}
 }

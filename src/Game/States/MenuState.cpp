@@ -208,7 +208,7 @@ namespace tsom
 	{
 		m_layout->Resize({ newSize.x * 0.2f, m_layout->GetPreferredHeight() });
 		m_layout->CenterHorizontal();
-		m_layout->SetPosition(m_layout->GetPosition().x, newSize.y * 0.2f - m_layout->GetSize().y / 2.f);
+		m_layout->SetPosition({ m_layout->GetPosition().x, newSize.y * 0.2f - m_layout->GetSize().y / 2.f });
 
 		m_updateLayout->Resize({ std::max(m_updateLabel->GetPreferredWidth(), m_updateButton->GetPreferredWidth()), m_updateLabel->GetPreferredHeight() * 2.f + m_updateButton->GetPreferredHeight() });
 		m_updateLayout->SetPosition(newSize * Nz::Vector2f(0.9f, 0.1f) - m_updateButton->GetSize() * 0.5f);
