@@ -119,14 +119,13 @@ namespace tsom
 
 		struct ChunkUpdate
 		{
-			Helper::ChunkId chunkId;
-
 			struct BlockUpdate
 			{
 				Helper::VoxelLocation voxelLoc;
 				Nz::UInt8 newContent;
 			};
 
+			Helper::ChunkId chunkId;
 			std::vector<BlockUpdate> updates;
 		};
 

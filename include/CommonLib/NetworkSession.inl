@@ -23,7 +23,7 @@ namespace tsom
 	}
 
 	template<typename T>
-	void NetworkSession::SendPacket(const T& packet)
+	void NetworkSession::SendPacket(const T& packet, std::function<void()> acknowledgeCallback)
 	{
 		static_assert(PacketCount < 0xFF);
 
@@ -37,7 +37,7 @@ namespace tsom
 
 		netPacket.FlushBits();
 
-		m_reactor.SendData(m_peerId, sendAttributes.channelId, sendAttributes.flags, std::move(netPacket));
+		m_reactor.SendData(m_peerId, sendAttributes.channelId, sendAttributes.flags, std::move(netPacket), std::move(acknowledgeCallback));
 	}
 
 	template<typename T, typename ...Args>

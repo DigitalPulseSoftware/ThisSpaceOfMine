@@ -15,6 +15,7 @@
 #include <entt/entt.hpp>
 #include <tsl/hopscotch_map.h>
 #include <tsl/hopscotch_set.h>
+#include <memory>
 
 namespace tsom
 {
@@ -59,6 +60,7 @@ namespace tsom
 			void DispatchChunks();
 			void DispatchEntities(Nz::UInt16 tickIndex);
 
+			static constexpr std::size_t MaxConcurrentChunkUpdate = 3;
 			static constexpr std::size_t FreeChunkIdGrowRate = 128;
 			static constexpr std::size_t FreeEntityIdGrowRate = 512;
 
@@ -80,6 +82,7 @@ namespace tsom
 			tsl::hopscotch_set<entt::handle, HandlerHasher> m_deletedEntities;
 			tsl::hopscotch_set<entt::handle, HandlerHasher> m_movingEntities;
 			tsl::hopscotch_map<Chunk*, std::size_t> m_chunkIndices;
+			std::shared_ptr<std::size_t> m_activeChunkUpdates;
 			std::vector<VisibleChunk> m_visibleChunks;
 			Nz::Bitset<Nz::UInt64> m_freeChunkIds;
 			Nz::Bitset<Nz::UInt64> m_freeEntityIds;

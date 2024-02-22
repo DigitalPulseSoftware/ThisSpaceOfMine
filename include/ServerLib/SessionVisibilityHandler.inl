@@ -11,6 +11,7 @@ namespace tsom
 	m_controlledCharacter(nullptr),
 	m_networkSession(networkSession)
 	{
+		m_activeChunkUpdates = std::make_shared<std::size_t>(0);
 	}
 
 	inline void SessionVisibilityHandler::UpdateControlledEntity(entt::handle entity, CharacterController* controller)

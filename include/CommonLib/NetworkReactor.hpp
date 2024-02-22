@@ -47,7 +47,7 @@ namespace tsom
 
 			void QueryInfo(std::size_t peerId, PeerInfoCallback callback);
 
-			void SendData(std::size_t peerId, Nz::UInt8 channelId, Nz::ENetPacketFlags flags, Nz::NetPacket&& packet);
+			void SendData(std::size_t peerId, Nz::UInt8 channelId, Nz::ENetPacketFlags flags, Nz::NetPacket&& packet, std::function<void()> acknowledgeCallback = {});
 
 			NetworkReactor& operator=(const NetworkReactor&) = delete;
 			NetworkReactor& operator=(NetworkReactor&&) = delete;
@@ -124,6 +124,7 @@ namespace tsom
 					Nz::ENetPacketFlags flags;
 					Nz::UInt8 channelId;
 					Nz::NetPacket packet;
+					std::function<void()> acknowledgeCallback;
 				};
 
 				struct QueryPeerInfo 

@@ -104,6 +104,9 @@ namespace tsom
 
 		for (std::size_t chunkIndex = m_newlyVisibleChunk.FindFirst(); chunkIndex != m_newlyVisibleChunk.npos; chunkIndex = m_newlyVisibleChunk.FindNext(chunkIndex))
 		{
+			if (*m_activeChunkUpdates >= MaxConcurrentChunkUpdate)
+				break;
+
 			VisibleChunk& visibleChunk = m_visibleChunks[chunkIndex];
 
 			// Connect update signal on dispatch to prevent updates made during the same tick to be sent as update
@@ -151,9 +154,15 @@ namespace tsom
 			for (unsigned int i = 0; i < blockCount; ++i)
 				chunkCreatePacket.content[i] = Nz::SafeCast<Nz::UInt8>(chunkContent[i]);
 
-			m_networkSession->SendPacket(chunkCreatePacket);
+			(*m_activeChunkUpdates)++;
+			m_networkSession->SendPacket(chunkCreatePacket, [chunkLocation, chunkUpdateCount = m_activeChunkUpdates]
+			{
+				assert(*chunkUpdateCount > 0);
+				(*chunkUpdateCount)--;
+			});
+
+			m_newlyVisibleChunk.UnboundedReset(chunkIndex);
 		}
-		m_newlyVisibleChunk.Clear();
 
 		for (std::size_t chunkIndex = m_updatedChunk.FindFirst(); chunkIndex != m_updatedChunk.npos; chunkIndex = m_updatedChunk.FindNext(chunkIndex))
 		{
