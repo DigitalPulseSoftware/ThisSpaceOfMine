@@ -656,7 +656,7 @@ namespace tsom
 			cameraNode.SetPosition(characterNode.GetPosition() + characterNode.GetRotation() * (Nz::Vector3f::Up() * 3.f + Nz::Vector3f::Backward() * 2.f));
 			cameraNode.SetRotation(characterNode.GetRotation() * Nz::EulerAnglesf(-30.f, 0.f, 0.f));
 #else
-			cameraNode.SetPosition(characterNode.GetPosition() + characterNode.GetRotation() * (Nz::Vector3f::Up() * 0.6f));
+			cameraNode.SetPosition(characterNode.GetPosition() + characterNode.GetRotation() * (Nz::Vector3f::Up() * Constants::PlayerCameraHeight));
 			//cameraNode.SetRotation(characterNode.GetRotation());
 			//cameraNode.SetRotation(Nz::Quaternionf::Normalize(characterNode.GetRotation() * Nz::Quaternionf(m_predictedCameraRotation)));
 			cameraNode.SetRotation(Nz::Quaternionf::Normalize(characterNode.GetRotation()));

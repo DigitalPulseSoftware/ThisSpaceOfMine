@@ -2,6 +2,8 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
+// no header guards
+
 #ifndef TSOM_NETWORK_PACKET
 #error TSOM_NETWORK_PACKET must defined before including this file
 #endif

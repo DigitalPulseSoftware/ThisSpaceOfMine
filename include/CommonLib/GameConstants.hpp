@@ -20,12 +20,17 @@ namespace tsom::Constants
 	// Player constants
 	constexpr std::size_t PlayerMaxNicknameLength = 16;
 	constexpr float PlayerColliderRadius = 0.3f;
-	constexpr float PlayerColliderHeight = 1.8f - PlayerColliderRadius * 2.f;
+	constexpr float PlayerColliderHeight = 1.85f;
+	constexpr float PlayerEyesHeight = 1.75f;
 	constexpr float PlayerJumpPower = 5.f;
 	constexpr float PlayerSprintSpeed = 8.f;
 	constexpr float PlayerWalkSpeed = 5.f;
 	constexpr Nz::DegreeAnglef GravityMaxRotationSpeed = 180.f;
 	constexpr Nz::DegreeAnglef PlayerRotationSpeed = 90.f;
+
+	// Computed constants
+	constexpr float PlayerCapsuleHeight = PlayerColliderHeight - PlayerColliderRadius * 2.f;
+	constexpr float PlayerCameraHeight = PlayerEyesHeight - PlayerColliderHeight * 0.5f;
 }
 
 #endif // TSOM_COMMONLIB_GAMECONSTANTS_HPP

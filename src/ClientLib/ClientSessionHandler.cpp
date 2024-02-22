@@ -43,7 +43,10 @@ namespace tsom
 	ClientSessionHandler::~ClientSessionHandler()
 	{
 		for (auto it = m_networkIdToEntity.begin(); it != m_networkIdToEntity.end(); ++it)
-			it.value().destroy();
+		{
+			if (entt::handle entity = it.value(); entity.valid())
+				entity.destroy();
+		}
 		m_networkIdToEntity.clear();
 	}
 
@@ -174,7 +177,7 @@ namespace tsom
 
 	void ClientSessionHandler::SetupEntity(entt::handle entity, Packets::Helper::PlayerControlledData&& entityData)
 	{
-		auto collider = std::make_shared<Nz::CapsuleCollider3D>(Constants::PlayerColliderHeight, Constants::PlayerColliderRadius);
+		auto collider = std::make_shared<Nz::CapsuleCollider3D>(Constants::PlayerCapsuleHeight, Constants::PlayerColliderRadius);
 		entity.emplace<Nz::RigidBody3DComponent>(Nz::RigidBody3D::DynamicSettings(collider, 0.f));
 
 		// Player model (collider for now)
@@ -211,7 +214,7 @@ namespace tsom
 		{
 			auto& textNode = frontTextEntity.emplace<Nz::NodeComponent>();
 			textNode.SetParent(entity);
-			textNode.SetPosition(-textSprite->GetAABB().width * 0.5f, 1.5f, 0.f);
+			textNode.SetPosition({ -textSprite->GetAABB().width * 0.5f, 1.5f, 0.f });
 
 			frontTextEntity.emplace<Nz::GraphicsComponent>(textSprite);
 		}
@@ -221,7 +224,7 @@ namespace tsom
 		{
 			auto& textNode = backTextEntity.emplace<Nz::NodeComponent>();
 			textNode.SetParent(entity);
-			textNode.SetPosition(textSprite->GetAABB().width * 0.5f, 1.5f, 0.f);
+			textNode.SetPosition({ textSprite->GetAABB().width * 0.5f, 1.5f, 0.f });
 			textNode.SetRotation(Nz::EulerAnglesf(0.f, Nz::TurnAnglef(0.5f), 0.f));
 
 			backTextEntity.emplace<Nz::GraphicsComponent>(std::move(textSprite));

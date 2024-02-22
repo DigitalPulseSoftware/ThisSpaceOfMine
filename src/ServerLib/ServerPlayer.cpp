@@ -38,7 +38,7 @@ namespace tsom
 		auto& planetGravity = m_controlledEntity.emplace<PlanetGravityComponent>();
 		planetGravity.planet = &m_instance.GetPlanet();
 
-		auto collider = std::make_shared<Nz::CapsuleCollider3D>(Constants::PlayerColliderHeight, Constants::PlayerColliderRadius);
+		auto collider = std::make_shared<Nz::CapsuleCollider3D>(Constants::PlayerCapsuleHeight, Constants::PlayerColliderRadius);
 
 		m_controller = std::make_shared<CharacterController>();
 		m_controller->SetCurrentPlanet(&m_instance.GetPlanet());

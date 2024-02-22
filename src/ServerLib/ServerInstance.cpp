@@ -203,7 +203,6 @@ namespace tsom
 					auto& playerData = gameData.players.emplace_back();
 					playerData.index = Nz::SafeCast<PlayerIndex>(serverPlayer.GetPlayerIndex());
 					playerData.nickname = serverPlayer.GetNickname();
-
 				});
 
 				session->SendPacket(gameData);
