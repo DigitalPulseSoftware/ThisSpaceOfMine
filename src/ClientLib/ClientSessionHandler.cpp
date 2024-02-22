@@ -211,7 +211,7 @@ namespace tsom
 			params.mesh.vertexRotation = Nz::Quaternionf(Nz::TurnAnglef(0.5f), Nz::Vector3f::Up());
 			params.mesh.vertexScale = Nz::Vector3f(1.f / 10.f);
 
-			m_playerModel->model = fs.Load<Nz::Model>("assets/player/Idle.fbx", params);
+			m_playerModel->model = fs.Load<Nz::Model>("assets/Player/Idle.fbx", params);
 			if (m_playerModel->model)
 			{
 				assert(m_playerAnimAssets->referenceSkeleton.IsValid());
@@ -229,9 +229,9 @@ namespace tsom
 
 				m_playerModel->model->SetMaterial(0, std::move(playerMat));
 
-				m_playerAnimAssets->idleAnimation = fs.Load<Nz::Animation>("assets/player/Idle.fbx", animParams);
-				m_playerAnimAssets->runningAnimation = fs.Load<Nz::Animation>("assets/player/Running.fbx", animParams);
-				m_playerAnimAssets->walkingAnimation = fs.Load<Nz::Animation>("assets/player/Walking.fbx", animParams);
+				m_playerAnimAssets->idleAnimation = fs.Load<Nz::Animation>("assets/Player/Idle.fbx", animParams);
+				m_playerAnimAssets->runningAnimation = fs.Load<Nz::Animation>("assets/Player/Running.fbx", animParams);
+				m_playerAnimAssets->walkingAnimation = fs.Load<Nz::Animation>("assets/Player/Walking.fbx", animParams);
 			}
 			else
 			{
