@@ -24,6 +24,8 @@ namespace tsom
 	class DownloadManager
 	{
 		public:
+			struct Download;
+
 			inline DownloadManager(Nz::ApplicationBase& application);
 			DownloadManager(const DownloadManager&) = delete;
 			DownloadManager(DownloadManager&&) = delete;
@@ -31,25 +33,26 @@ namespace tsom
 
 			inline bool HasDownloadInProgress() const;
 
-			bool QueueDownload(std::string name, std::filesystem::path filepath, const std::string& downloadUrl, Nz::UInt64 expectedSize = 0, std::string expectedHash = {}, bool force = false);
+			std::shared_ptr<const Download> QueueDownload(std::string name, const std::filesystem::path& filepath, const std::string& downloadUrl, Nz::UInt64 expectedSize = 0, std::string expectedHash = {}, bool force = false);
 
 			DownloadManager& operator=(const DownloadManager&) = delete;
 			DownloadManager& operator=(DownloadManager&&) = delete;
 
-			NazaraSignal(OnDownloadFailed, DownloadManager* /*downloadManager*/, const std::string& /*filename*/);
-			NazaraSignal(OnDownloadFinished, DownloadManager* /*downloadManager*/, const std::string& /*filename*/);
-			NazaraSignal(OnDownloadProgress, DownloadManager* /*downloadManager*/, const std::string& /*filename*/, Nz::UInt64 /*downloadedSize*/, Nz::UInt64 /*totalSize*/);
-
-		private:
 			struct Download
 			{
-				std::string filename;
+				std::string name;
 				Nz::File file;
 				Nz::SHA256Hasher hasher;
 				Nz::UInt64 downloadedSize = 0;
+				Nz::UInt64 totalSize;
 				bool isFinished = false;
+
+				NazaraSignal(OnDownloadFailed,   const Download& /*download*/);
+				NazaraSignal(OnDownloadFinished, const Download& /*download*/);
+				NazaraSignal(OnDownloadProgress, const Download& /*download*/);
 			};
 
+		private:
 			std::vector<std::shared_ptr<Download>> m_pendingDownloads;
 			Nz::ApplicationBase& m_application;
 			bool m_isCancelled;

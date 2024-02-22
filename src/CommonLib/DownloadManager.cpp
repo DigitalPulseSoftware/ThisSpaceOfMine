@@ -3,52 +3,25 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/DownloadManager.hpp>
+#include <CommonLib/Utils.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Network/WebServiceAppComponent.hpp>
 #include <fmt/color.h>
 #include <fmt/core.h>
+#include <fmt/std.h>
 #include <filesystem>
 
 namespace tsom
 {
-	namespace
-	{
-		std::string FormatSize(Nz::UInt64 sizeInBytes)
-		{
-			constexpr std::array<std::string_view, 7> s_units = { "B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB" };
-
-			std::size_t unitIndex = 0;
-			for (; unitIndex < s_units.size(); ++unitIndex)
-			{
-				if (sizeInBytes < 1024 * 1024)
-					break;
-
-				sizeInBytes /= 1024;
-			}
-
-			double size = 0.0;
-			if (sizeInBytes > 1024 && unitIndex < s_units.size() - 1)
-			{
-				size = sizeInBytes / 1024.0;
-				unitIndex++;
-			}
-			else
-				size = sizeInBytes;
-
-			return fmt::format("{:.2f} {}", size, s_units[unitIndex]);
-		}
-	}
-
-	bool DownloadManager::QueueDownload(std::string name, std::filesystem::path filepath, const std::string& downloadUrl, Nz::UInt64 expectedSize, std::string expectedHash, bool force)
+	auto DownloadManager::QueueDownload(std::string name, const std::filesystem::path& filepath, const std::string& downloadUrl, Nz::UInt64 expectedSize, std::string expectedHash, bool force) -> std::shared_ptr<const Download>
 	{
 		auto* webService = m_application.TryGetComponent<Nz::WebServiceAppComponent>();
 		if (!webService)
-			return false;
+			return {};
 
 		std::shared_ptr<Download> download = std::make_shared<Download>();
-		download->filename = std::move(name);
-
-		m_pendingDownloads.push_back(download);
+		download->name = std::move(name);
+		download->totalSize = expectedSize;
 
 		if (!force && !expectedHash.empty())
 		{
@@ -57,13 +30,16 @@ namespace tsom
 				if (Nz::File::ComputeHash(Nz::HashType::SHA256, filepath).ToHex() == expectedHash)
 				{
 					download->isFinished = true;
-					return true;
+					return download;
 				}
 			}
 		}
 
 		if (!download->file.Open(filepath, Nz::OpenMode::Write))
-			return false;
+		{
+			fmt::print(fg(fmt::color::red), "failed to create file {0}", filepath);
+			return {};
+		}
 
 		webService->QueueRequest([&](Nz::WebRequest& request)
 		{
@@ -76,9 +52,9 @@ namespace tsom
 
 				if (!result.HasSucceeded())
 				{
-					fmt::print(fg(fmt::color::red), "failed to download {0}: {1}\n", download->filename, result.GetErrorMessage());
+					fmt::print(fg(fmt::color::red), "failed to download {0}: {1}\n", download->name, result.GetErrorMessage());
 					download->file.Delete();
-					OnDownloadFailed(this, download->filename);
+					download->OnDownloadFailed(*download);
 					return;
 				}
 
@@ -86,15 +62,15 @@ namespace tsom
 				{
 					if (std::string fileHash = download->hasher.End().ToHex(); fileHash != expectedHash)
 					{
-						fmt::print(fg(fmt::color::red), "failed to download {0}: hash doesn't match (file hash {1} doesn't match expected hash {2})\n", download->filename, fileHash, expectedHash);
+						fmt::print(fg(fmt::color::red), "failed to download {0}: hash doesn't match (file hash {1} doesn't match expected hash {2})\n", download->name, fileHash, expectedHash);
 						download->file.Delete();
-						OnDownloadFailed(this, download->filename);
+						download->OnDownloadFailed(*download);
 						return;
 					}
 				}
 
-				fmt::print(fg(fmt::color::green), "{} download succeeded!\n", download->filename);
-				OnDownloadFinished(this, download->filename);
+				fmt::print(fg(fmt::color::green), "{} download succeeded!\n", download->name);
+				download->OnDownloadFinished(*download);
 			});
 
 			if (!expectedHash.empty())
@@ -122,26 +98,27 @@ namespace tsom
 
 			request.SetOptions(Nz::WebRequestOption::FailOnError | Nz::WebRequestOption::FollowRedirects);
 
-			request.SetProgressCallback([this, download, expectedSize](std::size_t bytesReceived, std::size_t bytesTotal)
+			request.SetProgressCallback([this, download](std::size_t bytesReceived, std::size_t bytesTotal)
 			{
 				if (m_isCancelled)
 					return false;
 
-				if (bytesTotal != 0 && expectedSize != 0 && bytesTotal != expectedSize)
+				if (bytesTotal != 0 && download->totalSize != 0 && bytesTotal != download->totalSize)
 				{
-					fmt::print(fg(fmt::color::red), "error when downloading {0}: file size ({1}) doesn't match expected size ({2})!\n", download->filename, FormatSize(bytesTotal), FormatSize(expectedSize));
+					fmt::print(fg(fmt::color::red), "error when downloading {0}: file size ({1}) doesn't match expected size ({2})!\n", download->name, FormatSize(bytesTotal), FormatSize(download->totalSize));
 					return false;
 				}
 
 				download->downloadedSize = bytesReceived;
-				OnDownloadProgress(this, download->filename, bytesReceived, bytesTotal);
-
+				download->OnDownloadProgress(*download);
 				return true;
 			});
 
 			return true;
 		});
 
-		return true;
+		m_pendingDownloads.push_back(download);
+
+		return download;
 	}
 }
