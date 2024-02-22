@@ -12,16 +12,16 @@
 namespace tsom
 {
 	constexpr SessionHandler::SendAttributeTable s_packetAttributes = SessionHandler::BuildAttributeTable({
-		{ PacketIndex<Packets::ChatMessage>,         { 0, Nz::ENetPacketFlag_Reliable } },
-		{ PacketIndex<Packets::ChunkCreate>,         { 1, Nz::ENetPacketFlag_Reliable } },
-		{ PacketIndex<Packets::ChunkDestroy>,        { 1, Nz::ENetPacketFlag_Reliable } },
-		{ PacketIndex<Packets::ChunkUpdate>,         { 1, Nz::ENetPacketFlag_Reliable } },
-		{ PacketIndex<Packets::EntitiesCreation>,    { 1, Nz::ENetPacketFlag_Reliable } },
-		{ PacketIndex<Packets::EntitiesDelete>,      { 1, Nz::ENetPacketFlag_Reliable } },
+		{ PacketIndex<Packets::ChatMessage>,         { 0, Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::ChunkCreate>,         { 1, Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::ChunkDestroy>,        { 1, Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::ChunkUpdate>,         { 1, Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::EntitiesCreation>,    { 1, Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::EntitiesDelete>,      { 1, Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::EntitiesStateUpdate>, { 1, 0 } },
-		{ PacketIndex<Packets::GameData>,            { 1, Nz::ENetPacketFlag_Reliable } },
-		{ PacketIndex<Packets::PlayerJoin>,          { 1, Nz::ENetPacketFlag_Reliable } },
-		{ PacketIndex<Packets::PlayerLeave>,         { 1, Nz::ENetPacketFlag_Reliable } },
+		{ PacketIndex<Packets::GameData>,            { 1, Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::PlayerJoin>,          { 1, Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::PlayerLeave>,         { 1, Nz::ENetPacketFlag::Reliable } },
 	});
 
 	PlayerSessionHandler::PlayerSessionHandler(NetworkSession* session, ServerPlayer* player) :

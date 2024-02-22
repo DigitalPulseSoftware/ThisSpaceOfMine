@@ -15,7 +15,7 @@
 namespace tsom
 {
 	constexpr SessionHandler::SendAttributeTable s_packetAttributes = SessionHandler::BuildAttributeTable({
-		{ PacketIndex<Packets::AuthResponse>, { 0, Nz::ENetPacketFlag_Reliable } }
+		{ PacketIndex<Packets::AuthResponse>, { 0, Nz::ENetPacketFlag::Reliable } }
 	});
 
 	InitialSessionHandler::InitialSessionHandler(ServerInstance& instance, NetworkSession* session) :

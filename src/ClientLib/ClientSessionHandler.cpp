@@ -28,10 +28,10 @@
 namespace tsom
 {
 	constexpr SessionHandler::SendAttributeTable s_packetAttributes = SessionHandler::BuildAttributeTable({
-		{ PacketIndex<Packets::AuthRequest>,        { 0, Nz::ENetPacketFlag_Reliable } },
-		{ PacketIndex<Packets::MineBlock>,          { 1, Nz::ENetPacketFlag_Reliable } },
-		{ PacketIndex<Packets::PlaceBlock>,         { 1, Nz::ENetPacketFlag_Reliable } },
-		{ PacketIndex<Packets::SendChatMessage>,    { 0, Nz::ENetPacketFlag_Reliable } },
+		{ PacketIndex<Packets::AuthRequest>,        { 0, Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::MineBlock>,          { 1, Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::PlaceBlock>,         { 1, Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::SendChatMessage>,    { 0, Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::UpdatePlayerInputs>, { 1, 0 } }
 	});
 
