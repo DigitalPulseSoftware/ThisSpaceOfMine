@@ -11,21 +11,26 @@
 #include <CommonLib/SessionHandler.hpp>
 #include <CommonLib/Protocol/Packets.hpp>
 #include <NazaraUtils/Signal.hpp>
+#include <Nazara/Core/Skeleton.hpp>
 #include <entt/entt.hpp>
 #include <tsl/hopscotch_map.h>
 
 namespace Nz
 {
+	class Animation;
+	class ApplicationBase;
 	class EnttWorld;
 	class Model;
 }
 
 namespace tsom
 {
+	struct PlayerAnimationAssets;
+
 	class TSOM_CLIENTLIB_API ClientSessionHandler : public SessionHandler
 	{
 		public:
-			ClientSessionHandler(NetworkSession* session, Nz::EnttWorld& world);
+			ClientSessionHandler(NetworkSession* session, Nz::ApplicationBase& app, Nz::EnttWorld& world);
 			~ClientSessionHandler();
 
 			inline entt::handle GetControlledEntity() const;
@@ -65,10 +70,17 @@ namespace tsom
 				std::string nickname;
 			};
 
+			struct PlayerModel
+			{
+				std::shared_ptr<Nz::Model> model;
+			};
+
 			entt::handle m_playerControlledEntity;
 			tsl::hopscotch_map<Nz::UInt32, entt::handle> m_networkIdToEntity;
-			std::shared_ptr<Nz::Model> m_playerModel;
+			std::optional<PlayerModel> m_playerModel;
+			std::shared_ptr<PlayerAnimationAssets> m_playerAnimAssets;
 			std::vector<std::optional<PlayerInfo>> m_players; //< FIXME: Nz::SparseVector
+			Nz::ApplicationBase& m_app;
 			Nz::EnttWorld& m_world;
 			Nz::UInt16 m_lastTickIndex;
 			Nz::UInt16 m_ownPlayerIndex;

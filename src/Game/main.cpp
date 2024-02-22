@@ -4,6 +4,7 @@
 
 #include <ClientLib/ClientBlockLibrary.hpp>
 #include <ClientLib/RenderConstants.hpp>
+#include <ClientLib/Systems/AnimationSystem.hpp>
 #include <ClientLib/Systems/MovementInterpolationSystem.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/InternalConstants.hpp>
@@ -19,7 +20,9 @@
 #include <Nazara/Core/Application.hpp>
 #include <Nazara/Core/EntitySystemAppComponent.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
+#include <Nazara/Core/PluginLoader.hpp>
 #include <Nazara/Core/StateMachine.hpp>
+#include <Nazara/Core/Plugins/AssimpPlugin.hpp>
 #include <Nazara/Graphics/Graphics.hpp>
 #include <Nazara/Graphics/RenderWindow.hpp>
 #include <Nazara/Network/Network.hpp>
@@ -46,6 +49,9 @@ NAZARA_REQUEST_DEDICATED_GPU()
 int GameMain(int argc, char* argv[])
 {
 	Nz::Application<Nz::Graphics, Nz::Physics3D, Nz::Network, Nz::TextRenderer, Nz::Widgets> app(argc, argv);
+
+	Nz::PluginLoader pluginLoader;
+	Nz::Plugin<Nz::AssimpPlugin> assimp = pluginLoader.Load<Nz::AssimpPlugin>();
 
 	auto& filesystem = app.AddComponent<Nz::FilesystemAppComponent>();
 
@@ -121,6 +127,7 @@ int GameMain(int argc, char* argv[])
 	physicsSystem.GetPhysWorld().RegisterStepListener(&planetGravity);
 
 	world.AddSystem<tsom::MovementInterpolationSystem>(tsom::Constants::TickDuration);
+	world.AddSystem<tsom::AnimationSystem>();
 
 	entt::handle camera2D = world.CreateEntity();
 	{

@@ -5,6 +5,7 @@
 #include <Game/States/GameState.hpp>
 #include <ClientLib/Chatbox.hpp>
 #include <ClientLib/RenderConstants.hpp>
+#include <ClientLib/Systems/AnimationSystem.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/NetworkSession.hpp>
@@ -730,6 +731,9 @@ namespace tsom
 
 	void GameState::OnTick(Nz::Time elapsedTime, bool lastTick)
 	{
+		AnimationSystem& animationSystem = GetStateData().world->GetSystem<AnimationSystem>();
+		animationSystem.UpdateAnimationStates(elapsedTime);
+
 		if (lastTick)
 			SendInputs();
 	}

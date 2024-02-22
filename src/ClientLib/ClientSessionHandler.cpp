@@ -3,11 +3,16 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ClientLib/ClientSessionHandler.hpp>
+#include <ClientLib/PlayerAnimationController.hpp>
 #include <ClientLib/RenderConstants.hpp>
+#include <ClientLib/Components/AnimationComponent.hpp>
 #include <ClientLib/Components/MovementInterpolationComponent.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/Components/EntityOwnerComponent.hpp>
+#include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/EnttWorld.hpp>
+#include <Nazara/Core/FilesystemAppComponent.hpp>
+#include <Nazara/Core/Components/SkeletonComponent.hpp>
 #include <Nazara/Graphics/Graphics.hpp>
 #include <Nazara/Graphics/MaterialInstance.hpp>
 #include <Nazara/Graphics/Model.hpp>
@@ -30,8 +35,9 @@ namespace tsom
 		{ PacketIndex<Packets::UpdatePlayerInputs>, { 1, 0 } }
 	});
 
-	ClientSessionHandler::ClientSessionHandler(NetworkSession* session, Nz::EnttWorld& world) :
+	ClientSessionHandler::ClientSessionHandler(NetworkSession* session, Nz::ApplicationBase& app, Nz::EnttWorld& world) :
 	SessionHandler(session),
+	m_app(app),
 	m_world(world),
 	m_ownPlayerIndex(InvalidPlayerIndex),
 	m_lastInputIndex(0)
@@ -183,24 +189,80 @@ namespace tsom
 		// Player model (collider for now)
 		if (!m_playerModel)
 		{
-			std::shared_ptr<Nz::MaterialInstance> colliderMat = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic);
-			colliderMat->SetValueProperty("BaseColor", Nz::Color::Green());
-			colliderMat->UpdatePassesStates([](Nz::RenderStates& states)
+			m_playerModel.emplace();
+
+			auto& fs = m_app.GetComponent<Nz::FilesystemAppComponent>();
+
+			m_playerAnimAssets = std::make_shared<PlayerAnimationAssets>();
+
+			Nz::ModelParams params;
+			params.loadMaterials = false;
+			params.mesh.vertexDeclaration = Nz::VertexDeclaration::Get(Nz::VertexLayout::XYZ_Normal_UV_Tangent_Skinning);
+			params.meshCallback = [&](const std::shared_ptr<Nz::Mesh>& mesh) -> Nz::Result<void, Nz::ResourceLoadingError>
 			{
-				states.primitiveMode = Nz::PrimitiveMode::LineList;
-				return true;
-			});
+				if (!mesh->IsAnimable())
+					return Nz::Err(Nz::ResourceLoadingError::Unrecognized);
 
-			std::shared_ptr<Nz::Mesh> colliderMesh = Nz::Mesh::Build(collider->GenerateDebugMesh());
-			std::shared_ptr<Nz::GraphicalMesh> colliderGraphicalMesh = Nz::GraphicalMesh::BuildFromMesh(*colliderMesh);
+				m_playerAnimAssets->referenceSkeleton = std::move(*mesh->GetSkeleton());
+				return Nz::Ok();
+			};
 
-			m_playerModel = std::make_shared<Nz::Model>(colliderGraphicalMesh);
-			for (std::size_t i = 0; i < m_playerModel->GetSubMeshCount(); ++i)
-				m_playerModel->SetMaterial(i, colliderMat);
+			params.mesh.vertexOffset = Nz::Vector3f(0.f, -0.826f, 0.f);
+			params.mesh.vertexRotation = Nz::Quaternionf(Nz::TurnAnglef(0.5f), Nz::Vector3f::Up());
+			params.mesh.vertexScale = Nz::Vector3f(1.f / 10.f);
+
+			m_playerModel->model = fs.Load<Nz::Model>("assets/player/Idle.fbx", params);
+			if (m_playerModel->model)
+			{
+				assert(m_playerAnimAssets->referenceSkeleton.IsValid());
+
+				Nz::AnimationParams animParams;
+				animParams.skeleton = &m_playerAnimAssets->referenceSkeleton;
+
+				animParams.jointOffset = params.mesh.vertexOffset;
+				animParams.jointRotation = params.mesh.vertexRotation;
+				animParams.jointScale = params.mesh.vertexScale;
+
+				std::shared_ptr<Nz::MaterialInstance> playerMat = Nz::MaterialInstance::Instantiate(Nz::MaterialType::PhysicallyBased);
+				playerMat->SetTextureProperty("BaseColorMap", fs.Load<Nz::Texture>("assets/Player/Textures/Soldier_AlbedoTransparency.png"));
+				playerMat->SetTextureProperty("NormalMap", fs.Load<Nz::Texture>("assets/Player/Textures/Soldier_Normal.png.png"));
+
+				m_playerModel->model->SetMaterial(0, std::move(playerMat));
+
+				m_playerAnimAssets->idleAnimation = fs.Load<Nz::Animation>("assets/player/Idle.fbx", animParams);
+				m_playerAnimAssets->runningAnimation = fs.Load<Nz::Animation>("assets/player/Running.fbx", animParams);
+				m_playerAnimAssets->walkingAnimation = fs.Load<Nz::Animation>("assets/player/Walking.fbx", animParams);
+			}
+			else
+			{
+				// Fallback
+				std::shared_ptr<Nz::Mesh> mesh = Nz::Mesh::Build(collider->GenerateDebugMesh());
+
+				std::shared_ptr<Nz::MaterialInstance> colliderMat = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic);
+				colliderMat->SetValueProperty("BaseColor", Nz::Color::Green());
+				colliderMat->UpdatePassesStates([](Nz::RenderStates& states)
+				{
+					states.primitiveMode = Nz::PrimitiveMode::LineList;
+					return true;
+				});
+
+				std::shared_ptr<Nz::GraphicalMesh> colliderGraphicalMesh = Nz::GraphicalMesh::BuildFromMesh(*mesh);
+
+				m_playerModel->model = std::make_shared<Nz::Model>(colliderGraphicalMesh);
+				for (std::size_t i = 0; i < m_playerModel->model->GetSubMeshCount(); ++i)
+					m_playerModel->model->SetMaterial(i, colliderMat);
+			}
 		}
 
 		auto& gfx = entity.emplace<Nz::GraphicsComponent>();
-		gfx.AttachRenderable(m_playerModel, (entityData.controllingPlayerId == m_ownPlayerIndex) ? tsom::Constants::RenderMaskLocalPlayer : tsom::Constants::RenderMaskOtherPlayer);
+		gfx.AttachRenderable(m_playerModel->model, (entityData.controllingPlayerId == m_ownPlayerIndex) ? tsom::Constants::RenderMaskLocalPlayer : tsom::Constants::RenderMaskOtherPlayer);
+
+		// Skeleton & animations
+		std::shared_ptr<Nz::Skeleton> skeleton = std::make_shared<Nz::Skeleton>(m_playerAnimAssets->referenceSkeleton);
+
+		auto& skeletonComponent = entity.emplace<Nz::SkeletonComponent>(skeleton);
+
+		entity.emplace<AnimationComponent>(skeleton, std::make_shared<PlayerAnimationController>(entity, m_playerAnimAssets));
 
 		// Floating name
 		std::shared_ptr<Nz::TextSprite> textSprite = std::make_shared<Nz::TextSprite>();

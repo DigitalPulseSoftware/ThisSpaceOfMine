@@ -49,9 +49,11 @@ namespace tsom
 			reactor = &m_reactors.emplace_back(MaxConnection * m_reactors.size(), serverAddress.GetProtocol(), 0, MaxConnection);
 		}
 
+		auto& stateData = GetStateData();
+
 		std::size_t peerId = reactor->ConnectTo(serverAddress);
 		m_serverSession.emplace(*reactor, peerId, serverAddress);
-		ClientSessionHandler& sessionHandler = m_serverSession->SetupHandler<ClientSessionHandler>(*GetStateData().world);
+		ClientSessionHandler& sessionHandler = m_serverSession->SetupHandler<ClientSessionHandler>(*stateData.app, *stateData.world);
 		ConnectSignal(sessionHandler.OnAuthResponse, [this](const Packets::AuthResponse& authResponse)
 		{
 			if (authResponse.authResult.IsOk())
@@ -72,7 +74,6 @@ namespace tsom
 			}
 		});
 
-		auto& stateData = GetStateData();
 		stateData.networkSession = &m_serverSession.value();
 		stateData.sessionHandler = &sessionHandler;
 
