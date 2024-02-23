@@ -4,6 +4,7 @@
 
 #include <ServerLib/SessionVisibilityHandler.hpp>
 #include <CommonLib/CharacterController.hpp>
+#include <CommonLib/ChunkContainer.hpp>
 #include <CommonLib/NetworkSession.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <NazaraUtils/Algorithm.hpp>
@@ -102,15 +103,47 @@ namespace tsom
 		}
 		m_newlyHiddenChunk.Clear();
 
+		if (m_newlyVisibleChunk.GetSize() > 0)
+			DispatchNewChunks();
+
+		for (std::size_t chunkIndex = m_updatedChunk.FindFirst(); chunkIndex != m_updatedChunk.npos; chunkIndex = m_updatedChunk.FindNext(chunkIndex))
+		{
+			VisibleChunk& visibleChunk = m_visibleChunks[chunkIndex];
+			m_networkSession->SendPacket(visibleChunk.chunkUpdatePacket);
+		}
+		m_updatedChunk.Clear();
+	}
+
+	void SessionVisibilityHandler::DispatchNewChunks()
+	{
+		m_orderedChunkList.clear();
 		for (std::size_t chunkIndex = m_newlyVisibleChunk.FindFirst(); chunkIndex != m_newlyVisibleChunk.npos; chunkIndex = m_newlyVisibleChunk.FindNext(chunkIndex))
 		{
-			if (*m_activeChunkUpdates >= MaxConcurrentChunkUpdate)
-				break;
+			const Chunk* chunk = m_visibleChunks[chunkIndex].chunk;
+			Nz::Vector3f chunkPosition = chunk->GetContainer().GetChunkOffset(chunk->GetIndices());
+			m_orderedChunkList.push_back(ChunkWithPos{chunkIndex, chunkPosition + Nz::Vector3f(chunk->GetSize()) * chunk->GetBlockSize()});
+		}
 
-			VisibleChunk& visibleChunk = m_visibleChunks[chunkIndex];
+		if (m_controlledEntity)
+		{
+			// Sort chunks based on distance to reference position (closers chunks get sent in priority)
+			Nz::Vector3f referencePosition = m_controlledEntity.get<Nz::NodeComponent>().GetGlobalPosition();
+
+			std::sort(m_orderedChunkList.begin(), m_orderedChunkList.end(), [&](const ChunkWithPos& chunkA, const ChunkWithPos& chunkB)
+			{
+				return chunkA.chunkCenter.SquaredDistance(referencePosition) < chunkB.chunkCenter.SquaredDistance(referencePosition);
+			});
+		}
+
+		for (const ChunkWithPos& chunk : m_orderedChunkList)
+		{
+			if (*m_activeChunkUpdates >= MaxConcurrentChunkUpdate)
+				return;
+
+			VisibleChunk& visibleChunk = m_visibleChunks[chunk.chunkIndex];
 
 			// Connect update signal on dispatch to prevent updates made during the same tick to be sent as update
-			visibleChunk.onCellUpdatedSlot.Connect(visibleChunk.chunk->OnBlockUpdated, [this, chunkIndex]([[maybe_unused]] Chunk* chunk, const Nz::Vector3ui& indices, BlockIndex newBlock)
+			visibleChunk.onCellUpdatedSlot.Connect(visibleChunk.chunk->OnBlockUpdated, [this, chunkIndex = chunk.chunkIndex]([[maybe_unused]] Chunk* chunk, const Nz::Vector3ui& indices, BlockIndex newBlock)
 			{
 				m_updatedChunk.UnboundedSet(chunkIndex);
 
@@ -138,7 +171,7 @@ namespace tsom
 			Nz::Vector3ui chunkSize = visibleChunk.chunk->GetSize();
 
 			Packets::ChunkCreate chunkCreatePacket;
-			chunkCreatePacket.chunkId = Nz::SafeCast<Packets::Helper::ChunkId>(chunkIndex);
+			chunkCreatePacket.chunkId = Nz::SafeCast<Packets::Helper::ChunkId>(chunk.chunkIndex);
 			chunkCreatePacket.chunkLocX = chunkLocation.x;
 			chunkCreatePacket.chunkLocY = chunkLocation.y;
 			chunkCreatePacket.chunkLocZ = chunkLocation.z;
@@ -161,15 +194,12 @@ namespace tsom
 				(*chunkUpdateCount)--;
 			});
 
-			m_newlyVisibleChunk.UnboundedReset(chunkIndex);
+			m_newlyVisibleChunk.UnboundedReset(chunk.chunkIndex);
 		}
 
-		for (std::size_t chunkIndex = m_updatedChunk.FindFirst(); chunkIndex != m_updatedChunk.npos; chunkIndex = m_updatedChunk.FindNext(chunkIndex))
-		{
-			VisibleChunk& visibleChunk = m_visibleChunks[chunkIndex];
-			m_networkSession->SendPacket(visibleChunk.chunkUpdatePacket);
-		}
-		m_updatedChunk.Clear();
+		// If we get there, we didn't hit the concurrent chunk limit, we can clear the chunk bitset
+		assert(m_newlyVisibleChunk.TestNone());
+		m_newlyVisibleChunk.Clear();
 	}
 
 	void SessionVisibilityHandler::DispatchEntities(Nz::UInt16 tickIndex)

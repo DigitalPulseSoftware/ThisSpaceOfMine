@@ -58,11 +58,18 @@ namespace tsom
 
 		private:
 			void DispatchChunks();
+			void DispatchNewChunks();
 			void DispatchEntities(Nz::UInt16 tickIndex);
 
 			static constexpr std::size_t MaxConcurrentChunkUpdate = 3;
 			static constexpr std::size_t FreeChunkIdGrowRate = 128;
 			static constexpr std::size_t FreeEntityIdGrowRate = 512;
+
+			struct ChunkWithPos
+			{
+				std::size_t chunkIndex;
+				Nz::Vector3f chunkCenter;
+			};
 
 			struct HandlerHasher
 			{
@@ -84,6 +91,7 @@ namespace tsom
 			tsl::hopscotch_map<Chunk*, std::size_t> m_chunkIndices;
 			std::shared_ptr<std::size_t> m_activeChunkUpdates;
 			std::vector<VisibleChunk> m_visibleChunks;
+			std::vector<ChunkWithPos> m_orderedChunkList;
 			Nz::Bitset<Nz::UInt64> m_freeChunkIds;
 			Nz::Bitset<Nz::UInt64> m_freeEntityIds;
 			Nz::Bitset<Nz::UInt64> m_newlyHiddenChunk;
