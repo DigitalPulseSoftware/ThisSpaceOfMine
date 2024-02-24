@@ -8,8 +8,15 @@ option("serverlib_static", { default = false, defines = "TSOM_SERVERLIB_STATIC"}
 add_repositories("nazara-repo https://github.com/NazaraEngine/xmake-repo.git")
 add_requires("nazaraengine >=2023.08.15", { configs = { debug = is_mode("debug"), symbols = true }})
 add_requires("fmt", { configs = { header_only = false }})
-add_requires("semver", "concurrentqueue", "hopscotch-map", "nlohmann_json", "perlinnoise")
 add_requires("libcurl", { configs = { shared = true }, system = false })
+add_requires(
+	"concurrentqueue",
+	"lz4",
+	"hopscotch-map",
+	"nlohmann_json",
+	"perlinnoise",
+	"semver"
+)
 
 if is_plat("windows") then
 	add_requires("stackwalker 5b0df7a4db8896f6b6dc45d36e383c52577e3c6b")
@@ -53,7 +60,7 @@ target("CommonLib", function ()
 
 	add_packages("nazaraengine", { components = { "physics3d", "network" }, public = true })
 	add_packages("concurrentqueue", "semver", "fmt", "hopscotch-map", "nlohmann_json", { public = true })
-	add_packages("perlinnoise")
+	add_packages("lz4", "perlinnoise")
 
 	if is_plat("windows") then
 		add_packages("stackwalker")
