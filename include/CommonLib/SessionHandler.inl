@@ -66,7 +66,7 @@ namespace tsom
 	auto SessionHandler::GetPacketAttributes() -> const SendAttributes&
 	{
 		const SendAttributes& sendAttributes = (*m_sendAttributes)[PacketIndex<T>];
-		if (sendAttributes.channelId == SendAttributes::InvalidChannel)
+		if (sendAttributes.channel == SendAttributes::InvalidChannel)
 			throw std::runtime_error(fmt::format("missing packet setup for {}", PacketNames[PacketIndex<T>]));
 
 		return sendAttributes;

@@ -12,16 +12,16 @@
 namespace tsom
 {
 	constexpr SessionHandler::SendAttributeTable s_packetAttributes = SessionHandler::BuildAttributeTable({
-		{ PacketIndex<Packets::ChatMessage>,         { 0, Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::ChunkCreate>,         { 1, Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::ChunkDestroy>,        { 1, Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::ChunkUpdate>,         { 1, Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::EntitiesCreation>,    { 1, Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::EntitiesDelete>,      { 1, Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::EntitiesStateUpdate>, { 1, 0 } },
-		{ PacketIndex<Packets::GameData>,            { 1, Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::PlayerJoin>,          { 1, Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::PlayerLeave>,         { 1, Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::ChatMessage>,         { .channel = 0, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::ChunkCreate>,         { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::ChunkDestroy>,        { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::ChunkUpdate>,         { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::EntitiesCreation>,    { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::EntitiesDelete>,      { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::EntitiesStateUpdate>, { .channel = 1, .flags = Nz::ENetPacketFlag_Unreliable } },
+		{ PacketIndex<Packets::GameData>,            { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::PlayerJoin>,          { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::PlayerLeave>,         { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
 	});
 
 	PlayerSessionHandler::PlayerSessionHandler(NetworkSession* session, ServerPlayer* player) :

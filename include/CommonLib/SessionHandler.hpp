@@ -48,7 +48,7 @@ namespace tsom
 
 			struct SendAttributes
 			{
-				Nz::UInt8 channelId = InvalidChannel;
+				Nz::UInt8 channel = InvalidChannel;
 				Nz::ENetPacketFlags flags;
 
 				static constexpr Nz::UInt8 InvalidChannel = 0xFF;
