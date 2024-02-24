@@ -44,26 +44,26 @@ namespace tsom
 		};
 	}
 
-	inline PacketSerializer::PacketSerializer(Nz::ByteStream& packetBuffer, bool isWriting, Nz::UInt32 protocolVersion) :
-	m_buffer(packetBuffer),
+	inline PacketSerializer::PacketSerializer(Nz::ByteStream& packetStream, bool isWriting, Nz::UInt32 protocolVersion) :
+	m_stream(packetStream),
 	m_protocolVersion(protocolVersion),
 	m_isWriting(isWriting)
 	{
 	}
 
-	inline Nz::ByteStream& PacketSerializer::GetStream()
+	inline Nz::ByteStream& PacketSerializer::GetByteStream()
+	{
+		return m_stream;
+	}
+
 	inline Nz::UInt32 PacketSerializer::GetProtocolVersion() const
 	{
 		return m_protocolVersion;
 	}
 
-	{
-		return m_buffer;
-	}
-
 	inline void PacketSerializer::Read(void* ptr, std::size_t size)
 	{
-		if (m_buffer.Read(ptr, size) != size)
+		if (m_stream.Read(ptr, size) != size)
 			throw std::runtime_error("failed to read");
 	}
 
@@ -74,7 +74,7 @@ namespace tsom
 
 	inline void PacketSerializer::Write(const void* ptr, std::size_t size)
 	{
-		if (m_buffer.Write(ptr, size) != size)
+		if (m_stream.Write(ptr, size) != size)
 			throw std::runtime_error("failed to write");
 	}
 
@@ -82,9 +82,9 @@ namespace tsom
 	void PacketSerializer::Serialize(DataType& data)
 	{
 		if (!IsWriting())
-			m_buffer >> data;
+			m_stream >> data;
 		else
-			m_buffer << data;
+			m_stream << data;
 	}
 
 	template<EnumType E>
@@ -199,7 +199,7 @@ namespace tsom
 	{
 		assert(IsWriting());
 
-		m_buffer << data;
+		m_stream << data;
 	}
 
 	template<typename PacketType, typename DataType>
@@ -208,12 +208,12 @@ namespace tsom
 		if (!IsWriting())
 		{
 			PacketType packetData;
-			m_buffer >> packetData;
+			m_stream >> packetData;
 
 			data = static_cast<DataType>(packetData);
 		}
 		else
-			m_buffer << static_cast<PacketType>(data);
+			m_stream << static_cast<PacketType>(data);
 	}
 
 	template<typename PacketType, typename DataType>
@@ -221,7 +221,7 @@ namespace tsom
 	{
 		assert(IsWriting());
 
-		m_buffer << static_cast<PacketType>(data);
+		m_stream << static_cast<PacketType>(data);
 	}
 
 	template<typename T>
@@ -262,11 +262,11 @@ namespace tsom
 	void PacketSerializer::SerializeEnum(E& enumValue)
 	{
 		if (IsWriting())
-			m_buffer << static_cast<UT>(enumValue);
+			m_stream << static_cast<UT>(enumValue);
 		else
 		{
 			UT v;
-			m_buffer >> v;
+			m_stream >> v;
 
 			enumValue = static_cast<E>(v);
 		}

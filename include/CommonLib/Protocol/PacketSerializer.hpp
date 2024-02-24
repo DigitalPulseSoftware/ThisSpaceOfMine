@@ -22,10 +22,10 @@ namespace tsom
 	class TSOM_COMMONLIB_API PacketSerializer
 	{
 		public:
-			inline PacketSerializer(Nz::ByteStream& packetBuffer, bool isWriting, Nz::UInt32 protocolVersion);
+			inline PacketSerializer(Nz::ByteStream& packetStream, bool isWriting, Nz::UInt32 protocolVersion);
 			~PacketSerializer() = default;
 
-			inline Nz::ByteStream& GetStream();
+			inline Nz::ByteStream& GetByteStream();
 			inline Nz::UInt32 GetProtocolVersion() const;
 
 			inline void Read(void* ptr, std::size_t size);
@@ -56,7 +56,7 @@ namespace tsom
 			template<typename DataType> void operator&=(const DataType& data) const;
 
 		private:
-			Nz::ByteStream& m_buffer;
+			Nz::ByteStream& m_stream;
 			Nz::UInt32 m_protocolVersion;
 			bool m_isWriting;
 	};
