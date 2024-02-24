@@ -35,6 +35,7 @@ namespace tsom
 			virtual ~SessionHandler();
 
 			template<typename T> const SendAttributes& GetPacketAttributes();
+			Nz::UInt32 GetProtocolVersion() const;
 			inline NetworkSession* GetSession() const;
 
 			void HandlePacket(Nz::ByteArray&& byteArray);

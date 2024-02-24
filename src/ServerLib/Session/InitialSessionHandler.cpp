@@ -55,6 +55,8 @@ namespace tsom
 			return FailAuth(AuthError::ServerIsOutdated);
 		}
 
+		GetSession()->SetProtocolVersion(authRequest.gameVersion);
+
 		std::string_view login = Nz::Trim(authRequest.nickname, Nz::UnicodeAware{});
 		if (login.empty() || login != authRequest.nickname)
 		{

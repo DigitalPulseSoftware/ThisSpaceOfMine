@@ -3,12 +3,18 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/SessionHandler.hpp>
+#include <CommonLib/NetworkSession.hpp>
 #include <Nazara/Core/ByteArray.hpp>
 #include <fmt/format.h>
 
 namespace tsom
 {
 	SessionHandler::~SessionHandler() = default;
+
+	Nz::UInt32 SessionHandler::GetProtocolVersion() const
+	{
+		return m_session->GetProtocolVersion();
+	}
 
 	void SessionHandler::HandlePacket(Nz::ByteArray&& byteArray)
 	{

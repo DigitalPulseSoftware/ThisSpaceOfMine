@@ -31,6 +31,7 @@ namespace tsom
 			void Disconnect(DisconnectionType type = DisconnectionType::Normal);
 
 			inline std::size_t GetPeerId() const;
+			inline Nz::UInt32 GetProtocolVersion() const;
 			inline SessionHandler* GetSessionHandler();
 
 			inline bool IsConnected() const;
@@ -40,6 +41,8 @@ namespace tsom
 			template<typename T> void SendPacket(const T& packet, std::function<void()> acknowledgeCallback = {});
 
 			SessionHandler& SetHandler(std::unique_ptr<SessionHandler>&& sessionHandler);
+			inline void SetProtocolVersion(Nz::UInt32 protocolVersion);
+
 			template<typename T, typename... Args> T& SetupHandler(Args&&... args);
 
 			NetworkSession& operator=(const NetworkSession&) = delete;
@@ -50,6 +53,7 @@ namespace tsom
 			std::unique_ptr<SessionHandler> m_sessionHandler;
 			NetworkReactor& m_reactor;
 			Nz::IpAddress m_remoteAddress;
+			Nz::UInt32 m_protocolVersion;
 	};
 }
 

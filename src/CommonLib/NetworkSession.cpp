@@ -11,7 +11,8 @@ namespace tsom
 	NetworkSession::NetworkSession(NetworkReactor& reactor, std::size_t peerId, const Nz::IpAddress& remoteAddress) :
 	m_peerId(peerId),
 	m_reactor(reactor),
-	m_remoteAddress(remoteAddress)
+	m_remoteAddress(remoteAddress),
+	m_protocolVersion(0)
 	{
 	}
 

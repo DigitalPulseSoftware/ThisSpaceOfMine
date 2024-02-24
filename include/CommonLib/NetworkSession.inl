@@ -12,6 +12,11 @@ namespace tsom
 		return m_peerId;
 	}
 
+	inline Nz::UInt32 NetworkSession::GetProtocolVersion() const
+	{
+		return m_protocolVersion;
+	}
+
 	inline SessionHandler* NetworkSession::GetSessionHandler()
 	{
 		return m_sessionHandler.get();
@@ -33,12 +38,18 @@ namespace tsom
 		Nz::ByteStream byteStream(&byteArray, Nz::OpenMode::Write);
 		byteStream << Nz::UInt8(PacketIndex<T>);
 
-		PacketSerializer serializer(netPacket, true);
+		PacketSerializer serializer(byteStream, true, m_protocolVersion);
 		Packets::Serialize(serializer, const_cast<T&>(packet));
 
 		byteStream.FlushBits();
 
 		m_reactor.SendData(m_peerId, sendAttributes.channel, sendAttributes.flags, std::move(byteArray), std::move(acknowledgeCallback));
+	}
+
+	inline void NetworkSession::SetProtocolVersion(Nz::UInt32 protocolVersion)
+	{
+		assert(m_protocolVersion == 0);
+		m_protocolVersion = protocolVersion;
 	}
 
 	template<typename T, typename ...Args>

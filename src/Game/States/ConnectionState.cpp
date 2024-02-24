@@ -53,6 +53,8 @@ namespace tsom
 
 		std::size_t peerId = reactor->ConnectTo(serverAddress);
 		m_serverSession.emplace(*reactor, peerId, serverAddress);
+		m_serverSession->SetProtocolVersion(GameVersion);
+
 		ClientSessionHandler& sessionHandler = m_serverSession->SetupHandler<ClientSessionHandler>(*stateData.app, *stateData.world);
 		ConnectSignal(sessionHandler.OnAuthResponse, [this](const Packets::AuthResponse& authResponse)
 		{

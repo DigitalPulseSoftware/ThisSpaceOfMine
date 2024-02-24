@@ -44,13 +44,19 @@ namespace tsom
 		};
 	}
 
-	inline PacketSerializer::PacketSerializer(Nz::ByteStream& packetBuffer, bool isWriting) :
+	inline PacketSerializer::PacketSerializer(Nz::ByteStream& packetBuffer, bool isWriting, Nz::UInt32 protocolVersion) :
 	m_buffer(packetBuffer),
+	m_protocolVersion(protocolVersion),
 	m_isWriting(isWriting)
 	{
 	}
 
 	inline Nz::ByteStream& PacketSerializer::GetStream()
+	inline Nz::UInt32 PacketSerializer::GetProtocolVersion() const
+	{
+		return m_protocolVersion;
+	}
+
 	{
 		return m_buffer;
 	}

@@ -29,7 +29,7 @@ namespace tsom
 					{
 						PacketType unserializedPacket;
 
-						PacketSerializer serializer(packet, false);
+						PacketSerializer serializer(packet, false, sessionHandler.GetProtocolVersion());
 						try
 						{
 							Nz::ErrorFlags errFlags(Nz::ErrorMode::Silent | Nz::ErrorMode::ThrowException);
