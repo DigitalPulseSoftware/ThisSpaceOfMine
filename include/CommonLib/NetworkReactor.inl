@@ -33,7 +33,7 @@ namespace tsom
 				}
 				else if constexpr (std::is_same_v<T, IncomingEvent::PacketEvent>)
 				{
-					onData(inEvent.peerId, std::move(arg.packet));
+					onData(inEvent.peerId, std::move(arg.data));
 				}
 				else if constexpr (std::is_same_v<T, IncomingEvent::PeerInfoResponse>)
 				{

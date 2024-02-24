@@ -15,7 +15,7 @@
 
 namespace Nz
 {
-	class NetPacket;
+	class ByteArray;
 }
 
 namespace tsom
@@ -35,7 +35,7 @@ namespace tsom
 
 			inline bool IsConnected() const;
 
-			void HandlePacket(Nz::NetPacket&& netPacket);
+			void HandlePacket(Nz::ByteArray&& byteArray);
 
 			template<typename T> void SendPacket(const T& packet, std::function<void()> acknowledgeCallback = {});
 

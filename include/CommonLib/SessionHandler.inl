@@ -25,7 +25,7 @@ namespace tsom
 			{
 				if constexpr (HasHandlePacket<Handler, PacketType>())
 				{
-					return [](SessionHandler& sessionHandler, Nz::NetPacket&& packet)
+					return [](SessionHandler& sessionHandler, Nz::ByteStream&& packet)
 					{
 						PacketType unserializedPacket;
 
@@ -47,7 +47,7 @@ namespace tsom
 				}
 				else
 				{
-					return [](SessionHandler& sessionHandler, Nz::NetPacket&& packet)
+					return [](SessionHandler& sessionHandler, Nz::ByteStream&& /*packet*/)
 					{
 						constexpr std::size_t packetIndex = Nz::TypeListFind<PacketTypes, PacketType>;
 						static_cast<Handler&>(sessionHandler).OnUnexpectedPacket(packetIndex);

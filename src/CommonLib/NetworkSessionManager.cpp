@@ -32,7 +32,7 @@ namespace tsom
 			m_sessions[peerIndex].reset();
 		};
 
-		auto PacketHandler = [&](std::size_t peerIndex, Nz::NetPacket&& packet)
+		auto PacketHandler = [&](std::size_t peerIndex, Nz::ByteArray&& packet)
 		{
 			assert(m_sessions[peerIndex].has_value());
 

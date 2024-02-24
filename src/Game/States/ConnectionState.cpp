@@ -146,7 +146,7 @@ namespace tsom
 			m_serverSession.reset();
 		};
 
-		auto PacketHandler = [&](std::size_t peerIndex, Nz::NetPacket&& packet)
+		auto PacketHandler = [&](std::size_t peerIndex, Nz::ByteArray&& packet)
 		{
 			if NAZARA_UNLIKELY(!m_serverSession || m_serverSession->GetPeerId() != peerIndex)
 				return;

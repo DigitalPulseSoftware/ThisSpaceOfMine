@@ -13,9 +13,9 @@ namespace tsom
 	{
 	}
 
-	void NetworkSessionManager::SendData(std::size_t peerId, Nz::UInt8 channelId, Nz::ENetPacketFlags flags, Nz::NetPacket&& packet)
+	void NetworkSessionManager::SendData(std::size_t peerId, Nz::UInt8 channelId, Nz::ENetPacketFlags flags, Nz::ByteArray&& payload)
 	{
-		m_reactor.SendData(peerId, channelId, flags, std::move(packet));
+		m_reactor.SendData(peerId, channelId, flags, std::move(payload));
 	}
 
 	template<typename T, typename... Args>

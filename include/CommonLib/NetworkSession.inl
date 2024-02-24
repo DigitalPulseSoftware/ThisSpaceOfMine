@@ -29,15 +29,16 @@ namespace tsom
 
 		const SessionHandler::SendAttributes& sendAttributes = m_sessionHandler->GetPacketAttributes<T>();
 
-		Nz::NetPacket netPacket;
-		netPacket << Nz::UInt8(PacketIndex<T>);
+		Nz::ByteArray byteArray;
+		Nz::ByteStream byteStream(&byteArray, Nz::OpenMode::Write);
+		byteStream << Nz::UInt8(PacketIndex<T>);
 
 		PacketSerializer serializer(netPacket, true);
 		Packets::Serialize(serializer, const_cast<T&>(packet));
 
-		netPacket.FlushBits();
+		byteStream.FlushBits();
 
-		m_reactor.SendData(m_peerId, sendAttributes.channelId, sendAttributes.flags, std::move(netPacket), std::move(acknowledgeCallback));
+		m_reactor.SendData(m_peerId, sendAttributes.channel, sendAttributes.flags, std::move(byteArray), std::move(acknowledgeCallback));
 	}
 
 	template<typename T, typename ...Args>

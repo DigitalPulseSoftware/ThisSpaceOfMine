@@ -28,7 +28,7 @@ namespace tsom
 
 			void Poll();
 
-			inline void SendData(std::size_t peerId, Nz::UInt8 channelId, Nz::ENetPacketFlags flags, Nz::NetPacket&& packet);
+			inline void SendData(std::size_t peerId, Nz::UInt8 channelId, Nz::ENetPacketFlags flags, Nz::ByteArray&& payload);
 
 			template<typename T, typename... Args> void SetDefaultHandler(Args&&... args);
 

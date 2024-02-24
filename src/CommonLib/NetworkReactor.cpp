@@ -97,14 +97,14 @@ namespace tsom
 		m_outgoingQueue.enqueue(std::move(outgoingRequest));
 	}
 
-	void NetworkReactor::SendData(std::size_t peerId, Nz::UInt8 channelId, Nz::ENetPacketFlags flags, Nz::NetPacket&& packet, std::function<void()> acknowledgeCallback)
+	void NetworkReactor::SendData(std::size_t peerId, Nz::UInt8 channelId, Nz::ENetPacketFlags flags, Nz::ByteArray&& payload, std::function<void()> acknowledgeCallback)
 	{
 		assert(peerId >= m_idOffset);
 
 		OutgoingEvent::PacketEvent packetEvent;
 		packetEvent.acknowledgeCallback = std::move(acknowledgeCallback);
 		packetEvent.channelId = channelId;
-		packetEvent.packet = std::move(packet);
+		packetEvent.data = std::move(payload);
 		packetEvent.flags = flags;
 
 		OutgoingEvent outgoingData;
@@ -260,7 +260,7 @@ namespace tsom
 						Nz::UInt16 peerId = event.peer->GetPeerId();
 
 						IncomingEvent::PacketEvent packetEvent;
-						packetEvent.packet = std::move(event.packet->data);
+						packetEvent.data = std::move(event.packet->data);
 
 						IncomingEvent newEvent;
 						newEvent.peerId = m_idOffset + peerId;
@@ -327,7 +327,7 @@ namespace tsom
 				{
 					if (Nz::ENetPeer* peer = m_clients[outEvent.peerId])
 					{
-						Nz::ENetPacketRef packet = m_host.AllocatePacket(arg.flags, std::move(arg.packet));
+						Nz::ENetPacketRef packet = m_host.AllocatePacket(arg.flags, std::move(arg.data));
 						if (arg.acknowledgeCallback)
 							packet->OnAcknowledged.Connect(std::move(arg.acknowledgeCallback));
 

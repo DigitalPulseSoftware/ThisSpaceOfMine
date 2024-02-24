@@ -3,14 +3,14 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/SessionHandler.hpp>
-#include <Nazara/Network/NetPacket.hpp>
+#include <Nazara/Core/ByteArray.hpp>
 #include <fmt/format.h>
 
 namespace tsom
 {
 	SessionHandler::~SessionHandler() = default;
 
-	void SessionHandler::HandlePacket(Nz::NetPacket&& netPacket)
+	void SessionHandler::HandlePacket(Nz::ByteArray&& byteArray)
 	{
 		const HandlerTable& handlerTable = *m_handlerTable;
 

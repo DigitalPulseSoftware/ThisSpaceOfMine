@@ -14,7 +14,7 @@
 
 namespace Nz
 {
-	class NetPacket;
+	class ByteStream;
 }
 
 namespace tsom
@@ -24,7 +24,7 @@ namespace tsom
 	class TSOM_COMMONLIB_API SessionHandler
 	{
 		public:
-			using HandlerFunc = void(*)(SessionHandler&, Nz::NetPacket&&);
+			using HandlerFunc = void(*)(SessionHandler&, Nz::ByteStream&&);
 			using HandlerTable = std::array<HandlerFunc, PacketCount>;
 			struct SendAttributes;
 			using SendAttributeTable = std::array<SendAttributes, PacketCount>;
@@ -37,7 +37,7 @@ namespace tsom
 			template<typename T> const SendAttributes& GetPacketAttributes();
 			inline NetworkSession* GetSession() const;
 
-			void HandlePacket(Nz::NetPacket&& netPacket);
+			void HandlePacket(Nz::ByteArray&& byteArray);
 
 			virtual void OnDeserializationError(std::size_t packetIndex);
 			virtual void OnUnexpectedPacket(std::size_t packetIndex);

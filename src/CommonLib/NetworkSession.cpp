@@ -24,9 +24,9 @@ namespace tsom
 		m_reactor.DisconnectPeer(m_peerId, 0, type);
 	}
 
-	void NetworkSession::HandlePacket(Nz::NetPacket&& netPacket)
+	void NetworkSession::HandlePacket(Nz::ByteArray&& byteArray)
 	{
-		m_sessionHandler->HandlePacket(std::move(netPacket));
+		m_sessionHandler->HandlePacket(std::move(byteArray));
 	}
 
 	SessionHandler& NetworkSession::SetHandler(std::unique_ptr<SessionHandler>&& sessionHandler)
