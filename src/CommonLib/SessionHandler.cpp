@@ -14,8 +14,18 @@ namespace tsom
 	{
 		const HandlerTable& handlerTable = *m_handlerTable;
 
+		Nz::ByteStream byteStream(&byteArray, Nz::OpenMode::Read);
+
 		Nz::UInt8 opcode;
-		netPacket >> opcode;
+		try
+		{
+			byteStream >> opcode;
+		}
+		catch (const std::exception& e)
+		{
+			OnUnknownOpcode(0xFF);
+			return;
+		}
 
 		if (opcode >= handlerTable.size())
 		{
@@ -23,7 +33,7 @@ namespace tsom
 			return;
 		}
 
-		(*m_handlerTable)[opcode](*this, std::move(netPacket));
+		(*m_handlerTable)[opcode](*this, std::move(byteStream));
 	}
 
 	void SessionHandler::OnDeserializationError(std::size_t packetIndex)
