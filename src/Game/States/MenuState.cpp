@@ -133,6 +133,9 @@ namespace tsom
 
 	void MenuState::CheckVersion()
 	{
+		m_updateLayout->Hide();
+		m_newVersionInfo.reset();
+
 		auto* webService = GetStateData().app->TryGetComponent<Nz::WebServiceAppComponent>();
 		if (!webService)
 			return;
@@ -199,9 +202,6 @@ namespace tsom
 
 			return true;
 		});
-
-		m_updateLayout->Hide();
-		m_newVersionInfo.reset();
 	}
 
 	void MenuState::LayoutWidgets(const Nz::Vector2f& newSize)
