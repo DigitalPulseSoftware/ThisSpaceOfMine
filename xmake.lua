@@ -1,4 +1,5 @@
 includes("xmake/actions/*.lua")
+includes("xmake/rules/*.lua")
 
 -- Options
 option("commonlib_static", { default = false, defines = "TSOM_COMMONLIB_STATIC"})
@@ -26,6 +27,7 @@ add_requireconfs("fmt", "stackwalker", { debug = is_mode("debug") })
 
 add_rules("mode.debug", "mode.releasedbg", "mode.release")
 add_rules("plugin.vsxmake.autoupdate")
+add_rules("natvis")
 
 --set_policy("package.requires_lock", true)
 
