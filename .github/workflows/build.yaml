@@ -88,9 +88,9 @@ jobs:
       run: |
         xmake install -vo dest/
         if [ "$RUNNER_OS" == "Linux" ]; then
-          mv ./dest/lib/* ./dest/bin/
+          mv ./dest/lib/*.so* ./dest/bin/
         elif [ "$RUNNER_OS" == "macOS" ]; then
-          mv ./dest/lib/* ./dest/bin/
+          mv ./dest/lib/*.dylib* ./dest/bin/
         fi
         rm -rf dest/include/
         rm -rf dest/lib/
