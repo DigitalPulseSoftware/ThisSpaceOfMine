@@ -4,8 +4,4 @@
 
 namespace tsom
 {
-	inline bool ChunkEntities::DoesRequireUpdate() const
-	{
-		return m_invalidatedChunks.GetSize() != 0;
-	}
 }

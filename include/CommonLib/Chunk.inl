@@ -171,6 +171,16 @@ namespace tsom
 		OnBlockReset();
 	}
 
+	inline void Chunk::LockRead() const
+	{
+		m_mutex.lock_shared();
+	}
+
+	inline void Chunk::LockWrite()
+	{
+		m_mutex.lock();
+	}
+
 	inline void Chunk::UpdateBlock(const Nz::Vector3ui& indices, BlockIndex newBlock)
 	{
 		unsigned int blockIndex = GetBlockIndex(indices);
@@ -185,5 +195,15 @@ namespace tsom
 		m_blockTypeCount[newBlock]++;
 
 		OnBlockUpdated(this, indices, newBlock);
+	}
+
+	inline void Chunk::UnlockRead() const
+	{
+		m_mutex.unlock_shared();
+	}
+
+	inline void Chunk::UnlockWrite()
+	{
+		m_mutex.unlock();
 	}
 }

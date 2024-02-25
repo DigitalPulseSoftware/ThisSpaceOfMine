@@ -8,6 +8,7 @@
 #include <Nazara/Core/Application.hpp>
 #include <Nazara/Core/Core.hpp>
 #include <Nazara/Core/SignalHandlerAppComponent.hpp>
+#include <Nazara/Core/TaskScheduler.hpp>
 #include <Nazara/Network/Network.hpp>
 #include <Nazara/Physics3D/Physics3D.hpp>
 #include <Main/Main.hpp>
@@ -16,10 +17,13 @@
 int ServerMain(int argc, char* argv[])
 {
 	Nz::Application<Nz::Core, Nz::Physics3D, Nz::Network> app(argc, argv);
+
+	Nz::TaskScheduler taskScheduler;
+
 	app.AddComponent<Nz::SignalHandlerAppComponent>();
 	auto& worldAppComponent = app.AddComponent<tsom::ServerInstanceAppComponent>();
 
-	auto& instance = worldAppComponent.AddInstance();
+	auto& instance = worldAppComponent.AddInstance(taskScheduler);
 	auto& sessionManager = instance.AddSessionManager(tsom::Constants::ServerPort);
 	sessionManager.SetDefaultHandler<tsom::InitialSessionHandler>(std::ref(instance));
 

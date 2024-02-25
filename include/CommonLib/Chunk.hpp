@@ -18,6 +18,7 @@
 #include <NazaraUtils/Signal.hpp>
 #include <NazaraUtils/SparsePtr.hpp>
 #include <memory>
+#include <shared_mutex>
 #include <optional>
 #include <vector>
 
@@ -65,8 +66,14 @@ namespace tsom
 
 			template<typename F> void InitBlocks(F&& func);
 
+			inline void LockRead() const;
+			inline void LockWrite();
+
 			virtual void Serialize(const BlockLibrary& blockLibrary, Nz::ByteStream& byteStream);
 			virtual void Unserialize(const BlockLibrary& blockLibrary, Nz::ByteStream& byteStream);
+
+			inline void UnlockRead() const;
+			inline void UnlockWrite();
 
 			inline void UpdateBlock(const Nz::Vector3ui& indices, BlockIndex cellType);
 
@@ -88,6 +95,7 @@ namespace tsom
 		protected:
 			void OnBlockReset();
 
+			mutable std::shared_mutex m_mutex;
 			std::vector<BlockIndex> m_blocks;
 			std::vector<Nz::UInt16> m_blockTypeCount;
 			Nz::Bitset<Nz::UInt64> m_collisionCellMask;

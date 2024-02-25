@@ -17,7 +17,8 @@ namespace Nz
 	class ApplicationBase;
 	class EnttWorld;
 	class MaterialInstance;
-	class Model;
+	class Mesh;
+	class TaskScheduler;
 	class VertexDeclaration;
 }
 
@@ -34,7 +35,7 @@ namespace tsom
 	class TSOM_CLIENTLIB_API ClientChunkEntities final : public ChunkEntities
 	{
 		public:
-			ClientChunkEntities(Nz::ApplicationBase& app, Nz::EnttWorld& world, ChunkContainer& chunkContainer, const ClientBlockLibrary& blockLibrary);
+			ClientChunkEntities(Nz::ApplicationBase& app, Nz::EnttWorld& world, Nz::TaskScheduler& taskScheduler, ChunkContainer& chunkContainer, const ClientBlockLibrary& blockLibrary);
 			ClientChunkEntities(const ClientChunkEntities&) = delete;
 			ClientChunkEntities(ClientChunkEntities&&) = delete;
 			~ClientChunkEntities() = default;
@@ -43,9 +44,14 @@ namespace tsom
 			ClientChunkEntities& operator=(ClientChunkEntities&&) = delete;
 
 		private:
-			std::shared_ptr<Nz::Model> BuildModel(const Chunk* chunk);
-			void CreateChunkEntity(std::size_t chunkId, const Chunk* chunk) override;
-			void UpdateChunkEntity(std::size_t chunkId) override;
+			struct ColliderModelUpdateJob : UpdateJob
+			{
+				std::shared_ptr<Nz::Collider3D> collider;
+				std::shared_ptr<Nz::Mesh> mesh;
+			};
+
+			std::shared_ptr<Nz::Mesh> BuildMesh(const Chunk* chunk);
+			void HandleChunkUpdate(std::size_t chunkId, const Chunk* chunk) override;
 			void UpdateChunkDebugCollider(std::size_t chunkId);
 
 			std::shared_ptr<Nz::MaterialInstance> m_chunkMaterial;

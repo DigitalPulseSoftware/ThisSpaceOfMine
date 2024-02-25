@@ -47,7 +47,9 @@ namespace tsom
 		if (!CheckCanMineBlock(chunk, voxelLoc))
 			return;
 
+		chunk->LockWrite();
 		chunk->UpdateBlock(voxelLoc, EmptyBlockIndex);
+		chunk->UnlockWrite();
 	}
 
 	void PlayerSessionHandler::HandlePacket(Packets::PlaceBlock&& placeBlock)
@@ -60,7 +62,9 @@ namespace tsom
 		if (!CheckCanPlaceBlock(chunk, voxelLoc))
 			return;
 
+		chunk->LockWrite();
 		chunk->UpdateBlock(voxelLoc, static_cast<BlockIndex>(placeBlock.newContent));
+		chunk->UnlockWrite();
 	}
 
 	void PlayerSessionHandler::HandlePacket(Packets::SendChatMessage&& playerChat)

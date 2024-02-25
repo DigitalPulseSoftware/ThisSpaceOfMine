@@ -218,8 +218,12 @@ namespace tsom
 		m_onChunkUpdate.Connect(stateData.sessionHandler->OnChunkUpdate, [&](const Packets::ChunkUpdate& chunkUpdate)
 		{
 			Chunk* chunk = m_planet->GetChunkByNetworkIndex(chunkUpdate.chunkId);
+			chunk->LockWrite();
+
 			for (auto&& [blockPos, blockIndex] : chunkUpdate.updates)
 				chunk->UpdateBlock({ blockPos.x, blockPos.y, blockPos.z }, Nz::SafeCast<BlockIndex>(blockIndex));
+
+			chunk->UnlockWrite();
 		});
 
 		m_onControlledEntityStateUpdate.Connect(stateData.sessionHandler->OnControlledEntityStateUpdate, [&](InputIndex inputIndex, const Packets::EntitiesStateUpdate::ControlledCharacter& characterStates)
@@ -460,7 +464,7 @@ namespace tsom
 
 		auto& stateData = GetStateData();
 
-		m_planetEntities = std::make_unique<ClientChunkEntities>(*stateData.app, *stateData.world, *m_planet, *stateData.blockLibrary);
+		m_planetEntities = std::make_unique<ClientChunkEntities>(*stateData.app, *stateData.world, *stateData.taskScheduler, *m_planet, *stateData.blockLibrary);
 
 		m_remainingCameraRotation = Nz::EulerAnglesf(0.f, 0.f, 0.f);
 		m_predictedCameraRotation = m_remainingCameraRotation;

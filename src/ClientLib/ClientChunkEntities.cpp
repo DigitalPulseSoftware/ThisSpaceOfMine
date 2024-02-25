@@ -7,6 +7,7 @@
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <Nazara/Core/IndexBuffer.hpp>
+#include <Nazara/Core/TaskScheduler.hpp>
 #include <Nazara/Core/VertexBuffer.hpp>
 #include <Nazara/Graphics/GraphicalMesh.hpp>
 #include <Nazara/Graphics/Graphics.hpp>
@@ -21,8 +22,8 @@
 
 namespace tsom
 {
-	ClientChunkEntities::ClientChunkEntities(Nz::ApplicationBase& app, Nz::EnttWorld& world, ChunkContainer& chunkContainer, const ClientBlockLibrary& blockLibrary) :
-	ChunkEntities(world, chunkContainer, blockLibrary, NoInit{})
+	ClientChunkEntities::ClientChunkEntities(Nz::ApplicationBase& app, Nz::EnttWorld& world, Nz::TaskScheduler& taskScheduler, ChunkContainer& chunkContainer, const ClientBlockLibrary& blockLibrary) :
+	ChunkEntities(taskScheduler, world, chunkContainer, blockLibrary, NoInit{})
 	{
 		auto& filesystem = app.GetComponent<Nz::FilesystemAppComponent>();
 
@@ -133,7 +134,7 @@ namespace tsom
 		FillChunks();
 	}
 
-	std::shared_ptr<Nz::Model> ClientChunkEntities::BuildModel(const Chunk* chunk)
+	std::shared_ptr<Nz::Mesh> ClientChunkEntities::BuildMesh(const Chunk* chunk)
 	{
 		std::vector<Nz::UInt32> indices;
 		std::vector<VertexStruct> vertices;
@@ -163,43 +164,74 @@ namespace tsom
 		staticMesh->GenerateAABB();
 		staticMesh->GenerateTangents();
 
-		Nz::Mesh chunkMesh;
-		chunkMesh.CreateStatic();
-		chunkMesh.AddSubMesh(std::move(staticMesh));
+		std::shared_ptr<Nz::Mesh> chunkMesh = std::make_shared<Nz::Mesh>();
+		chunkMesh->CreateStatic();
+		chunkMesh->AddSubMesh(std::move(staticMesh));
 
-		std::shared_ptr<Nz::GraphicalMesh> gfxMesh = Nz::GraphicalMesh::BuildFromMesh(chunkMesh);
-
-		std::shared_ptr<Nz::Model> model = std::make_shared<Nz::Model>(std::move(gfxMesh));
-		model->SetMaterial(0, m_chunkMaterial);
-
-		return model;
+		return chunkMesh;
 	}
 
-	void ClientChunkEntities::CreateChunkEntity(std::size_t chunkId, const Chunk* chunk)
+	void ClientChunkEntities::HandleChunkUpdate(std::size_t chunkId, const Chunk* chunk)
 	{
-		ChunkEntities::CreateChunkEntity(chunkId, chunk);
+		// Try to cancel current update job to void useless work
+		if (auto it = m_updateJobs.find(chunkId); it != m_updateJobs.end())
+		{
+			UpdateJob& job = *it->second;
+			job.cancelled = true;
+		}
 
-		std::shared_ptr<Nz::Model> model = BuildModel(chunk);
+		std::shared_ptr<ColliderModelUpdateJob> updateJob = std::make_shared<ColliderModelUpdateJob>();
+		updateJob->taskCount = 2;
 
-		auto& gfxComponent = m_chunkEntities[chunkId].emplace<Nz::GraphicsComponent>();
-		if (model)
-			gfxComponent.AttachRenderable(std::move(model), tsom::Constants::RenderMask3D);
+		updateJob->applyFunc = [this](std::size_t chunkId, UpdateJob&& job)
+		{
+			ColliderModelUpdateJob&& colliderUpdateJob = static_cast<ColliderModelUpdateJob&&>(job);
 
-		UpdateChunkDebugCollider(chunkId);
-	}
+			auto& rigidBody = m_chunkEntities[chunkId].get<Nz::RigidBody3DComponent>();
+			rigidBody.SetGeom(std::move(colliderUpdateJob.collider), false);
 
-	void ClientChunkEntities::UpdateChunkEntity(std::size_t chunkId)
-	{
-		ChunkEntities::UpdateChunkEntity(chunkId);
+			auto& gfxComponent = m_chunkEntities[chunkId].get_or_emplace<Nz::GraphicsComponent>();
+			gfxComponent.Clear();
 
-		std::shared_ptr<Nz::Model> model = BuildModel(m_chunkContainer.GetChunk(chunkId));
+			if (colliderUpdateJob.mesh)
+			{
+				// TODO: Move this to async task (should almost already work on Vulkan, problem is OpenGL)
+				std::shared_ptr<Nz::GraphicalMesh> gfxMesh = Nz::GraphicalMesh::BuildFromMesh(*colliderUpdateJob.mesh);
 
-		auto& gfxComponent = m_chunkEntities[chunkId].get_or_emplace<Nz::GraphicsComponent>();
-		gfxComponent.Clear();
-		if (model)
-			gfxComponent.AttachRenderable(std::move(model), tsom::Constants::RenderMask3D);
+				std::shared_ptr<Nz::Model> model = std::make_shared<Nz::Model>(std::move(gfxMesh));
+				model->SetMaterial(0, m_chunkMaterial);
 
-		UpdateChunkDebugCollider(chunkId);
+				gfxComponent.AttachRenderable(std::move(model), tsom::Constants::RenderMask3D);
+			}
+
+			UpdateChunkDebugCollider(chunkId);
+		};
+
+		m_taskScheduler.AddTask([this, chunk, updateJob]
+		{
+			if (updateJob->cancelled)
+				return;
+
+			chunk->LockRead();
+			updateJob->collider = chunk->BuildCollider(m_blockLibrary);
+			chunk->UnlockRead();
+
+			updateJob->executionCounter++;
+		});
+
+		m_taskScheduler.AddTask([this, chunk, updateJob]
+		{
+			if (updateJob->cancelled)
+				return;
+
+			chunk->LockRead();
+			updateJob->mesh = BuildMesh(chunk);
+			chunk->UnlockRead();
+
+			updateJob->executionCounter++;
+		});
+
+		m_updateJobs[chunkId] = std::move(updateJob);
 	}
 
 	void ClientChunkEntities::UpdateChunkDebugCollider(std::size_t chunkId)

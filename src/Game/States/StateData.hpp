@@ -15,6 +15,7 @@ namespace Nz
 	class Canvas;
 	class EnttWorld;
 	class RenderTarget;
+	class TaskScheduler;
 	class Window;
 	class WindowSwapchain;
 }
@@ -31,6 +32,7 @@ namespace tsom
 		Nz::ApplicationBase* app;
 		Nz::Canvas* canvas;
 		Nz::EnttWorld* world;
+		Nz::TaskScheduler* taskScheduler;
 		Nz::Window* window;
 		ClientBlockLibrary* blockLibrary = nullptr;
 		ClientSessionHandler* sessionHandler = nullptr;

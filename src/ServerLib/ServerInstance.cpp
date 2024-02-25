@@ -16,12 +16,13 @@
 
 namespace tsom
 {
-	ServerInstance::ServerInstance() :
+	ServerInstance::ServerInstance(Nz::TaskScheduler& taskScheduler) :
 	m_tickIndex(0),
 	m_players(256),
 	m_tickAccumulator(Nz::Time::Zero()),
 	m_tickDuration(Constants::TickDuration),
-	m_gravitySystem(m_world)
+	m_gravitySystem(m_world),
+	m_taskScheduler(taskScheduler)
 	{
 		m_world.AddSystem<NetworkedEntitiesSystem>(*this);
 		auto& physicsSystem = m_world.AddSystem<Nz::Physics3DSystem>();
@@ -44,7 +45,7 @@ namespace tsom
 			m_dirtyChunks.insert(chunk->GetIndices());
 		});
 
-		m_planetEntities = std::make_unique<ChunkEntities>(m_world, *m_planet, m_blockLibrary);
+		m_planetEntities = std::make_unique<ChunkEntities>(m_taskScheduler, m_world, *m_planet, m_blockLibrary);
 	}
 
 	ServerInstance::~ServerInstance()
@@ -225,12 +226,7 @@ namespace tsom
 			serverPlayer.Tick();
 		});
 
-		if (m_planetEntities->DoesRequireUpdate())
-		{
-			Nz::HighPrecisionClock colliderClock;
-			m_planetEntities->Update();
-			fmt::print("updated planet collider in {}\n", fmt::streamed(colliderClock.GetElapsedTime()));
-		}
+		m_planetEntities->Update();
 
 		m_world.Update(elapsedTime);
 

@@ -10,11 +10,14 @@
 #include <CommonLib/ChunkContainer.hpp>
 #include <NazaraUtils/Bitset.hpp>
 #include <entt/entt.hpp>
+#include <tsl/hopscotch_map.h>
+#include <atomic>
 #include <vector>
 
 namespace Nz
 {
 	class EnttWorld;
+	class TaskScheduler;
 }
 
 namespace tsom
@@ -25,12 +28,10 @@ namespace tsom
 	class TSOM_COMMONLIB_API ChunkEntities
 	{
 		public:
-			ChunkEntities(Nz::EnttWorld& world, const ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary);
+			ChunkEntities(Nz::TaskScheduler& taskScheduler, Nz::EnttWorld& world, const ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary);
 			ChunkEntities(const ChunkEntities&) = delete;
 			ChunkEntities(ChunkEntities&&) = delete;
 			~ChunkEntities();
-
-			inline bool DoesRequireUpdate() const;
 
 			void Update();
 
@@ -39,19 +40,35 @@ namespace tsom
 
 		protected:
 			struct NoInit {};
-			ChunkEntities(Nz::EnttWorld& world, const ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary, NoInit);
+			ChunkEntities(Nz::TaskScheduler& taskScheduler, Nz::EnttWorld& world, const ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary, NoInit);
 
-			virtual void CreateChunkEntity(std::size_t chunkId, const Chunk* chunk);
+			void CreateChunkEntity(std::size_t chunkId, const Chunk* chunk);
 			void DestroyChunkEntity(std::size_t chunkId);
 			void FillChunks();
-			virtual void UpdateChunkEntity(std::size_t chunkId);
+			virtual void HandleChunkUpdate(std::size_t chunkId, const Chunk* chunk);
+			void UpdateChunkEntity(std::size_t chunkId);
+
+			struct UpdateJob
+			{
+				std::function<void(std::size_t chunkId, UpdateJob&& job)> applyFunc;
+				std::atomic_bool cancelled = false;
+				std::atomic_uint executionCounter = 0;
+				unsigned int taskCount;
+			};
+
+			struct ColliderUpdateJob : UpdateJob
+			{
+				std::shared_ptr<Nz::Collider3D> collider;
+			};
 
 			NazaraSlot(ChunkContainer, OnChunkAdded, m_onChunkAdded);
 			NazaraSlot(ChunkContainer, OnChunkRemove, m_onChunkRemove);
 			NazaraSlot(ChunkContainer, OnChunkUpdated, m_onChunkUpdated);
 
 			std::vector<entt::handle> m_chunkEntities;
+			tsl::hopscotch_map<std::size_t /*chunkId*/, std::shared_ptr<UpdateJob>> m_updateJobs;
 			Nz::EnttWorld& m_world;
+			Nz::TaskScheduler& m_taskScheduler;
 			const BlockLibrary& m_blockLibrary;
 			const ChunkContainer& m_chunkContainer;
 			Nz::Bitset<> m_invalidatedChunks;

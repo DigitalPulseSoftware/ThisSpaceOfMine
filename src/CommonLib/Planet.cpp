@@ -70,7 +70,10 @@ namespace tsom
 			for (unsigned int y = 0; y < m_chunkCount.y; ++y)
 			{
 				for (unsigned int x = 0; x < m_chunkCount.x; ++x)
-					AddChunk({ x, y, z });
+				{
+					auto& chunk = AddChunk({ x, y, z });
+					chunk.LockWrite();
+				}
 			}
 		}
 
@@ -321,6 +324,18 @@ namespace tsom
 				gridSize += 2;
 			}
 		}*/
+
+		for (unsigned int z = 0; z < m_chunkCount.z; ++z)
+		{
+			for (unsigned int y = 0; y < m_chunkCount.y; ++y)
+			{
+				for (unsigned int x = 0; x < m_chunkCount.x; ++x)
+				{
+					auto& chunk = GetChunk({ x, y, z });
+					chunk.UnlockWrite();
+				}
+			}
+		}
 	}
 
 	void Planet::GeneratePlatform(BlockLibrary& blockLibrary, Direction upDirection, const Nz::Vector3ui& platformCenter)

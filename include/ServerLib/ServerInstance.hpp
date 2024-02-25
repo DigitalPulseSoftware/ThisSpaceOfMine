@@ -21,12 +21,17 @@
 #include <unordered_set>
 #include <vector>
 
+namespace Nz
+{
+	class TaskScheduler;
+}
+
 namespace tsom
 {
 	class TSOM_SERVERLIB_API ServerInstance
 	{
 		public:
-			ServerInstance();
+			ServerInstance(Nz::TaskScheduler& taskScheduler);
 			ServerInstance(const ServerInstance&) = delete;
 			ServerInstance(ServerInstance&&) = delete;
 			~ServerInstance();
@@ -77,6 +82,7 @@ namespace tsom
 			Nz::Time m_tickDuration;
 			BlockLibrary m_blockLibrary;
 			PlanetGravitySystem m_gravitySystem;
+			Nz::TaskScheduler& m_taskScheduler;
 	};
 }
 

@@ -34,6 +34,7 @@
 #include <Nazara/Renderer/GpuSwitch.hpp>
 #include <Nazara/TextRenderer/TextRenderer.hpp>
 #include <Nazara/Widgets/Widgets.hpp>
+#include <Nazara/Core/TaskScheduler.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Graphics/Components/CameraComponent.hpp>
 #include <Nazara/Graphics/Systems/RenderSystem.hpp>
@@ -52,6 +53,8 @@ int GameMain(int argc, char* argv[])
 
 	Nz::PluginLoader pluginLoader;
 	Nz::Plugin<Nz::AssimpPlugin> assimp = pluginLoader.Load<Nz::AssimpPlugin>();
+
+	Nz::TaskScheduler taskScheduler;
 
 	auto& filesystem = app.AddComponent<Nz::FilesystemAppComponent>();
 
@@ -157,6 +160,7 @@ int GameMain(int argc, char* argv[])
 	stateData->blockLibrary = &blockLibrary;
 	stateData->canvas = &canvas;
 	stateData->renderTarget = std::move(renderTarget);
+	stateData->taskScheduler = &taskScheduler;
 	stateData->window = &window;
 	stateData->world = &world;
 
