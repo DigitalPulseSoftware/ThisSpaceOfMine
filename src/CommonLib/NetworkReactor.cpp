@@ -36,14 +36,11 @@ namespace tsom
 
 	std::size_t NetworkReactor::ConnectTo(Nz::IpAddress address, Nz::UInt32 data)
 	{
-		// We will need a few synchronization primitives to block the calling thread until the reactor has treated our request
-		std::condition_variable signal;
-		std::mutex signalMutex;
-
 		ConnectionRequest request;
 		request.data = data;
 		request.remoteAddress = std::move(address);
 
+		// We will need a few synchronization primitives to block the calling thread until the reactor has treated our request
 		std::size_t newClientId = InvalidPeerId;
 		// As InvalidClientId is a possible return from the callback, we need another variable to prevent spurious wakeup
 		std::atomic_bool hasReturned = false;
