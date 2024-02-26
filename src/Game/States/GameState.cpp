@@ -40,7 +40,6 @@
 #include <fmt/ostream.h>
 
 //#define FREEFLIGHT
-//#define THIRDPERSON
 #define DEBUG_ROTATION 0
 
 namespace tsom
@@ -50,8 +49,9 @@ namespace tsom
 	m_upCorrection(Nz::Quaternionf::Identity()),
 	m_tickAccumulator(Nz::Time::Zero()),
 	m_tickDuration(Constants::TickDuration),
-	m_isMouseLocked(true),
-	m_nextInputIndex(1)
+	m_nextInputIndex(1),
+	m_isCameraThirdPerson(false),
+	m_isMouseLocked(true)
 	{
 		auto& stateData = GetStateData();
 		auto& filesystem = stateData.app->GetComponent<Nz::FilesystemAppComponent>();
@@ -64,11 +64,7 @@ namespace tsom
 
 			auto& cameraComponent = m_cameraEntity.emplace<Nz::CameraComponent>(stateData.renderTarget, std::move(passList));
 			cameraComponent.UpdateClearColor(Nz::Color::Gray());
-			#if defined(FREEFLIGHT) || defined(THIRDPERSON)
-			cameraComponent.UpdateRenderMask(tsom::Constants::RenderMask3D);
-			#else
 			cameraComponent.UpdateRenderMask(tsom::Constants::RenderMask3D & ~tsom::Constants::RenderMaskLocalPlayer);
-			#endif
 			cameraComponent.UpdateZNear(0.1f);
 		}
 
@@ -350,6 +346,18 @@ namespace tsom
 					break;
 				}
 
+				case Nz::Keyboard::VKey::F5:
+				{
+					m_isCameraThirdPerson = !m_isCameraThirdPerson;
+
+					auto& cameraComponent = m_cameraEntity.get<Nz::CameraComponent>();
+					if (m_isCameraThirdPerson)
+						cameraComponent.UpdateRenderMask(tsom::Constants::RenderMask3D);
+					else
+						cameraComponent.UpdateRenderMask(tsom::Constants::RenderMask3D & ~tsom::Constants::RenderMaskLocalPlayer);
+					break;
+				}
+
 				default:
 					break;
 			}
@@ -616,32 +624,26 @@ namespace tsom
 		{
 			Nz::NodeComponent& characterNode = m_controlledEntity.get<Nz::NodeComponent>();
 
-			/*if (m_cameraRotation.yaw != 0.f)
+			Nz::Vector3f characterPos = characterNode.GetPosition();
+			Nz::Quaternionf characterRot = characterNode.GetRotation();
+
+			if (m_isCameraThirdPerson)
 			{
-				Nz::Quaternionf newRotation = characterComponent.GetRotation() * Nz::Quaternionf(Nz::EulerAnglesf(0.f, m_cameraRotation.yaw, 0.f));
-				newRotation.Normalize();
+				Nz::Quaternionf cameraRot = characterRot * Nz::EulerAnglesf(m_predictedCameraRotation.pitch, 0.f, 0.f);
+				cameraRot.Normalize();
 
-				characterComponent.SetRotation(newRotation);
-				m_cameraRotation.yaw = 0.f;
+				cameraNode.SetPosition(characterPos + characterRot * (Nz::Vector3f::Up() * 1.f) + cameraRot * (Nz::Vector3f::Backward() * 1.f));
+				cameraNode.SetRotation(cameraRot);
 			}
+			else
+			{
+				cameraNode.SetPosition(characterPos + characterRot * (Nz::Vector3f::Up() * Constants::PlayerCameraHeight + Nz::Vector3f::Forward() * 0.3f));
 
-			Nz::Quaternionf rotation = characterComponent.GetRotation();*/
+				Nz::Quaternionf cameraRotation = m_referenceRotation * Nz::Quaternionf(m_predictedCameraRotation);
+				cameraRotation.Normalize();
 
-#ifdef THIRDPERSON
-			cameraNode.SetPosition(characterNode.GetPosition() + characterNode.GetRotation() * (Nz::Vector3f::Up() * 3.f + Nz::Vector3f::Backward() * 2.f));
-			cameraNode.SetRotation(characterNode.GetRotation() * Nz::EulerAnglesf(-30.f, 0.f, 0.f));
-#else
-			cameraNode.SetPosition(characterNode.GetPosition() + characterNode.GetRotation() * (Nz::Vector3f::Up() * Constants::PlayerCameraHeight));
-			//cameraNode.SetRotation(characterNode.GetRotation());
-			//cameraNode.SetRotation(Nz::Quaternionf::Normalize(characterNode.GetRotation() * Nz::Quaternionf(m_predictedCameraRotation)));
-			cameraNode.SetRotation(Nz::Quaternionf::Normalize(characterNode.GetRotation()));
-
-			Nz::Quaternionf cameraRotation = m_referenceRotation * Nz::Quaternionf(m_predictedCameraRotation);
-			cameraRotation.Normalize();
-
-			auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
-			cameraNode.SetRotation(cameraRotation);
-#endif
+				cameraNode.SetRotation(cameraRotation);
+			}
 		}
 
 #endif

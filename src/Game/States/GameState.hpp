@@ -89,6 +89,7 @@ namespace tsom
 			BlockSelectionBar* m_blockSelectionBar;
 			Chatbox* m_chatBox;
 			EscapeMenu* m_escapeMenu;
+			bool m_isCameraThirdPerson;
 			bool m_isMouseLocked;
 	};
 }
