@@ -13,14 +13,15 @@
 
 namespace tsom
 {
-	Chatbox::Chatbox(Nz::RenderTarget& renderTarget, Nz::Canvas* canvas) :
+	Chatbox::Chatbox(Nz::BaseWidget* parent) :
+	BaseWidget(parent),
 	m_chatEnteringBox(nullptr)
 	{
 		//TODO
 		//Nz::FontRef chatboxFont = Nz::FontLibrary::Get("BW_Chatbox");
 		//assert(chatboxFont);
 
-		m_chatBox = canvas->Add<Nz::RichTextAreaWidget>();
+		m_chatBox = Add<Nz::RichTextAreaWidget>();
 		m_chatBox->EnableBackground(false);
 		m_chatBox->EnableLineWrap(true);
 		m_chatBox->SetBackgroundColor(Nz::Color(0.f, 0.f, 0.f, 0.2f));
@@ -31,36 +32,33 @@ namespace tsom
 		m_chatBox->SetTextOutlineThickness(1.f);
 		m_chatBox->SetReadOnly(true);
 
-		m_chatboxScrollArea = canvas->Add<Nz::ScrollAreaWidget>(m_chatBox);
+		m_chatboxScrollArea = Add<Nz::ScrollAreaWidget>(m_chatBox);
 		m_chatboxScrollArea->Resize({ 480.f, 0.f });
 		m_chatboxScrollArea->EnableScrollbar(false);
 
-		m_chatEnteringBox = canvas->Add<Nz::TextAreaWidget>();
+		m_chatEnteringBox = Add<Nz::TextAreaWidget>();
 		m_chatEnteringBox->EnableBackground(true);
 		m_chatEnteringBox->SetBackgroundColor(Nz::Color(1.f, 1.f, 1.f, 0.6f));
 		m_chatEnteringBox->SetTextColor(Nz::Color::Black());
 		//m_chatEnteringBox->SetTextFont(chatboxFont);
 		m_chatEnteringBox->Hide();
 		m_chatEnteringBox->SetMaximumTextLength(Constants::ChatMaxPlayerMessageLength);
-
-		// Connect every slot
-		m_onTargetChangeSizeSlot.Connect(renderTarget.OnRenderTargetSizeChange, this, &Chatbox::OnRenderTargetSizeChange);
-
-		OnRenderTargetSizeChange(&renderTarget, renderTarget.GetSize());
-	}
-
-	Chatbox::~Chatbox()
-	{
-		m_chatboxScrollArea->Destroy();
-
-		if (m_chatEnteringBox)
-			m_chatEnteringBox->Destroy();
 	}
 
 	void Chatbox::Clear()
 	{
 		m_chatLines.clear();
 		m_chatBox->Clear();
+	}
+
+	bool Chatbox::IsOpen() const
+	{
+		return m_chatEnteringBox->IsVisible();
+	}
+
+	bool Chatbox::IsTyping() const
+	{
+		return m_chatEnteringBox->IsVisible();
 	}
 
 	void Chatbox::Open(bool shouldOpen)
@@ -86,25 +84,6 @@ namespace tsom
 
 	void Chatbox::PrintMessage(std::vector<Item> message)
 	{
-		// Log message
-		{
-			std::string textMessage;
-
-			for (const Item& messageItem : message)
-			{
-				std::visit([&](auto&& item)
-				{
-					using T = std::decay_t<decltype(item)>;
-
-					if constexpr (std::is_same_v<T, TextItem>)
-						textMessage += item.text;
-
-				}, messageItem);
-			}
-
-			fmt::print("{0}\n", textMessage);
-		}
-
 		m_chatLines.emplace_back(std::move(message));
 		if (m_chatLines.size() > Constants::ChatMaxLines)
 			m_chatLines.erase(m_chatLines.begin());
@@ -119,9 +98,11 @@ namespace tsom
 			OnChatMessage(text);
 	}
 
-	void Chatbox::OnRenderTargetSizeChange(const Nz::RenderTarget* renderTarget, const Nz::Vector2ui& newSize)
+	void Chatbox::Layout()
 	{
-		Nz::Vector2f size = Nz::Vector2f(newSize);
+		BaseWidget::Layout();
+
+		Nz::Vector2f size = GetSize();
 
 		m_chatEnteringBox->Resize({ size.x, 40.f });
 		m_chatEnteringBox->SetPosition({ 0.f, 0.f, 0.f });

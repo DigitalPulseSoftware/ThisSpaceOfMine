@@ -10,7 +10,6 @@
 #include <ClientLib/ClientChunkEntities.hpp>
 #include <ClientLib/ClientPlanet.hpp>
 #include <ClientLib/ClientSessionHandler.hpp>
-#include <ClientLib/EscapeMenu.hpp>
 #include <Game/States/WidgetState.hpp>
 #include <Nazara/Core/State.hpp>
 #include <Nazara/Core/Time.hpp>
@@ -26,7 +25,9 @@
 
 namespace tsom
 {
+	class BlockSelectionBar;
 	class Chatbox;
+	class EscapeMenu;
 	struct StateData;
 
 	class GameState : public WidgetState
@@ -45,6 +46,7 @@ namespace tsom
 			GameState& operator=(GameState&&) = delete;
 
 		private:
+			void LayoutWidgets(const Nz::Vector2f& newSize) override;
 			void OnTick(Nz::Time elapsedTime, bool lastTick);
 			void SendInputs();
 			void UpdateMouseLock();
@@ -59,15 +61,9 @@ namespace tsom
 			NazaraSlot(ClientSessionHandler, OnPlayerJoined, m_onPlayerJoined);
 			NazaraSlot(Nz::Canvas, OnUnhandledKeyPressed, m_onUnhandledKeyPressed);
 			NazaraSlot(Nz::Canvas, OnUnhandledKeyReleased, m_onUnhandledKeyReleased);
-			NazaraSlot(Nz::WindowEventHandler, OnMouseButtonReleased, m_mouseButtonReleasedSlot);
-			NazaraSlot(Nz::WindowEventHandler, OnMouseMoved, m_mouseMovedSlot);
-			NazaraSlot(Nz::WindowEventHandler, OnMouseWheelMoved, m_mouseWheelMovedSlot);
-
-			struct InventorySlot
-			{
-				std::shared_ptr<Nz::Sprite> sprite;
-				entt::handle entity;
-			};
+			NazaraSlot(Nz::Canvas, OnUnhandledMouseButtonPressed, m_mouseButtonReleasedSlot);
+			NazaraSlot(Nz::Canvas, OnUnhandledMouseMoved, m_mouseMovedSlot);
+			NazaraSlot(Nz::Canvas, OnUnhandledMouseWheelMoved, m_mouseWheelMovedSlot);
 
 			struct InputRotation
 			{
@@ -75,12 +71,9 @@ namespace tsom
 				Nz::EulerAnglesf inputRotation;
 			};
 
-			std::size_t m_selectedBlock;
 			std::unique_ptr<ClientPlanet> m_planet;
 			std::unique_ptr<ClientChunkEntities> m_planetEntities;
-			std::unique_ptr<Chatbox> m_chatBox;
 			std::vector<InputRotation> m_predictedInputRotations;
-			std::vector<InventorySlot> m_inventorySlots;
 			entt::handle m_cameraEntity;
 			entt::handle m_controlledEntity;
 			entt::handle m_sunLightEntity;
@@ -93,8 +86,9 @@ namespace tsom
 			Nz::Time m_tickAccumulator;
 			Nz::Time m_tickDuration;
 			Nz::UInt8 m_nextInputIndex;
-			BlockIndex m_selectedBlockIndex;
-			EscapeMenu m_escapeMenu;
+			BlockSelectionBar* m_blockSelectionBar;
+			Chatbox* m_chatBox;
+			EscapeMenu* m_escapeMenu;
 			bool m_isMouseLocked;
 	};
 }

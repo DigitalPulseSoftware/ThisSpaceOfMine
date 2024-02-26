@@ -12,21 +12,21 @@
 #include <Nazara/Widgets/Canvas.hpp>
 #include <NazaraUtils/Signal.hpp>
 
+namespace Nz
+{
+	class BoxLayout;
+	class ButtonWidget;
+}
+
 namespace tsom
 {
-	class TSOM_CLIENTLIB_API EscapeMenu
+	class TSOM_CLIENTLIB_API EscapeMenu : public Nz::BaseWidget
 	{
 		public:
-			EscapeMenu(Nz::Canvas* canvas);
+			EscapeMenu(Nz::BaseWidget* parent);
 			EscapeMenu(const EscapeMenu&) = delete;
 			EscapeMenu(EscapeMenu&&) = delete;
-			~EscapeMenu();
-
-			inline void Hide();
-
-			inline bool IsVisible() const;
-
-			void Show(bool shouldOpen = true);
+			~EscapeMenu() = default;
 
 			EscapeMenu& operator=(const EscapeMenu&) = delete;
 			EscapeMenu& operator=(EscapeMenu&&) = delete;
@@ -35,16 +35,12 @@ namespace tsom
 			NazaraSignal(OnQuitApp, EscapeMenu* /*emitter*/);
 
 		private:
-			void OnBackButtonPressed();
+			void Layout() override;
 
-			void Layout();
-
-			NazaraSlot(Nz::BaseWidget, OnWidgetResized, m_onCanvasResizedSlot);
-
+			Nz::BoxLayout* m_layout;
 			Nz::ButtonWidget* m_closeMenuButton;
 			Nz::ButtonWidget* m_disconnectButton;
 			Nz::ButtonWidget* m_quitAppButton;
-			Nz::BaseWidget* m_backgroundWidget;
 	};
 }
 

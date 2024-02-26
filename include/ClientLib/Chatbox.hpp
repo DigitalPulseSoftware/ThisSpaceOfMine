@@ -9,16 +9,19 @@
 
 #include <ClientLib/Export.hpp>
 #include <Nazara/Graphics/RenderTarget.hpp>
-#include <Nazara/Widgets/Canvas.hpp>
-#include <Nazara/Widgets/RichTextAreaWidget.hpp>
-#include <Nazara/Widgets/ScrollAreaWidget.hpp>
-#include <Nazara/Widgets/TextAreaWidget.hpp>
-#include <NazaraUtils/Signal.hpp>
+#include <Nazara/Widgets/BaseWidget.hpp>
 #include <variant>
+
+namespace Nz
+{
+	class RichTextAreaWidget;
+	class ScrollAreaWidget;
+	class TextAreaWidget;
+}
 
 namespace tsom
 {
-	class TSOM_CLIENTLIB_API Chatbox
+	class TSOM_CLIENTLIB_API Chatbox : public Nz::BaseWidget
 	{
 		public:
 			struct ColorItem
@@ -33,16 +36,16 @@ namespace tsom
 
 			using Item = std::variant<ColorItem, TextItem>;
 
-			Chatbox(Nz::RenderTarget& renderTarget, Nz::Canvas* canvas);
+			Chatbox(Nz::BaseWidget* parent);
 			Chatbox(const Chatbox&) = delete;
 			Chatbox(Chatbox&&) = delete;
-			~Chatbox();
+			~Chatbox() = default;
 
 			void Clear();
 			inline void Close();
 
-			inline bool IsOpen() const;
-			inline bool IsTyping() const;
+			bool IsOpen() const;
+			bool IsTyping() const;
 
 			void Open(bool shouldOpen = true);
 
@@ -56,7 +59,7 @@ namespace tsom
 			NazaraSignal(OnChatMessage, const std::string& /*message*/);
 
 		private:
-			void OnRenderTargetSizeChange(const Nz::RenderTarget* renderTarget, const Nz::Vector2ui& newSize);
+			void Layout() override;
 			void Refresh();
 
 			NazaraSlot(Nz::RenderTarget, OnRenderTargetSizeChange, m_onTargetChangeSizeSlot);

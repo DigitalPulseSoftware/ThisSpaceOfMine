@@ -4,8 +4,8 @@
 
 namespace tsom
 {
-	inline void Chatbox::Close()
+	inline BlockIndex BlockSelectionBar::GetSelectedBlock() const
 	{
-		return Open(false);
+		return m_selectedBlockIndex;
 	}
 }

@@ -4,75 +4,42 @@
 
 #include <ClientLib/EscapeMenu.hpp>
 #include <Nazara/TextRenderer/SimpleTextDrawer.hpp>
+#include <Nazara/Widgets/BoxLayout.hpp>
 
 namespace tsom
 {
-	EscapeMenu::EscapeMenu(Nz::Canvas* canvas)
+	EscapeMenu::EscapeMenu(Nz::BaseWidget* parent) :
+	BaseWidget(parent)
 	{
-		m_backgroundWidget = canvas->Add<Nz::BaseWidget>();
-		m_backgroundWidget->EnableBackground(true);
-		m_backgroundWidget->SetBackgroundColor(Nz::Color(0, 0, 0, 0.6f));
+		EnableBackground(true);
+		SetBackgroundColor(Nz::Color(0, 0, 0, 0.6f));
 
-		m_closeMenuButton = m_backgroundWidget->Add<Nz::ButtonWidget>();
+		m_layout = Add<Nz::BoxLayout>(Nz::BoxLayoutOrientation::TopToBottom);
+
+		m_closeMenuButton = m_layout->Add<Nz::ButtonWidget>();
 		m_closeMenuButton->UpdateText(Nz::SimpleTextDrawer::Draw("Close", 30));
-		m_closeMenuButton->Resize(m_closeMenuButton->GetPreferredSize());
+		m_closeMenuButton->SetMaximumSize(m_closeMenuButton->GetPreferredSize());
 		m_closeMenuButton->OnButtonTrigger.Connect([this](const Nz::ButtonWidget*)
 		{
 			Hide();
 		});
 
-		m_disconnectButton = m_backgroundWidget->Add<Nz::ButtonWidget>();
+		m_disconnectButton = m_layout->Add<Nz::ButtonWidget>();
 		m_disconnectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Disconnect", 30));
-		m_disconnectButton->Resize(m_disconnectButton->GetPreferredSize());
+		m_disconnectButton->SetMaximumSize(m_disconnectButton->GetPreferredSize());
 		m_disconnectButton->OnButtonTrigger.Connect([this](const Nz::ButtonWidget*)
 		{
 			OnDisconnect(this);
 		});
 
-		m_quitAppButton = m_backgroundWidget->Add<Nz::ButtonWidget>();
+		m_quitAppButton = m_layout->Add<Nz::ButtonWidget>();
 		m_quitAppButton->UpdateText(Nz::SimpleTextDrawer::Draw("Exit application", 30));
-		m_quitAppButton->Resize(m_quitAppButton->GetPreferredSize());
+		m_quitAppButton->SetMaximumSize(m_quitAppButton->GetPreferredSize());
 		m_quitAppButton->OnButtonTrigger.Connect([this](const Nz::ButtonWidget*)
 		{
 			OnQuitApp(this);
 		});
 
-		// Connect slots
-		m_onCanvasResizedSlot.Connect(canvas->OnWidgetResized, [this](const Nz::BaseWidget*, const Nz::Vector2f&)
-		{
-			Layout();
-		});
-		Layout();
-
-		Hide();
-	}
-
-	EscapeMenu::~EscapeMenu()
-	{
-		m_backgroundWidget->Destroy();
-	}
-
-	void EscapeMenu::Show(bool shouldOpen)
-	{
-		if (IsVisible() != shouldOpen)
-		{
-			m_backgroundWidget->Show(shouldOpen);
-
-			Layout();
-		}
-	}
-
-	void EscapeMenu::OnBackButtonPressed()
-	{
-		m_closeMenuButton->Show();
-		m_disconnectButton->Show();
-		m_quitAppButton->Show();
-
-		Layout();
-	}
-
-	void EscapeMenu::Layout()
-	{
 		constexpr float padding = 20.f;
 		constexpr float buttonPadding = 10.f;
 
@@ -82,25 +49,28 @@ namespace tsom
 		float height = 0.f;
 		for (Nz::ButtonWidget* button : buttons)
 		{
-			maxWidth = std::max(maxWidth, button->GetWidth());
-			height += button->GetHeight();
+			maxWidth = std::max(maxWidth, button->GetPreferredWidth());
+			height += button->GetPreferredHeight();
 		}
+
+		height += buttonPadding * (buttons.size() - 1);
+
+		SetMinimumSize({ maxWidth, height });
+
 		maxWidth += padding * 2.f;
-		height += padding * 2.f + buttonPadding * (buttons.size() - 1);
+		height += padding * 2.f;
 
-		m_backgroundWidget->Resize({ maxWidth, height });
+		SetPreferredSize({ maxWidth, height });
+	}
 
-		float cursor = height - padding;
-		for (Nz::ButtonWidget* button : buttons)
-		{
-			cursor -= button->GetHeight();
+	void EscapeMenu::Layout()
+	{
+		BaseWidget::Layout();
 
-			button->SetPosition({ 0.f, cursor });
-			button->CenterHorizontal();
+		constexpr float padding = 20.f;
+		constexpr float buttonPadding = 10.f;
 
-			cursor -= buttonPadding;
-		}
-
-		m_backgroundWidget->Center();
+		m_layout->Resize(GetMinimumSize());
+		m_layout->Center();
 	}
 }

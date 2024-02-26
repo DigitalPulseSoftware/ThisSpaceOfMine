@@ -3,7 +3,9 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <Game/States/GameState.hpp>
+#include <ClientLib/BlockSelectionBar.hpp>
 #include <ClientLib/Chatbox.hpp>
+#include <ClientLib/EscapeMenu.hpp>
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Systems/AnimationSystem.hpp>
 #include <CommonLib/GameConstants.hpp>
@@ -43,22 +45,16 @@
 
 namespace tsom
 {
-	constexpr std::array<std::string_view, 7> s_selectableBlocks = { "dirt", "grass", "stone", "snow", "stone_bricks", "planks", "debug" };
-
 	GameState::GameState(std::shared_ptr<StateData> stateDataPtr) :
 	WidgetState(std::move(stateDataPtr)),
-	m_selectedBlock(0),
 	m_upCorrection(Nz::Quaternionf::Identity()),
 	m_tickAccumulator(Nz::Time::Zero()),
 	m_tickDuration(Constants::TickDuration),
-	m_escapeMenu(GetStateData().canvas),
 	m_isMouseLocked(true),
 	m_nextInputIndex(1)
 	{
 		auto& stateData = GetStateData();
 		auto& filesystem = stateData.app->GetComponent<Nz::FilesystemAppComponent>();
-
-		Nz::Vector2f screenSize = Nz::Vector2f(stateData.renderTarget->GetSize());
 
 		m_cameraEntity = CreateEntity();
 		{
@@ -88,61 +84,6 @@ namespace tsom
 			dirLight.EnableShadowCasting(true);
 			dirLight.UpdateShadowMapSize(4096);
 		}
-
-		constexpr float InventoryTileSize = 96.f;
-
-		const auto& blockColorMap = stateData.blockLibrary->GetBaseColorTexture();
-
-		float offset = screenSize.x / 2.f - (s_selectableBlocks.size() * (InventoryTileSize + 5.f)) * 0.5f;
-		for (std::string_view blockName : s_selectableBlocks)
-		{
-			bool active = m_selectedBlock == m_inventorySlots.size();
-
-			auto& slot = m_inventorySlots.emplace_back();
-
-			BlockIndex blockIndex = stateData.blockLibrary->GetBlockIndex(blockName);
-
-			std::shared_ptr<Nz::MaterialInstance> slotMat = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic);
-			slotMat->SetTextureProperty("BaseColorMap", stateData.blockLibrary->GetPreviewTexture(blockIndex));
-
-			slot.sprite = std::make_shared<Nz::Sprite>(std::move(slotMat));
-			slot.sprite->SetColor((active) ? Nz::Color::White() : Nz::Color::sRGBToLinear(Nz::Color::Gray()));
-			slot.sprite->SetSize({ InventoryTileSize, InventoryTileSize });
-
-			slot.entity = CreateEntity();
-			slot.entity.emplace<Nz::GraphicsComponent>(slot.sprite, tsom::Constants::RenderMaskUI);
-
-			auto& entityNode = slot.entity.emplace<Nz::NodeComponent>();
-			entityNode.SetPosition({ offset, 5.f });
-			offset += (InventoryTileSize + 5.f);
-		}
-
-		m_selectedBlockIndex = stateData.blockLibrary->GetBlockIndex(s_selectableBlocks[m_selectedBlock]);
-
-		m_mouseWheelMovedSlot.Connect(stateData.window->GetEventHandler().OnMouseWheelMoved, [&](const Nz::WindowEventHandler* /*eventHandler*/, const Nz::WindowEvent::MouseWheelEvent& event)
-		{
-			if (!m_isMouseLocked)
-				return;
-
-			if (event.delta < 0.f)
-			{
-				m_selectedBlock++;
-				if (m_selectedBlock >= s_selectableBlocks.size())
-					m_selectedBlock = 0;
-			}
-			else
-			{
-				if (m_selectedBlock > 0)
-					m_selectedBlock--;
-				else
-					m_selectedBlock = s_selectableBlocks.size() - 1;
-			}
-
-			m_selectedBlockIndex = stateData.blockLibrary->GetBlockIndex(s_selectableBlocks[m_selectedBlock]);
-
-			for (std::size_t i = 0; i < m_inventorySlots.size(); ++i)
-				m_inventorySlots[i].sprite->SetColor((i == m_selectedBlock) ? Nz::Color::White() : Nz::Color::sRGBToLinear(Nz::Color::Gray()));
-		});
 
 		m_skyboxEntity = CreateEntity();
 		{
@@ -286,7 +227,25 @@ namespace tsom
 #endif
 		});
 
-		m_chatBox = std::make_unique<Chatbox>(*stateData.renderTarget, stateData.canvas);
+		m_blockSelectionBar = CreateWidget<BlockSelectionBar>(*stateData.blockLibrary);
+		m_mouseWheelMovedSlot.Connect(stateData.window->GetEventHandler().OnMouseWheelMoved, [&](const Nz::WindowEventHandler* /*eventHandler*/, const Nz::WindowEvent::MouseWheelEvent& event)
+		{
+			if (!m_isMouseLocked)
+				return;
+
+			if (event.delta < 0.f)
+				m_blockSelectionBar->SelectNext();
+			else
+				m_blockSelectionBar->SelectPrevious();
+		});
+
+		m_escapeMenu = CreateWidget<EscapeMenu>();
+		m_escapeMenu->OnWidgetVisibilityUpdated.Connect([&](const Nz::BaseWidget* /*widget*/, bool /*isVisible*/)
+		{
+			UpdateMouseLock();
+		});
+
+		m_chatBox = CreateWidget<Chatbox>();
 		m_chatBox->OnChatMessage.Connect([&](const std::string& message)
 		{
 			Packets::SendChatMessage messagePacket;
@@ -294,6 +253,8 @@ namespace tsom
 
 			stateData.networkSession->SendPacket(messagePacket);
 		});
+
+		LayoutWidgets(Nz::Vector2f(stateData.renderTarget->GetSize()));
 
 		m_onUnhandledKeyPressed.Connect(stateData.canvas->OnUnhandledKeyPressed, [this](const Nz::WindowEventHandler*, const Nz::WindowEvent::KeyEvent& event)
 		{
@@ -303,12 +264,12 @@ namespace tsom
 			{
 				case Nz::Keyboard::VKey::Escape:
 				{
-					if (m_escapeMenu.IsVisible())
-						m_escapeMenu.Hide();
+					if (m_escapeMenu->IsVisible())
+						m_escapeMenu->Hide();
 					else if (m_chatBox->IsOpen())
 						m_chatBox->Close();
 					else
-						m_escapeMenu.Show();
+						m_escapeMenu->Show();
 
 					UpdateMouseLock();
 					break;
@@ -407,6 +368,8 @@ namespace tsom
 						{ Chatbox::TextItem{ message } }
 					}
 				});
+
+				fmt::print("{0}: {1}\n", senderName, message);
 			}
 			else
 			{
@@ -415,6 +378,8 @@ namespace tsom
 						{ Chatbox::TextItem{ message } }
 					}
 				});
+
+				fmt::print("{0}\n", message);
 			}
 		});
 
@@ -426,6 +391,8 @@ namespace tsom
 					{ Chatbox::TextItem{ " left the server" } }
 				}
 			});
+
+			fmt::print("{0} left the server\n", playerName);
 		});
 
 		m_onPlayerJoined.Connect(stateData.sessionHandler->OnPlayerJoined, [this](const std::string& playerName)
@@ -436,14 +403,16 @@ namespace tsom
 					{ Chatbox::TextItem{ " joined the server" } }
 				}
 			});
+
+			fmt::print("{0} joined the server\n", playerName);
 		});
 
-		m_escapeMenu.OnDisconnect.Connect([this](EscapeMenu* /*menu*/)
+		m_escapeMenu->OnDisconnect.Connect([this](EscapeMenu* /*menu*/)
 		{
 			GetStateData().networkSession->Disconnect();
 		});
 
-		m_escapeMenu.OnQuitApp.Connect([this](EscapeMenu* /*menu*/)
+		m_escapeMenu->OnQuitApp.Connect([this](EscapeMenu* /*menu*/)
 		{
 			GetStateData().app->Quit();
 		});
@@ -456,6 +425,9 @@ namespace tsom
 	void GameState::Enter(Nz::StateMachine& fsm)
 	{
 		WidgetState::Enter(fsm);
+
+		m_chatBox->Close();
+		m_escapeMenu->Hide();
 
 #ifdef FREEFLIGHT
 		auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
@@ -470,9 +442,7 @@ namespace tsom
 		m_predictedCameraRotation = m_remainingCameraRotation;
 		m_incomingCameraRotation = Nz::EulerAnglesf::Zero();
 
-		Nz::WindowEventHandler& eventHandler = stateData.window->GetEventHandler();
-
-		m_mouseMovedSlot.Connect(eventHandler.OnMouseMoved, [&](const Nz::WindowEventHandler*, const Nz::WindowEvent::MouseMoveEvent& event)
+		m_mouseMovedSlot.Connect(stateData.canvas->OnUnhandledMouseMoved, [&](const Nz::WindowEventHandler*, const Nz::WindowEvent::MouseMoveEvent& event)
 		{
 			if (!m_isMouseLocked)
 				return;
@@ -506,7 +476,7 @@ namespace tsom
 #endif
 		});
 
-		m_mouseButtonReleasedSlot.Connect(eventHandler.OnMouseButtonReleased, [&](const Nz::WindowEventHandler*, const Nz::WindowEvent::MouseButtonEvent& event)
+		m_mouseButtonReleasedSlot.Connect(stateData.canvas->OnUnhandledMouseButtonReleased, [&](const Nz::WindowEventHandler*, const Nz::WindowEvent::MouseButtonEvent& event)
 		{
 			if (!m_isMouseLocked)
 				return;
@@ -569,7 +539,7 @@ namespace tsom
 					placeBlock.voxelLoc.x = coordinates->x;
 					placeBlock.voxelLoc.y = coordinates->y;
 					placeBlock.voxelLoc.z = coordinates->z;
-					placeBlock.newContent = Nz::SafeCast<Nz::UInt8>(m_selectedBlockIndex);
+					placeBlock.newContent = Nz::SafeCast<Nz::UInt8>(m_blockSelectionBar->GetSelectedBlock());
 
 					stateData.networkSession->SendPacket(placeBlock);
 				}
@@ -733,6 +703,17 @@ namespace tsom
 		return true;
 	}
 
+	void GameState::LayoutWidgets(const Nz::Vector2f& newSize)
+	{
+		m_blockSelectionBar->Resize({ newSize.x, BlockSelectionBar::InventoryTileSize });
+		m_blockSelectionBar->SetPosition({ 0.f, 5.f });
+
+		m_chatBox->Resize(newSize);
+
+		m_escapeMenu->Resize(m_escapeMenu->GetPreferredSize());
+		m_escapeMenu->Center();
+	}
+
 	void GameState::OnTick(Nz::Time elapsedTime, bool lastTick)
 	{
 		AnimationSystem& animationSystem = GetStateData().world->GetSystem<AnimationSystem>();
@@ -793,7 +774,7 @@ namespace tsom
 
 	void GameState::UpdateMouseLock()
 	{
-		m_isMouseLocked = !m_chatBox->IsTyping() && !m_escapeMenu.IsVisible();
+		m_isMouseLocked = !m_chatBox->IsTyping() && !m_escapeMenu->IsVisible();
 		Nz::Mouse::SetRelativeMouseMode(m_isMouseLocked);
 	}
 }
