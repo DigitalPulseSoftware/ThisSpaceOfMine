@@ -21,7 +21,7 @@ add_requires(
 
 if is_plat("windows") then
 	add_requires("stackwalker 5b0df7a4db8896f6b6dc45d36e383c52577e3c6b")
-elseif is_plat("macos") then
+elseif is_plat("macosx") then
 	add_requires("moltenvk", { configs = { shared = true }})
 end
 
@@ -208,7 +208,10 @@ target("TSOMGame", function ()
 	add_rpathdirs("@executable_path")
 
 	add_packages("nazaraengine", { components = { "widgets" }, public = true })
-	add_packages("libcurl", "moltenvk", { links = {} })
+	add_packages("libcurl", { links = {} })
+	if is_plat("macosx") then
+		add_packages("moltenvk", { links = {} })
+	end
 end)
 
 target("TSOMServer", function ()
