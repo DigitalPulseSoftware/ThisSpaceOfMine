@@ -16,12 +16,12 @@ namespace tsom
 		{ PacketIndex<Packets::ChunkCreate>,         { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::ChunkDestroy>,        { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::ChunkUpdate>,         { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::EntitiesCreation>,    { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::EntitiesDelete>,      { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::EntitiesStateUpdate>, { .channel = 1, .flags = Nz::ENetPacketFlag_Unreliable } },
-		{ PacketIndex<Packets::GameData>,            { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::PlayerJoin>,          { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::PlayerLeave>,         { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::EntitiesCreation>,    { .channel = 2, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::EntitiesDelete>,      { .channel = 2, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::EntitiesStateUpdate>, { .channel = 2, .flags = Nz::ENetPacketFlag_Unreliable } },
+		{ PacketIndex<Packets::GameData>,            { .channel = 2, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::PlayerJoin>,          { .channel = 2, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::PlayerLeave>,         { .channel = 2, .flags = Nz::ENetPacketFlag::Reliable } },
 	});
 
 	PlayerSessionHandler::PlayerSessionHandler(NetworkSession* session, ServerPlayer* player) :

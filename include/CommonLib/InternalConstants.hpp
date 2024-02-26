@@ -15,9 +15,10 @@
 namespace tsom::Constants
 {
 	// Network constants
-	constexpr Nz::Time TickDuration = Nz::Time::TickDuration(60);
+	constexpr Nz::UInt32 NetworkChannelCount = 3;
 	constexpr Nz::UInt32 ProtocolRequiredClientVersion = BuildVersion(0, 1, 2);
 	constexpr Nz::UInt32 ServerPort = 29536;
+	constexpr Nz::Time TickDuration = Nz::Time::TickDuration(60);
 
 	// Server constants
 	constexpr Nz::Time SaveInterval = Nz::Time::Seconds(30);

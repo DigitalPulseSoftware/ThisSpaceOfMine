@@ -3,26 +3,23 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/NetworkReactor.hpp>
+#include <CommonLib/InternalConstants.hpp>
 #include <Nazara/Core/ThreadExt.hpp>
 #include <cassert>
-#include <condition_variable>
-#include <mutex>
 #include <stdexcept>
 
 namespace tsom
 {
-	constexpr Nz::UInt32 NetworkChannelCount = 2;
-
 	NetworkReactor::NetworkReactor(std::size_t idOffset, Nz::NetProtocol protocol, Nz::UInt16 port, std::size_t maxClient) :
 	m_idOffset(idOffset),
 	m_protocol(protocol)
 	{
 		if (port > 0)
 		{
-			if (!m_host.Create(protocol, port, maxClient, NetworkChannelCount))
+			if (!m_host.Create(protocol, port, maxClient, Constants::NetworkChannelCount))
 				throw std::runtime_error("failed to start reactor");
 		}
-		else if (!m_host.Create((protocol == Nz::NetProtocol::IPv4) ? Nz::IpAddress::LoopbackIpV4 : Nz::IpAddress::LoopbackIpV6, maxClient, NetworkChannelCount))
+		else if (!m_host.Create((protocol == Nz::NetProtocol::IPv4) ? Nz::IpAddress::LoopbackIpV4 : Nz::IpAddress::LoopbackIpV6, maxClient, Constants::NetworkChannelCount))
 			throw std::runtime_error("failed to start reactor");
 
 		m_clients.resize(maxClient, nullptr);
@@ -48,23 +45,18 @@ namespace tsom
 		request.remoteAddress = std::move(address);
 
 		std::size_t newClientId = InvalidPeerId;
+		// As InvalidClientId is a possible return from the callback, we need another variable to prevent spurious wakeup
 		std::atomic_bool hasReturned = false;
 		request.callback = [&](std::size_t peerId)
 		{
 			// This callback is called from within the reactor
 			newClientId = m_idOffset + peerId;
-			hasReturned.store(true, std::memory_order_release);
-
-			std::unique_lock<std::mutex> lock(signalMutex);
-			signal.notify_all();
+			hasReturned = true;
+			hasReturned.notify_all();
 		};
-
-		// Lock before enqueuing the request, to prevent notify being called before we actually wait on the signal
-		std::unique_lock<std::mutex> lock(signalMutex);
 		m_connectionRequests.enqueue(request);
 
-		// As InvalidClientId is a possible return from the callback, we need another variable to prevent spurious wakeup
-		signal.wait(lock, [&]() { return hasReturned.load(std::memory_order_acquire); });
+		hasReturned.wait(false);
 
 		return newClientId;
 	}
@@ -197,7 +189,7 @@ namespace tsom
 		ConnectionRequest request;
 		while (m_connectionRequests.try_dequeue(token, request))
 		{
-			if (Nz::ENetPeer* peer = m_host.Connect(request.remoteAddress, NetworkChannelCount, request.data))
+			if (Nz::ENetPeer* peer = m_host.Connect(request.remoteAddress, Constants::NetworkChannelCount, request.data))
 			{
 				Nz::UInt16 peerId = peer->GetPeerId();
 				m_clients[peerId] = peer;
