@@ -3,6 +3,7 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/NetworkSessionManager.hpp>
+#include <CommonLib/Version.hpp> //!< Remove on 0.4.0
 #include <CommonLib/Protocol/Packets.hpp>
 
 namespace tsom
@@ -44,9 +45,11 @@ namespace tsom
 		byteStream.FlushBits();
 
 		// 0.3.2 extended from 2 to 3 channels but 0.3.1 clients can't receive packets on channel 2
+		//! Remove on 0.4
 		Nz::UInt8 channel = sendAttributes.channel;
-		if (m_protocolVersion < BuildVersion(0, 3, 1))
-			channel = std::min(channel, 1);
+		if (m_protocolVersion < BuildVersion(0, 3, 1) && channel >= 2)
+			channel = 1;
+		//! Remove on 0.4
 
 		m_reactor.SendData(m_peerId, channel, sendAttributes.flags, std::move(byteArray), std::move(acknowledgeCallback));
 	}
