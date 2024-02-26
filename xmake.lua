@@ -21,9 +21,16 @@ add_requires(
 
 if is_plat("windows") then
 	add_requires("stackwalker 5b0df7a4db8896f6b6dc45d36e383c52577e3c6b")
+elseif is_plat("macos") then
+	add_requires("moltenvk", { configs = { shared = true }})
 end
 
 add_requireconfs("fmt", "stackwalker", { debug = is_mode("debug") })
+
+-- Don't link with system-installed libs on CI
+if os.getenv("CI") then
+	add_requireconfs("*", { system = false })
+end
 
 add_rules("mode.debug", "mode.releasedbg", "mode.release")
 add_rules("plugin.vsxmake.autoupdate")
