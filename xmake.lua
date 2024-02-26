@@ -208,7 +208,7 @@ target("TSOMGame", function ()
 	add_rpathdirs("@executable_path")
 
 	add_packages("nazaraengine", { components = { "widgets" }, public = true })
-	add_packages("libcurl", { links = {} })
+	add_packages("libcurl", "moltenvk", { links = {} })
 end)
 
 target("TSOMServer", function ()
