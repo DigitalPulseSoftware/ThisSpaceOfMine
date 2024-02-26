@@ -43,7 +43,12 @@ namespace tsom
 
 		byteStream.FlushBits();
 
-		m_reactor.SendData(m_peerId, sendAttributes.channel, sendAttributes.flags, std::move(byteArray), std::move(acknowledgeCallback));
+		// 0.3.2 extended from 2 to 3 channels but 0.3.1 clients can't receive packets on channel 2
+		Nz::UInt8 channel = sendAttributes.channel;
+		if (m_protocolVersion < BuildVersion(0, 3, 1))
+			channel = std::min(channel, 1);
+
+		m_reactor.SendData(m_peerId, channel, sendAttributes.flags, std::move(byteArray), std::move(acknowledgeCallback));
 	}
 
 	inline void NetworkSession::SetProtocolVersion(Nz::UInt32 protocolVersion)
