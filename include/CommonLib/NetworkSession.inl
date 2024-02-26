@@ -47,7 +47,7 @@ namespace tsom
 		// 0.3.2 extended from 2 to 3 channels but 0.3.1 clients can't receive packets on channel 2
 		//! Remove on 0.4
 		Nz::UInt8 channel = sendAttributes.channel;
-		if (m_protocolVersion < BuildVersion(0, 3, 1) && channel >= 2)
+		if (m_protocolVersion < BuildVersion(0, 3, 2) && channel >= 2)
 			channel = 1;
 		//! Remove on 0.4
 
