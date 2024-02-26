@@ -4,8 +4,8 @@
 
 #include <CommonLib/Protocol/Packets.hpp>
 #include <CommonLib/Version.hpp>
-#include <fmt/format.h>
 #include <lz4.h>
+#include <fmt/format.h>
 
 namespace tsom
 {

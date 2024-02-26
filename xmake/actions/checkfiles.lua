@@ -558,7 +558,7 @@ on_run(function ()
 		Name = "copyright",
 		Check = function (moduleName)
 			local files = table.join(
-				os.files("include/" .. moduleName .. "/**.hpp|Config.hpp"),
+				os.files("include/" .. moduleName .. "/**.hpp"),
 				os.files("include/" .. moduleName .. "/**.inl"),
 				os.files("src/" .. moduleName .. "/**.hpp"),
 				os.files("src/" .. moduleName .. "/**.inl"),

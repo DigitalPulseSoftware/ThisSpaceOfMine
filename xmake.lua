@@ -116,7 +116,8 @@ target("CommonLib", function ()
 		depend.on_changed(function ()
 			progress.show(opt.progress, "${color.build.target}updating version info (%s on %s@%s)", targetversion:shortstr(), commitHash, branch)
 			io.writefile(targetfile, string.format([[
-// no header guard
+// this file was automatically generated
+// no header guards
 
 std::uint32_t GameMajorVersion = %s;
 std::uint32_t GameMinorVersion = %s;

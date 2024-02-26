@@ -7,12 +7,12 @@
 #ifndef TSOM_COMMONLIB_UTILITY_CRASHHANDLERWIN32_HPP
 #define TSOM_COMMONLIB_UTILITY_CRASHHANDLERWIN32_HPP
 
-// no include reorder
+// no include reordering
 
 #include <CommonLib/Utility/CrashHandler.hpp>
 #include <Nazara/Core/DynLib.hpp>
-#include <windows.h>
-#include <Dbghelp.h> //< Must be included after windows.h
+#include <Windows.h>
+#include <Dbghelp.h> //< Must be included after Windows.h
 
 namespace tsom
 {

@@ -22,7 +22,7 @@
 #include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <Nazara/Core/PluginLoader.hpp>
 #include <Nazara/Core/StateMachine.hpp>
-#include <Nazara/Core/Plugins/AssimpPlugin.hpp>
+#include <Nazara/Core/TaskScheduler.hpp>
 #include <Nazara/Graphics/Graphics.hpp>
 #include <Nazara/Graphics/RenderWindow.hpp>
 #include <Nazara/Network/Network.hpp>
@@ -34,8 +34,8 @@
 #include <Nazara/Renderer/GpuSwitch.hpp>
 #include <Nazara/TextRenderer/TextRenderer.hpp>
 #include <Nazara/Widgets/Widgets.hpp>
-#include <Nazara/Core/TaskScheduler.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
+#include <Nazara/Core/Plugins/AssimpPlugin.hpp>
 #include <Nazara/Graphics/Components/CameraComponent.hpp>
 #include <Nazara/Graphics/Systems/RenderSystem.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>

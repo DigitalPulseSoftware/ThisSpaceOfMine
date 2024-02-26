@@ -18,8 +18,8 @@
 #include <NazaraUtils/Signal.hpp>
 #include <NazaraUtils/SparsePtr.hpp>
 #include <memory>
-#include <shared_mutex>
 #include <optional>
+#include <shared_mutex>
 #include <vector>
 
 namespace Nz
