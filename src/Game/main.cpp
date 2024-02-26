@@ -59,7 +59,7 @@ int GameMain(int argc, char* argv[])
 	auto& filesystem = app.AddComponent<Nz::FilesystemAppComponent>();
 
 	std::filesystem::path assetPath = Nz::Utf8Path("assets");
-	if (!std::filesystem::exists(assetPath))
+	if (!std::filesystem::is_directory(assetPath))
 	{
 		fmt::print(fg(fmt::color::red), "assets are missing!\n");
 
