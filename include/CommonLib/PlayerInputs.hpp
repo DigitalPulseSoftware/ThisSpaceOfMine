@@ -16,6 +16,7 @@ namespace tsom
 	{
 		InputIndex index;
 
+		bool crouch = false;
 		bool jump = false;
 		bool moveForward = false;
 		bool moveBackward = false;

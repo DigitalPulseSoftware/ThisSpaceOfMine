@@ -22,6 +22,7 @@ namespace tsom::Constants
 	constexpr float PlayerColliderRadius = 0.3f;
 	constexpr float PlayerColliderHeight = 1.85f;
 	constexpr float PlayerEyesHeight = 1.75f;
+	constexpr float PlayerFlySpeed = 20.f;
 	constexpr float PlayerJumpPower = 5.f;
 	constexpr float PlayerSprintSpeed = 8.f;
 	constexpr float PlayerWalkSpeed = 5.f;

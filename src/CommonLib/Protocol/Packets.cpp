@@ -51,6 +51,10 @@ namespace tsom
 				serializer &= data.moveLeft;
 				serializer &= data.moveRight;
 				serializer &= data.sprint;
+				if (serializer.GetProtocolVersion() >= BuildVersion(0, 3, 2))
+					serializer &= data.crouch;
+				else if (!serializer.IsWriting())
+					data.crouch = false;
 
 				serializer &= data.pitch;
 				serializer &= data.yaw;

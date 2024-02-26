@@ -28,10 +28,14 @@ namespace tsom
 			CharacterController(CharacterController&&) = delete;
 			~CharacterController() = default;
 
+			inline void EnableFlying(bool enable = true);
+
 			inline const Nz::EulerAnglesf& GetCameraRotation() const;
 			inline const Nz::Vector3f& GetCharacterPosition() const;
 			inline const Nz::Quaternionf& GetCharacterRotation() const;
 			inline const Nz::Quaternionf& GetReferenceRotation() const;
+
+			inline bool IsFlying() const;
 
 			void PostSimulate(Nz::PhysCharacter3D& character, float elapsedTime) override;
 			void PreSimulate(Nz::PhysCharacter3D& character, float elapsedTime) override;
@@ -51,6 +55,7 @@ namespace tsom
 			PlayerInputs m_lastInputs;
 			const Planet* m_planet;
 			bool m_allowInputRotation;
+			bool m_isFlying;
 	};
 }
 

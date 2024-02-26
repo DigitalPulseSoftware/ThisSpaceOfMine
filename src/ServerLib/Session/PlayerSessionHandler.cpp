@@ -4,6 +4,7 @@
 
 #include <ServerLib/Session/PlayerSessionHandler.hpp>
 #include <CommonLib/BlockIndex.hpp>
+#include <CommonLib/CharacterController.hpp>
 #include <ServerLib/ServerInstance.hpp>
 #include <Nazara/Physics3D/Collider3D.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
@@ -69,9 +70,20 @@ namespace tsom
 
 	void PlayerSessionHandler::HandlePacket(Packets::SendChatMessage&& playerChat)
 	{
-		if (static_cast<std::string_view>(playerChat.message) == "/respawn")
+		std::string_view message = static_cast<std::string_view>(playerChat.message);
+		if (message == "/respawn")
 		{
 			m_player->Respawn();
+			return;
+		}
+		else if (message == "/fly")
+		{
+			m_player->GetCharacterController()->EnableFlying(!m_player->GetCharacterController()->IsFlying());
+
+			Packets::ChatMessage chatMessage;
+			chatMessage.message = (m_player->GetCharacterController()->IsFlying()) ? "fly enabled" : "fly disabled";
+
+			GetSession()->SendPacket(std::move(chatMessage));
 			return;
 		}
 

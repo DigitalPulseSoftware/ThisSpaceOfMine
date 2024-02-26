@@ -4,6 +4,11 @@
 
 namespace tsom
 {
+	inline void CharacterController::EnableFlying(bool enable)
+	{
+		m_isFlying = enable;
+	}
+
 	inline const Nz::EulerAnglesf& CharacterController::GetCameraRotation() const
 	{
 		return m_cameraRotation;
@@ -22,6 +27,11 @@ namespace tsom
 	inline const Nz::Quaternionf& CharacterController::GetReferenceRotation() const
 	{
 		return m_referenceRotation;
+	}
+
+	inline bool CharacterController::IsFlying() const
+	{
+		return m_isFlying;
 	}
 
 	inline void CharacterController::SetCurrentPlanet(const Planet* planet)

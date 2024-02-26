@@ -35,6 +35,7 @@ namespace tsom
 
 			void Destroy();
 
+			inline const std::shared_ptr<CharacterController>& GetCharacterController();
 			inline entt::handle GetControlledEntity() const;
 			inline const std::string& GetNickname() const;
 			inline PlayerIndex GetPlayerIndex() const;

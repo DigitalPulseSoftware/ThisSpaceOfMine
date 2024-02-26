@@ -20,7 +20,8 @@ namespace tsom
 	m_cameraRotation(Nz::EulerAnglesf::Zero()),
 	m_referenceRotation(Nz::Quaternionf::Identity()),
 	m_planet(nullptr),
-	m_allowInputRotation(false)
+	m_allowInputRotation(false),
+	m_isFlying(false)
 	{
 	}
 
@@ -88,28 +89,26 @@ namespace tsom
 		Nz::Quaternionf movementRotation;
 		if (m_planet)
 		{
-			// Apply gravity
-			Nz::Vector3f position = character.GetPosition();
-			velocity -= m_planet->GetGravityFactor(position) * m_planet->ComputeUpDirection(character.GetPosition()) * elapsedTime;
-
-			if (m_lastInputs.jump)
+			if (!m_isFlying)
 			{
-				if (character.IsOnGround())
-					velocity += up * Constants::PlayerJumpPower;
+				// Apply gravity
+				Nz::Vector3f position = character.GetPosition();
+				velocity -= m_planet->GetGravityFactor(position) * m_planet->ComputeUpDirection(character.GetPosition()) * elapsedTime;
 			}
-
-			// Restrict movement around up
-			auto ExtractYawRotation = [&](const Nz::Quaternionf& quat)
-			{
-				Nz::RadianAnglef yaw(std::atan2(2.f * quat.y * quat.w - 2.f * quat.x * quat.z, 1.f - 2.f * quat.y * quat.y - 2.f * quat.z * quat.z));
-				return Nz::Quaternionf(yaw, up);
-			};
 
 			movementRotation = character.GetRotation();
 		}
 		else
 			movementRotation = character.GetRotation() * Nz::Quaternionf(Nz::EulerAnglesf(m_lastInputs.pitch, 0.f, 0.f));
 
+		if (!m_isFlying)
+		{
+			if (m_lastInputs.jump)
+			{
+				if (character.IsOnGround())
+					velocity += up * Constants::PlayerJumpPower;
+			}
+		}
 
 		Nz::Vector3f desiredVelocity = Nz::Vector3f::Zero();
 		if (m_lastInputs.moveForward)
@@ -124,6 +123,15 @@ namespace tsom
 		if (m_lastInputs.moveRight)
 			desiredVelocity += Nz::Vector3f::Right();
 
+		if (m_isFlying)
+		{
+			if (m_lastInputs.jump)
+				desiredVelocity += Nz::Vector3f::Up();
+
+			if (m_lastInputs.crouch)
+				desiredVelocity -= Nz::Vector3f::Up();
+		}
+
 		if (desiredVelocity != Nz::Vector3f::Zero())
 		{
 			character.SetFriction(0.f);
@@ -132,12 +140,24 @@ namespace tsom
 		else
 			character.SetFriction(1.f);
 
-		float moveSpeed = (m_lastInputs.sprint) ? Constants::PlayerSprintSpeed : Constants::PlayerWalkSpeed;
+		float moveSpeed;
+		if (m_isFlying)
+			moveSpeed = Constants::PlayerFlySpeed * ((m_lastInputs.sprint) ? 2.f : 1.f);
+		else if (m_lastInputs.sprint)
+			moveSpeed = Constants::PlayerSprintSpeed;
+		else
+			moveSpeed = Constants::PlayerWalkSpeed;
 
 		desiredVelocity = movementRotation * desiredVelocity * moveSpeed;
-		desiredVelocity += velocity.Project(up);
 
-		float desiredImpact = (character.IsOnGround()) ? 0.25f : 0.1f;
+		float desiredImpact;
+		if (m_isFlying)
+			desiredImpact = 0.2f;
+		else
+		{
+			desiredVelocity += velocity.Project(up);
+			desiredImpact = (character.IsOnGround()) ? 0.25f : 0.1f;
+		}
 
 		character.SetLinearVelocity(Lerp(velocity, desiredVelocity, desiredImpact));
 	}

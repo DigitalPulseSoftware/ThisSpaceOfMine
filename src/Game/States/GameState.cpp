@@ -39,7 +39,6 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
-//#define FREEFLIGHT
 #define DEBUG_ROTATION 0
 
 namespace tsom
@@ -197,9 +196,7 @@ namespace tsom
 			cameraRotation.Normalize();
 
 			auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
-#ifndef FREEFLIGHT
 			cameraNode.SetRotation(cameraRotation);
-#endif
 
 #if DEBUG_ROTATION
 			Nz::EulerAnglesf err = m_predictedCameraRotation - currentRotation;
@@ -437,11 +434,6 @@ namespace tsom
 		m_chatBox->Close();
 		m_escapeMenu->Hide();
 
-#ifdef FREEFLIGHT
-		auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
-		cameraNode.SetPosition(Nz::Vector3f::Up() * (m_planet->GetGridDimensions().z * m_planet->GetTileSize() * 0.5f + 1.f));
-#endif
-
 		auto& stateData = GetStateData();
 
 		m_planetEntities = std::make_unique<ClientChunkEntities>(*stateData.app, *stateData.world, *stateData.taskScheduler, *m_planet, *stateData.blockLibrary);
@@ -464,24 +456,6 @@ namespace tsom
 
 			m_incomingCameraRotation.pitch += pitchMod;
 			m_incomingCameraRotation.yaw += yawMod;
-
-#ifdef FREEFLIGHT
-			static Nz::EulerAnglesf camAngles = Nz::EulerAnglesf::Zero();
-
-			// Gestion de la caméra free-fly (Rotation)
-			//
-			// On modifie l'angle de la caméra grâce au déplacement relatif sur X de la souris
-			camAngles.yaw = camAngles.yaw + yawMod;
-			camAngles.yaw.Normalize();
-
-			// Idem, mais pour éviter les problèmes de calcul de la matrice de vue, on restreint les angles
-			camAngles.pitch = Nz::Clamp(camAngles.pitch + pitchMod, -89.f, 89.f);
-
-			/*auto& playerRotNode = registry.get<Nz::NodeComponent>(playerRotation);
-			playerRotNode.SetRotation(camAngles);*/
-			auto& playerRotNode = m_cameraEntity.get<Nz::NodeComponent>();
-			playerRotNode.SetRotation(camAngles);
-#endif
 		});
 
 		m_mouseButtonReleasedSlot.Connect(stateData.canvas->OnUnhandledMouseButtonReleased, [&](const Nz::WindowEventHandler*, const Nz::WindowEvent::MouseButtonEvent& event)
@@ -598,28 +572,6 @@ namespace tsom
 		float updateTime = elapsedTime.AsSeconds();
 
 		auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
-#ifdef FREEFLIGHT
-		if (m_isMouseLocked)
-		{
-			if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::Space))
-				cameraNode.MoveGlobal(Nz::Vector3f::Up() * cameraSpeed * updateTime);
-
-			if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::Z))
-				cameraNode.Move(Nz::Vector3f::Forward() * cameraSpeed * updateTime);
-
-			if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::S))
-				cameraNode.Move(Nz::Vector3f::Backward() * cameraSpeed * updateTime);
-
-			if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::Q))
-				cameraNode.Move(Nz::Vector3f::Left() * cameraSpeed * updateTime);
-
-			if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::D))
-				cameraNode.Move(Nz::Vector3f::Right() * cameraSpeed * updateTime);
-		}
-#else
-		if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::F1) && stateData.networkSession->IsConnected())
-			stateData.networkSession->Disconnect();
-
 		if (m_controlledEntity)
 		{
 			Nz::NodeComponent& characterNode = m_controlledEntity.get<Nz::NodeComponent>();
@@ -645,8 +597,6 @@ namespace tsom
 				cameraNode.SetRotation(cameraRotation);
 			}
 		}
-
-#endif
 
 		// Raycast
 		{
@@ -733,6 +683,7 @@ namespace tsom
 
 		if (m_isMouseLocked)
 		{
+			inputPacket.inputs.crouch = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::LControl);
 			inputPacket.inputs.jump = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::Space);
 			inputPacket.inputs.moveForward = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::W);
 			inputPacket.inputs.moveBackward = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::S);

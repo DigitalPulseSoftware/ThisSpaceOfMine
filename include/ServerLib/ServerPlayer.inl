@@ -13,6 +13,11 @@ namespace tsom
 	{
 	}
 
+	inline const std::shared_ptr<CharacterController>& ServerPlayer::GetCharacterController()
+	{
+		return m_controller;
+	}
+
 	inline entt::handle ServerPlayer::GetControlledEntity() const
 	{
 		return m_controlledEntity;
