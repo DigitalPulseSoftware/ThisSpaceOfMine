@@ -33,8 +33,6 @@ namespace tsom
 			bool Update(Nz::StateMachine& fsm, Nz::Time elapsedTime) override;
 
 		private:
-			struct PendingDownload;
-
 			void LayoutWidgets(const Nz::Vector2f& newSize) override;
 			void StartUpdate();
 			void UpdateProgressBar();

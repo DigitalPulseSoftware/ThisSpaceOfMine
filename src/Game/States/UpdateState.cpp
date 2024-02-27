@@ -61,23 +61,28 @@ namespace tsom
 		m_hasUpdateStarted = false;
 
 		m_activeDownloads.clear(); //< just in case
-		auto QueueDownload = [&](std::string_view filename, const UpdateInfo::DownloadInfo* info)
+		auto QueueDownload = [&](std::string_view filename, const UpdateInfo::DownloadInfo& info)
 		{
-			auto download = m_downloadManager.QueueDownload(Nz::Utf8Path(filename), info->downloadUrl, info->size, info->sha256);
+			auto download = m_downloadManager.QueueDownload(Nz::Utf8Path(filename), info.downloadUrl, info.size, info.sha256);
 			m_activeDownloads.push_back(download);
 
 			return download;
 		};
 
 		if (m_updateInfo.assets)
-			m_updateArchives.push_back(QueueDownload("autoupdate_assets", &m_updateInfo.assets.value()));
+			m_updateArchives.push_back(QueueDownload("autoupdate_assets", m_updateInfo.assets.value()));
 
-		m_updateArchives.push_back(QueueDownload("autoupdate_binaries", &m_updateInfo.binaries));
+		m_updateArchives.push_back(QueueDownload("autoupdate_binaries", m_updateInfo.binaries));
 
-		m_updaterDownload = QueueDownload("this_updater_of_mine", &m_updateInfo.updater);
+		m_updaterDownload = QueueDownload("this_updater_of_mine", m_updateInfo.updater);
 
 		for (auto& downloadPtr : m_activeDownloads)
 		{
+			downloadPtr->OnDownloadFailed.Connect([this](const DownloadManager::Download&)
+			{
+				m_isCancelled = true;
+			});
+
 			downloadPtr->OnDownloadProgress.Connect([this](const DownloadManager::Download&)
 			{
 				UpdateProgressBar();
