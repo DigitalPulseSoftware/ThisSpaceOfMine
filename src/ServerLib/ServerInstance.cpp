@@ -6,8 +6,8 @@
 #include <CommonLib/InternalConstants.hpp>
 #include <ServerLib/NetworkedEntitiesSystem.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
-#include <Nazara/Core/TaskSchedulerAppComponent.hpp>
 #include <Nazara/Core/File.hpp>
+#include <Nazara/Core/TaskSchedulerAppComponent.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <NazaraUtils/PathUtils.hpp>
 #include <fmt/color.h>

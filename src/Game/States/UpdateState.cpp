@@ -14,6 +14,7 @@
 #include <Nazara/Widgets/ButtonWidget.hpp>
 #include <Nazara/Widgets/ProgressBarWidget.hpp>
 #include <Nazara/Widgets/SimpleLabelWidget.hpp>
+#include <NazaraUtils/PathUtils.hpp>
 #include <fmt/color.h>
 #include <fmt/core.h>
 #include <numeric>
@@ -23,6 +24,7 @@ namespace tsom
 	UpdateState::UpdateState(std::shared_ptr<StateData> stateData, std::shared_ptr<Nz::State> previousState, UpdateInfo updateInfo) :
 	WidgetState(stateData),
 	m_previousState(std::move(previousState)),
+	m_downloadManager(*GetStateData().app),
 	m_updateInfo(std::move(updateInfo)),
 	m_isCancelled(false)
 	{
@@ -42,21 +44,13 @@ namespace tsom
 		m_progressionLabel->SetText("Starting download...");
 		m_progressionLabel->Resize(m_progressionLabel->GetPreferredSize());
 
-		// Set first download as the updater
-		m_pendingDownloads.push_back({ "this_updater_of_mine", &m_updateInfo.updater, 0 });
-
-		if (m_updateInfo.assets)
-			m_pendingDownloads.push_back({ "autoupdate_assets", &m_updateInfo.assets.value(), 0 });
-
-		m_pendingDownloads.push_back({ "autoupdate_binaries", &m_updateInfo.binaries, 0 });
-
 		m_cancelButton = m_layout->Add<Nz::ButtonWidget>();
 		m_cancelButton->UpdateText(Nz::SimpleTextDrawer::Draw("Cancel update", 24));
 		m_cancelButton->SetMaximumSize(m_cancelButton->GetPreferredSize());
 
 		m_cancelButton->OnButtonTrigger.Connect([this](const Nz::ButtonWidget*)
 		{
-			m_isCancelled = true;
+			m_downloadManager.Cancel();
 		});
 	}
 
@@ -65,18 +59,35 @@ namespace tsom
 		WidgetState::Enter(fsm);
 
 		m_hasUpdateStarted = false;
-		for (auto& pendingDownload : m_pendingDownloads)
-			StartDownload(pendingDownload);
+
+		m_activeDownloads.clear(); //< just in case
+		auto QueueDownload = [&](std::string_view filename, const UpdateInfo::DownloadInfo* info)
+		{
+			auto download = m_downloadManager.QueueDownload(Nz::Utf8Path(filename), info->downloadUrl, info->size, info->sha256);
+			m_activeDownloads.push_back(download);
+
+			return download;
+		};
+
+		if (m_updateInfo.assets)
+			m_updateArchives.push_back(QueueDownload("autoupdate_assets", &m_updateInfo.assets.value()));
+
+		m_updateArchives.push_back(QueueDownload("autoupdate_binaries", &m_updateInfo.binaries));
+
+		m_updaterDownload = QueueDownload("this_updater_of_mine", &m_updateInfo.updater);
+
+		for (auto& downloadPtr : m_activeDownloads)
+		{
+			downloadPtr->OnDownloadProgress.Connect([this](const DownloadManager::Download&)
+			{
+				UpdateProgressBar();
+			});
+		}
 	}
 
 	bool UpdateState::Update(Nz::StateMachine& fsm, Nz::Time elapsedTime)
 	{
-		bool isDone = std::all_of(m_pendingDownloads.begin(), m_pendingDownloads.end(), [](const PendingDownload& pendingDownload)
-		{
-			return pendingDownload.isFinished;
-		});
-
-		if (isDone)
+		if (!m_downloadManager.HasDownloadInProgress())
 		{
 			if (m_isCancelled)
 			{
@@ -105,78 +116,8 @@ namespace tsom
 			m_progressionLabel->Center();
 	}
 
-	void UpdateState::StartDownload(PendingDownload& pendingDownload)
-	{
-		auto* webService = GetStateData().app->TryGetComponent<Nz::WebServiceAppComponent>();
-		if (!webService)
-		{
-			// We shouldn't get in this state without web service, so this is just a fail-safe
-			pendingDownload.isFinished = true;
-			m_isCancelled = true;
-			return;
-		}
-
-		std::filesystem::path path = Nz::Utf8Path(pendingDownload.name);
-		path += Nz::Utf8Path(pendingDownload.info->downloadUrl).extension();
-
-		pendingDownload.filename = Nz::PathToString(path);
-
-		std::shared_ptr<Nz::File> file = std::make_shared<Nz::File>(path, Nz::OpenMode::Write);
-
-		webService->QueueRequest([&](Nz::WebRequest& request)
-		{
-			request.SetupGet();
-			request.SetURL(pendingDownload.info->downloadUrl);
-
-			request.SetResultCallback([this, file, &pendingDownload](Nz::WebRequestResult&& result)
-			{
-				pendingDownload.isFinished = true;
-
-				if (!result.HasSucceeded())
-				{
-					fmt::print(fg(fmt::color::red), "failed to download {0}: {1}\n", pendingDownload.name, result.GetErrorMessage());
-					file->Delete();
-					return;
-				}
-
-				fmt::print(fg(fmt::color::green), "{} download succeeded!\n", pendingDownload.name);
-			});
-
-			request.SetDataCallback([this, file](const void* data, std::size_t length) mutable
-			{
-				if (file->Write(data, length) != length)
-					return false;
-
-				return true;
-			});
-
-			request.SetOptions(Nz::WebRequestOption::FailOnError | Nz::WebRequestOption::FollowRedirects);
-
-			request.SetProgressCallback([this, &pendingDownload](std::size_t bytesReceived, std::size_t bytesTotal)
-			{
-				if (m_isCancelled)
-					return false;
-
-				if (bytesTotal != 0 && bytesTotal != pendingDownload.info->size)
-				{
-					fmt::print(fg(fmt::color::green), "error when downloading {0}: file size ({1}) doesn't match expected size ({2})!\n", pendingDownload.name, FormatSize(bytesTotal), FormatSize(pendingDownload.info->size));
-					return false;
-				}
-
-				pendingDownload.downloadedSize = bytesReceived;
-				UpdateProgressBar();
-
-				return true;
-			});
-
-			return true;
-		});
-	}
-
 	void UpdateState::StartUpdate()
 	{
-		std::filesystem::path updaterProgram = Nz::Utf8Path(m_pendingDownloads.front().name);
-
 		Nz::Pid pid = Nz::Process::GetCurrentPid();
 
 		std::vector<std::string> args;
@@ -190,10 +131,10 @@ namespace tsom
 #endif
 
 		// Skip first download (as it's the updater)
-		for (std::size_t i = 1; i < m_pendingDownloads.size(); ++i)
-			args.push_back(m_pendingDownloads[i].filename);
+		for (auto& downloadPtr : m_updateArchives)
+			args.push_back(Nz::PathToString(downloadPtr->filepath));
 
-		Nz::Result updater = Nz::Process::SpawnDetached(updaterProgram, args);
+		Nz::Result updater = Nz::Process::SpawnDetached(m_updaterDownload->filepath, args);
 		if (!updater)
 		{
 			fmt::print(fg(fmt::color::red), "failed to start autoupdater process: {0}\n", updater.GetError());
@@ -209,12 +150,12 @@ namespace tsom
 		Nz::UInt64 totalDownloaded = 0;
 		Nz::UInt64 totalSize = 0;
 
-		for (auto& download : m_pendingDownloads)
+		for (auto& downloadPtr : m_activeDownloads)
 		{
-			totalDownloaded += download.downloadedSize;
-			totalSize += download.info->size;
+			totalDownloaded += downloadPtr->downloadedSize;
+			totalSize += downloadPtr->totalSize;
 
-			if (download.downloadedSize != download.info->size)
+			if (downloadPtr->downloadedSize != downloadPtr->totalSize)
 				activeDownloadCount++;
 		}
 

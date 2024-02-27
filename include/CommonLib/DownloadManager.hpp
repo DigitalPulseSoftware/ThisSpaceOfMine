@@ -7,9 +7,11 @@
 #ifndef TSOM_COMMONLIB_DOWNLOADMANAGER_HPP
 #define TSOM_COMMONLIB_DOWNLOADMANAGER_HPP
 
+#include <CommonLib/Export.hpp>
 #include <CommonLib/Chunk.hpp>
 #include <Nazara/Core/File.hpp>
 #include <Nazara/Core/Hash/SHA256.hpp>
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <vector>
@@ -21,7 +23,7 @@ namespace Nz
 
 namespace tsom
 {
-	class DownloadManager
+	class TSOM_COMMONLIB_API DownloadManager
 	{
 		public:
 			struct Download;
@@ -31,20 +33,23 @@ namespace tsom
 			DownloadManager(DownloadManager&&) = delete;
 			~DownloadManager() = default;
 
+			inline void Cancel();
+
 			inline bool HasDownloadInProgress() const;
 
-			std::shared_ptr<const Download> QueueDownload(std::string name, const std::filesystem::path& filepath, const std::string& downloadUrl, Nz::UInt64 expectedSize = 0, std::string expectedHash = {}, bool force = false);
+			std::shared_ptr<const Download> QueueDownload(std::filesystem::path filepath, const std::string& downloadUrl, Nz::UInt64 expectedSize = 0, std::string expectedHash = {}, bool force = false);
 
 			DownloadManager& operator=(const DownloadManager&) = delete;
 			DownloadManager& operator=(DownloadManager&&) = delete;
 
 			struct Download
 			{
-				std::string name;
+				std::filesystem::path filepath;
 				Nz::File file;
 				Nz::SHA256Hasher hasher;
 				Nz::UInt64 downloadedSize = 0;
 				Nz::UInt64 totalSize;
+				bool isCancelled = false;
 				bool isFinished = false;
 
 				NazaraSignal(OnDownloadFailed,   const Download& /*download*/);
@@ -53,9 +58,9 @@ namespace tsom
 			};
 
 		private:
-			std::vector<std::shared_ptr<Download>> m_pendingDownloads;
+			using DownloadList = std::vector<std::shared_ptr<Download>>;
+			std::shared_ptr<DownloadList> m_activeDownloads;
 			Nz::ApplicationBase& m_application;
-			bool m_isCancelled;
 	};
 }
 

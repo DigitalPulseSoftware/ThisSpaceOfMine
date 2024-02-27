@@ -6,6 +6,7 @@
 #include <CommonLib/Utils.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Network/WebServiceAppComponent.hpp>
+#include <NazaraUtils/PathUtils.hpp>
 #include <fmt/color.h>
 #include <fmt/core.h>
 #include <fmt/std.h>
@@ -13,21 +14,27 @@
 
 namespace tsom
 {
-	auto DownloadManager::QueueDownload(std::string name, const std::filesystem::path& filepath, const std::string& downloadUrl, Nz::UInt64 expectedSize, std::string expectedHash, bool force) -> std::shared_ptr<const Download>
+	auto DownloadManager::QueueDownload(std::filesystem::path filepath, const std::string& downloadUrl, Nz::UInt64 expectedSize, std::string expectedHash, bool force) -> std::shared_ptr<const Download>
 	{
 		auto* webService = m_application.TryGetComponent<Nz::WebServiceAppComponent>();
 		if (!webService)
 			return {};
 
+		if (filepath.empty())
+			filepath = Nz::Utf8Path(downloadUrl).filename();
+
+		if (!filepath.has_extension())
+			filepath.replace_extension(Nz::Utf8Path(downloadUrl).extension());
+
 		std::shared_ptr<Download> download = std::make_shared<Download>();
-		download->name = std::move(name);
+		download->filepath = std::move(filepath);
 		download->totalSize = expectedSize;
 
 		if (!force && !expectedHash.empty())
 		{
-			if (std::filesystem::is_regular_file(filepath) && std::filesystem::file_size(filepath) == expectedSize)
+			if (std::filesystem::is_regular_file(download->filepath) && std::filesystem::file_size(download->filepath) == expectedSize)
 			{
-				if (Nz::File::ComputeHash(Nz::HashType::SHA256, filepath).ToHex() == expectedHash)
+				if (Nz::File::ComputeHash(Nz::HashType::SHA256, download->filepath).ToHex() == expectedHash)
 				{
 					download->isFinished = true;
 					return download;
@@ -35,9 +42,9 @@ namespace tsom
 			}
 		}
 
-		if (!download->file.Open(filepath, Nz::OpenMode::Write))
+		if (!download->file.Open(download->filepath, Nz::OpenMode::Write))
 		{
-			fmt::print(fg(fmt::color::red), "failed to create file {0}", filepath);
+			fmt::print(fg(fmt::color::red), "failed to create file {0}", download->filepath);
 			return {};
 		}
 
@@ -46,13 +53,14 @@ namespace tsom
 			request.SetupGet();
 			request.SetURL(downloadUrl);
 
-			request.SetResultCallback([this, download, expectedHash](Nz::WebRequestResult&& result)
+			request.SetResultCallback([activeDownloads = m_activeDownloads, download, expectedHash](Nz::WebRequestResult&& result)
 			{
-				download->isFinished = true;
+				activeDownloads->erase(std::find(activeDownloads->begin(), activeDownloads->end(), download));
 
+				download->isFinished = true;
 				if (!result.HasSucceeded())
 				{
-					fmt::print(fg(fmt::color::red), "failed to download {0}: {1}\n", download->name, result.GetErrorMessage());
+					fmt::print(fg(fmt::color::red), "failed to download {0}: {1}\n", download->filepath, result.GetErrorMessage());
 					download->file.Delete();
 					download->OnDownloadFailed(*download);
 					return;
@@ -62,21 +70,22 @@ namespace tsom
 				{
 					if (std::string fileHash = download->hasher.End().ToHex(); fileHash != expectedHash)
 					{
-						fmt::print(fg(fmt::color::red), "failed to download {0}: hash doesn't match (file hash {1} doesn't match expected hash {2})\n", download->name, fileHash, expectedHash);
+						fmt::print(fg(fmt::color::red), "failed to download {0}: hash doesn't match (file hash {1} doesn't match expected hash {2})\n", download->filepath, fileHash, expectedHash);
 						download->file.Delete();
 						download->OnDownloadFailed(*download);
 						return;
 					}
 				}
 
-				fmt::print(fg(fmt::color::green), "{} download succeeded!\n", download->name);
+				download->file.Close();
+				fmt::print(fg(fmt::color::green), "{} download succeeded!\n", download->filepath);
 				download->OnDownloadFinished(*download);
 			});
 
 			if (!expectedHash.empty())
 			{
 				download->hasher.Begin();
-				request.SetDataCallback([this, download](const void* data, std::size_t length) mutable
+				request.SetDataCallback([download](const void* data, std::size_t length) mutable
 				{
 					if (download->file.Write(data, length) != length)
 						return false;
@@ -87,7 +96,7 @@ namespace tsom
 			}
 			else
 			{
-				request.SetDataCallback([this, download](const void* data, std::size_t length) mutable
+				request.SetDataCallback([download](const void* data, std::size_t length) mutable
 				{
 					if (download->file.Write(data, length) != length)
 						return false;
@@ -100,12 +109,12 @@ namespace tsom
 
 			request.SetProgressCallback([this, download](std::size_t bytesReceived, std::size_t bytesTotal)
 			{
-				if (m_isCancelled)
+				if (download->isCancelled)
 					return false;
 
 				if (bytesTotal != 0 && download->totalSize != 0 && bytesTotal != download->totalSize)
 				{
-					fmt::print(fg(fmt::color::red), "error when downloading {0}: file size ({1}) doesn't match expected size ({2})!\n", download->name, FormatSize(bytesTotal), FormatSize(download->totalSize));
+					fmt::print(fg(fmt::color::red), "error when downloading {0}: file size ({1}) doesn't match expected size ({2})!\n", download->filepath, FormatSize(bytesTotal), FormatSize(download->totalSize));
 					return false;
 				}
 
@@ -117,8 +126,7 @@ namespace tsom
 			return true;
 		});
 
-		m_pendingDownloads.push_back(download);
-
+		m_activeDownloads->push_back(download);
 		return download;
 	}
 }

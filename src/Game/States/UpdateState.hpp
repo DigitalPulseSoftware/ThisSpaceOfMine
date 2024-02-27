@@ -7,6 +7,7 @@
 #ifndef TSOM_GAME_STATES_UPDATESTATE_HPP
 #define TSOM_GAME_STATES_UPDATESTATE_HPP
 
+#include <CommonLib/DownloadManager.hpp>
 #include <Game/States/UpdateInfo.hpp>
 #include <Game/States/WidgetState.hpp>
 #include <NazaraUtils/FixedVector.hpp>
@@ -35,26 +36,19 @@ namespace tsom
 			struct PendingDownload;
 
 			void LayoutWidgets(const Nz::Vector2f& newSize) override;
-			void StartDownload(PendingDownload& pendingDownload);
 			void StartUpdate();
 			void UpdateProgressBar();
 
-			struct PendingDownload
-			{
-				std::string_view name;
-				const UpdateInfo::DownloadInfo* info;
-				Nz::UInt64 downloadedSize;
-				std::string filename;
-				bool isFinished = false;
-			};
-
 			Nz::BoxLayout* m_layout;
 			Nz::ButtonWidget* m_cancelButton;
-			Nz::FixedVector<PendingDownload, 3> m_pendingDownloads;
+			Nz::FixedVector<std::shared_ptr<const DownloadManager::Download>, 3> m_activeDownloads;
+			Nz::FixedVector<std::shared_ptr<const DownloadManager::Download>, 3> m_updateArchives;
 			Nz::ProgressBarWidget* m_progressBar;
 			Nz::SimpleLabelWidget* m_downloadLabel;
 			Nz::SimpleLabelWidget* m_progressionLabel;
 			std::shared_ptr<Nz::State> m_previousState;
+			std::shared_ptr<const DownloadManager::Download> m_updaterDownload;
+			DownloadManager m_downloadManager;
 			UpdateInfo m_updateInfo;
 			bool m_isCancelled;
 			bool m_hasUpdateStarted;
