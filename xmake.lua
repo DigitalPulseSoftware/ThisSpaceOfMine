@@ -84,6 +84,10 @@ target("CommonLib", function ()
 		local targetfile = "src/CommonLib/VersionData.hpp"
 
 		local host = os.host()
+		if host == "macosx" then
+			host = "macos"
+		end
+
 		local subhost = os.subhost()
 
 		local system
