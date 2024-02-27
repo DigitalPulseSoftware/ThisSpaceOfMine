@@ -7,6 +7,6 @@ namespace tsom
 	template<typename... Args>
 	ServerInstance& ServerInstanceAppComponent::AddInstance(Args&& ...args)
 	{
-		return *m_instances.emplace_back(std::make_unique<ServerInstance>(std::forward<Args>(args)...));
+		return *m_instances.emplace_back(std::make_unique<ServerInstance>(GetApp(), std::forward<Args>(args)...));
 	}
 }

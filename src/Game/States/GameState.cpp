@@ -436,7 +436,7 @@ namespace tsom
 
 		auto& stateData = GetStateData();
 
-		m_planetEntities = std::make_unique<ClientChunkEntities>(*stateData.app, *stateData.world, taskSchedulerComponent., *m_planet, *stateData.blockLibrary);
+		m_planetEntities = std::make_unique<ClientChunkEntities>(*stateData.app, *stateData.world, *m_planet, *stateData.blockLibrary);
 
 		m_remainingCameraRotation = Nz::EulerAnglesf(0.f, 0.f, 0.f);
 		m_predictedCameraRotation = m_remainingCameraRotation;
