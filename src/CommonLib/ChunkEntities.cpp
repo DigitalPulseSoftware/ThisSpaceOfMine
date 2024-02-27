@@ -4,23 +4,24 @@
 
 #include <CommonLib/ChunkEntities.hpp>
 #include <CommonLib/BlockLibrary.hpp>
+#include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/EnttWorld.hpp>
-#include <Nazara/Core/TaskScheduler.hpp>
+#include <Nazara/Core/TaskSchedulerAppComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
 #include <cassert>
 
 namespace tsom
 {
-	ChunkEntities::ChunkEntities(Nz::TaskScheduler& taskScheduler, Nz::EnttWorld& world, const ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary) :
-	ChunkEntities(taskScheduler, world, chunkContainer, blockLibrary, NoInit{})
+	ChunkEntities::ChunkEntities(Nz::ApplicationBase& application, Nz::EnttWorld& world, const ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary) :
+	ChunkEntities(application, world, chunkContainer, blockLibrary, NoInit{})
 	{
 		FillChunks();
 	}
 
-	ChunkEntities::ChunkEntities(Nz::TaskScheduler& taskScheduler, Nz::EnttWorld& world, const ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary, NoInit) :
+	ChunkEntities::ChunkEntities(Nz::ApplicationBase& application, Nz::EnttWorld& world, const ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary, NoInit) :
 	m_world(world),
-	m_taskScheduler(taskScheduler),
+	m_application(application),
 	m_blockLibrary(blockLibrary),
 	m_chunkContainer(chunkContainer)
 	{
@@ -127,7 +128,8 @@ namespace tsom
 			rigidBody.SetGeom(std::move(colliderUpdateJob.collider), false);
 		};
 
-		m_taskScheduler.AddTask([this, chunk, updateJob]
+		auto& taskScheduler = m_application.GetComponent<Nz::TaskSchedulerAppComponent>();
+		taskScheduler.AddTask([this, chunk, updateJob]
 		{
 			if (updateJob->cancelled)
 				return;

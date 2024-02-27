@@ -16,8 +16,8 @@
 
 namespace Nz
 {
+	class ApplicationBase;
 	class EnttWorld;
-	class TaskScheduler;
 }
 
 namespace tsom
@@ -28,7 +28,7 @@ namespace tsom
 	class TSOM_COMMONLIB_API ChunkEntities
 	{
 		public:
-			ChunkEntities(Nz::TaskScheduler& taskScheduler, Nz::EnttWorld& world, const ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary);
+			ChunkEntities(Nz::ApplicationBase& app, Nz::EnttWorld& world, const ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary);
 			ChunkEntities(const ChunkEntities&) = delete;
 			ChunkEntities(ChunkEntities&&) = delete;
 			~ChunkEntities();
@@ -40,7 +40,7 @@ namespace tsom
 
 		protected:
 			struct NoInit {};
-			ChunkEntities(Nz::TaskScheduler& taskScheduler, Nz::EnttWorld& world, const ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary, NoInit);
+			ChunkEntities(Nz::ApplicationBase& app, Nz::EnttWorld& world, const ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary, NoInit);
 
 			void CreateChunkEntity(std::size_t chunkId, const Chunk* chunk);
 			void DestroyChunkEntity(std::size_t chunkId);
@@ -67,11 +67,11 @@ namespace tsom
 
 			std::vector<entt::handle> m_chunkEntities;
 			tsl::hopscotch_map<std::size_t /*chunkId*/, std::shared_ptr<UpdateJob>> m_updateJobs;
+			Nz::Bitset<> m_invalidatedChunks;
+			Nz::ApplicationBase& m_application;
 			Nz::EnttWorld& m_world;
-			Nz::TaskScheduler& m_taskScheduler;
 			const BlockLibrary& m_blockLibrary;
 			const ChunkContainer& m_chunkContainer;
-			Nz::Bitset<> m_invalidatedChunks;
 	};
 }
 

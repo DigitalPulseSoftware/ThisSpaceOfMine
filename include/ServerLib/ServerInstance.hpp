@@ -23,7 +23,7 @@
 
 namespace Nz
 {
-	class TaskScheduler;
+	class ApplicationBase;
 }
 
 namespace tsom
@@ -31,7 +31,7 @@ namespace tsom
 	class TSOM_SERVERLIB_API ServerInstance
 	{
 		public:
-			ServerInstance(Nz::TaskScheduler& taskScheduler);
+			ServerInstance(Nz::ApplicationBase& application);
 			ServerInstance(const ServerInstance&) = delete;
 			ServerInstance(ServerInstance&&) = delete;
 			~ServerInstance();
@@ -82,7 +82,7 @@ namespace tsom
 			Nz::Time m_tickDuration;
 			BlockLibrary m_blockLibrary;
 			PlanetGravitySystem m_gravitySystem;
-			Nz::TaskScheduler& m_taskScheduler;
+			Nz::ApplicationBase& m_application;
 	};
 }
 

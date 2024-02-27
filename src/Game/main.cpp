@@ -22,7 +22,7 @@
 #include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <Nazara/Core/PluginLoader.hpp>
 #include <Nazara/Core/StateMachine.hpp>
-#include <Nazara/Core/TaskScheduler.hpp>
+#include <Nazara/Core/TaskSchedulerAppComponent.hpp>
 #include <Nazara/Graphics/Graphics.hpp>
 #include <Nazara/Graphics/RenderWindow.hpp>
 #include <Nazara/Network/Network.hpp>
@@ -49,12 +49,12 @@ NAZARA_REQUEST_DEDICATED_GPU()
 
 int GameMain(int argc, char* argv[])
 {
-	Nz::Application<Nz::Graphics, Nz::Physics3D, Nz::Network, Nz::TextRenderer, Nz::Widgets> app(argc, argv);
+	Nz::Application<Nz::Graphics, Nz::Physics3D, Nz::Network, Nz::Widgets> app(argc, argv);
 
 	Nz::PluginLoader pluginLoader;
 	Nz::Plugin<Nz::AssimpPlugin> assimp = pluginLoader.Load<Nz::AssimpPlugin>();
 
-	Nz::TaskScheduler taskScheduler;
+	app.AddComponent<Nz::TaskSchedulerAppComponent>();
 
 	auto& filesystem = app.AddComponent<Nz::FilesystemAppComponent>();
 
@@ -160,7 +160,6 @@ int GameMain(int argc, char* argv[])
 	stateData->blockLibrary = &blockLibrary;
 	stateData->canvas = &canvas;
 	stateData->renderTarget = std::move(renderTarget);
-	stateData->taskScheduler = &taskScheduler;
 	stateData->window = &window;
 	stateData->world = &world;
 

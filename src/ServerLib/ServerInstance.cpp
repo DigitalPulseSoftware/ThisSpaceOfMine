@@ -5,7 +5,8 @@
 #include <ServerLib/ServerInstance.hpp>
 #include <CommonLib/InternalConstants.hpp>
 #include <ServerLib/NetworkedEntitiesSystem.hpp>
-#include <Nazara/Core/Components.hpp>
+#include <Nazara/Core/ApplicationBase.hpp>
+#include <Nazara/Core/TaskSchedulerAppComponent.hpp>
 #include <Nazara/Core/File.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <NazaraUtils/PathUtils.hpp>
@@ -16,13 +17,13 @@
 
 namespace tsom
 {
-	ServerInstance::ServerInstance(Nz::TaskScheduler& taskScheduler) :
+	ServerInstance::ServerInstance(Nz::ApplicationBase& application) :
 	m_tickIndex(0),
 	m_players(256),
 	m_tickAccumulator(Nz::Time::Zero()),
 	m_tickDuration(Constants::TickDuration),
 	m_gravitySystem(m_world),
-	m_taskScheduler(taskScheduler)
+	m_application(application)
 	{
 		m_world.AddSystem<NetworkedEntitiesSystem>(*this);
 		auto& physicsSystem = m_world.AddSystem<Nz::Physics3DSystem>();
@@ -45,7 +46,7 @@ namespace tsom
 			m_dirtyChunks.insert(chunk->GetIndices());
 		});
 
-		m_planetEntities = std::make_unique<ChunkEntities>(m_taskScheduler, m_world, *m_planet, m_blockLibrary);
+		m_planetEntities = std::make_unique<ChunkEntities>(m_application, m_world, *m_planet, m_blockLibrary);
 	}
 
 	ServerInstance::~ServerInstance()

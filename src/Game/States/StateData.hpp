@@ -32,7 +32,6 @@ namespace tsom
 		Nz::ApplicationBase* app;
 		Nz::Canvas* canvas;
 		Nz::EnttWorld* world;
-		Nz::TaskScheduler* taskScheduler;
 		Nz::Window* window;
 		ClientBlockLibrary* blockLibrary = nullptr;
 		ClientSessionHandler* sessionHandler = nullptr;

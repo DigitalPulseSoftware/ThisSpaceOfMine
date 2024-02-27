@@ -7,7 +7,7 @@
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <Nazara/Core/IndexBuffer.hpp>
-#include <Nazara/Core/TaskScheduler.hpp>
+#include <Nazara/Core/TaskSchedulerAppComponent.hpp>
 #include <Nazara/Core/VertexBuffer.hpp>
 #include <Nazara/Graphics/GraphicalMesh.hpp>
 #include <Nazara/Graphics/Graphics.hpp>
@@ -22,8 +22,8 @@
 
 namespace tsom
 {
-	ClientChunkEntities::ClientChunkEntities(Nz::ApplicationBase& app, Nz::EnttWorld& world, Nz::TaskScheduler& taskScheduler, ChunkContainer& chunkContainer, const ClientBlockLibrary& blockLibrary) :
-	ChunkEntities(taskScheduler, world, chunkContainer, blockLibrary, NoInit{})
+	ClientChunkEntities::ClientChunkEntities(Nz::ApplicationBase& app, Nz::EnttWorld& world, ChunkContainer& chunkContainer, const ClientBlockLibrary& blockLibrary) :
+	ChunkEntities(app, world, chunkContainer, blockLibrary, NoInit{})
 	{
 		auto& filesystem = app.GetComponent<Nz::FilesystemAppComponent>();
 
@@ -207,7 +207,8 @@ namespace tsom
 			UpdateChunkDebugCollider(chunkId);
 		};
 
-		m_taskScheduler.AddTask([this, chunk, updateJob]
+		auto& taskScheduler = m_application.GetComponent<Nz::TaskSchedulerAppComponent>();
+		taskScheduler.AddTask([this, chunk, updateJob]
 		{
 			if (updateJob->cancelled)
 				return;
@@ -219,7 +220,7 @@ namespace tsom
 			updateJob->executionCounter++;
 		});
 
-		m_taskScheduler.AddTask([this, chunk, updateJob]
+		taskScheduler.AddTask([this, chunk, updateJob]
 		{
 			if (updateJob->cancelled)
 				return;
