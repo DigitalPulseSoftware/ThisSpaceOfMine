@@ -11,7 +11,6 @@
 #include <CommonLib/ChunkEntities.hpp>
 #include <CommonLib/NetworkSessionManager.hpp>
 #include <CommonLib/Planet.hpp>
-#include <CommonLib/Systems/PlanetGravitySystem.hpp>
 #include <ServerLib/ServerPlayer.hpp>
 #include <Nazara/Core/Clock.hpp>
 #include <Nazara/Core/EnttWorld.hpp>
@@ -81,7 +80,6 @@ namespace tsom
 			Nz::Time m_tickAccumulator;
 			Nz::Time m_tickDuration;
 			BlockLibrary m_blockLibrary;
-			PlanetGravitySystem m_gravitySystem;
 			Nz::ApplicationBase& m_application;
 	};
 }

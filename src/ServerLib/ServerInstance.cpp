@@ -4,6 +4,7 @@
 
 #include <ServerLib/ServerInstance.hpp>
 #include <CommonLib/InternalConstants.hpp>
+#include <CommonLib/Systems/PlanetGravitySystem.hpp>
 #include <ServerLib/NetworkedEntitiesSystem.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/File.hpp>
@@ -22,14 +23,17 @@ namespace tsom
 	m_players(256),
 	m_tickAccumulator(Nz::Time::Zero()),
 	m_tickDuration(Constants::TickDuration),
-	m_gravitySystem(m_world),
 	m_application(application)
 	{
 		m_world.AddSystem<NetworkedEntitiesSystem>(*this);
 		auto& physicsSystem = m_world.AddSystem<Nz::Physics3DSystem>();
-		physicsSystem.GetPhysWorld().SetStepSize(m_tickDuration);
-		physicsSystem.GetPhysWorld().SetGravity(Nz::Vector3f::Zero());
-		physicsSystem.GetPhysWorld().RegisterStepListener(&m_gravitySystem);
+		{
+			auto& physWorld = physicsSystem.GetPhysWorld();
+			physWorld.SetStepSize(m_tickDuration);
+			physWorld.SetGravity(Nz::Vector3f::Zero());
+
+			m_world.AddSystem<PlanetGravitySystem>(physWorld);
+		}
 
 		m_planet = std::make_unique<Planet>(Nz::Vector3ui(180), 1.f, 16.f, 9.81f);
 		m_planet->GenerateChunks(m_blockLibrary);
