@@ -27,34 +27,39 @@
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <fmt/color.h>
 #include <fmt/core.h>
+#include <charconv>
 
 namespace tsom
 {
 	GameAppComponent::GameAppComponent(Nz::ApplicationBase& app) :
 	ApplicationComponent(app)
 	{
-		auto& window = SetupWindow();
-		auto& world = SetupWorld();
+		if (CheckAssets())
+		{
+			auto& window = SetupWindow();
+			auto& world = SetupWorld();
 
-		auto renderTarget = SetupRenderTarget(world, window);
+			auto renderTarget = SetupRenderTarget(world, window);
 
-		SetupCanvas(world, window);
-		SetupCamera(renderTarget, world);
+			SetupCanvas(world, window);
+			SetupCamera(renderTarget, world);
 
-		std::shared_ptr<tsom::StateData> stateData = std::make_shared<tsom::StateData>();
-		stateData->app = &GetApp();
-		stateData->blockLibrary = &m_blockLibrary.value();
-		stateData->canvas = &m_canvas.value();
-		stateData->renderTarget = std::move(renderTarget);
-		stateData->window = &window;
-		stateData->world = &world;
+			std::shared_ptr<tsom::StateData> stateData = std::make_shared<tsom::StateData>();
+			stateData->app = &GetApp();
+			stateData->blockLibrary = &m_blockLibrary.value();
+			stateData->canvas = &m_canvas.value();
+			stateData->renderTarget = std::move(renderTarget);
+			stateData->window = &window;
+			stateData->world = &world;
 
-		std::shared_ptr<tsom::ConnectionState> connectionState = std::make_shared<tsom::ConnectionState>(stateData);
+			std::shared_ptr<tsom::ConnectionState> connectionState = std::make_shared<tsom::ConnectionState>(stateData);
 
-		m_stateMachine.PushState(std::make_shared<tsom::DebugInfoState>(stateData));
-		m_stateMachine.PushState(connectionState);
-		m_stateMachine.PushState(std::make_shared<tsom::BackgroundState>(stateData));
-		m_stateMachine.PushState(std::make_shared<tsom::MenuState>(stateData, connectionState));
+			m_stateMachine.PushState(std::make_shared<tsom::DebugInfoState>(stateData));
+			m_stateMachine.PushState(connectionState);
+			m_stateMachine.PushState(std::make_shared<tsom::BackgroundState>(stateData));
+			m_stateMachine.PushState(std::make_shared<tsom::MenuState>(stateData, connectionState));
+		}
+
 	}
 
 	void GameAppComponent::Update(Nz::Time elapsedTime)
@@ -80,6 +85,7 @@ namespace tsom
 				fmt::print(fg(fmt::color::red), "failed to open the error message box: {0}!\n", result.GetError());
 
 			app.Quit();
+			return false;
 		}
 
 		auto& filesystem = app.GetComponent<Nz::FilesystemAppComponent>();
