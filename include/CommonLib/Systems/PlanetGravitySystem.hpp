@@ -13,23 +13,31 @@
 #include <NazaraUtils/TypeList.hpp>
 #include <entt/fwd.hpp>
 
+namespace Nz
+{
+	class PhysWorld3D;
+}
+
 namespace tsom
 {
 	class TSOM_COMMONLIB_API PlanetGravitySystem : public Nz::PhysWorld3DStepListener
 	{
 		public:
-			inline PlanetGravitySystem(entt::registry& registry);
+			PlanetGravitySystem(entt::registry& registry, Nz::PhysWorld3D& physWorld);
 			PlanetGravitySystem(const PlanetGravitySystem&) = delete;
 			PlanetGravitySystem(PlanetGravitySystem&&) = default;
-			~PlanetGravitySystem() = default;
+			~PlanetGravitySystem();
 
 			void PreSimulate(float elapsedTime);
+
+			void Update(Nz::Time elapsedTime); // TODO: Remove on Nazara update
 
 			PlanetGravitySystem& operator=(const PlanetGravitySystem&) = delete;
 			PlanetGravitySystem& operator=(PlanetGravitySystem&&) = default;
 
 		private:
 			entt::registry& m_registry;
+			Nz::PhysWorld3D& m_physWorld;
 	};
 }
 

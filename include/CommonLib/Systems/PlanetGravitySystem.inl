@@ -4,8 +4,4 @@
 
 namespace tsom
 {
-	inline PlanetGravitySystem::PlanetGravitySystem(entt::registry& registry) :
-	m_registry(registry)
-	{
-	}
 }
