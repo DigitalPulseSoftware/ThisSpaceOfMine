@@ -1,18 +1,18 @@
 // Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
-// For conditions of distribution and use, see copyright notice in Config.hpp
+// For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <Game/GameAppComponent.hpp>
-#include <Game/States/BackgroundState.hpp>
-#include <Game/States/ConnectionState.hpp>
-#include <Game/States/DebugInfoState.hpp>
-#include <Game/States/MenuState.hpp>
-#include <CommonLib/InternalConstants.hpp>
-#include <CommonLib/GameConstants.hpp>
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Systems/AnimationSystem.hpp>
 #include <ClientLib/Systems/MovementInterpolationSystem.hpp>
 #include <ClientLib/Systems/PlayerAnimationSystem.hpp>
+#include <CommonLib/GameConstants.hpp>
+#include <CommonLib/InternalConstants.hpp>
+#include <Game/States/BackgroundState.hpp>
+#include <Game/States/ConnectionState.hpp>
+#include <Game/States/DebugInfoState.hpp>
+#include <Game/States/MenuState.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/EntitySystemAppComponent.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
@@ -22,9 +22,9 @@
 #include <Nazara/Graphics/Components/CameraComponent.hpp>
 #include <Nazara/Graphics/Systems/RenderSystem.hpp>
 #include <Nazara/Network/WebServiceAppComponent.hpp>
+#include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <Nazara/Platform/MessageBox.hpp>
 #include <Nazara/Platform/WindowingAppComponent.hpp>
-#include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <fmt/color.h>
 #include <fmt/core.h>
 #include <charconv>

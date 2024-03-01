@@ -17,6 +17,7 @@
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <Nazara/Core/PrimitiveList.hpp>
+#include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Graphics/DirectionalLight.hpp>
 #include <Nazara/Graphics/FramePipeline.hpp>
 #include <Nazara/Graphics/Material.hpp>
@@ -25,17 +26,16 @@
 #include <Nazara/Graphics/PipelinePassList.hpp>
 #include <Nazara/Graphics/PointLight.hpp>
 #include <Nazara/Graphics/SpotLight.hpp>
-#include <Nazara/Math/Ray.hpp>
-#include <Nazara/Platform/Window.hpp>
-#include <Nazara/Platform/WindowEventHandler.hpp>
-#include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Graphics/Components/CameraComponent.hpp>
 #include <Nazara/Graphics/Components/LightComponent.hpp>
 #include <Nazara/Graphics/PropertyHandler/TexturePropertyHandler.hpp>
 #include <Nazara/Graphics/PropertyHandler/UniformValuePropertyHandler.hpp>
 #include <Nazara/Graphics/Systems/RenderSystem.hpp>
+#include <Nazara/Math/Ray.hpp>
 #include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
+#include <Nazara/Platform/Window.hpp>
+#include <Nazara/Platform/WindowEventHandler.hpp>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 

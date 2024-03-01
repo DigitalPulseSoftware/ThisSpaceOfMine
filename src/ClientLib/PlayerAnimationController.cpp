@@ -5,8 +5,8 @@
 #include <ClientLib/PlayerAnimationController.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <Nazara/Core/Skeleton.hpp>
-#include <Nazara/Platform/Keyboard.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
+#include <Nazara/Platform/Keyboard.hpp>
 #include <entt/entt.hpp>
 #include <fmt/core.h>
 

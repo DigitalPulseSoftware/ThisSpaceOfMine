@@ -7,12 +7,12 @@
 #ifndef TSOM_GAME_GAMEAPPCOMPONENT_HPP
 #define TSOM_GAME_GAMEAPPCOMPONENT_HPP
 
-#include <NazaraUtils/Prerequisites.hpp>
+#include <ClientLib/ClientBlockLibrary.hpp>
+#include <CommonLib/Systems/PlanetGravitySystem.hpp>
 #include <Nazara/Core/ApplicationComponent.hpp>
 #include <Nazara/Core/StateMachine.hpp>
 #include <Nazara/Widgets/Canvas.hpp>
-#include <CommonLib/Systems/PlanetGravitySystem.hpp>
-#include <ClientLib/ClientBlockLibrary.hpp>
+#include <NazaraUtils/Prerequisites.hpp>
 #include <optional>
 
 namespace Nz

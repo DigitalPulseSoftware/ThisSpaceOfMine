@@ -10,11 +10,11 @@
 #include <Nazara/Core/TaskSchedulerAppComponent.hpp>
 #include <Nazara/Core/Plugins/AssimpPlugin.hpp>
 #include <Nazara/Graphics/Graphics.hpp>
-#include <Nazara/Platform/WindowingAppComponent.hpp>
 #include <Nazara/Network/Network.hpp>
 #include <Nazara/Network/WebServiceAppComponent.hpp>
-#include <Nazara/Renderer/GpuSwitch.hpp>
 #include <Nazara/Physics3D/Physics3D.hpp>
+#include <Nazara/Platform/WindowingAppComponent.hpp>
+#include <Nazara/Renderer/GpuSwitch.hpp>
 #include <Nazara/Widgets/Widgets.hpp>
 #include <Main/Main.hpp>
 #include <fmt/color.h>

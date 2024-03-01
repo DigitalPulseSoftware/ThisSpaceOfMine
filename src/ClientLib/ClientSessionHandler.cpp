@@ -12,16 +12,16 @@
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/EnttWorld.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
+#include <Nazara/Core/Components/NodeComponent.hpp>
+#include <Nazara/Core/Components/SkeletonComponent.hpp>
 #include <Nazara/Graphics/Graphics.hpp>
 #include <Nazara/Graphics/MaterialInstance.hpp>
 #include <Nazara/Graphics/Model.hpp>
 #include <Nazara/Graphics/TextSprite.hpp>
-#include <Nazara/Physics3D/Collider3D.hpp>
-#include <Nazara/TextRenderer/SimpleTextDrawer.hpp>
-#include <Nazara/Core/Components/NodeComponent.hpp>
-#include <Nazara/Core/Components/SkeletonComponent.hpp>
 #include <Nazara/Graphics/Components/GraphicsComponent.hpp>
+#include <Nazara/Physics3D/Collider3D.hpp>
 #include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
+#include <Nazara/TextRenderer/SimpleTextDrawer.hpp>
 #include <fmt/color.h>
 #include <fmt/format.h>
 

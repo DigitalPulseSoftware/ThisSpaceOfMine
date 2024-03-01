@@ -474,8 +474,8 @@ on_run(function ()
 
 				local function compareFunc(a, b)
 					if a.order == b.order then
-						local folderA = a.path:match("^(.-)/")
-						local folderB = b.path:match("^(.-)/")
+						local folderA = a.path:match("^(.+)/")
+						local folderB = b.path:match("^(.+)/")
 						if folderA and folderB then
 							if folderA ~= folderB then
 								return folderA < folderB
