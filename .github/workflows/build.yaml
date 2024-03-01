@@ -20,7 +20,7 @@ jobs:
         - { runner: windows-latest, os: windows, arch: x64,    archive_ext: .zip }
         - { runner: ubuntu-latest,  os: linux,   arch: x86_64, archive_ext: .tar.gz }
         - { runner: macos-latest,   os: macos,   arch: x86_64, archive_ext: .tar.gz }
-        #- { runner: macos-latest,   os: macos,   arch: arm64,  archive_ext: .tar.gz }
+        - { runner: macos-14,       os: macos,   arch: arm64,  archive_ext: .tar.gz }
         mode: [debug, releasedbg]
 
     runs-on: ${{ matrix.platform.runner }}
@@ -95,7 +95,11 @@ jobs:
         rm -rf dest/include/
         rm -rf dest/lib/
       shell: bash
-    
+
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
     - name: Archive result
       uses: ihiroky/archive-action@v1
       with:
