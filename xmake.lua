@@ -84,10 +84,6 @@ target("CommonLib", function ()
 		local targetfile = "src/CommonLib/VersionData.hpp"
 
 		local host = os.host()
-		if host == "macosx" then
-			host = "macos"
-		end
-
 		local subhost = os.subhost()
 
 		local system
@@ -121,7 +117,11 @@ target("CommonLib", function ()
 
 		local targetversion = semver.new(target:version())
 
-		local buildconf = string.format("%s_%s", target:plat(), target:arch())
+		local targetplat = target:plat()
+		if targetplat == "macosx" then
+			targetplat = "macos"
+		end
+		local buildconf = string.format("%s_%s", targetplat, target:arch())
 
 		local dependfile = target:dependfile("versioninfo")
 		depend.on_changed(function ()
