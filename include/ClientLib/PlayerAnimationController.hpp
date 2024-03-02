@@ -7,9 +7,9 @@
 #ifndef TSOM_CLIENTLIB_PLAYERANIMATIONCONTROLLER_HPP
 #define TSOM_CLIENTLIB_PLAYERANIMATIONCONTROLLER_HPP
 
-#include <ClientLib/AnimationBlender.hpp>
 #include <ClientLib/AnimationController.hpp>
 #include <Nazara/Core/Animation.hpp>
+#include <Nazara/Core/AnimationBlender.hpp>
 #include <Nazara/Core/Skeleton.hpp>
 #include <Nazara/Math/Vector3.hpp>
 #include <entt/entt.hpp>
@@ -43,8 +43,8 @@ namespace tsom
 		private:
 			std::shared_ptr<PlayerAnimationAssets> m_animationAssets;
 			entt::handle m_entity;
+			Nz::AnimationBlender m_idleRunBlender;
 			Nz::Vector3f m_playerPosition;
-			AnimationBlender m_idleRunBlender;
 			float m_playerVelocity;
 	};
 }

@@ -28,8 +28,8 @@ namespace tsom
 	m_playerVelocity(0.f)
 	{
 		m_idleRunBlender.AddPoint(0.f, m_animationAssets->idleAnimation);
+		m_idleRunBlender.AddPoint(Constants::PlayerWalkSpeed, m_animationAssets->walkingAnimation);
 		m_idleRunBlender.AddPoint(Constants::PlayerSprintSpeed, m_animationAssets->runningAnimation);
-		m_idleRunBlender.UpdateBlendingFactorIncrease(2.f);
 
 		Nz::NodeComponent& node = entity.get<Nz::NodeComponent>();
 		m_playerPosition = node.GetPosition();
