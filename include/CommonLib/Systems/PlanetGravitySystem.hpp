@@ -25,15 +25,13 @@ namespace tsom
 		public:
 			PlanetGravitySystem(entt::registry& registry, Nz::PhysWorld3D& physWorld);
 			PlanetGravitySystem(const PlanetGravitySystem&) = delete;
-			PlanetGravitySystem(PlanetGravitySystem&&) = default;
+			PlanetGravitySystem(PlanetGravitySystem&&) = delete;
 			~PlanetGravitySystem();
 
 			void PreSimulate(float elapsedTime);
 
-			void Update(Nz::Time elapsedTime); // TODO: Remove on Nazara update
-
 			PlanetGravitySystem& operator=(const PlanetGravitySystem&) = delete;
-			PlanetGravitySystem& operator=(PlanetGravitySystem&&) = default;
+			PlanetGravitySystem& operator=(PlanetGravitySystem&&) = delete;
 
 		private:
 			entt::registry& m_registry;

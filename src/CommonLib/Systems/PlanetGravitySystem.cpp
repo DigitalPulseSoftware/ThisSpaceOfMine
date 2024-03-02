@@ -38,9 +38,4 @@ namespace tsom
 			rigidBody.AddForce(-up * planetComponent.planet->GetGravityFactor(pos) * rigidBody.GetMass());
 		}
 	}
-
-	void PlanetGravitySystem::Update(Nz::Time elapsedTime)
-	{
-		// Dummy
-	}
 }
