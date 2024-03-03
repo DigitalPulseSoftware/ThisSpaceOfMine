@@ -55,7 +55,7 @@ namespace tsom
 			template<typename F> void ForEachPlayer(F&& functor);
 			template<typename F> void ForEachPlayer(F&& functor) const;
 
-			inline Nz::ApplicationBase& GetApp();
+			inline Nz::ApplicationBase& GetApplication();
 			inline const BlockLibrary& GetBlockLibrary() const;
 			inline const std::array<std::uint8_t, 32>& GetConnectionTokenEncryptionKey() const;
 			inline Planet& GetPlanet();

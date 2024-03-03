@@ -53,6 +53,7 @@ namespace tsom
 				Nz::Quaternionf initialRotation;
 				Nz::Vector3f initialPosition;
 				std::optional<Packets::Helper::PlayerControlledData> playerControlledData;
+				std::optional<Packets::Helper::ShipData> shipData;
 				bool isMoving;
 			};
 
