@@ -3,6 +3,7 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ServerLib/NetworkedEntitiesSystem.hpp>
+#include <CommonLib/Components/ShipComponent.hpp>
 #include <ServerLib/ServerInstance.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
 #include <ServerLib/Components/ServerPlayerControlledComponent.hpp>
@@ -71,6 +72,11 @@ namespace tsom
 				auto& data = createData.playerControlledData.emplace();
 				data.controllingPlayerId = controllingPlayer->GetPlayerIndex();
 			}
+		}
+
+		if (auto* shipComp = m_registry.try_get<ShipComponent>(entity))
+		{
+			auto& data = createData.shipData.emplace();
 		}
 
 		return createData;

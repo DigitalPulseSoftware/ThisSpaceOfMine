@@ -261,8 +261,11 @@ namespace tsom
 			Packets::EntitiesCreation creationPacket;
 			creationPacket.tickIndex = tickIndex;
 
-			for (auto&& [handle, data] : m_createdEntities)
+			for (auto it = m_createdEntities.begin(); it != m_createdEntities.end(); ++it)
 			{
+				entt::handle handle = it.key();
+				auto& data = it.value();
+
 				std::size_t networkId = m_freeEntityIds.FindFirst();
 				if (networkId == m_freeEntityIds.npos)
 				{
@@ -278,7 +281,8 @@ namespace tsom
 				entityData.entityId = Nz::SafeCast<Nz::UInt32>(networkId);
 				entityData.initialStates.position = data.initialPosition;
 				entityData.initialStates.rotation = data.initialRotation;
-				entityData.playerControlled = data.playerControlledData;
+				entityData.playerControlled = std::move(data.playerControlledData);
+				entityData.ship = std::move(data.shipData);
 			}
 
 			m_networkSession->SendPacket(creationPacket);
