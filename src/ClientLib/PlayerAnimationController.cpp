@@ -10,15 +10,6 @@
 #include <entt/entt.hpp>
 #include <fmt/core.h>
 
-namespace fixme
-{
-	Nz::Vector3f ProjectOnPlane(const Nz::Vector3f& vector, const Nz::Vector3f& normal)
-	{
-		float dot = vector.DotProduct(normal);
-		return vector - dot * normal;
-	}
-}
-
 namespace tsom
 {
 	PlayerAnimationController::PlayerAnimationController(entt::handle entity, std::shared_ptr<PlayerAnimationAssets> animationAssets) :
@@ -51,7 +42,7 @@ namespace tsom
 
 		Nz::Vector3f up = node.GetUp();
 
-		m_playerVelocity = Nz::Vector3f::Distance(fixme::ProjectOnPlane(newPosition, up), fixme::ProjectOnPlane(m_playerPosition, up)) / elapsedTime.AsSeconds();
+		m_playerVelocity = Nz::Vector3f::Distance(newPosition.ProjectOnPlane(up), m_playerPosition.ProjectOnPlane(up)) / elapsedTime.AsSeconds();
 		m_playerPosition = newPosition;
 		m_idleRunBlender.UpdateValue(m_playerVelocity);
 	}
