@@ -1,25 +1,25 @@
-// Copyright (C) 2023 Jérôme "Lynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com) (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
-// For conditions of distribution and use, see copyright notice in Config.hpp
+// For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <Game/States/ShipEditionState.hpp>
 #include <Game/States/StateData.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
-#include <Nazara/Core/AppFilesystemComponent.hpp>
+#include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <Nazara/Core/Primitive.hpp>
-#include <Nazara/Graphics/Components/CameraComponent.hpp>
+#include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Graphics/DirectionalLight.hpp>
 #include <Nazara/Graphics/FramePipeline.hpp>
 #include <Nazara/Graphics/GraphicalMesh.hpp>
 #include <Nazara/Graphics/Model.hpp>
+#include <Nazara/Graphics/Components/CameraComponent.hpp>
 #include <Nazara/Graphics/PropertyHandler/TexturePropertyHandler.hpp>
 #include <Nazara/Graphics/PropertyHandler/UniformValuePropertyHandler.hpp>
 #include <Nazara/Graphics/Systems/RenderSystem.hpp>
-#include <Nazara/JoltPhysics3D/Systems/JoltPhysics3DSystem.hpp>
+#include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <Nazara/Platform/Window.hpp>
-#include <Nazara/Utility/RichTextBuilder.hpp>
-#include <Nazara/Utility/RichTextDrawer.hpp>
-#include <Nazara/Utility/Components/NodeComponent.hpp>
+#include <Nazara/TextRenderer/RichTextBuilder.hpp>
+#include <Nazara/TextRenderer/RichTextDrawer.hpp>
 #include <Nazara/Widgets/BoxLayout.hpp>
 #include <Nazara/Widgets/ImageButtonWidget.hpp>
 #include <Nazara/Widgets/LabelWidget.hpp>
@@ -36,7 +36,7 @@ namespace tsom
 	m_cameraMovement(false)
 	{
 		StateData& stateData = GetStateData();
-		auto& filesystem = stateData.app->GetComponent<Nz::AppFilesystemComponent>();
+		auto& filesystem = stateData.app->GetComponent<Nz::FilesystemAppComponent>();
 
 		m_cameraEntity = CreateEntity();
 		{
@@ -200,10 +200,10 @@ namespace tsom
 			}
 
 			Nz::Vector3f hitPos, hitNormal;
-			auto filter = [&](const Nz::JoltPhysics3DSystem::RaycastHit& hitInfo) -> std::optional<float>
+			auto filter = [&](const Nz::Physics3DSystem::RaycastHit& hitInfo) -> std::optional<float>
 			{
 				//if (hitInfo.hitEntity != m_planetEntity)
-				//	return std::nullopt;
+				//  return std::nullopt;
 
 				hitPos = hitInfo.hitPosition;
 				hitNormal = hitInfo.hitNormal;
@@ -217,7 +217,7 @@ namespace tsom
 			Nz::Vector3f startPos = camera.Unproject({ mousePos.x, mousePos.y, 0.f });
 			Nz::Vector3f endPos = camera.Unproject({ mousePos.x, mousePos.y, 1.f });
 
-			auto& physSystem = stateData.world->GetSystem<Nz::JoltPhysics3DSystem>();
+			auto& physSystem = stateData.world->GetSystem<Nz::Physics3DSystem>();
 			if (physSystem.RaycastQuery(startPos, endPos, filter))
 			{
 				if (event.button == Nz::Mouse::Left)
@@ -291,19 +291,19 @@ namespace tsom
 		if (m_cameraMovement)
 		{
 			if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::Space))
-				cameraNode.Move(Nz::Vector3f::Up() * cameraSpeed * updateTime, Nz::CoordSys::Global);
+				cameraNode.MoveGlobal(Nz::Vector3f::Up() * cameraSpeed * updateTime);
 
 			if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::Z))
-				cameraNode.Move(Nz::Vector3f::Forward() * cameraSpeed * updateTime, Nz::CoordSys::Local);
+				cameraNode.Move(Nz::Vector3f::Forward() * cameraSpeed * updateTime);
 
 			if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::S))
-				cameraNode.Move(Nz::Vector3f::Backward() * cameraSpeed * updateTime, Nz::CoordSys::Local);
+				cameraNode.Move(Nz::Vector3f::Backward() * cameraSpeed * updateTime);
 
 			if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::Q))
-				cameraNode.Move(Nz::Vector3f::Left() * cameraSpeed * updateTime, Nz::CoordSys::Local);
+				cameraNode.Move(Nz::Vector3f::Left() * cameraSpeed * updateTime);
 
 			if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::D))
-				cameraNode.Move(Nz::Vector3f::Right() * cameraSpeed * updateTime, Nz::CoordSys::Local);
+				cameraNode.Move(Nz::Vector3f::Right() * cameraSpeed * updateTime);
 		}
 
 		DrawHoveredFace();
@@ -468,12 +468,12 @@ namespace tsom
 		Nz::Vector3f endPos = camera.Unproject({ mousePos.x, mousePos.y, 1.f });
 
 		// Raycast
-		auto& physSystem = GetStateData().world->GetSystem<Nz::JoltPhysics3DSystem>();
+		auto& physSystem = GetStateData().world->GetSystem<Nz::Physics3DSystem>();
 		Nz::Vector3f hitPos, hitNormal;
-		if (physSystem.RaycastQuery(startPos, endPos, [&](const Nz::JoltPhysics3DSystem::RaycastHit& hitInfo) -> std::optional<float>
+		if (physSystem.RaycastQuery(startPos, endPos, [&](const Nz::Physics3DSystem::RaycastHit& hitInfo) -> std::optional<float>
 		{
 			//if (hitInfo.hitEntity != m_planetEntity)
-			//	return std::nullopt;
+			//  return std::nullopt;
 
 			hitPos = hitInfo.hitPosition;
 			hitNormal = hitInfo.hitNormal;

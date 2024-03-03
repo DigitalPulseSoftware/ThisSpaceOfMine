@@ -32,6 +32,9 @@ namespace tsom
 			ChunkEntities(ChunkEntities&&) = delete;
 			~ChunkEntities();
 
+			void SetParentEntity(entt::handle entity);
+			void SetStaticRigidBodies(bool isStatic);
+
 			void Update();
 
 			ChunkEntities& operator=(const ChunkEntities&) = delete;
@@ -67,10 +70,12 @@ namespace tsom
 			tsl::hopscotch_set<ChunkIndices> m_invalidatedChunks;
 			tsl::hopscotch_map<ChunkIndices, std::shared_ptr<UpdateJob>> m_updateJobs;
 			tsl::hopscotch_map<ChunkIndices, entt::handle> m_chunkEntities;
+			entt::handle m_parentEntity;
 			Nz::ApplicationBase& m_application;
 			Nz::EnttWorld& m_world;
 			const BlockLibrary& m_blockLibrary;
 			const ChunkContainer& m_chunkContainer;
+			bool m_staticRigidBodies;
 	};
 }
 

@@ -5,7 +5,12 @@
 #include <ServerLib/Session/PlayerSessionHandler.hpp>
 #include <CommonLib/BlockIndex.hpp>
 #include <CommonLib/CharacterController.hpp>
+#include <CommonLib/ChunkEntities.hpp>
+#include <CommonLib/Ship.hpp>
+#include <CommonLib/Components/PlanetGravityComponent.hpp>
+#include <CommonLib/Components/ShipComponent.hpp>
 #include <ServerLib/ServerInstance.hpp>
+#include <ServerLib/Components/NetworkedComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Collider3D.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
@@ -92,6 +97,32 @@ namespace tsom
 			chatMessage.message = (m_player->GetCharacterController()->IsFlying()) ? "fly enabled" : "fly disabled";
 
 			GetSession()->SendPacket(std::move(chatMessage));
+			return;
+		}
+		else if (message == "/spawnship")
+		{
+			entt::handle controlledEntity = m_player->GetControlledEntity();
+			entt::registry* reg = controlledEntity.registry();
+
+			entt::handle ent = entt::handle(*reg, reg->create());
+			auto& node = ent.emplace<Nz::NodeComponent>();
+			node.SetPosition(controlledEntity.get<Nz::NodeComponent>().GetPosition());
+
+			ServerInstance& serverInstance = m_player->GetServerInstance();
+			Nz::ApplicationBase& app = serverInstance.GetApplication();
+			const BlockLibrary& blockLibrary = serverInstance.GetBlockLibrary();
+
+			auto& shipComp = ent.emplace<ShipComponent>();
+			shipComp.ship = std::make_unique<Ship>(blockLibrary, Nz::Vector3ui(32), 1.f);
+
+			std::shared_ptr<Nz::Collider3D> chunkCollider = shipComp.ship->GetChunk(0)->BuildCollider(blockLibrary);
+
+			ent.emplace<Nz::RigidBody3DComponent>(Nz::RigidBody3DComponent::DynamicSettings(chunkCollider, 100.f));
+
+			ent.emplace<NetworkedComponent>();
+			ent.emplace<PlanetGravityComponent>().planet = &serverInstance.GetPlanet();
+
+			//shipComp.chunkEntities = std::make_unique<ChunkEntities>(app, serverInstance.GetWorld(), *shipComp.ship, blockLibrary);
 			return;
 		}
 

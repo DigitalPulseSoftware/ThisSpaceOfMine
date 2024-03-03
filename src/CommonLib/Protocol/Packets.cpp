@@ -171,6 +171,7 @@ namespace tsom
 				Helper::Serialize(serializer, entity.initialStates);
 
 				serializer.SerializePresence(entity.playerControlled);
+				serializer.SerializePresence(entity.ship);
 
 				if (entity.playerControlled)
 					Helper::Serialize(serializer, *entity.playerControlled);

@@ -4,11 +4,14 @@
 
 #include <ClientLib/ClientSessionHandler.hpp>
 #include <ClientLib/PlayerAnimationController.hpp>
+#include <ClientLib/ClientBlockLibrary.hpp>
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Components/AnimationComponent.hpp>
 #include <ClientLib/Components/MovementInterpolationComponent.hpp>
 #include <CommonLib/GameConstants.hpp>
+#include <CommonLib/Ship.hpp>
 #include <CommonLib/Components/EntityOwnerComponent.hpp>
+#include <CommonLib/Components/ShipComponent.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/EnttWorld.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
@@ -35,10 +38,11 @@ namespace tsom
 		{ PacketIndex<Packets::UpdatePlayerInputs>, { .channel = 1, .flags = Nz::ENetPacketFlag_Unreliable } }
 	});
 
-	ClientSessionHandler::ClientSessionHandler(NetworkSession* session, Nz::ApplicationBase& app, Nz::EnttWorld& world) :
+	ClientSessionHandler::ClientSessionHandler(NetworkSession* session, Nz::ApplicationBase& app, Nz::EnttWorld& world, ClientBlockLibrary& blockLibrary) :
 	SessionHandler(session),
 	m_app(app),
 	m_world(world),
+	m_blockLibrary(blockLibrary),
 	m_ownPlayerIndex(InvalidPlayerIndex),
 	m_lastInputIndex(0)
 	{
@@ -112,7 +116,10 @@ namespace tsom
 			if (entityData.playerControlled)
 				SetupEntity(entity, std::move(entityData.playerControlled.value()));
 
-			fmt::print("Create entity {}\n", entityData.entityId);
+			if (entityData.ship)
+				SetupEntity(entity, std::move(entityData.ship.value()));
+
+			fmt::print("Created entity {}\n", entityData.entityId);
 		}
 	}
 
@@ -306,5 +313,35 @@ namespace tsom
 		}
 		else
 			entity.emplace<MovementInterpolationComponent>(m_lastTickIndex);
+	}
+
+	void ClientSessionHandler::SetupEntity(entt::handle entity, Packets::Helper::ShipData&& entityData)
+	{
+		auto& shipComp = entity.emplace<ShipComponent>();
+		shipComp.ship = std::make_unique<Ship>(m_blockLibrary, Nz::Vector3ui(32), 1.f);
+
+		std::shared_ptr<Nz::Collider3D> chunkCollider = shipComp.ship->GetChunk(0)->BuildCollider(m_blockLibrary);
+
+		entity.emplace<Nz::RigidBody3DComponent>(Nz::RigidBody3DComponent::DynamicSettings(chunkCollider, 100.f));
+
+		// Fallback
+		std::shared_ptr<Nz::Mesh> mesh = Nz::Mesh::Build(chunkCollider->GenerateDebugMesh());
+
+		std::shared_ptr<Nz::MaterialInstance> colliderMat = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic);
+		colliderMat->SetValueProperty("BaseColor", Nz::Color::Green());
+		colliderMat->UpdatePassesStates([](Nz::RenderStates& states)
+		{
+			states.primitiveMode = Nz::PrimitiveMode::LineList;
+			return true;
+		});
+
+		std::shared_ptr<Nz::GraphicalMesh> colliderGraphicalMesh = Nz::GraphicalMesh::BuildFromMesh(*mesh);
+
+		std::shared_ptr<Nz::Model> model = std::make_shared<Nz::Model>(colliderGraphicalMesh);
+		for (std::size_t i = 0; i < model->GetSubMeshCount(); ++i)
+			model->SetMaterial(i, colliderMat);
+
+		auto& gfx = entity.emplace<Nz::GraphicsComponent>();
+		gfx.AttachRenderable(model);
 	}
 }

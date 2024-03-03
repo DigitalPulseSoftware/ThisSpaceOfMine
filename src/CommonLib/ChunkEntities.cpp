@@ -23,7 +23,8 @@ namespace tsom
 	m_world(world),
 	m_application(application),
 	m_blockLibrary(blockLibrary),
-	m_chunkContainer(chunkContainer)
+	m_chunkContainer(chunkContainer),
+	m_staticRigidBodies(true)
 	{
 		m_onChunkAdded.Connect(chunkContainer.OnChunkAdded, [this](ChunkContainer* /*emitter*/, Chunk* chunk)
 		{
@@ -51,6 +52,16 @@ namespace tsom
 		}
 	}
 
+	void ChunkEntities::SetParentEntity(entt::handle entity)
+	{
+		m_parentEntity = entity;
+	}
+
+	void ChunkEntities::SetStaticRigidBodies(bool isStatic)
+	{
+		m_staticRigidBodies = isStatic;
+	}
+
 	void ChunkEntities::Update()
 	{
 		for (auto it = m_updateJobs.begin(); it != m_updateJobs.end(); )
@@ -75,8 +86,14 @@ namespace tsom
 	void ChunkEntities::CreateChunkEntity(const ChunkIndices& chunkIndices, const Chunk* chunk)
 	{
 		entt::handle chunkEntity = m_world.CreateEntity();
-		chunkEntity.emplace<Nz::NodeComponent>(m_chunkContainer.GetChunkOffset(chunkIndices));
-		chunkEntity.emplace<Nz::RigidBody3DComponent>(Nz::RigidBody3D::StaticSettings(std::make_shared<Nz::SphereCollider3D>(1.f))); //< FIXME: null collider couldn't be changed back (sensor issue), set to null when Nazara is updated
+		auto& nodeComponent = chunkEntity.emplace<Nz::NodeComponent>(m_chunkContainer.GetChunkOffset(chunkIndices));
+		if (m_parentEntity)
+			nodeComponent.SetParent(m_parentEntity);
+
+		if (m_staticRigidBodies)
+			chunkEntity.emplace<Nz::RigidBody3DComponent>(Nz::RigidBody3D::StaticSettings(nullptr));
+		else
+			chunkEntity.emplace<Nz::RigidBody3DComponent>(Nz::RigidBody3D::DynamicSettings(nullptr, 100.f));
 
 		assert(!m_chunkEntities.contains(chunkIndices));
 		m_chunkEntities.insert_or_assign(chunkIndices, chunkEntity);

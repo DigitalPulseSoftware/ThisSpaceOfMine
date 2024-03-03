@@ -13,11 +13,6 @@
 #include <NazaraUtils/FunctionRef.hpp>
 #include <NazaraUtils/Signal.hpp>
 
-namespace Nz
-{
-	class Collider3D;
-}
-
 namespace tsom
 {
 	class TSOM_COMMONLIB_API ChunkContainer

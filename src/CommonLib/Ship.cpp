@@ -1,22 +1,22 @@
-// Copyright (C) 2023 Jérôme "Lynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com) (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
-// For conditions of distribution and use, see copyright notice in Config.hpp
+// For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/Ship.hpp>
 #include <CommonLib/BlockLibrary.hpp>
 #include <CommonLib/FlatChunk.hpp>
-#include <fmt/format.h>
 #include <PerlinNoise.hpp>
+#include <fmt/format.h>
 #include <random>
 
 namespace tsom
 {
-	Ship::Ship(BlockLibrary& blockManager, const Nz::Vector3ui& gridSize, float tileSize) :
+	Ship::Ship(const BlockLibrary& blockLibrary, const Nz::Vector3ui& gridSize, float tileSize) :
 	ChunkContainer(gridSize, tileSize)
 	{
 		m_chunks.resize(m_chunkCount.x * m_chunkCount.y * m_chunkCount.z);
 
-		SetupChunks(blockManager);
+		SetupChunks(blockLibrary);
 	}
 
 	Chunk& Ship::AddChunk(const Nz::Vector3ui& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback)
@@ -49,11 +49,11 @@ namespace tsom
 		m_chunks[index].onUpdated.Disconnect();
 	}
 
-	void Ship::SetupChunks(BlockLibrary& blockManager)
+	void Ship::SetupChunks(const BlockLibrary& blockLibrary)
 	{
 		constexpr unsigned int freespace = 5;
 
-		BlockIndex hullIndex = blockManager.GetBlockIndex("hull");
+		BlockIndex hullIndex = blockLibrary.GetBlockIndex("hull");
 		if (hullIndex == InvalidBlockIndex)
 			return;
 

@@ -1,15 +1,15 @@
-// Copyright (C) 2023 Jérôme "Lynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com) (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
-// For conditions of distribution and use, see copyright notice in Config.hpp
+// For conditions of distribution and use, see copyright notice in LICENSE
 
 #pragma once
 
 #ifndef TSOM_COMMONLIB_SHIP_HPP
 #define TSOM_COMMONLIB_SHIP_HPP
 
+#include <CommonLib/Export.hpp>
 #include <CommonLib/ChunkContainer.hpp>
 #include <CommonLib/Direction.hpp>
-#include <CommonLib/Export.hpp>
 #include <NazaraUtils/FunctionRef.hpp>
 #include <memory>
 #include <vector>
@@ -21,7 +21,7 @@ namespace tsom
 	class TSOM_COMMONLIB_API Ship : public ChunkContainer
 	{
 		public:
-			Ship(BlockLibrary& blockManager, const Nz::Vector3ui& gridSize, float tileSize);
+			Ship(const BlockLibrary& blockLibrary, const Nz::Vector3ui& gridSize, float tileSize);
 			Ship(const Ship&) = delete;
 			Ship(Ship&&) = delete;
 			~Ship() = default;
@@ -44,7 +44,7 @@ namespace tsom
 			static constexpr unsigned int ChunkSize = 32;
 
 		private:
-			void SetupChunks(BlockLibrary& blockManager);
+			void SetupChunks(const BlockLibrary& blockLibrary);
 
 			struct ChunkData
 			{

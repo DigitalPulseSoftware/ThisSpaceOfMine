@@ -16,6 +16,7 @@
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/DebugInfoState.hpp>
 #include <Game/States/MenuState.hpp>
+#include <Game/States/ShipEditionState.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/Clock.hpp>
 #include <Nazara/Core/EntitySystemAppComponent.hpp>

@@ -25,12 +25,13 @@ namespace Nz
 
 namespace tsom
 {
+	class ClientBlockLibrary;
 	struct PlayerAnimationAssets;
 
 	class TSOM_CLIENTLIB_API ClientSessionHandler : public SessionHandler
 	{
 		public:
-			ClientSessionHandler(NetworkSession* session, Nz::ApplicationBase& app, Nz::EnttWorld& world);
+			ClientSessionHandler(NetworkSession* session, Nz::ApplicationBase& app, Nz::EnttWorld& world, ClientBlockLibrary& blockLibrary);
 			~ClientSessionHandler();
 
 			inline entt::handle GetControlledEntity() const;
@@ -66,6 +67,7 @@ namespace tsom
 
 			inline const PlayerInfo* FetchPlayerInfo(PlayerIndex playerIndex) const;
 			void SetupEntity(entt::handle entity, Packets::Helper::PlayerControlledData&& entityData);
+			void SetupEntity(entt::handle entity, Packets::Helper::ShipData&& entityData);
 
 			struct PlayerInfo
 			{
@@ -84,6 +86,7 @@ namespace tsom
 			std::vector<std::optional<PlayerInfo>> m_players; //< FIXME: Nz::SparseVector
 			Nz::ApplicationBase& m_app;
 			Nz::EnttWorld& m_world;
+			ClientBlockLibrary& m_blockLibrary;
 			Nz::UInt16 m_lastTickIndex;
 			Nz::UInt16 m_ownPlayerIndex;
 			InputIndex m_lastInputIndex;

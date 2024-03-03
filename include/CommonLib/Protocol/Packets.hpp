@@ -67,6 +67,15 @@ namespace tsom
 				PlayerIndex controllingPlayerId;
 			};
 
+			struct ShipData
+			{
+				CompressedUnsigned<Nz::UInt32> chunkSizeX;
+				CompressedUnsigned<Nz::UInt32> chunkSizeY;
+				CompressedUnsigned<Nz::UInt32> chunkSizeZ;
+				float cellSize;
+				std::vector<Nz::UInt8> content;
+			};
+
 			struct VoxelLocation
 			{
 				Nz::UInt8 x;
@@ -142,6 +151,7 @@ namespace tsom
 				Helper::EntityId entityId;
 				Helper::EntityState initialStates;
 				std::optional<Helper::PlayerControlledData> playerControlled;
+				std::optional<Helper::ShipData> ship;
 			};
 
 			Nz::UInt16 tickIndex;

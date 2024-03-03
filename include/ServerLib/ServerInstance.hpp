@@ -48,6 +48,7 @@ namespace tsom
 			template<typename F> void ForEachPlayer(F&& functor);
 			template<typename F> void ForEachPlayer(F&& functor) const;
 
+			inline Nz::ApplicationBase& GetApplication();
 			inline const BlockLibrary& GetBlockLibrary() const;
 			inline Planet& GetPlanet();
 			inline const Planet& GetPlanet() const;
@@ -87,8 +88,8 @@ namespace tsom
 			Nz::Time m_saveInterval;
 			Nz::Time m_tickAccumulator;
 			Nz::Time m_tickDuration;
-			BlockLibrary m_blockLibrary;
 			Nz::ApplicationBase& m_application;
+			BlockLibrary m_blockLibrary;
 			bool m_pauseWhenEmpty;
 	};
 }
