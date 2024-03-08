@@ -47,6 +47,10 @@ set_rundir(".")
 add_includedirs("include", "src")
 set_targetdir("./bin/$(plat)_$(arch)_$(mode)")
 
+if is_mode("debug") then
+	add_defines("NAZARA_DEBUG")
+end
+
 if is_plat("windows") then
 	set_runtimes(is_mode("debug") and "MDd" or "MD")
 	add_cxflags("/bigobj", "/permissive-", "/Zc:__cplusplus", "/Zc:externConstexpr", "/Zc:inline", "/Zc:lambda", "/Zc:preprocessor", "/Zc:referenceBinding", "/Zc:strictStrings", "/Zc:throwingNew", {tools = "cl"})
@@ -144,7 +148,7 @@ std::string_view BuildCommitDate = "%s";
 			dependfile = dependfile, 
 			files = targetfile,
 			changed = target:is_rebuilt(),
-			values = {targetversion, buildconf, system, branch, commitHash, commitDate}
+			values = {targetversion:shortstr(), buildconf, system, branch, commitHash, commitDate}
 		})
 	end)
 
@@ -230,3 +234,5 @@ target("TSOMServer", function ()
 
 	add_rpathdirs("@executable_path")
 end)
+
+includes("tests/xmake.lua")
