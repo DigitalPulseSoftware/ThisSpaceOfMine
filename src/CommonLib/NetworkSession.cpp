@@ -30,6 +30,13 @@ namespace tsom
 		m_sessionHandler->HandlePacket(std::move(byteArray));
 	}
 
+	void NetworkSession::QueryInfo(NetworkReactor::PeerInfoCallback callback)
+	{
+		assert(m_peerId != NetworkReactor::InvalidPeerId);
+
+		m_reactor.QueryInfo(m_peerId, std::move(callback));
+	}
+
 	SessionHandler& NetworkSession::SetHandler(std::unique_ptr<SessionHandler>&& sessionHandler)
 	{
 		m_sessionHandler = std::move(sessionHandler);

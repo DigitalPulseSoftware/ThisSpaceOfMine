@@ -10,11 +10,13 @@
 #include <ClientLib/ClientChunkEntities.hpp>
 #include <ClientLib/ClientPlanet.hpp>
 #include <ClientLib/ClientSessionHandler.hpp>
+#include <CommonLib/NetworkReactor.hpp>
 #include <Game/States/WidgetState.hpp>
 #include <Nazara/Core/State.hpp>
 #include <Nazara/Core/Time.hpp>
 #include <Nazara/Math/EulerAngles.hpp>
 #include <Nazara/Platform/WindowEventHandler.hpp>
+#include <Nazara/TextRenderer/SimpleTextDrawer.hpp>
 #include <Nazara/Widgets/Canvas.hpp>
 #include <entt/entt.hpp>
 #include <array>
@@ -22,6 +24,11 @@
 #include <memory>
 #include <optional>
 #include <vector>
+
+namespace Nz
+{
+	class LabelWidget;
+}
 
 namespace tsom
 {
@@ -66,12 +73,21 @@ namespace tsom
 			NazaraSlot(Nz::Canvas, OnUnhandledMouseMoved, m_mouseMovedSlot);
 			NazaraSlot(Nz::Canvas, OnUnhandledMouseWheelMoved, m_mouseWheelMovedSlot);
 
+			struct DebugOverlay
+			{
+				Nz::LabelWidget* label = nullptr;
+				Nz::SimpleTextDrawer textDrawer;
+				NetworkReactor::PeerInfo peerInfo;
+				unsigned int mode = 0;
+			};
+
 			struct InputRotation
 			{
 				InputIndex inputIndex;
 				Nz::EulerAnglesf inputRotation;
 			};
 
+			std::shared_ptr<DebugOverlay> m_debugOverlay;
 			std::unique_ptr<ClientPlanet> m_planet;
 			std::unique_ptr<ClientChunkEntities> m_planetEntities;
 			std::vector<InputRotation> m_predictedInputRotations;

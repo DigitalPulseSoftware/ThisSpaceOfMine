@@ -38,6 +38,8 @@ namespace tsom
 
 			void HandlePacket(Nz::ByteArray&& byteArray);
 
+			void QueryInfo(NetworkReactor::PeerInfoCallback callback);
+
 			template<typename T> void SendPacket(const T& packet, std::function<void()> acknowledgeCallback = {});
 
 			SessionHandler& SetHandler(std::unique_ptr<SessionHandler>&& sessionHandler);

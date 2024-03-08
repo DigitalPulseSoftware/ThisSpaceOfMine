@@ -4,6 +4,14 @@
 
 namespace tsom
 {
+	inline auto ConnectionState::GetConnectionInfo() const -> const ConnectionInfo*
+	{
+		if (!m_connectionInfo.has_value())
+			return nullptr;
+
+		return &m_connectionInfo.value();
+	}
+
 	inline bool ConnectionState::HasSession() const
 	{
 		return m_serverSession.has_value();

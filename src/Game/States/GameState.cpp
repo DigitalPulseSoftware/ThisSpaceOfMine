@@ -13,6 +13,8 @@
 #include <CommonLib/NetworkSession.hpp>
 #include <CommonLib/PlayerInputs.hpp>
 #include <CommonLib/Components/PlanetGravityComponent.hpp>
+#include <CommonLib/Utils.hpp>
+#include <Game/States/ConnectionState.hpp>
 #include <Game/States/StateData.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
@@ -36,6 +38,8 @@
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <Nazara/Platform/Window.hpp>
 #include <Nazara/Platform/WindowEventHandler.hpp>
+#include <Nazara/Widgets/LabelWidget.hpp>
+#include <fmt/color.h>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
@@ -328,16 +332,22 @@ namespace tsom
 
 				case Nz::Keyboard::VKey::F3:
 				{
-					auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
-					Nz::Vector3f pos = cameraNode.GetPosition();
-
-					Nz::Vector3f innerPos;
-					Chunk* chunk = m_planet->GetChunkByPosition(pos, &innerPos);
-					if (chunk)
+					if (!m_debugOverlay)
 					{
-						std::optional<Nz::Vector3ui> innerCoordinates = chunk->ComputeCoordinates(innerPos);
-						if (innerCoordinates)
-							fmt::print("Current position = {0}\n", fmt::streamed(chunk->GetIndices() * Planet::ChunkSize + *innerCoordinates));
+						m_debugOverlay = std::make_shared<DebugOverlay>();
+						m_debugOverlay->label = CreateWidget<Nz::LabelWidget>();
+						m_debugOverlay->textDrawer.SetCharacterSize(18);
+					}
+					else
+					{
+						m_debugOverlay->mode++;
+						if (m_debugOverlay->mode > 3)
+						{
+							// Disable debug overlay
+							DestroyWidget(m_debugOverlay->label);
+							m_debugOverlay = nullptr;
+							break;
+						}
 					}
 
 					break;
@@ -564,6 +574,9 @@ namespace tsom
 		if (!stateData.networkSession)
 			return true;
 
+		if (m_debugOverlay)
+			m_debugOverlay->textDrawer.Clear();
+
 		m_planetEntities->Update();
 
 		m_tickAccumulator += elapsedTime;
@@ -610,6 +623,51 @@ namespace tsom
 
 				cameraNode.SetRotation(cameraRotation);
 			}
+
+			if (m_debugOverlay)
+			{
+				m_debugOverlay->textDrawer.AppendText(fmt::format("{0:-^{1}}\n", "Player position", 20));
+				m_debugOverlay->textDrawer.AppendText(fmt::format("Position: {0:.3f};{1:.3f};{2:.3f}\n", characterPos.x, characterPos.y, characterPos.z));
+				m_debugOverlay->textDrawer.AppendText(fmt::format("Rotation: {0:.3f};{1:.3f};{2:.3f};{3:.3f}\n", characterRot.x, characterRot.y, characterRot.z, characterRot.w));
+
+				Nz::Vector3f up = m_planet->ComputeUpDirection(characterPos);
+				float gravity = m_planet->GetGravityFactor(characterPos);
+
+				m_debugOverlay->textDrawer.AppendText(fmt::format("Up direction: {0:.3f};{1:.3f};{2:.3f} - gravity: {3:.2f}\n", up.x, up.y, up.z, gravity));
+
+				ChunkIndices chunkIndices = m_planet->GetChunkIndicesByPosition(characterPos);
+				const Chunk* chunk = m_planet->GetChunk(chunkIndices);
+
+				m_debugOverlay->textDrawer.AppendText(fmt::format("Chunk: {0};{1};{2}{3}\n", chunkIndices.x, chunkIndices.y, chunkIndices.z, chunk ? "" : " (not loaded)"));
+
+				if (const Chunk* chunk = m_planet->GetChunk(chunkIndices))
+				{
+					if (auto coordinates = chunk->ComputeCoordinates(characterPos))
+						m_debugOverlay->textDrawer.AppendText(fmt::format("Chunk block: {0};{1};{2}\n", coordinates->x, coordinates->y, coordinates->z));
+				}
+			}
+		}
+
+		// Network info
+		if (m_debugOverlay && m_debugOverlay->mode >= 2)
+		{
+			const auto* connectionInfo = stateData.connectionState->GetConnectionInfo();
+			if (connectionInfo)
+			{
+				Nz::UInt32 downloadSpeed = Nz::UInt32(std::max(std::round(connectionInfo->downloadSpeed.GetAverageValue()), 0.0));
+				Nz::UInt32 uploadSpeed = Nz::UInt32(std::max(std::round(connectionInfo->uploadSpeed.GetAverageValue()), 0.0));
+
+				m_debugOverlay->textDrawer.AppendText(fmt::format("{0:-^{1}}\n", "Network", 20));
+				m_debugOverlay->textDrawer.AppendText(fmt::format("Ping: {0}ms\n", connectionInfo->peerInfo.ping));
+				m_debugOverlay->textDrawer.AppendText(fmt::format("Download speed: {0}\n", ByteToString(downloadSpeed, true)));
+				m_debugOverlay->textDrawer.AppendText(fmt::format("Upload speed: {0}\n", ByteToString(uploadSpeed, true)));
+				if (m_debugOverlay->mode >= 3)
+				{
+					m_debugOverlay->textDrawer.AppendText(fmt::format("Total downloaded: {0}\n", ByteToString(connectionInfo->peerInfo.totalByteReceived)));
+					m_debugOverlay->textDrawer.AppendText(fmt::format("Total uploaded: {0}\n", ByteToString(connectionInfo->peerInfo.totalByteSent)));
+					m_debugOverlay->textDrawer.AppendText(fmt::format("Packet loss: {0}%\n", 100ull * connectionInfo->peerInfo.totalPacketLost / connectionInfo->peerInfo.totalPacketSent));
+				}
+			}
 		}
 
 		// Raycast
@@ -628,12 +686,42 @@ namespace tsom
 			{
 				debugDrawer.DrawLine(hitPos, hitPos + hitNormal * 0.2f, Nz::Color::Cyan());
 
-				Nz::Vector3f localPos;
-				if (const Chunk* chunk = m_planet->GetChunkByPosition(hitPos - hitNormal * m_planet->GetTileSize() * 0.25f, &localPos))
+				Nz::Vector3f blockPos = hitPos - hitNormal * m_planet->GetTileSize() * 0.25f;
+
+				ChunkIndices chunkIndices = m_planet->GetChunkIndicesByPosition(blockPos);
+				const Chunk* chunk = m_planet->GetChunk(chunkIndices);
+
+				if (m_debugOverlay && m_debugOverlay->mode >= 1)
 				{
-					auto coordinates = chunk->ComputeCoordinates(localPos);
-					if (coordinates)
+					const ChunkIndices& chunkIndices = chunk->GetIndices();
+					m_debugOverlay->textDrawer.AppendText(fmt::format("{0:-^{1}}\n", "Target", 20));
+					m_debugOverlay->textDrawer.AppendText(fmt::format("Target chunk: {0};{1};{2}{3}\n", chunkIndices.x, chunkIndices.y, chunkIndices.z, chunk ? "" : " (not loaded)"));
+				}
+
+				if (chunk)
+				{
+					if (auto coordinates = chunk->ComputeCoordinates(blockPos))
 					{
+						if (m_debugOverlay && m_debugOverlay->mode >= 1)
+						{
+							m_debugOverlay->textDrawer.AppendText(fmt::format("Target chunk block: {0};{1};{2}\n", coordinates->x, coordinates->y, coordinates->z));
+
+							Nz::Vector3ui chunkCount(5);
+
+							Nz::Vector3i maxHeight((Nz::Vector3i(chunkCount) + Nz::Vector3i(1)) / 2);
+							maxHeight *= int(Planet::ChunkSize);
+
+							const ChunkIndices& chunkIndices = chunk->GetIndices();
+							Nz::Vector3i blockIndices = chunkIndices * int(Planet::ChunkSize) + Nz::Vector3i(coordinates->x, coordinates->z, coordinates->y) - Nz::Vector3i(int(Planet::ChunkSize)) / 2;
+							m_debugOverlay->textDrawer.AppendText(fmt::format("Target block global indices: {0};{1};{2}\n", blockIndices.x, blockIndices.y, blockIndices.z));
+							unsigned int depth = Nz::SafeCaster(std::min({
+								maxHeight.x - std::abs(blockIndices.x),
+								maxHeight.y - std::abs(blockIndices.z),
+								maxHeight.z - std::abs(blockIndices.y)
+							}));
+							m_debugOverlay->textDrawer.AppendText(fmt::format("Target block depth: {0}\n", depth));
+						}
+
 						auto cornerPos = chunk->ComputeVoxelCorners(*coordinates);
 						Nz::Vector3f offset = m_planet->GetChunkOffset(chunk->GetIndices());
 
@@ -663,8 +751,14 @@ namespace tsom
 			}
 		}
 
-
 		m_controlledEntity = stateData.sessionHandler->GetControlledEntity();
+
+		if (m_debugOverlay)
+		{
+			m_debugOverlay->label->UpdateText(m_debugOverlay->textDrawer);
+			m_debugOverlay->label->Resize(m_debugOverlay->label->GetPreferredSize());
+			m_debugOverlay->label->SetPosition({ 0.f, stateData.canvas->GetHeight() - m_debugOverlay->label->GetHeight() });
+		}
 
 		return true;
 	}

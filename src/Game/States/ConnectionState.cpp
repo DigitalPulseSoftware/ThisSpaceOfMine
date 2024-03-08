@@ -15,8 +15,11 @@
 
 namespace tsom
 {
+	constexpr Nz::Time PeerInfoPollTime = Nz::Time::Milliseconds(100);
+
 	ConnectionState::ConnectionState(std::shared_ptr<StateData> stateData) :
-	WidgetState(std::move(stateData))
+	WidgetState(std::move(stateData)),
+	m_nextPollTimer(PeerInfoPollTime)
 	{
 		m_connectingLabel = CreateWidget<Nz::LabelWidget>();
 	}
@@ -110,6 +113,8 @@ namespace tsom
 			if (!m_serverSession || m_serverSession->GetPeerId() != peerIndex)
 				return;
 
+			m_nextPollTimer = PeerInfoPollTime;
+
 			UpdateStatus(Nz::SimpleTextDrawer::Draw("Authenticating...", 36));
 
 			Packets::AuthRequest request;
@@ -156,6 +161,13 @@ namespace tsom
 			m_serverSession->HandlePacket(std::move(packet));
 		};
 
+		m_nextPollTimer -= elapsedTime;
+		if (m_nextPollTimer < Nz::Time::Zero())
+		{
+			PollSessionInfo();
+			m_nextPollTimer = PeerInfoPollTime;
+		}
+
 		for (auto& reactor : m_reactors)
 			reactor.Poll(ConnectionHandler, DisconnectionHandler, PacketHandler);
 
@@ -175,6 +187,34 @@ namespace tsom
 		}
 
 		return true;
+	}
+
+	void ConnectionState::PollSessionInfo()
+	{
+		if (!m_serverSession || !m_serverSession->IsConnected())
+			return;
+
+		// Since ConnectionState owns the Reactor, it's safe to assume it will outlive the lambda
+		m_serverSession->QueryInfo([this](const NetworkReactor::PeerInfo& peerInfo)
+		{
+			if (m_connectionInfo)
+			{
+				ConnectionInfo& connectionInfo = *m_connectionInfo;
+
+				double elapsedTime = m_sessionInfoClock.Restart().AsSeconds<double>();
+
+				connectionInfo.downloadSpeed.InsertValue((peerInfo.totalByteReceived - connectionInfo.peerInfo.totalByteReceived) / elapsedTime);
+				connectionInfo.uploadSpeed.InsertValue((peerInfo.totalByteSent - connectionInfo.peerInfo.totalByteSent) / elapsedTime);
+
+				connectionInfo.peerInfo = peerInfo;
+			}
+			else
+			{
+				m_connectionInfo.emplace();
+				m_connectionInfo->peerInfo = peerInfo;
+				m_sessionInfoClock.Restart();
+			}
+		});
 	}
 
 	void ConnectionState::UpdateStatus(const Nz::AbstractTextDrawer& textDrawer)

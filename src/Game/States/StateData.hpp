@@ -24,6 +24,7 @@ namespace tsom
 {
 	class ClientBlockLibrary;
 	class ClientSessionHandler;
+	class ConnectionState;
 	class NetworkSession;
 
 	struct StateData : std::enable_shared_from_this<StateData>
@@ -33,6 +34,7 @@ namespace tsom
 		Nz::Canvas* canvas;
 		Nz::EnttWorld* world;
 		Nz::Window* window;
+		ConnectionState* connectionState = nullptr;
 		ClientBlockLibrary* blockLibrary = nullptr;
 		ClientSessionHandler* sessionHandler = nullptr;
 		NetworkSession* networkSession = nullptr;

@@ -12,7 +12,7 @@
 
 namespace tsom
 {
-	TSOM_COMMONLIB_API std::string FormatSize(Nz::UInt64 sizeInBytes);
+	TSOM_COMMONLIB_API std::string ByteToString(Nz::UInt64 bytes, bool speed = false);
 }
 
 #include <CommonLib/Utils.inl>

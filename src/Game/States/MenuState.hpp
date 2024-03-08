@@ -26,7 +26,7 @@ namespace tsom
 	class MenuState : public WidgetState
 	{
 		public:
-			MenuState(std::shared_ptr<StateData> stateData, std::shared_ptr<ConnectionState> connectionState);
+			MenuState(std::shared_ptr<StateData> stateData);
 			~MenuState() = default;
 
 			void Enter(Nz::StateMachine& fsm) override;
@@ -40,7 +40,6 @@ namespace tsom
 
 			std::optional<UpdateInfo> m_newVersionInfo;
 			std::shared_ptr<Nz::State> m_nextState;
-			std::weak_ptr<ConnectionState> m_connectionState;
 			Nz::BoxLayout* m_layout;
 			Nz::BoxLayout* m_updateLayout;
 			Nz::ButtonWidget* m_connectButton;

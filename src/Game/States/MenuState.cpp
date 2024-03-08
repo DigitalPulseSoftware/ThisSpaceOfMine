@@ -49,9 +49,8 @@ namespace nlohmann
 
 namespace tsom
 {
-	MenuState::MenuState(std::shared_ptr<StateData> stateData, std::shared_ptr<ConnectionState> connectionState) :
-	WidgetState(stateData),
-	m_connectionState(connectionState)
+	MenuState::MenuState(std::shared_ptr<StateData> stateData) :
+	WidgetState(stateData)
 	{
 		std::string_view address = "malcolm.digitalpulse.software";
 		std::string_view nickname = "Mingebag";
@@ -242,8 +241,9 @@ namespace tsom
 
 		fmt::print("connecting to {}...\n", serverAddress.ToString());
 
-		if (auto connectionState = m_connectionState.lock())
-			connectionState->Connect(serverAddress, login, shared_from_this());
+		auto& stateData = GetStateData();
+		if (stateData.connectionState)
+			stateData.connectionState->Connect(serverAddress, login, shared_from_this());
 	}
 
 	void MenuState::OnUpdatePressed()

@@ -5,31 +5,28 @@
 #include <CommonLib/Utils.hpp>
 #include <fmt/format.h>
 #include <array>
+#include <cassert>
 
 namespace tsom
 {
-	std::string FormatSize(Nz::UInt64 sizeInBytes)
+	std::string ByteToString(Nz::UInt64 bytes, bool speed)
 	{
-		constexpr std::array<std::string_view, 7> s_units = { "B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB" };
+		constexpr std::array<std::string_view, 9> s_suffixes = { "B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB" };
 
-		std::size_t unitIndex = 0;
-		for (; unitIndex < s_units.size(); ++unitIndex)
+		std::size_t suffixIndex = 0;
+		Nz::UInt64 rem = 0;
+		while (bytes > 1024 && suffixIndex < s_suffixes.size() - 1)
 		{
-			if (sizeInBytes < 1024 * 1024)
-				break;
-
-			sizeInBytes /= 1024;
+			rem = bytes % 1024;
+			bytes /= 1024;
+			suffixIndex++;
 		}
 
-		double size = 0.0;
-		if (sizeInBytes > 1024 && unitIndex < s_units.size() - 1)
-		{
-			size = sizeInBytes / 1024.0;
-			unitIndex++;
-		}
+		assert(suffixIndex < s_suffixes.size());
+		std::string str = std::to_string(bytes);
+		if (rem > 0)
+			return fmt::format("{0}.{1} {2}{3}", bytes, 1000 * rem / 1024, s_suffixes[suffixIndex], (speed) ? "/s" : "");
 		else
-			size = sizeInBytes;
-
-		return fmt::format("{:.2f} {}", size, s_units[unitIndex]);
+			return fmt::format("{0} {1}{2}", bytes, s_suffixes[suffixIndex], (speed) ? "/s" : "");
 	}
 }
