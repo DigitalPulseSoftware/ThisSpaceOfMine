@@ -30,8 +30,8 @@ namespace tsom
 			void OnUnknownOpcode(Nz::UInt8 opcode);
 
 		private:
-			bool CheckCanMineBlock(Chunk* chunk, const Nz::Vector3ui& blockIndices) const;
-			bool CheckCanPlaceBlock(Chunk* chunk, const Nz::Vector3ui& blockIndices) const;
+			bool CheckCanMineBlock(const Chunk* chunk, const Nz::Vector3ui& blockIndices) const;
+			bool CheckCanPlaceBlock(const Chunk* chunk, const Nz::Vector3ui& blockIndices) const;
 
 			ServerPlayer* m_player;
 	};

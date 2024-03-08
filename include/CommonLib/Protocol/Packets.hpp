@@ -7,6 +7,7 @@
 #ifndef TSOM_COMMONLIB_PROTOCOL_PACKETS_HPP
 #define TSOM_COMMONLIB_PROTOCOL_PACKETS_HPP
 
+#include <CommonLib/BlockIndex.hpp>
 #include <CommonLib/Export.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/PlayerIndex.hpp>
@@ -102,14 +103,13 @@ namespace tsom
 		struct ChunkCreate
 		{
 			Helper::ChunkId chunkId;
-			CompressedUnsigned<Nz::UInt32> chunkLocX;
-			CompressedUnsigned<Nz::UInt32> chunkLocY;
-			CompressedUnsigned<Nz::UInt32> chunkLocZ;
+			CompressedSigned<Nz::Int32> chunkLocX;
+			CompressedSigned<Nz::Int32> chunkLocY;
+			CompressedSigned<Nz::Int32> chunkLocZ;
 			CompressedUnsigned<Nz::UInt32> chunkSizeX;
 			CompressedUnsigned<Nz::UInt32> chunkSizeY;
 			CompressedUnsigned<Nz::UInt32> chunkSizeZ;
 			float cellSize;
-			std::vector<Nz::UInt8> content;
 		};
 
 		struct ChunkDestroy
@@ -117,12 +117,18 @@ namespace tsom
 			Helper::ChunkId chunkId;
 		};
 
+		struct ChunkReset
+		{
+			Helper::ChunkId chunkId;
+			std::vector<BlockIndex> content;
+		};
+
 		struct ChunkUpdate
 		{
 			struct BlockUpdate
 			{
 				Helper::VoxelLocation voxelLoc;
-				Nz::UInt8 newContent;
+				BlockIndex newContent;
 			};
 
 			Helper::ChunkId chunkId;
@@ -227,6 +233,7 @@ namespace tsom
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, ChatMessage& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, ChunkCreate& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, ChunkDestroy& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, ChunkReset& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, ChunkUpdate& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntitiesCreation& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntitiesDelete& data);

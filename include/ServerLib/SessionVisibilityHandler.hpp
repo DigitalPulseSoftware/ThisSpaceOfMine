@@ -32,15 +32,15 @@ namespace tsom
 			SessionVisibilityHandler(SessionVisibilityHandler&&) = delete;
 			~SessionVisibilityHandler() = default;
 
-			void CreateChunk(Chunk& chunk);
+			void CreateChunk(const Chunk& chunk);
 			void CreateEntity(entt::handle entity, CreateEntityData entityData);
 
-			void DestroyChunk(Chunk& chunk);
+			void DestroyChunk(const Chunk& chunk);
 			void DestroyEntity(entt::handle entity);
 
 			void Dispatch(Nz::UInt16 tickIndex);
 
-			Chunk* GetChunkByIndex(std::size_t chunkIndex) const;
+			const Chunk* GetChunkByIndex(std::size_t chunkIndex) const;
 
 			inline void UpdateControlledEntity(entt::handle entity, CharacterController* controller);
 			inline void UpdateLastInputIndex(InputIndex inputIndex);
@@ -58,7 +58,8 @@ namespace tsom
 
 		private:
 			void DispatchChunks();
-			void DispatchNewChunks();
+			void DispatchChunkCreation();
+			void DispatchChunkReset();
 			void DispatchEntities(Nz::UInt16 tickIndex);
 
 			static constexpr std::size_t MaxConcurrentChunkUpdate = 3;
@@ -78,9 +79,10 @@ namespace tsom
 
 			struct VisibleChunk
 			{
-				NazaraSlot(Chunk, OnBlockUpdated, onCellUpdatedSlot);
+				NazaraSlot(Chunk, OnBlockUpdated, onBlockUpdatedSlot);
+				NazaraSlot(Chunk, OnReset, onResetSlot);
 
-				Chunk* chunk;
+				const Chunk* chunk;
 				Packets::ChunkUpdate chunkUpdatePacket;
 			};
 
@@ -88,14 +90,15 @@ namespace tsom
 			tsl::hopscotch_map<entt::handle, CreateEntityData, HandlerHasher> m_createdEntities;
 			tsl::hopscotch_set<entt::handle, HandlerHasher> m_deletedEntities;
 			tsl::hopscotch_set<entt::handle, HandlerHasher> m_movingEntities;
-			tsl::hopscotch_map<Chunk*, std::size_t> m_chunkIndices;
+			tsl::hopscotch_map<const Chunk*, std::size_t> m_chunkIndices;
 			std::shared_ptr<std::size_t> m_activeChunkUpdates;
-			std::vector<VisibleChunk> m_visibleChunks;
 			std::vector<ChunkWithPos> m_orderedChunkList;
+			std::vector<VisibleChunk> m_visibleChunks;
 			Nz::Bitset<Nz::UInt64> m_freeChunkIds;
 			Nz::Bitset<Nz::UInt64> m_freeEntityIds;
 			Nz::Bitset<Nz::UInt64> m_newlyHiddenChunk;
 			Nz::Bitset<Nz::UInt64> m_newlyVisibleChunk;
+			Nz::Bitset<Nz::UInt64> m_resetChunk;
 			Nz::Bitset<Nz::UInt64> m_updatedChunk;
 			entt::handle m_controlledEntity;
 			InputIndex m_lastInputIndex;
