@@ -53,11 +53,12 @@ namespace tsom
 			stateData->world = &world;
 
 			std::shared_ptr<tsom::ConnectionState> connectionState = std::make_shared<tsom::ConnectionState>(stateData);
+			stateData->connectionState = connectionState.get();
 
 			m_stateMachine.PushState(std::make_shared<tsom::DebugInfoState>(stateData));
-			m_stateMachine.PushState(connectionState);
+			m_stateMachine.PushState(std::move(connectionState));
 			m_stateMachine.PushState(std::make_shared<tsom::BackgroundState>(stateData));
-			m_stateMachine.PushState(std::make_shared<tsom::MenuState>(stateData, connectionState));
+			m_stateMachine.PushState(std::make_shared<tsom::MenuState>(stateData));
 		}
 
 	}

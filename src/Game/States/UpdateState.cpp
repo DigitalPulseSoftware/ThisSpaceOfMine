@@ -166,7 +166,7 @@ namespace tsom
 
 		m_progressBar->SetFraction(float(totalDownloaded) / float(totalSize));
 
-		m_progressionLabel->SetText(fmt::format("Downloading {0} file(s) - {1} / {2}", activeDownloadCount, FormatSize(totalDownloaded), FormatSize(totalSize)));
+		m_progressionLabel->SetText(fmt::format("Downloading {0} file(s) - {1} / {2}", activeDownloadCount, ByteToString(totalDownloaded), ByteToString(totalSize)));
 		m_progressionLabel->Resize(m_progressionLabel->GetPreferredSize());
 		m_progressionLabel->Center();
 	}

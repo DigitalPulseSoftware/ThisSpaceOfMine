@@ -114,7 +114,7 @@ namespace tsom
 
 				if (bytesTotal != 0 && download->totalSize != 0 && bytesTotal != download->totalSize)
 				{
-					fmt::print(fg(fmt::color::red), "error when downloading {0}: file size ({1}) doesn't match expected size ({2})!\n", download->filepath, FormatSize(bytesTotal), FormatSize(download->totalSize));
+					fmt::print(fg(fmt::color::red), "error when downloading {0}: file size ({1}) doesn't match expected size ({2})!\n", download->filepath, ByteToString(bytesTotal), ByteToString(download->totalSize));
 					return false;
 				}
 
