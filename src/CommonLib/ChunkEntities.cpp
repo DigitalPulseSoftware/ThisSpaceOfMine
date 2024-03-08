@@ -25,31 +25,27 @@ namespace tsom
 	m_blockLibrary(blockLibrary),
 	m_chunkContainer(chunkContainer)
 	{
-		m_chunkEntities.resize(chunkContainer.GetChunkCount());
-
 		m_onChunkAdded.Connect(chunkContainer.OnChunkAdded, [this](ChunkContainer* /*emitter*/, Chunk* chunk)
 		{
-			std::size_t chunkId = m_chunkContainer.GetChunkIndex(chunk->GetIndices());
-			CreateChunkEntity(chunkId, chunk);
+			CreateChunkEntity(chunk->GetIndices(), chunk);
 		});
 
 		m_onChunkRemove.Connect(chunkContainer.OnChunkRemove, [this](ChunkContainer* /*emitter*/, Chunk* chunk)
 		{
-			std::size_t chunkId = m_chunkContainer.GetChunkIndex(chunk->GetIndices());
-			DestroyChunkEntity(chunkId);
+			DestroyChunkEntity(chunk->GetIndices());
 		});
 
 		m_onChunkUpdated.Connect(chunkContainer.OnChunkUpdated, [this](ChunkContainer* /*emitter*/, Chunk* chunk)
 		{
-			std::size_t chunkId = m_chunkContainer.GetChunkIndex(chunk->GetIndices());
-			m_invalidatedChunks.UnboundedSet(chunkId);
+			m_invalidatedChunks.insert(chunk->GetIndices());
 		});
 	}
 
 	ChunkEntities::~ChunkEntities()
 	{
-		for (entt::handle entity : m_chunkEntities)
+		for (auto it = m_chunkEntities.begin(); it != m_chunkEntities.end(); ++it)
 		{
+			entt::handle entity = it.value();
 			if (entity)
 				entity.destroy();
 		}
@@ -70,48 +66,55 @@ namespace tsom
 			it = m_updateJobs.erase(it);
 		}
 
-		for (std::size_t chunkId = m_invalidatedChunks.FindFirst(); chunkId != m_invalidatedChunks.npos; chunkId = m_invalidatedChunks.FindNext(chunkId))
-			UpdateChunkEntity(chunkId);
+		for (const ChunkIndices& chunkIndices : m_invalidatedChunks)
+			UpdateChunkEntity(chunkIndices);
 
-		m_invalidatedChunks.Clear();
+		m_invalidatedChunks.clear();
 	}
 
-	void ChunkEntities::CreateChunkEntity(std::size_t chunkId, const Chunk* chunk)
+	void ChunkEntities::CreateChunkEntity(const ChunkIndices& chunkIndices, const Chunk* chunk)
 	{
-		m_chunkEntities[chunkId] = m_world.CreateEntity();
-		m_chunkEntities[chunkId].emplace<Nz::NodeComponent>(m_chunkContainer.GetChunkOffset(chunk->GetIndices()));
-		m_chunkEntities[chunkId].emplace<Nz::RigidBody3DComponent>(Nz::RigidBody3D::StaticSettings(std::make_shared<Nz::SphereCollider3D>(1.f))); //< FIXME: null collider couldn't be changed back (sensor issue), set to null when Nazara is updated
+		entt::handle chunkEntity = m_world.CreateEntity();
+		chunkEntity.emplace<Nz::NodeComponent>(m_chunkContainer.GetChunkOffset(chunkIndices));
+		chunkEntity.emplace<Nz::RigidBody3DComponent>(Nz::RigidBody3D::StaticSettings(std::make_shared<Nz::SphereCollider3D>(1.f))); //< FIXME: null collider couldn't be changed back (sensor issue), set to null when Nazara is updated
 
-		HandleChunkUpdate(chunkId, chunk);
+		assert(!m_chunkEntities.contains(chunkIndices));
+		m_chunkEntities.insert_or_assign(chunkIndices, chunkEntity);
+
+		HandleChunkUpdate(chunkIndices, chunk);
 	}
 
-	void ChunkEntities::DestroyChunkEntity(std::size_t chunkId)
+	void ChunkEntities::DestroyChunkEntity(const ChunkIndices& chunkIndices)
 	{
-		if (auto it = m_updateJobs.find(chunkId); it != m_updateJobs.end())
+		if (auto it = m_updateJobs.find(chunkIndices); it != m_updateJobs.end())
 		{
 			UpdateJob& job = *it->second;
 			job.cancelled = true;
 
-			m_updateJobs.erase(chunkId);
+			m_updateJobs.erase(chunkIndices);
 		}
 
-		m_chunkEntities[chunkId].destroy();
-		m_invalidatedChunks.UnboundedReset(chunkId);
+		if (auto it = m_chunkEntities.find(chunkIndices); it != m_chunkEntities.end())
+		{
+			it.value().destroy();
+			m_chunkEntities.erase(it);
+		}
+
+		m_invalidatedChunks.erase(chunkIndices);
 	}
 
 	void ChunkEntities::FillChunks()
 	{
-		for (std::size_t i = 0; i < m_chunkEntities.size(); ++i)
+		m_chunkContainer.ForEachChunk([this](const ChunkIndices& chunkIndices, const Chunk& chunk)
 		{
-			if (const Chunk* chunk = m_chunkContainer.GetChunk(i))
-				CreateChunkEntity(i, chunk);
-		}
+			CreateChunkEntity(chunkIndices, &chunk);
+		});
 	}
 
-	void ChunkEntities::HandleChunkUpdate(std::size_t chunkId, const Chunk* chunk)
+	void ChunkEntities::HandleChunkUpdate(const ChunkIndices& chunkIndices, const Chunk* chunk)
 	{
 		// Try to cancel current update job to void useless work
-		if (auto it = m_updateJobs.find(chunkId); it != m_updateJobs.end())
+		if (auto it = m_updateJobs.find(chunkIndices); it != m_updateJobs.end())
 		{
 			UpdateJob& job = *it->second;
 			job.cancelled = true;
@@ -120,11 +123,12 @@ namespace tsom
 		std::shared_ptr<ColliderUpdateJob> updateJob = std::make_shared<ColliderUpdateJob>();
 		updateJob->taskCount = 1;
 
-		updateJob->applyFunc = [this](std::size_t chunkId, UpdateJob&& job)
+		updateJob->applyFunc = [this](const ChunkIndices& chunkIndices, UpdateJob&& job)
 		{
 			ColliderUpdateJob&& colliderUpdateJob = static_cast<ColliderUpdateJob&&>(job);
 
-			auto& rigidBody = m_chunkEntities[chunkId].get<Nz::RigidBody3DComponent>();
+			entt::handle chunkEntity = Nz::Retrieve(m_chunkEntities, chunkIndices);
+			auto& rigidBody = chunkEntity.get<Nz::RigidBody3DComponent>();
 			rigidBody.SetGeom(std::move(colliderUpdateJob.collider), false);
 		};
 
@@ -141,15 +145,15 @@ namespace tsom
 			updateJob->executionCounter++;
 		});
 
-		m_updateJobs[chunkId] = std::move(updateJob);
+		m_updateJobs.insert_or_assign(chunkIndices, std::move(updateJob));
 	}
 
-	void ChunkEntities::UpdateChunkEntity(std::size_t chunkId)
+	void ChunkEntities::UpdateChunkEntity(const ChunkIndices& chunkIndices)
 	{
-		assert(m_chunkEntities[chunkId]);
-		const Chunk* chunk = m_chunkContainer.GetChunk(chunkId);
+		assert(m_chunkEntities.contains(chunkIndices));
+		const Chunk* chunk = m_chunkContainer.GetChunk(chunkIndices);
 		assert(chunk);
 
-		HandleChunkUpdate(chunkId, chunk);
+		HandleChunkUpdate(chunkIndices, chunk);
 	}
 }

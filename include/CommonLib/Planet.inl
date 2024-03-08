@@ -9,24 +9,22 @@ namespace tsom
 		return Nz::Vector3f::Zero();
 	}
 
-	inline Chunk* Planet::GetChunk(std::size_t chunkIndex)
+	inline Chunk* Planet::GetChunk(const ChunkIndices& chunkIndices)
 	{
-		return m_chunks[chunkIndex].chunk.get();
+		auto it = m_chunks.find(chunkIndices);
+		if (it == m_chunks.end())
+			return nullptr;
+
+		return it->second.chunk.get();
 	}
 
-	inline const Chunk* Planet::GetChunk(std::size_t chunkIndex) const
+	inline const Chunk* Planet::GetChunk(const ChunkIndices& chunkIndices) const
 	{
-		return m_chunks[chunkIndex].chunk.get();
-	}
+		auto it = m_chunks.find(chunkIndices);
+		if (it == m_chunks.end())
+			return nullptr;
 
-	inline Chunk& Planet::GetChunk(const Nz::Vector3ui& indices)
-	{
-		return *m_chunks[GetChunkIndex(indices)].chunk;
-	}
-
-	inline const Chunk& Planet::GetChunk(const Nz::Vector3ui& indices) const
-	{
-		return *m_chunks[GetChunkIndex(indices)].chunk;
+		return it->second.chunk.get();
 	}
 
 	inline std::size_t Planet::GetChunkCount() const

@@ -235,10 +235,10 @@ namespace tsom
 		}
 
 		m_blocks = std::move(blocks);
-		OnBlockReset();
+		OnChunkReset();
 	}
 
-	void Chunk::OnBlockReset()
+	void Chunk::OnChunkReset()
 	{
 		std::fill(m_blockTypeCount.begin(), m_blockTypeCount.end(), 0);
 		for (std::size_t blockIndex = 0; blockIndex < m_blocks.size(); ++blockIndex)
@@ -251,5 +251,7 @@ namespace tsom
 
 			m_blockTypeCount[blockContent]++;
 		}
+
+		OnReset(this);
 	}
 }

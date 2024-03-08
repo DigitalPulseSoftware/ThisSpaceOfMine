@@ -3,6 +3,7 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/FlatChunk.hpp>
+#include <CommonLib/ChunkContainer.hpp>
 #include <Nazara/Physics3D/Collider3D.hpp>
 #include <NazaraUtils/Bitset.hpp>
 #include <fmt/format.h>
@@ -31,7 +32,7 @@ namespace tsom
 				{
 					for (unsigned int x = startPos->x; x <= endX; ++x)
 					{
-						if (!availableBlocks[GetBlockIndex({ x, endY, endZ })])
+						if (!availableBlocks[GetBlockLocalIndex({ x, endY, endZ })])
 							return false;
 					}
 
@@ -52,7 +53,7 @@ namespace tsom
 					{
 						for (unsigned int x = startPos->x; x <= endX; ++x)
 						{
-							if (!availableBlocks[GetBlockIndex({ x, y, endZ })])
+							if (!availableBlocks[GetBlockLocalIndex({ x, y, endZ })])
 								return false;
 						}
 					}
@@ -70,7 +71,7 @@ namespace tsom
 				for (unsigned int y = startPos->y; y <= endY; ++y)
 				{
 					for (unsigned int x = startPos->x; x <= endX; ++x)
-						availableBlocks[GetBlockIndex({ x, y, z })] = false;
+						availableBlocks[GetBlockLocalIndex({ x, y, z })] = false;
 				}
 			}
 
@@ -80,7 +81,7 @@ namespace tsom
 			Nz::Vector3f size = (endOffset - startOffset) * m_blockSize;
 
 			auto& childCollider = childColliders.emplace_back();
-			childCollider.offset = startOffset * m_blockSize + size * 0.5f;
+			childCollider.offset = startOffset * m_blockSize + size * 0.5f - Nz::Vector3f(m_size) * m_blockSize * 0.5f;
 			childCollider.collider = std::make_shared<Nz::BoxCollider3D>(size);
 
 			startPos.reset();
@@ -93,7 +94,7 @@ namespace tsom
 			{
 				for (unsigned int x = 0; x < m_size.x; ++x)
 				{
-					if (!availableBlocks[GetBlockIndex({ x, y, z })])
+					if (!availableBlocks[GetBlockLocalIndex({ x, y, z })])
 					{
 						CommitCollider(x - 1);
 						continue;
@@ -114,7 +115,10 @@ namespace tsom
 
 	std::optional<Nz::Vector3ui> FlatChunk::ComputeCoordinates(const Nz::Vector3f& position) const
 	{
-		Nz::Vector3f indices = position / m_blockSize;
+		Nz::Vector3f indices = position - m_owner.GetChunkOffset(m_indices);
+		indices += Nz::Vector3f(m_size) * m_blockSize * 0.5f;
+		indices /= m_blockSize;
+
 		if (indices.x < 0.f || indices.y < 0.f || indices.z < 0.f)
 			return std::nullopt;
 
@@ -127,22 +131,9 @@ namespace tsom
 
 	Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> FlatChunk::ComputeVoxelCorners(const Nz::Vector3ui& indices) const
 	{
-		float fX = indices.x * m_blockSize;
-		float fY = indices.y * m_blockSize;
-		float fZ = indices.z * m_blockSize;
+		Nz::Vector3f blockPos = (Nz::Vector3f(indices) - Nz::Vector3f(m_size) * 0.5f) * m_blockSize;
 
-		Nz::Boxf box(fX, fZ, fY, m_blockSize, m_blockSize, m_blockSize);
-		Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> corners {
-			box.GetCorner(Nz::BoxCorner::FarLeftBottom),
-			box.GetCorner(Nz::BoxCorner::FarLeftTop),
-			box.GetCorner(Nz::BoxCorner::FarRightBottom),
-			box.GetCorner(Nz::BoxCorner::FarRightTop),
-			box.GetCorner(Nz::BoxCorner::NearLeftBottom),
-			box.GetCorner(Nz::BoxCorner::NearLeftTop),
-			box.GetCorner(Nz::BoxCorner::NearRightBottom),
-			box.GetCorner(Nz::BoxCorner::NearRightTop)
-		};
-
-		return corners;
+		Nz::Boxf box(blockPos.x, blockPos.z, blockPos.y, m_blockSize, m_blockSize, m_blockSize);
+		return box.GetCorners();
 	}
 }

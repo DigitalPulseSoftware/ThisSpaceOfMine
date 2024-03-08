@@ -11,36 +11,44 @@
 #include <CommonLib/ChunkContainer.hpp>
 #include <CommonLib/Direction.hpp>
 #include <NazaraUtils/FunctionRef.hpp>
+#include <tsl/hopscotch_map.h>
 #include <memory>
 #include <vector>
+
+namespace Nz
+{
+	class TaskScheduler;
+}
 
 namespace tsom
 {
 	class TSOM_COMMONLIB_API Planet : public ChunkContainer
 	{
 		public:
-			Planet(const Nz::Vector3ui& gridSize, float tileSize, float cornerRadius, float gravityFactor);
+			Planet(float tileSize, float cornerRadius, float gravityFactor);
 			Planet(const Planet&) = delete;
 			Planet(Planet&&) = delete;
 			~Planet() = default;
 
-			Chunk& AddChunk(const Nz::Vector3ui& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback = nullptr);
+			Chunk& AddChunk(const ChunkIndices& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback = nullptr);
 
 			Nz::Vector3f ComputeUpDirection(const Nz::Vector3f& position) const;
 
-			void GenerateChunks(BlockLibrary& blockLibrary);
-			void GeneratePlatform(BlockLibrary& blockLibrary, Direction upDirection, const Nz::Vector3ui& platformCenter);
+			void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, Chunk& chunk)> callback) override;
+			void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, const Chunk& chunk)> callback) const override;
+
+			void GenerateChunk(const BlockLibrary& blockLibrary, Chunk& chunk, unsigned int seed, const Nz::Vector3ui& chunkCount);
+			void GenerateChunks(const BlockLibrary& blockLibrary, Nz::TaskScheduler& taskScheduler, unsigned int seed, const Nz::Vector3ui& chunkCount);
+			void GeneratePlatform(const BlockLibrary& blockLibrary, Direction upDirection, const BlockIndices& platformCenter);
 
 			inline Nz::Vector3f GetCenter() const override;
-			inline Chunk* GetChunk(std::size_t chunkIndex) override;
-			inline const Chunk* GetChunk(std::size_t chunkIndex) const override;
-			inline Chunk& GetChunk(const Nz::Vector3ui& indices) override;
-			inline const Chunk& GetChunk(const Nz::Vector3ui& indices) const override;
+			inline Chunk* GetChunk(const ChunkIndices& chunkIndices) override;
+			inline const Chunk* GetChunk(const ChunkIndices& chunkIndices) const override;
 			inline std::size_t GetChunkCount() const override;
 			inline float GetCornerRadius() const;
 			inline float GetGravityFactor(const Nz::Vector3f& position) const;
 
-			void RemoveChunk(const Nz::Vector3ui& indices);
+			void RemoveChunk(const ChunkIndices& indices);
 
 			inline void UpdateCornerRadius(float cornerRadius);
 
@@ -55,9 +63,10 @@ namespace tsom
 				std::unique_ptr<Chunk> chunk;
 
 				NazaraSlot(Chunk, OnBlockUpdated, onUpdated);
+				NazaraSlot(Chunk, OnReset, onReset);
 			};
 
-			std::vector<ChunkData> m_chunks;
+			tsl::hopscotch_map<ChunkIndices, ChunkData> m_chunks;
 			float m_cornerRadius;
 			float m_gravityFactor;
 	};

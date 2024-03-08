@@ -34,12 +34,15 @@ namespace tsom
 	class BlockLibrary;
 	class ChunkContainer;
 
+	using BlockIndices = Nz::Vector3i32;
+	using ChunkIndices = Nz::Vector3i32;
+
 	class TSOM_COMMONLIB_API Chunk
 	{
 		public:
 			struct VertexAttributes;
 
-			inline Chunk(ChunkContainer& owner, const Nz::Vector3ui& indices, const Nz::Vector3ui& size, float blockSize);
+			inline Chunk(ChunkContainer& owner, const ChunkIndices& indices, const Nz::Vector3ui& size, float blockSize);
 			Chunk(const Chunk&) = delete;
 			Chunk(Chunk&&) = delete;
 			virtual ~Chunk();
@@ -51,8 +54,8 @@ namespace tsom
 			virtual Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> ComputeVoxelCorners(const Nz::Vector3ui& indices) const = 0;
 
 			inline const Nz::Bitset<Nz::UInt64>& GetCollisionCellMask() const;
-			inline unsigned int GetBlockIndex(const Nz::Vector3ui& indices) const;
-			inline Nz::Vector3ui GetBlockIndices(unsigned int blockIndex) const;
+			inline unsigned int GetBlockLocalIndex(const Nz::Vector3ui& indices) const;
+			inline Nz::Vector3ui GetBlockLocalIndices(unsigned int blockIndex) const;
 			inline BlockIndex GetBlockContent(unsigned int blockIndex) const;
 			inline BlockIndex GetBlockContent(const Nz::Vector3ui& indices) const;
 			inline std::size_t GetBlockCount() const;
@@ -60,27 +63,29 @@ namespace tsom
 			inline ChunkContainer& GetContainer();
 			inline const ChunkContainer& GetContainer() const;
 			inline const BlockIndex* GetContent() const;
-			inline const Nz::Vector3ui& GetIndices() const;
+			inline const ChunkIndices& GetIndices() const;
 			inline std::optional<BlockIndex> GetNeighborBlock(Nz::Vector3ui indices, const Nz::Vector3i& offsets) const;
 			inline const Nz::Vector3ui& GetSize() const;
-
-			template<typename F> void InitBlocks(F&& func);
 
 			inline void LockRead() const;
 			inline void LockWrite();
 
+			template<typename F> void Reset(F&& func);
+
 			virtual void Serialize(const BlockLibrary& blockLibrary, Nz::ByteStream& byteStream);
-			virtual void Unserialize(const BlockLibrary& blockLibrary, Nz::ByteStream& byteStream);
 
 			inline void UnlockRead() const;
 			inline void UnlockWrite();
 
 			inline void UpdateBlock(const Nz::Vector3ui& indices, BlockIndex cellType);
 
+			virtual void Unserialize(const BlockLibrary& blockLibrary, Nz::ByteStream& byteStream);
+
 			Chunk& operator=(const Chunk&) = delete;
 			Chunk& operator=(Chunk&&) = delete;
 
 			NazaraSignal(OnBlockUpdated, Chunk* /*emitter*/, const Nz::Vector3ui& /*indices*/, BlockIndex /*newBlock*/);
+			NazaraSignal(OnReset, Chunk* /*emitter*/);
 
 			struct VertexAttributes
 			{
@@ -93,15 +98,15 @@ namespace tsom
 			};
 
 		protected:
-			void OnBlockReset();
+			void OnChunkReset();
 
 			mutable std::shared_mutex m_mutex;
 			std::vector<BlockIndex> m_blocks;
 			std::vector<Nz::UInt16> m_blockTypeCount;
 			Nz::Bitset<Nz::UInt64> m_collisionCellMask;
-			Nz::Vector3ui m_indices;
 			Nz::Vector3ui m_size;
 			ChunkContainer& m_owner;
+			ChunkIndices m_indices;
 			float m_blockSize;
 	};
 }

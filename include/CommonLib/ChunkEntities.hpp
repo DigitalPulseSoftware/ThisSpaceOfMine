@@ -8,9 +8,9 @@
 #define TSOM_COMMONLIB_CHUNKENTITIES_HPP
 
 #include <CommonLib/ChunkContainer.hpp>
-#include <NazaraUtils/Bitset.hpp>
 #include <entt/entt.hpp>
 #include <tsl/hopscotch_map.h>
+#include <tsl/hopscotch_set.h>
 #include <atomic>
 #include <vector>
 
@@ -23,7 +23,6 @@ namespace Nz
 namespace tsom
 {
 	class BlockLibrary;
-	class Chunk;
 
 	class TSOM_COMMONLIB_API ChunkEntities
 	{
@@ -42,15 +41,15 @@ namespace tsom
 			struct NoInit {};
 			ChunkEntities(Nz::ApplicationBase& app, Nz::EnttWorld& world, const ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary, NoInit);
 
-			void CreateChunkEntity(std::size_t chunkId, const Chunk* chunk);
-			void DestroyChunkEntity(std::size_t chunkId);
+			void CreateChunkEntity(const ChunkIndices& chunkIndices, const Chunk* chunk);
+			void DestroyChunkEntity(const ChunkIndices& chunkIndices);
 			void FillChunks();
-			virtual void HandleChunkUpdate(std::size_t chunkId, const Chunk* chunk);
-			void UpdateChunkEntity(std::size_t chunkId);
+			virtual void HandleChunkUpdate(const ChunkIndices& chunkIndices, const Chunk* chunk);
+			void UpdateChunkEntity(const ChunkIndices& chunkIndices);
 
 			struct UpdateJob
 			{
-				std::function<void(std::size_t chunkId, UpdateJob&& job)> applyFunc;
+				std::function<void(const ChunkIndices& chunkIndices, UpdateJob&& job)> applyFunc;
 				std::atomic_bool cancelled = false;
 				std::atomic_uint executionCounter = 0;
 				unsigned int taskCount;
@@ -65,9 +64,9 @@ namespace tsom
 			NazaraSlot(ChunkContainer, OnChunkRemove, m_onChunkRemove);
 			NazaraSlot(ChunkContainer, OnChunkUpdated, m_onChunkUpdated);
 
-			std::vector<entt::handle> m_chunkEntities;
-			tsl::hopscotch_map<std::size_t /*chunkId*/, std::shared_ptr<UpdateJob>> m_updateJobs;
-			Nz::Bitset<> m_invalidatedChunks;
+			tsl::hopscotch_set<ChunkIndices> m_invalidatedChunks;
+			tsl::hopscotch_map<ChunkIndices, std::shared_ptr<UpdateJob>> m_updateJobs;
+			tsl::hopscotch_map<ChunkIndices, entt::handle> m_chunkEntities;
 			Nz::ApplicationBase& m_application;
 			Nz::EnttWorld& m_world;
 			const BlockLibrary& m_blockLibrary;

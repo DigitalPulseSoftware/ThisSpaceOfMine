@@ -4,7 +4,16 @@
 
 namespace tsom
 {
-	inline Chunk* ClientPlanet::GetChunkByNetworkIndex(Nz::UInt16 networkIndex) const
+	inline Chunk* ClientPlanet::GetChunkByNetworkIndex(Nz::UInt16 networkIndex)
+	{
+		auto it = m_chunkByNetworkIndex.find(networkIndex);
+		if (it == m_chunkByNetworkIndex.end())
+			return nullptr;
+
+		return it->second;
+	}
+
+	inline const Chunk* ClientPlanet::GetChunkByNetworkIndex(Nz::UInt16 networkIndex) const
 	{
 		auto it = m_chunkByNetworkIndex.find(networkIndex);
 		if (it == m_chunkByNetworkIndex.end())

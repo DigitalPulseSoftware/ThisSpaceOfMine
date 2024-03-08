@@ -2,93 +2,57 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
+#include <cmath>
+
 namespace tsom
 {
-	inline ChunkContainer::ChunkContainer(const Nz::Vector3ui& gridSize, float tileSize) :
-	m_gridSize((gridSize + Nz::Vector3ui(ChunkSize - 1)) / Nz::Vector3ui(ChunkSize) * Nz::Vector3ui(ChunkSize)),
+	inline ChunkContainer::ChunkContainer(float tileSize) :
 	m_tileSize(tileSize)
 	{
-		m_chunkCount = m_gridSize / ChunkSize;
 	}
 
-	inline std::size_t ChunkContainer::GetChunkIndex(const Nz::Vector3ui& indices) const
+	inline BlockIndices ChunkContainer::GetBlockIndices(const ChunkIndices& chunkIndices, const Nz::Vector3ui& indices) const
 	{
-		assert(indices.x < m_chunkCount.x);
-		assert(indices.y < m_chunkCount.y);
-		assert(indices.z < m_chunkCount.z);
-		return indices.z * m_chunkCount.y * m_chunkCount.x + indices.y * m_chunkCount.x + indices.x;
+		return chunkIndices * Nz::Int32(ChunkSize) + BlockIndices(indices.x, indices.z, indices.y) - BlockIndices(Nz::Int32(ChunkSize)) / 2;
 	}
 
-	inline Chunk& ChunkContainer::GetChunkByIndices(const Nz::Vector3ui& gridPosition, Nz::Vector3ui* innerPos)
+	inline ChunkIndices ChunkContainer::GetChunkIndicesByBlockIndices(const BlockIndices& indices, Nz::Vector3ui* localIndices) const
 	{
-		if (innerPos)
-			*innerPos = Nz::Vector3ui(gridPosition.x % ChunkSize, gridPosition.y % ChunkSize, gridPosition.z % ChunkSize);
+		BlockIndices adjustedIndices = indices + BlockIndices(Nz::Int32(ChunkSize)) / 2;
 
-		return GetChunk(gridPosition / ChunkSize);
+		// Correctly map negative indices to the right values
+		BlockIndices adjustedIndicesOffseted = BlockIndices::Apply([](int val) -> int
+		{
+			return (val < 0) ? val - int(ChunkSize) + 1 : val;
+		}, adjustedIndices);
+
+		ChunkIndices chunkIndices = adjustedIndicesOffseted / Nz::Int32(ChunkSize);
+		if (localIndices)
+		{
+			Nz::Vector3i localBlockIndices = adjustedIndices - chunkIndices * Nz::Int32(ChunkSize);
+			localBlockIndices = Nz::Vector3i::Apply([](int val)
+			{
+				return (val < 0) ? val + int(ChunkSize) : val;
+			}, localBlockIndices);
+
+			*localIndices = Nz::Vector3ui(Nz::SafeCast<unsigned int>(localBlockIndices.x), Nz::SafeCast<unsigned int>(localBlockIndices.z), Nz::SafeCast<unsigned int>(localBlockIndices.y));
+		}
+
+		return chunkIndices;
 	}
 
-	inline const Chunk& ChunkContainer::GetChunkByIndices(const Nz::Vector3ui& gridPosition, Nz::Vector3ui* innerPos) const
+	inline ChunkIndices ChunkContainer::GetChunkIndicesByPosition(const Nz::Vector3f& position) const
 	{
-		if (innerPos)
-			*innerPos = Nz::Vector3ui(gridPosition.x % ChunkSize, gridPosition.y % ChunkSize, gridPosition.z % ChunkSize);
-
-		return GetChunk(gridPosition / ChunkSize);
-	}
-
-	inline Chunk* ChunkContainer::GetChunkByPosition(const Nz::Vector3f& position, Nz::Vector3f* localPos)
-	{
-		Nz::Vector3f recenterOffset = 0.5f * Nz::Vector3f(m_gridSize) * m_tileSize;
-		Nz::Vector3f offsetPos = position + recenterOffset;
+		Nz::Vector3f relativePos = position - GetCenter();
 		Nz::Vector3f chunkSize(ChunkSize * m_tileSize);
 
-		Nz::Vector3f indices = offsetPos / Nz::Vector3f(ChunkSize * m_tileSize);
-		if (indices.x < 0.f || indices.y < 0.f || indices.z < 0.f)
-			return nullptr;
-
-		Nz::Vector3ui pos(indices.x, indices.z, indices.y);
-		if (pos.x >= m_chunkCount.x || pos.y >= m_chunkCount.y || pos.z >= m_chunkCount.z)
-			return nullptr;
-
-		if (localPos)
-			*localPos = { std::fmod(offsetPos.x, chunkSize.x), std::fmod(offsetPos.y, chunkSize.y), std::fmod(offsetPos.z, chunkSize.z) };
-
-		return &GetChunk(pos);
+		Nz::Vector3f indices = Nz::Vector3f::Apply(std::round, (relativePos + chunkSize * 0.5f) / chunkSize - Nz::Vector3f(0.5f));
+		return ChunkIndices(indices.x, indices.y, indices.z);
 	}
 
-	inline const Chunk* ChunkContainer::GetChunkByPosition(const Nz::Vector3f& position, Nz::Vector3f* localPos) const
+	inline Nz::Vector3f ChunkContainer::GetChunkOffset(const ChunkIndices& indices) const
 	{
-		Nz::Vector3f recenterOffset = 0.5f * Nz::Vector3f(m_gridSize) * m_tileSize;
-		Nz::Vector3f offsetPos = position + recenterOffset;
-		Nz::Vector3f chunkSize(ChunkSize * m_tileSize);
-
-		Nz::Vector3f indices = offsetPos / Nz::Vector3f(ChunkSize * m_tileSize);
-		if (indices.x < 0.f || indices.y < 0.f || indices.z < 0.f)
-			return nullptr;
-
-		Nz::Vector3ui pos(indices.x, indices.z, indices.y);
-		if (pos.x >= m_chunkCount.x || pos.y >= m_chunkCount.y || pos.z >= m_chunkCount.z)
-			return nullptr;
-
-		if (localPos)
-			*localPos = { std::fmod(offsetPos.x, chunkSize.x), std::fmod(offsetPos.y, chunkSize.y), std::fmod(offsetPos.z, chunkSize.z) };
-
-		return &GetChunk(pos);
-	}
-
-	inline Nz::Vector3f ChunkContainer::GetChunkOffset(const Nz::Vector3ui& indices) const
-	{
-		// Recenter
-		Nz::Vector3f offset = -0.5f * Nz::Vector3f(m_gridSize) * m_tileSize - GetCenter() * 0.5f;
-
-		// Chunk offset
-		offset += Nz::Vector3f(indices.x, indices.z, indices.y) * ChunkSize * m_tileSize;
-
-		return offset;
-	}
-
-	inline Nz::Vector3ui ChunkContainer::GetGridDimensions() const
-	{
-		return m_gridSize;
+		return Nz::Vector3f(indices.x, indices.y, indices.z) * ChunkSize * m_tileSize;
 	}
 
 	inline float ChunkContainer::GetTileSize() const

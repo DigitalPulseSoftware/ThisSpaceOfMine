@@ -6,7 +6,7 @@
 
 namespace tsom
 {
-	Chunk& ClientPlanet::AddChunk(Nz::UInt16 networkIndex, const Nz::Vector3ui& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback)
+	Chunk& ClientPlanet::AddChunk(Nz::UInt16 networkIndex, const ChunkIndices& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback)
 	{
 		Chunk& chunk = Planet::AddChunk(indices, initCallback);
 
