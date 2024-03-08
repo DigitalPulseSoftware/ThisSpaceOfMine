@@ -39,7 +39,7 @@ add_rules("natvis")
 --set_policy("package.requires_lock", true)
 
 set_project("ThisSpaceOfMine")
-set_version("0.3.2")
+set_version("0.4.0")
 
 set_exceptions("cxx")
 set_languages("cxx20")

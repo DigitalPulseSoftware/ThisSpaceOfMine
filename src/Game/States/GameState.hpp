@@ -54,6 +54,7 @@ namespace tsom
 			NazaraSlot(ClientSessionHandler, OnChatMessage, m_onChatMessage);
 			NazaraSlot(ClientSessionHandler, OnChunkCreate, m_onChunkCreate);
 			NazaraSlot(ClientSessionHandler, OnChunkDestroy, m_onChunkDestroy);
+			NazaraSlot(ClientSessionHandler, OnChunkReset, m_onChunkReset);
 			NazaraSlot(ClientSessionHandler, OnChunkUpdate, m_onChunkUpdate);
 			NazaraSlot(ClientSessionHandler, OnControlledEntityChanged, m_onControlledEntityChanged);
 			NazaraSlot(ClientSessionHandler, OnControlledEntityStateUpdate, m_onControlledEntityStateUpdate);

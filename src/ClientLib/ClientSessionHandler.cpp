@@ -90,6 +90,16 @@ namespace tsom
 		OnChunkDestroy(chunkDestroy);
 	}
 
+	void ClientSessionHandler::HandlePacket(Packets::ChunkReset&& chunkReset)
+	{
+		OnChunkReset(chunkReset);
+	}
+
+	void ClientSessionHandler::HandlePacket(Packets::ChunkUpdate&& stateUpdate)
+	{
+		OnChunkUpdate(stateUpdate);
+	}
+
 	void ClientSessionHandler::HandlePacket(Packets::EntitiesCreation&& entitiesCreation)
 	{
 		for (auto&& entityData : entitiesCreation.entities)
@@ -174,11 +184,6 @@ namespace tsom
 		playerInfo.nickname = std::move(playerJoin.nickname);
 
 		OnPlayerJoined(playerInfo.nickname);
-	}
-
-	void ClientSessionHandler::HandlePacket(Packets::ChunkUpdate&& stateUpdate)
-	{
-		OnChunkUpdate(stateUpdate);
 	}
 
 	void ClientSessionHandler::SetupEntity(entt::handle entity, Packets::Helper::PlayerControlledData&& entityData)

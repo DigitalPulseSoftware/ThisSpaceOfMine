@@ -51,10 +51,7 @@ namespace tsom
 				serializer &= data.moveLeft;
 				serializer &= data.moveRight;
 				serializer &= data.sprint;
-				if (serializer.GetProtocolVersion() >= BuildVersion(0, 3, 2))
-					serializer &= data.crouch;
-				else if (!serializer.IsWriting())
-					data.crouch = false;
+				serializer &= data.crouch;
 
 				serializer &= data.pitch;
 				serializer &= data.yaw;
@@ -101,59 +98,54 @@ namespace tsom
 			serializer &= data.chunkSizeY;
 			serializer &= data.chunkSizeZ;
 			serializer &= data.cellSize;
-
-			if (serializer.GetProtocolVersion() >= BuildVersion(0, 3, 1))
-			{
-				std::size_t blockCount = data.chunkSizeX * data.chunkSizeY * data.chunkSizeZ;
-				std::size_t bufferSize = blockCount * sizeof(Nz::UInt8);
-
-				if (serializer.IsWriting())
-				{
-					assert(blockCount == data.content.size());
-
-					const char* srcData = reinterpret_cast<const char*>(data.content.data());
-
-					int maxCompressedSize = LZ4_compressBound(Nz::SafeCast<int>(bufferSize));
-
-					std::vector<Nz::UInt8> compressedChunk(maxCompressedSize);
-					int compressedSizeInt = LZ4_compress_default(srcData, reinterpret_cast<char*>(compressedChunk.data()), Nz::SafeCast<int>(bufferSize), maxCompressedSize);
-					if (compressedSizeInt <= 0)
-						throw std::runtime_error("failed to compress chunk");
-
-					Nz::UInt16 compressedSize = Nz::UInt16(compressedSizeInt);
-					serializer &= compressedSize;
-
-					serializer.Write(compressedChunk.data(), compressedSize * sizeof(Nz::UInt8));
-				}
-				else
-				{
-					Nz::UInt16 compressedSize;
-					serializer &= compressedSize;
-
-					Nz::Stream* stream = serializer.GetByteStream().GetStream();
-					const char* srcData = static_cast<const char*>(stream->GetMappedPointer()) + stream->GetCursorPos();
-
-					data.content.resize(bufferSize);
-					int decompressedSize = LZ4_decompress_safe(srcData, reinterpret_cast<char*>(data.content.data()), Nz::SafeCast<int>(compressedSize), Nz::SafeCast<int>(bufferSize));
-					if (decompressedSize < 0)
-						throw std::runtime_error("failed to decompress chunk");
-
-					if (decompressedSize != bufferSize)
-						throw std::runtime_error(fmt::format("malformed packet (decompressed size exceeds max packet size: {0} != {1})", decompressedSize, bufferSize));
-				}
-			}
-			else
-			{
-				// Pre-0.3.1 compression
-				serializer.SerializeArraySize(data.content);
-				for (Nz::UInt8& block : data.content)
-					serializer &= block;
-			}
 		}
 
 		void Serialize(PacketSerializer& serializer, ChunkDestroy& data)
 		{
 			serializer &= data.chunkId;
+		}
+
+		void Serialize(PacketSerializer& serializer, ChunkReset& data)
+		{
+			// FIXME: Handle endianness
+
+			serializer &= data.chunkId;
+
+			serializer.SerializeArraySize(data.content);
+			std::size_t bufferSize = data.content.size() * sizeof(BlockIndex);
+
+			if (serializer.IsWriting())
+			{
+				const char* srcData = reinterpret_cast<const char*>(data.content.data());
+
+				int maxCompressedSize = LZ4_compressBound(Nz::SafeCast<int>(bufferSize));
+
+				std::vector<Nz::UInt8> compressedChunk(maxCompressedSize);
+				int compressedSizeInt = LZ4_compress_default(srcData, reinterpret_cast<char*>(compressedChunk.data()), Nz::SafeCast<int>(bufferSize), maxCompressedSize);
+				if (compressedSizeInt <= 0)
+					throw std::runtime_error("failed to compress chunk");
+
+				Nz::UInt16 compressedSize = Nz::UInt16(compressedSizeInt);
+				serializer &= compressedSize;
+
+				serializer.Write(compressedChunk.data(), compressedSize * sizeof(BlockIndex));
+			}
+			else
+			{
+				Nz::UInt16 compressedSize;
+				serializer &= compressedSize;
+
+				Nz::Stream* stream = serializer.GetByteStream().GetStream();
+				const char* srcData = static_cast<const char*>(stream->GetMappedPointer()) + stream->GetCursorPos();
+
+				data.content.resize(data.content.size());
+				int decompressedSize = LZ4_decompress_safe(srcData, reinterpret_cast<char*>(data.content.data()), Nz::SafeCast<int>(compressedSize), Nz::SafeCast<int>(bufferSize));
+				if (decompressedSize < 0)
+					throw std::runtime_error("failed to decompress chunk");
+
+				if (decompressedSize != bufferSize)
+					throw std::runtime_error(fmt::format("malformed packet (decompressed size exceeds max packet size: {0} != {1})", decompressedSize, bufferSize));
+			}
 		}
 
 		void Serialize(PacketSerializer& serializer, ChunkUpdate& data)

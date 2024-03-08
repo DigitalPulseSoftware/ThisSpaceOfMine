@@ -139,16 +139,30 @@ namespace tsom
 		{
 			ChunkIndices indices(chunkCreate.chunkLocX, chunkCreate.chunkLocY, chunkCreate.chunkLocZ);
 
-			Chunk& chunk = m_planet->AddChunk(chunkCreate.chunkId, indices, [&](BlockIndex* blocks)
-			{
-				for (Nz::UInt8 blockContent : chunkCreate.content)
-					*blocks++ = Nz::SafeCast<BlockIndex>(blockContent);
-			});
+			m_planet->AddChunk(chunkCreate.chunkId, indices);
 		});
 
 		m_onChunkDestroy.Connect(stateData.sessionHandler->OnChunkDestroy, [&](const Packets::ChunkDestroy& chunkDestroy)
 		{
 			m_planet->RemoveChunk(chunkDestroy.chunkId);
+		});
+
+		m_onChunkReset.Connect(stateData.sessionHandler->OnChunkReset, [&](const Packets::ChunkReset& chunkReset)
+		{
+			Chunk* chunk = m_planet->GetChunkByNetworkIndex(chunkReset.chunkId);
+			if (!chunk)
+			{
+				fmt::print(fg(fmt::color::red), "ChunkReset handler: unknown chunk {}\n", chunkReset.chunkId);
+				return;
+			}
+
+			chunk->LockWrite();
+			chunk->Reset([&](BlockIndex* blocks)
+			{
+				for (BlockIndex blockContent : chunkReset.content)
+					*blocks++ = blockContent;
+			});
+			chunk->UnlockWrite();
 		});
 
 		m_onChunkUpdate.Connect(stateData.sessionHandler->OnChunkUpdate, [&](const Packets::ChunkUpdate& chunkUpdate)

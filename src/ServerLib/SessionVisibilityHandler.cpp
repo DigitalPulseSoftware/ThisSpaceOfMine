@@ -11,7 +11,7 @@
 
 namespace tsom
 {
-	void SessionVisibilityHandler::CreateChunk(Chunk& chunk)
+	void SessionVisibilityHandler::CreateChunk(const Chunk& chunk)
 	{
 		// Check if this chunk was marked for destruction
 		if (auto it = m_chunkIndices.find(&chunk); it != m_chunkIndices.end())
@@ -44,7 +44,7 @@ namespace tsom
 		}
 	}
 
-	void SessionVisibilityHandler::DestroyChunk(Chunk& chunk)
+	void SessionVisibilityHandler::DestroyChunk(const Chunk& chunk)
 	{
 		std::size_t chunkIndex = Nz::Retrieve(m_chunkIndices, &chunk);
 
@@ -76,7 +76,7 @@ namespace tsom
 		DispatchEntities(tickIndex);
 	}
 
-	Chunk* SessionVisibilityHandler::GetChunkByIndex(std::size_t chunkIndex) const
+	const Chunk* SessionVisibilityHandler::GetChunkByIndex(std::size_t chunkIndex) const
 	{
 		if (chunkIndex >= m_visibleChunks.size())
 			return nullptr;
@@ -90,11 +90,12 @@ namespace tsom
 		{
 			// Mark chunk index as free on dispatch to prevent chunk index reuse while resurrecting it
 			m_freeChunkIds.Set(chunkIndex);
+			m_resetChunk.UnboundedReset(chunkIndex);
 			m_updatedChunk.UnboundedReset(chunkIndex);
 
 			VisibleChunk& visibleChunk = m_visibleChunks[chunkIndex];
 			visibleChunk.chunk = nullptr;
-			visibleChunk.onCellUpdatedSlot.Disconnect();
+			visibleChunk.onBlockUpdatedSlot.Disconnect();
 
 			Packets::ChunkDestroy chunkDestroyPacket;
 			chunkDestroyPacket.chunkId = Nz::SafeCast<Packets::Helper::ChunkId>(chunkIndex);
@@ -104,24 +105,89 @@ namespace tsom
 		m_newlyHiddenChunk.Clear();
 
 		if (m_newlyVisibleChunk.GetSize() > 0)
-			DispatchNewChunks();
+			DispatchChunkCreation();
+
+		if (m_resetChunk.GetSize() > 0)
+			DispatchChunkReset();
 
 		for (std::size_t chunkIndex = m_updatedChunk.FindFirst(); chunkIndex != m_updatedChunk.npos; chunkIndex = m_updatedChunk.FindNext(chunkIndex))
 		{
 			VisibleChunk& visibleChunk = m_visibleChunks[chunkIndex];
 			m_networkSession->SendPacket(visibleChunk.chunkUpdatePacket);
+			visibleChunk.chunkUpdatePacket.updates.clear();
 		}
 		m_updatedChunk.Clear();
 	}
 
-	void SessionVisibilityHandler::DispatchNewChunks()
+	void SessionVisibilityHandler::DispatchChunkCreation()
+	{
+		for (std::size_t chunkIndex = m_newlyVisibleChunk.FindFirst(); chunkIndex != m_newlyVisibleChunk.npos; chunkIndex = m_newlyVisibleChunk.FindNext(chunkIndex))
+		{
+			VisibleChunk& visibleChunk = m_visibleChunks[chunkIndex];
+
+			// Connect update signal on dispatch to prevent updates made during the same tick to be sent as update
+			visibleChunk.onBlockUpdatedSlot.Connect(visibleChunk.chunk->OnBlockUpdated, [this, chunkIndex]([[maybe_unused]] Chunk* chunk, const Nz::Vector3ui& indices, BlockIndex newBlock)
+			{
+				m_updatedChunk.UnboundedSet(chunkIndex);
+
+				VisibleChunk& visibleChunk = m_visibleChunks[chunkIndex];
+				assert(visibleChunk.chunk == chunk);
+
+				// Chunk content has been reset or wasn't already sent
+				if (m_resetChunk.UnboundedTest(chunkIndex))
+					return;
+
+				auto comp = [](Packets::ChunkUpdate::BlockUpdate& blockUpdate, const Nz::Vector3ui& indices)
+				{
+					return Nz::Vector3ui(blockUpdate.voxelLoc.x, blockUpdate.voxelLoc.y, blockUpdate.voxelLoc.z) < indices;
+				};
+
+				auto it = std::lower_bound(visibleChunk.chunkUpdatePacket.updates.begin(), visibleChunk.chunkUpdatePacket.updates.end(), indices, comp);
+				if (it == visibleChunk.chunkUpdatePacket.updates.end() || Nz::Vector3ui(it->voxelLoc.x, it->voxelLoc.y, it->voxelLoc.z) != indices)
+				{
+					visibleChunk.chunkUpdatePacket.updates.insert(it, {
+						Packets::Helper::VoxelLocation{ Nz::SafeCast<Nz::UInt8>(indices.x), Nz::SafeCast<Nz::UInt8>(indices.y), Nz::SafeCast<Nz::UInt8>(indices.z) },
+						Nz::SafeCast<Nz::UInt8>(newBlock)
+					});
+				}
+				else
+					it->newContent = Nz::SafeCast<Nz::UInt8>(newBlock);
+			});
+
+			visibleChunk.onResetSlot.Connect(visibleChunk.chunk->OnReset, [this, chunkIndex](Chunk*)
+			{
+				m_resetChunk.UnboundedSet(chunkIndex);
+			});
+
+			ChunkIndices chunkLocation = visibleChunk.chunk->GetIndices();
+			Nz::Vector3ui chunkSize = visibleChunk.chunk->GetSize();
+
+			Packets::ChunkCreate chunkCreatePacket;
+			chunkCreatePacket.chunkId = Nz::SafeCast<Packets::Helper::ChunkId>(chunkIndex);
+			chunkCreatePacket.chunkLocX = chunkLocation.x;
+			chunkCreatePacket.chunkLocY = chunkLocation.y;
+			chunkCreatePacket.chunkLocZ = chunkLocation.z;
+			chunkCreatePacket.chunkSizeX = chunkSize.x;
+			chunkCreatePacket.chunkSizeY = chunkSize.y;
+			chunkCreatePacket.chunkSizeZ = chunkSize.z;
+			chunkCreatePacket.cellSize = visibleChunk.chunk->GetBlockSize();
+
+			m_networkSession->SendPacket(chunkCreatePacket);
+
+			m_newlyVisibleChunk.UnboundedReset(chunkIndex);
+			m_resetChunk.UnboundedSet(chunkIndex);
+		}
+		m_newlyVisibleChunk.Clear();
+	}
+
+	void SessionVisibilityHandler::DispatchChunkReset()
 	{
 		m_orderedChunkList.clear();
-		for (std::size_t chunkIndex = m_newlyVisibleChunk.FindFirst(); chunkIndex != m_newlyVisibleChunk.npos; chunkIndex = m_newlyVisibleChunk.FindNext(chunkIndex))
+		for (std::size_t chunkIndex = m_resetChunk.FindFirst(); chunkIndex != m_resetChunk.npos; chunkIndex = m_resetChunk.FindNext(chunkIndex))
 		{
 			const Chunk* chunk = m_visibleChunks[chunkIndex].chunk;
 			Nz::Vector3f chunkPosition = chunk->GetContainer().GetChunkOffset(chunk->GetIndices());
-			m_orderedChunkList.push_back(ChunkWithPos{chunkIndex, chunkPosition + Nz::Vector3f(chunk->GetSize()) * chunk->GetBlockSize()});
+			m_orderedChunkList.push_back(ChunkWithPos{ chunkIndex, chunkPosition + Nz::Vector3f(chunk->GetSize()) * chunk->GetBlockSize() });
 		}
 
 		if (m_controlledEntity)
@@ -142,64 +208,31 @@ namespace tsom
 
 			VisibleChunk& visibleChunk = m_visibleChunks[chunk.chunkIndex];
 
-			// Connect update signal on dispatch to prevent updates made during the same tick to be sent as update
-			visibleChunk.onCellUpdatedSlot.Connect(visibleChunk.chunk->OnBlockUpdated, [this, chunkIndex = chunk.chunkIndex]([[maybe_unused]] Chunk* chunk, const Nz::Vector3ui& indices, BlockIndex newBlock)
-			{
-				m_updatedChunk.UnboundedSet(chunkIndex);
-
-				VisibleChunk& visibleChunk = m_visibleChunks[chunkIndex];
-				assert(visibleChunk.chunk == chunk);
-
-				auto comp = [](Packets::ChunkUpdate::BlockUpdate& blockUpdate, const Nz::Vector3ui& indices)
-				{
-					return Nz::Vector3ui(blockUpdate.voxelLoc.x, blockUpdate.voxelLoc.y, blockUpdate.voxelLoc.z) < indices;
-				};
-
-				auto it = std::lower_bound(visibleChunk.chunkUpdatePacket.updates.begin(), visibleChunk.chunkUpdatePacket.updates.end(), indices, comp);
-				if (it == visibleChunk.chunkUpdatePacket.updates.end() || Nz::Vector3ui(it->voxelLoc.x, it->voxelLoc.y, it->voxelLoc.z) != indices)
-				{
-					visibleChunk.chunkUpdatePacket.updates.insert(it, {
-						Packets::Helper::VoxelLocation{ Nz::SafeCast<Nz::UInt8>(indices.x), Nz::SafeCast<Nz::UInt8>(indices.y), Nz::SafeCast<Nz::UInt8>(indices.z) },
-						Nz::SafeCast<Nz::UInt8>(newBlock)
-					});
-				}
-				else
-					it->newContent = Nz::SafeCast<Nz::UInt8>(newBlock);
-			});
-
-			Nz::Vector3ui chunkLocation = visibleChunk.chunk->GetIndices();
+			ChunkIndices chunkLocation = visibleChunk.chunk->GetIndices();
 			Nz::Vector3ui chunkSize = visibleChunk.chunk->GetSize();
 
-			Packets::ChunkCreate chunkCreatePacket;
-			chunkCreatePacket.chunkId = Nz::SafeCast<Packets::Helper::ChunkId>(chunk.chunkIndex);
-			chunkCreatePacket.chunkLocX = chunkLocation.x;
-			chunkCreatePacket.chunkLocY = chunkLocation.y;
-			chunkCreatePacket.chunkLocZ = chunkLocation.z;
-			chunkCreatePacket.chunkSizeX = chunkSize.x;
-			chunkCreatePacket.chunkSizeY = chunkSize.y;
-			chunkCreatePacket.chunkSizeZ = chunkSize.z;
-			chunkCreatePacket.cellSize = visibleChunk.chunk->GetBlockSize();
+			Packets::ChunkReset chunkResetPacket;
+			chunkResetPacket.chunkId = Nz::SafeCast<Packets::Helper::ChunkId>(chunk.chunkIndex);
 
 			unsigned int blockCount = chunkSize.x * chunkSize.y * chunkSize.z;
-			chunkCreatePacket.content.resize(blockCount);
+			chunkResetPacket.content.resize(blockCount);
 
 			const BlockIndex* chunkContent = visibleChunk.chunk->GetContent();
-			for (unsigned int i = 0; i < blockCount; ++i)
-				chunkCreatePacket.content[i] = Nz::SafeCast<Nz::UInt8>(chunkContent[i]);
+			std::memcpy(chunkResetPacket.content.data(), chunkContent, blockCount * sizeof(BlockIndex));
 
 			(*m_activeChunkUpdates)++;
-			m_networkSession->SendPacket(chunkCreatePacket, [chunkLocation, chunkUpdateCount = m_activeChunkUpdates]
+			m_networkSession->SendPacket(chunkResetPacket, [chunkLocation, chunkUpdateCount = m_activeChunkUpdates]
 			{
 				assert(*chunkUpdateCount > 0);
 				(*chunkUpdateCount)--;
 			});
 
-			m_newlyVisibleChunk.UnboundedReset(chunk.chunkIndex);
+			m_resetChunk.UnboundedReset(chunk.chunkIndex);
 		}
 
 		// If we get there, we didn't hit the concurrent chunk limit, we can clear the chunk bitset
-		assert(m_newlyVisibleChunk.TestNone());
-		m_newlyVisibleChunk.Clear();
+		assert(m_resetChunk.TestNone());
+		m_resetChunk.Clear();
 	}
 
 	void SessionVisibilityHandler::DispatchEntities(Nz::UInt16 tickIndex)

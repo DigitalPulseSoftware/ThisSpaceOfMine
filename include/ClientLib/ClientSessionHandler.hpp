@@ -39,6 +39,7 @@ namespace tsom
 			void HandlePacket(Packets::ChatMessage&& chatMessage);
 			void HandlePacket(Packets::ChunkCreate&& chunkCreate);
 			void HandlePacket(Packets::ChunkDestroy&& chunkDestroy);
+			void HandlePacket(Packets::ChunkReset&& chunkReset);
 			void HandlePacket(Packets::ChunkUpdate&& chunkUpdate);
 			void HandlePacket(Packets::EntitiesCreation&& entitiesCreation);
 			void HandlePacket(Packets::EntitiesDelete&& entitiesDelete);
@@ -51,7 +52,8 @@ namespace tsom
 			NazaraSignal(OnChatMessage, const std::string& /*message*/, const std::string& /*senderNickname*/);
 			NazaraSignal(OnChunkCreate, const Packets::ChunkCreate& /*chunkCreate*/);
 			NazaraSignal(OnChunkDestroy, const Packets::ChunkDestroy& /*chunkDestroy*/);
-			NazaraSignal(OnChunkUpdate, const Packets::ChunkUpdate& /*gridUpdate*/);
+			NazaraSignal(OnChunkReset, const Packets::ChunkReset& /*chunkReset*/);
+			NazaraSignal(OnChunkUpdate, const Packets::ChunkUpdate& /*chunkUpdate*/);
 			NazaraSignal(OnControlledEntityChanged, entt::handle /*newEntity*/);
 			NazaraSignal(OnControlledEntityStateUpdate, InputIndex /*lastInputIndex*/, const Packets::EntitiesStateUpdate::ControlledCharacter& /*characterData*/);
 			NazaraSignal(OnPlayerLeave, const std::string& /*playerName*/);

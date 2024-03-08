@@ -6,6 +6,7 @@
 #include <CommonLib/BlockIndex.hpp>
 #include <CommonLib/CharacterController.hpp>
 #include <ServerLib/ServerInstance.hpp>
+#include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Collider3D.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <numeric>
@@ -16,6 +17,7 @@ namespace tsom
 		{ PacketIndex<Packets::ChatMessage>,         { .channel = 0, .flags = Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::ChunkCreate>,         { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::ChunkDestroy>,        { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::ChunkReset>,          { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::ChunkUpdate>,         { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::EntitiesCreation>,    { .channel = 2, .flags = Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::EntitiesDelete>,      { .channel = 2, .flags = Nz::ENetPacketFlag::Reliable } },
@@ -40,32 +42,38 @@ namespace tsom
 
 	void PlayerSessionHandler::HandlePacket(Packets::MineBlock&& mineBlock)
 	{
-		Chunk* chunk = m_player->GetVisibilityHandler().GetChunkByIndex(mineBlock.chunkId);
-		if (!chunk)
+		const Chunk* targetChunk = m_player->GetVisibilityHandler().GetChunkByIndex(mineBlock.chunkId);
+		if (!targetChunk)
 			return; //< ignore
 
 		Nz::Vector3ui voxelLoc(mineBlock.voxelLoc.x, mineBlock.voxelLoc.y, mineBlock.voxelLoc.z);
-		if (!CheckCanMineBlock(chunk, voxelLoc))
+		if (!CheckCanMineBlock(targetChunk, voxelLoc))
 			return;
 
-		chunk->LockWrite();
-		chunk->UpdateBlock(voxelLoc, EmptyBlockIndex);
-		chunk->UnlockWrite();
+		if (Chunk* chunk = m_player->GetServerInstance().GetPlanet().GetChunk(targetChunk->GetIndices()))
+		{
+			chunk->LockWrite();
+			chunk->UpdateBlock(voxelLoc, EmptyBlockIndex);
+			chunk->UnlockWrite();
+		}
 	}
 
 	void PlayerSessionHandler::HandlePacket(Packets::PlaceBlock&& placeBlock)
 	{
-		Chunk* chunk = m_player->GetVisibilityHandler().GetChunkByIndex(placeBlock.chunkId);
-		if (!chunk)
+		const Chunk* targetChunk = m_player->GetVisibilityHandler().GetChunkByIndex(placeBlock.chunkId);
+		if (!targetChunk)
 			return; //< ignore
 
 		Nz::Vector3ui voxelLoc(placeBlock.voxelLoc.x, placeBlock.voxelLoc.y, placeBlock.voxelLoc.z);
-		if (!CheckCanPlaceBlock(chunk, voxelLoc))
+		if (!CheckCanPlaceBlock(targetChunk, voxelLoc))
 			return;
 
-		chunk->LockWrite();
-		chunk->UpdateBlock(voxelLoc, static_cast<BlockIndex>(placeBlock.newContent));
-		chunk->UnlockWrite();
+		if (Chunk* chunk = m_player->GetServerInstance().GetPlanet().GetChunk(targetChunk->GetIndices()))
+		{
+			chunk->LockWrite();
+			chunk->UpdateBlock(voxelLoc, static_cast<BlockIndex>(placeBlock.newContent));
+			chunk->UnlockWrite();
+		}
 	}
 
 	void PlayerSessionHandler::HandlePacket(Packets::SendChatMessage&& playerChat)
@@ -113,7 +121,7 @@ namespace tsom
 		GetSession()->Disconnect(DisconnectionType::Kick);
 	}
 
-	bool PlayerSessionHandler::CheckCanMineBlock(Chunk* chunk, const Nz::Vector3ui& blockIndices) const
+	bool PlayerSessionHandler::CheckCanMineBlock(const Chunk* chunk, const Nz::Vector3ui& blockIndices) const
 	{
 		Nz::Vector3ui chunkSize = chunk->GetSize();
 		if (blockIndices.x >= chunkSize.x || blockIndices.y >= chunkSize.y || blockIndices.z >= chunkSize.z)
@@ -126,7 +134,7 @@ namespace tsom
 		return true;
 	}
 
-	bool PlayerSessionHandler::CheckCanPlaceBlock(Chunk* chunk, const Nz::Vector3ui& blockIndices) const
+	bool PlayerSessionHandler::CheckCanPlaceBlock(const Chunk* chunk, const Nz::Vector3ui& blockIndices) const
 	{
 		Nz::Vector3ui chunkSize = chunk->GetSize();
 		if (blockIndices.x >= chunkSize.x || blockIndices.y >= chunkSize.y || blockIndices.z >= chunkSize.z)

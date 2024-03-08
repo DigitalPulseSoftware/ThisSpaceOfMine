@@ -29,7 +29,7 @@ namespace tsom
 	{
 		public:
 			struct PeerInfo;
-			using PeerInfoCallback = std::function<void (PeerInfo& peerInfo)>;
+			using PeerInfoCallback = std::function<void(PeerInfo& peerInfo)>;
 
 			NetworkReactor(std::size_t idOffset, Nz::NetProtocol protocol, Nz::UInt16 port, std::size_t maxClient);
 			NetworkReactor(const NetworkReactor&) = delete;
