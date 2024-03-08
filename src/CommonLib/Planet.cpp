@@ -7,6 +7,8 @@
 #include <CommonLib/DeformedChunk.hpp>
 #include <CommonLib/FlatChunk.hpp>
 #include <CommonLib/Utility/SignedDistanceFunctions.hpp>
+#include <NazaraUtils/CallOnExit.hpp>
+#include <Nazara/Core/TaskScheduler.hpp>
 #include <Nazara/Core/VertexStruct.hpp>
 #include <Nazara/Math/Ray.hpp>
 #include <Nazara/Physics3D/Collider3D.hpp>
@@ -16,31 +18,37 @@
 
 namespace tsom
 {
-	Planet::Planet(const Nz::Vector3ui& gridSize, float tileSize, float cornerRadius, float gravityFactor) :
-	ChunkContainer(gridSize, tileSize),
+	Planet::Planet(float tileSize, float cornerRadius, float gravityFactor) :
+	ChunkContainer(tileSize),
 	m_cornerRadius(cornerRadius),
 	m_gravityFactor(gravityFactor)
 	{
-		m_chunks.resize(m_chunkCount.x * m_chunkCount.y * m_chunkCount.z);
 	}
 
-	Chunk& Planet::AddChunk(const Nz::Vector3ui& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback)
+	Chunk& Planet::AddChunk(const ChunkIndices& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback)
 	{
-		std::size_t index = GetChunkIndex(indices);
-		assert(!m_chunks[index].chunk);
-		m_chunks[index].chunk = std::make_unique<FlatChunk>(*this, indices, Nz::Vector3ui{ ChunkSize }, m_tileSize);
+		assert(!m_chunks.contains(indices));
+		ChunkData chunkData;
+		chunkData.chunk = std::make_unique<FlatChunk>(*this, indices, Nz::Vector3ui{ ChunkSize }, m_tileSize);
 
 		if (initCallback)
-			m_chunks[index].chunk->InitBlocks(initCallback);
+			chunkData.chunk->Reset(initCallback);
 
-		m_chunks[index].onUpdated.Connect(m_chunks[index].chunk->OnBlockUpdated, [this](Chunk* chunk, const Nz::Vector3ui& /*indices*/, BlockIndex /*newBlock*/)
+		chunkData.onReset.Connect(chunkData.chunk->OnReset, [this](Chunk* chunk)
 		{
 			OnChunkUpdated(this, chunk);
 		});
 
-		OnChunkAdded(this, m_chunks[index].chunk.get());
+		chunkData.onUpdated.Connect(chunkData.chunk->OnBlockUpdated, [this](Chunk* chunk, const Nz::Vector3ui& /*indices*/, BlockIndex /*newBlock*/)
+		{
+			OnChunkUpdated(this, chunk);
+		});
 
-		return *m_chunks[index].chunk;
+		auto it = m_chunks.insert_or_assign(indices, std::move(chunkData)).first;
+
+		OnChunkAdded(this, it->second.chunk.get());
+
+		return *it->second.chunk;
 	}
 
 	Nz::Vector3f Planet::ComputeUpDirection(const Nz::Vector3f& position) const
@@ -61,303 +69,284 @@ namespace tsom
 		return Nz::Vector3f::Normalize(position - innerPos);
 	}
 
-	void Planet::GenerateChunks(BlockLibrary& blockLibrary)
+	void Planet::ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, Chunk& chunk)> callback)
+	{
+		for (auto&& [chunkIndices, chunkData] : m_chunks)
+			callback(chunkIndices, *chunkData.chunk);
+	}
+
+	void Planet::ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, const Chunk& chunk)> callback) const
+	{
+		for (auto&& [chunkIndices, chunkData] : m_chunks)
+			callback(chunkIndices, *chunkData.chunk);
+	}
+
+	void Planet::GenerateChunk(const BlockLibrary& blockLibrary, Chunk& chunk, unsigned int seed, const Nz::Vector3ui& chunkCount)
 	{
 		constexpr std::size_t freeSpace = 30;
 
-		for (unsigned int z = 0; z < m_chunkCount.z; ++z)
-		{
-			for (unsigned int y = 0; y < m_chunkCount.y; ++y)
-			{
-				for (unsigned int x = 0; x < m_chunkCount.x; ++x)
-				{
-					auto& chunk = AddChunk({ x, y, z });
-					chunk.LockWrite();
-				}
-			}
-		}
+		ChunkIndices chunkIndices = chunk.GetIndices();
+		unsigned int chunkSeed = seed + static_cast<unsigned int>(chunkIndices.x) + static_cast<unsigned int>(chunkIndices.y) + static_cast<unsigned int>(chunkIndices.z);
 
-		std::mt19937 rand(std::random_device{}());
+		std::minstd_rand rand(chunkSeed);
 		std::bernoulli_distribution dis(0.9);
-
-		for (unsigned int z = 0; z < m_gridSize.z; ++z)
-		{
-			for (unsigned int y = 0; y < m_gridSize.y; ++y)
-			{
-				for (unsigned int x = 0; x < m_gridSize.x; ++x)
-				{
-					unsigned int depth = std::min({
-						x,
-						y,
-						z,
-						m_gridSize.x - x - 1,
-						m_gridSize.y - y - 1,
-						m_gridSize.z - z - 1,
-					});
-
-					if (depth < freeSpace / 2)
-						continue;
-
-					depth -= freeSpace / 2;
-
-					std::string_view blockType;
-					if (depth <= 1)
-						blockType = "snow";
-					else if (depth <= 12)
-						blockType = "dirt";
-					else
-						blockType = (dis(rand)) ? "stone" : "stone_mossy";
-
-					if (x >= m_gridSize.x / 2 - 3 && x < m_gridSize.x / 2 + 2 &&
-					    y >= m_gridSize.y / 2 - 3 && y < m_gridSize.y / 2 + 2)
-					{
-						blockType = "empty";
-					}
-
-					BlockIndex blockIndex = blockLibrary.GetBlockIndex(blockType);
-					if (blockIndex != InvalidBlockIndex)
-					{
-						Nz::Vector3ui innerCoordinates;
-						Chunk& chunk = GetChunkByIndices({ x, y, z }, &innerCoordinates);
-						chunk.UpdateBlock(innerCoordinates, blockIndex);
-					}
-				}
-			}
-		}
-
 
 		BlockIndex dirtBlockIndex = blockLibrary.GetBlockIndex("dirt");
 		BlockIndex grassBlockIndex = blockLibrary.GetBlockIndex("grass");
+		BlockIndex stoneBlockIndex = blockLibrary.GetBlockIndex("stone");
+		BlockIndex stoneMossyBlockIndex = blockLibrary.GetBlockIndex("stone_mossy");
+		BlockIndex snowBlockIndex = blockLibrary.GetBlockIndex("snow");
 
-		siv::PerlinNoise perlin(42);
+		Nz::Vector3i maxHeight((Nz::Vector3i(chunkCount) + Nz::Vector3i(1)) / 2);
+		maxHeight *= int(Planet::ChunkSize);
 
-		constexpr double scale = 0.02f;
-		constexpr std::size_t heightScale = 10 + freeSpace;
+		Nz::EnumArray<Direction, siv::PerlinNoise> perlin;
+		for (auto&& [dir, noise] : perlin.iter_kv())
+			noise.reseed(seed + static_cast<unsigned int>(dir));
 
-		// +X
-		for (unsigned int z = 0; z < m_gridSize.z; ++z)
+		chunk.LockWrite();
+		NAZARA_DEFER({ chunk.UnlockWrite(); });
+
+		chunk.Reset([&](BlockIndex* blockIndices)
 		{
-			for (unsigned int y = 0; y < m_gridSize.y; ++y)
-			{
-				double height = perlin.normalizedOctave3D_01(0.0, y * scale, z * scale, 4);
+			// Fill all blocks based on their depth
+			ChunkIndices chunkIndices = chunk.GetIndices();
 
-				unsigned int depth = m_gridSize.x - height * heightScale;
-				for (unsigned int x = m_gridSize.x - 1; x > depth; --x)
+			BlockIndex* blockIndexPtr = blockIndices;
+			for (unsigned int z = 0; z < Planet::ChunkSize; ++z)
+			{
+				for (unsigned int y = 0; y < Planet::ChunkSize; ++y)
 				{
-					Nz::Vector3ui innerCoordinates;
-					Chunk& chunk = GetChunkByIndices({ x, y, z }, &innerCoordinates);
-					chunk.UpdateBlock(innerCoordinates, EmptyBlockIndex);
+					for (unsigned int x = 0; x < Planet::ChunkSize; ++x)
+					{
+						Nz::Vector3i blockPos = GetBlockIndices(chunkIndices, { x, y, z });
+						unsigned int depth = Nz::SafeCaster(std::min({
+							maxHeight.x - std::abs(blockPos.x),
+							maxHeight.y - std::abs(blockPos.z),
+							maxHeight.z - std::abs(blockPos.y)
+						}));
+
+						if (depth < freeSpace)
+						{
+							*blockIndexPtr++ = EmptyBlockIndex;
+							continue;
+						}
+
+						depth -= freeSpace;
+
+						BlockIndex blockIndex;
+						if (depth <= 6)
+							blockIndex = snowBlockIndex;
+						else if (depth <= 18)
+							blockIndex = dirtBlockIndex;
+						else
+							blockIndex = (dis(rand)) ? stoneBlockIndex : stoneMossyBlockIndex;
+
+						if (std::abs(blockPos.x) <= 2 && std::abs(blockPos.z) <= 2)
+							blockIndex = EmptyBlockIndex;
+
+						if (blockIndex != InvalidBlockIndex)
+							*blockIndexPtr++ = blockIndex;
+					}
 				}
-
-				Nz::Vector3ui innerCoordinates;
-				Chunk& chunk = GetChunkByIndices({ depth, y, z }, &innerCoordinates);
-				if (chunk.GetBlockContent(innerCoordinates) == dirtBlockIndex)
-					chunk.UpdateBlock(innerCoordinates, grassBlockIndex);
 			}
-		}
 
-		// +Y
-		for (unsigned int z = 0; z < m_gridSize.z; ++z)
-		{
-			for (unsigned int x = 0; x < m_gridSize.x; ++x)
+			constexpr double heightScale = 1.5f;
+			constexpr double scale = 0.02f;
+
+			// +X
+			for (unsigned int y = 0; y < Planet::ChunkSize; ++y)
 			{
-				double height = perlin.normalizedOctave3D_01(x * scale, 0.0, z * scale, 4);
-
-				unsigned int depth = m_gridSize.y - height * heightScale;
-				for (unsigned int y = m_gridSize.y - 1; y > depth; --y)
+				for (unsigned int x = 0; x < Planet::ChunkSize; ++x)
 				{
-					Nz::Vector3ui innerCoordinates;
-					Chunk& chunk = GetChunkByIndices({ x, y, z }, &innerCoordinates);
-					chunk.UpdateBlock(innerCoordinates, EmptyBlockIndex);
-				}
+					BlockIndices mapPos = GetBlockIndices(chunkIndices, { 0, x, y });
+					double height = perlin[Direction::Right].normalizedOctave2D_01(mapPos.y * scale, mapPos.z * scale, 4) * heightScale;
 
-				Nz::Vector3ui innerCoordinates;
-				Chunk& chunk = GetChunkByIndices({ x, depth, z }, &innerCoordinates);
-				if (chunk.GetBlockContent(innerCoordinates) == dirtBlockIndex)
-					chunk.UpdateBlock(innerCoordinates, grassBlockIndex);
-			}
-		}
-
-		// +Z
-		for (unsigned int y = 0; y < m_gridSize.y; ++y)
-		{
-			for (unsigned int x = 0; x < m_gridSize.x; ++x)
-			{
-				double height = perlin.normalizedOctave3D_01(x * scale, y * scale, 0.0, 4);
-
-				unsigned int depth = m_gridSize.z - height * heightScale;
-				for (unsigned int z = m_gridSize.z - 1; z > depth; --z)
-				{
-					Nz::Vector3ui innerCoordinates;
-					Chunk& chunk = GetChunkByIndices({ x, y, z }, &innerCoordinates);
-					chunk.UpdateBlock(innerCoordinates, EmptyBlockIndex);
-				}
-
-				Nz::Vector3ui innerCoordinates;
-				Chunk& chunk = GetChunkByIndices({ x, y, depth }, &innerCoordinates);
-				if (chunk.GetBlockContent(innerCoordinates) == dirtBlockIndex)
-					chunk.UpdateBlock(innerCoordinates, grassBlockIndex);
-			}
-		}
-
-		// -X
-		for (unsigned int z = 0; z < m_gridSize.z; ++z)
-		{
-			for (unsigned int y = 0; y < m_gridSize.y; ++y)
-			{
-				double height = perlin.normalizedOctave3D_01(m_gridSize.z * scale, (m_gridSize.y - y) * scale, (m_gridSize.z - z) * scale, 4);
-
-				unsigned int depth = height * heightScale;
-				for (unsigned int x = 0; x < depth; ++x)
-				{
-					Nz::Vector3ui innerCoordinates;
-					Chunk& chunk = GetChunkByIndices({ x, y, z }, &innerCoordinates);
-					chunk.UpdateBlock(innerCoordinates, EmptyBlockIndex);
-				}
-
-				Nz::Vector3ui innerCoordinates;
-				Chunk& chunk = GetChunkByIndices({ depth, y, z }, &innerCoordinates);
-				if (chunk.GetBlockContent(innerCoordinates) == dirtBlockIndex)
-					chunk.UpdateBlock(innerCoordinates, grassBlockIndex);
-			}
-		}
-
-		// -Y
-		for (unsigned int z = 0; z < m_gridSize.z; ++z)
-		{
-			for (unsigned int x = 0; x < m_gridSize.x; ++x)
-			{
-				double height = perlin.normalizedOctave3D_01((m_gridSize.x - x) * scale, m_gridSize.y * scale, (m_gridSize.z - z) * scale, 4);
-
-				unsigned int depth = height * heightScale;
-				for (unsigned int y = 0; y < depth; ++y)
-				{
-					Nz::Vector3ui innerCoordinates;
-					Chunk& chunk = GetChunkByIndices({ x, y, z }, &innerCoordinates);
-					chunk.UpdateBlock(innerCoordinates, EmptyBlockIndex);
-				}
-
-				Nz::Vector3ui innerCoordinates;
-				Chunk& chunk = GetChunkByIndices({ x, depth, z }, &innerCoordinates);
-				if (chunk.GetBlockContent(innerCoordinates) == dirtBlockIndex)
-					chunk.UpdateBlock(innerCoordinates, grassBlockIndex);
-			}
-		}
-
-		// -Z
-		for (unsigned int y = 0; y < m_gridSize.y; ++y)
-		{
-			for (unsigned int x = 0; x < m_gridSize.x; ++x)
-			{
-				double height = perlin.normalizedOctave3D_01((m_gridSize.x - x) * scale, (m_gridSize.y - y) * scale, m_gridSize.z * scale, 4);
-
-				unsigned int depth = height * heightScale;
-				for (unsigned int z = 0; z < depth; ++z)
-				{
-					Nz::Vector3ui innerCoordinates;
-					Chunk& chunk = GetChunkByIndices({ x, y, z }, &innerCoordinates);
-					chunk.UpdateBlock(innerCoordinates, EmptyBlockIndex);
-				}
-
-				Nz::Vector3ui innerCoordinates;
-				Chunk& chunk = GetChunkByIndices({ x, y, depth }, &innerCoordinates);
-				if (chunk.GetBlockContent(innerCoordinates) == dirtBlockIndex)
-					chunk.UpdateBlock(innerCoordinates, grassBlockIndex);
-			}
-		}
-
-		/*for (unsigned int z = 0; z < m_gridSize.z; ++z)
-		{
-			for (unsigned int y = 0; y < m_gridSize.y; ++y)
-			{
-				for (unsigned int x = 0; x < m_gridSize.x; ++x)
-				{
-					if (x < freeSpace || x >= m_gridSize.x - freeSpace ||
-						y < freeSpace || y >= m_gridSize.y - freeSpace ||
-						z < freeSpace || z >= m_gridSize.z - freeSpace)
+					int terrainDepth = std::round(std::min<double>(height * (maxHeight.x / 2 - freeSpace) + freeSpace, maxHeight.x / 2));
+					int blockDepth = maxHeight.x - mapPos.x + 1;
+					if (blockDepth < terrainDepth)
 						continue;
 
-					unsigned int depth = std::min({
-						x - freeSpace,
-						y - freeSpace,
-						z - freeSpace,
-						m_gridSize.x - freeSpace - x - 1,
-						m_gridSize.y - freeSpace - y - 1,
-						m_gridSize.z - freeSpace - z - 1,
-					});
+					unsigned int startHeight = Nz::SafeCaster(blockDepth - terrainDepth);
+					if (startHeight >= Planet::ChunkSize)
+						continue;
 
-					VoxelBlock blockType;
-					if (depth == 0)
-						blockType = VoxelBlock::Grass;
-					else if (depth <= 3)
-						blockType = VoxelBlock::Dirt;
-					else
-						blockType = VoxelBlock::Stone;
+					if (BlockIndex& blockType = blockIndices[chunk.GetBlockLocalIndex({ startHeight, x, y })]; blockType == dirtBlockIndex)
+						blockType = grassBlockIndex;
 
-					Nz::Vector3ui innerCoordinates;
-					Chunk& chunk = GetChunkByIndices({ x, y, z }, &innerCoordinates);
-					chunk.UpdateBlock(innerCoordinates, blockType);
+					for (unsigned int height = startHeight + 1; height < Planet::ChunkSize; ++height)
+						blockIndices[chunk.GetBlockLocalIndex({ height, x, y })] = EmptyBlockIndex;
 				}
 			}
-		}*/
 
-		/*for (auto& gridVec : m_grids)
-		{
-			gridVec.clear();
-
-			std::size_t maxHeight = m_gridDimensions / 2;
-
-			std::size_t gridSize = 1;
-			for (std::size_t i = 0; i < m_gridDimensions; ++i)
+			// -X
+			for (unsigned int y = 0; y < Planet::ChunkSize; ++y)
 			{
-				VoxelBlock cell;
-				if (i >= maxHeight)
-					cell = EmptyBlockIndex;
-				else if (i == maxHeight - 1)
-					cell = VoxelBlock::Grass;
-				else if (i >= maxHeight - 3)
-					cell = VoxelBlock::Dirt;
-				else
-					cell = VoxelBlock::Stone;
-
-				gridVec.emplace_back(std::make_unique<Chunk>(gridSize, gridSize, cell));
-				gridSize += 2;
-			}
-		}*/
-
-		for (unsigned int z = 0; z < m_chunkCount.z; ++z)
-		{
-			for (unsigned int y = 0; y < m_chunkCount.y; ++y)
-			{
-				for (unsigned int x = 0; x < m_chunkCount.x; ++x)
+				for (unsigned int x = 0; x < Planet::ChunkSize; ++x)
 				{
-					auto& chunk = GetChunk({ x, y, z });
-					chunk.UnlockWrite();
+					BlockIndices mapPos = GetBlockIndices(chunkIndices, { Planet::ChunkSize - 1, x, y });
+					double height = perlin[Direction::Left].normalizedOctave2D_01(mapPos.y * scale, mapPos.z * scale, 4) * heightScale;
+
+					int terrainDepth = std::round(std::min<double>(height * (maxHeight.x / 2 - freeSpace) + freeSpace, maxHeight.x / 2));
+					int blockDepth = maxHeight.x + mapPos.x + 1;
+					if (blockDepth < terrainDepth)
+						continue;
+
+					unsigned int startHeight = Nz::SafeCast<unsigned int>(blockDepth - terrainDepth);
+					if (startHeight >= Planet::ChunkSize)
+						continue;
+
+					if (BlockIndex& blockType = blockIndices[chunk.GetBlockLocalIndex({ Planet::ChunkSize - startHeight - 1, x, y })]; blockType == dirtBlockIndex)
+						blockType = grassBlockIndex;
+
+					for (unsigned int height = startHeight + 1; height < Planet::ChunkSize; ++height)
+						blockIndices[chunk.GetBlockLocalIndex({ Planet::ChunkSize - height - 1, x, y })] = EmptyBlockIndex;
+				}
+			}
+
+			// +Y
+			for (unsigned int z = 0; z < Planet::ChunkSize; ++z)
+			{
+				for (unsigned int x = 0; x < Planet::ChunkSize; ++x)
+				{
+					BlockIndices mapPos = GetBlockIndices(chunkIndices, { x, z, 0 });
+					double height = perlin[Direction::Up].normalizedOctave2D_01(mapPos.x * scale, mapPos.z * scale, 4) * heightScale;
+
+					int terrainDepth = std::round(std::min<double>(height * (maxHeight.y / 2 - freeSpace) + freeSpace, maxHeight.y / 2));
+					int blockDepth = maxHeight.y - mapPos.y + 1;
+					if (blockDepth < terrainDepth)
+						continue;
+
+					unsigned int startHeight = Nz::SafeCaster(blockDepth - terrainDepth);
+					if (startHeight >= Planet::ChunkSize)
+						continue;
+
+					if (BlockIndex& blockType = blockIndices[chunk.GetBlockLocalIndex({ x, z, startHeight })]; blockType == dirtBlockIndex)
+						blockType = grassBlockIndex;
+
+					for (unsigned int height = startHeight + 1; height < Planet::ChunkSize; ++height)
+						blockIndices[chunk.GetBlockLocalIndex({ x, z, height })] = EmptyBlockIndex;
+				}
+			}
+
+			// -Y
+			for (unsigned int z = 0; z < Planet::ChunkSize; ++z)
+			{
+				for (unsigned int x = 0; x < Planet::ChunkSize; ++x)
+				{
+					BlockIndices mapPos = GetBlockIndices(chunkIndices, { x, z, Planet::ChunkSize - 1 });
+					double height = perlin[Direction::Down].normalizedOctave2D_01(mapPos.x * scale, mapPos.z * scale, 4) * heightScale;
+
+					int terrainDepth = std::round(std::min<double>(height * (maxHeight.y / 2 - freeSpace) + freeSpace, maxHeight.y / 2));
+					int blockDepth = maxHeight.y + mapPos.y + 1;
+					if (blockDepth < terrainDepth)
+						continue;
+
+					unsigned int startHeight = Nz::SafeCast<unsigned int>(blockDepth - terrainDepth);
+					if (startHeight >= Planet::ChunkSize)
+						continue;
+
+					if (BlockIndex& blockType = blockIndices[chunk.GetBlockLocalIndex({ x, z, Planet::ChunkSize - startHeight - 1 })]; blockType == dirtBlockIndex)
+						blockType = grassBlockIndex;
+
+					for (unsigned int height = startHeight + 1; height < Planet::ChunkSize; ++height)
+						blockIndices[chunk.GetBlockLocalIndex({ x, z, Planet::ChunkSize - height - 1 })] = EmptyBlockIndex;
+				}
+			}
+
+			// +Z
+			for (unsigned int y = 0; y < Planet::ChunkSize; ++y)
+			{
+				for (unsigned int x = 0; x < Planet::ChunkSize; ++x)
+				{
+					BlockIndices mapPos = GetBlockIndices(chunkIndices, { x, 0, y });
+					double height = perlin[Direction::Back].normalizedOctave2D_01(mapPos.x * scale, mapPos.y * scale, 4) * heightScale;
+
+					int terrainDepth = std::round(std::min<double>(height * (maxHeight.z / 2 - freeSpace) + freeSpace, maxHeight.z / 2));
+					int blockDepth = maxHeight.z - mapPos.z + 1;
+					if (blockDepth < terrainDepth)
+						continue;
+
+					unsigned int startHeight = Nz::SafeCaster(blockDepth - terrainDepth);
+					if (startHeight >= Planet::ChunkSize)
+						continue;
+
+					if (BlockIndex& blockType = blockIndices[chunk.GetBlockLocalIndex({ x, startHeight, y })]; blockType == dirtBlockIndex)
+						blockType = grassBlockIndex;
+
+					for (unsigned int height = startHeight + 1; height < Planet::ChunkSize; ++height)
+						blockIndices[chunk.GetBlockLocalIndex({ x, height, y })] = EmptyBlockIndex;
+				}
+			}
+
+			// -Z
+			for (unsigned int y = 0; y < Planet::ChunkSize; ++y)
+			{
+				for (unsigned int x = 0; x < Planet::ChunkSize; ++x)
+				{
+					BlockIndices mapPos = GetBlockIndices(chunkIndices, { x, Planet::ChunkSize - 1, y });
+					double height = perlin[Direction::Front].normalizedOctave2D_01(mapPos.x * scale, mapPos.y * scale, 4) * heightScale;
+
+					int terrainDepth = std::round(std::min<double>(height * (maxHeight.z / 2 - freeSpace) + freeSpace, maxHeight.z / 2));
+					int blockDepth = maxHeight.z + mapPos.z + 1;
+					if (blockDepth < terrainDepth)
+						continue;
+
+					unsigned int startHeight = Nz::SafeCaster(blockDepth - terrainDepth);
+					if (startHeight >= Planet::ChunkSize)
+						continue;
+
+					if (BlockIndex& blockType = blockIndices[chunk.GetBlockLocalIndex({ x, Planet::ChunkSize - startHeight - 1, y })]; blockType == dirtBlockIndex)
+						blockType = grassBlockIndex;
+
+					for (unsigned int height = startHeight + 1; height < Planet::ChunkSize; ++height)
+						blockIndices[chunk.GetBlockLocalIndex({ x, Planet::ChunkSize - height - 1, y })] = EmptyBlockIndex;
+				}
+			}
+		});
+	}
+
+	void Planet::GenerateChunks(const BlockLibrary& blockLibrary, Nz::TaskScheduler& taskScheduler, unsigned int seed, const Nz::Vector3ui& chunkCount)
+	{
+		unsigned int chunkSeed = seed;
+		for (int chunkZ = 0; chunkZ < chunkCount.z; ++chunkZ)
+		{
+			for (int chunkY = 0; chunkY < chunkCount.y; ++chunkY)
+			{
+				for (int chunkX = 0; chunkX < chunkCount.x; ++chunkX)
+				{
+					auto& chunk = AddChunk({ chunkX - int(chunkCount.x / 2), chunkY - int(chunkCount.y / 2), chunkZ - int(chunkCount.z / 2) });
+					taskScheduler.AddTask([&]
+					{
+						GenerateChunk(blockLibrary, chunk, seed, chunkCount);
+					});
 				}
 			}
 		}
+
+		taskScheduler.WaitForTasks();
 	}
 
-	void Planet::GeneratePlatform(BlockLibrary& blockLibrary, Direction upDirection, const Nz::Vector3ui& platformCenter)
+	void Planet::GeneratePlatform(const BlockLibrary& blockLibrary, Direction upDirection, const BlockIndices& platformCenter)
 	{
 		constexpr int platformSize = 15;
 		constexpr unsigned int freeHeight = 10;
 		const DirectionAxis& dirAxis = s_dirAxis[upDirection];
 
-		Nz::Vector3ui coordinates = platformCenter;
+		BlockIndices coordinates = platformCenter;
 
-		unsigned int& xPos = coordinates[dirAxis.rightAxis];
+		int& xPos = coordinates[dirAxis.rightAxis];
 		xPos += -dirAxis.rightDir * platformSize / 2;
 
-		unsigned int& yPos = coordinates[dirAxis.upAxis];
+		int& yPos = coordinates[dirAxis.upAxis];
 
-		unsigned int& zPos = coordinates[dirAxis.forwardAxis];
+		int& zPos = coordinates[dirAxis.forwardAxis];
 		zPos += -dirAxis.forwardDir * platformSize / 2;
 
 		BlockIndex borderBlockIndex = blockLibrary.GetBlockIndex("copper_block");
 		BlockIndex interiorBlockIndex = blockLibrary.GetBlockIndex("stone_bricks");
 
-		Nz::Vector3ui originalCoordinates = coordinates;
+		BlockIndices originalCoordinates = coordinates;
 		for (unsigned int y = 0; y < freeHeight; ++y)
 		{
 			unsigned int startingZ = zPos;
@@ -375,8 +364,9 @@ namespace tsom
 						blockIndex = interiorBlockIndex;
 
 					Nz::Vector3ui innerCoordinates;
-					Chunk& chunk = GetChunkByIndices(coordinates, &innerCoordinates);
-					chunk.UpdateBlock(innerCoordinates, blockIndex);
+					ChunkIndices chunkIndices = GetChunkIndicesByBlockIndices(coordinates, &innerCoordinates);
+					if (Chunk* chunk = GetChunk(chunkIndices))
+						chunk->UpdateBlock(innerCoordinates, blockIndex);
 
 					xPos += dirAxis.rightDir;
 				}
@@ -409,7 +399,10 @@ namespace tsom
 				for (unsigned int x = 0; x < platformSize; ++x)
 				{
 					Nz::Vector3ui innerCoordinates;
-					Chunk& chunk = GetChunkByIndices(coordinates, &innerCoordinates);
+					ChunkIndices chunkIndices = GetChunkIndicesByBlockIndices(coordinates, &innerCoordinates);
+					Chunk* chunk = GetChunk(chunkIndices);
+					if (!chunk)
+						continue;
 
 					xPos += dirAxis.rightDir;
 
@@ -421,7 +414,7 @@ namespace tsom
 					}
 					else
 					{
-						if (chunk.GetBlockContent(innerCoordinates) != EmptyBlockIndex)
+						if (chunk->GetBlockContent(innerCoordinates) != EmptyBlockIndex)
 							continue;
 
 						if (x != 0 && x != platformSize - 1 || z != 0 && z != platformSize - 1)
@@ -429,7 +422,7 @@ namespace tsom
 					}
 
 					hasEmpty = true;
-					chunk.UpdateBlock(innerCoordinates, planksBlockIndex);
+					chunk->UpdateBlock(innerCoordinates, planksBlockIndex);
 				}
 
 				xPos = startingX;
@@ -443,14 +436,12 @@ namespace tsom
 		}
 	}
 
-	void Planet::RemoveChunk(const Nz::Vector3ui& indices)
+	void Planet::RemoveChunk(const ChunkIndices& indices)
 	{
-		std::size_t index = GetChunkIndex(indices);
-		assert(m_chunks[index].chunk);
+		auto it = m_chunks.find(indices);
+		assert(it != m_chunks.end());
 
-		OnChunkRemove(this, m_chunks[index].chunk.get());
-
-		m_chunks[index].chunk = nullptr;
-		m_chunks[index].onUpdated.Disconnect();
+		OnChunkRemove(this, it->second.chunk.get());
+		m_chunks.erase(it);
 	}
 }

@@ -45,6 +45,7 @@ namespace tsom
 			template<typename F> void ForEachPlayer(F&& functor);
 			template<typename F> void ForEachPlayer(F&& functor) const;
 
+			inline const BlockLibrary& GetBlockLibrary() const;
 			inline Planet& GetPlanet();
 			inline const Planet& GetPlanet() const;
 			inline Nz::EnttWorld& GetWorld();
@@ -60,17 +61,10 @@ namespace tsom
 			void OnTick(Nz::Time elapsedTime);
 			void OnSave();
 
-			struct BlockUpdate
-			{
-				Nz::Vector3ui chunkIndices;
-				Nz::Vector3ui voxelIndices;
-				BlockIndex newBlock;
-			};
-
 			Nz::UInt16 m_tickIndex;
 			std::unique_ptr<Planet> m_planet;
 			std::unique_ptr<ChunkEntities> m_planetEntities;
-			std::unordered_set<Nz::Vector3ui /*chunkIndex*/> m_dirtyChunks;
+			std::unordered_set<ChunkIndices /*chunkIndex*/> m_dirtyChunks;
 			std::vector<std::unique_ptr<NetworkSessionManager>> m_sessionManagers;
 			Nz::Bitset<> m_disconnectedPlayers;
 			Nz::Bitset<> m_newPlayers;

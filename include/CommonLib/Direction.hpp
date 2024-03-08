@@ -55,12 +55,12 @@ namespace tsom
 	};
 
 	constexpr Nz::EnumArray<Direction, DirectionAxis> s_dirAxis = {
-		DirectionAxis { 2, 0, 1,  1,  1,  1 }, //< Back
-		DirectionAxis { 1, 0, 2,  1,  1, -1 }, //< Down
-		DirectionAxis { 2, 0, 1, -1,  1, -1 }, //< Front
+		DirectionAxis { 1, 0, 2,  1,  1,  1 }, //< Back
+		DirectionAxis { 2, 0, 1,  1,  1, -1 }, //< Down
+		DirectionAxis { 1, 0, 2, -1,  1, -1 }, //< Front
 		DirectionAxis { 2, 1, 0, -1,  1, -1 }, //< Left
 		DirectionAxis { 2, 1, 0, -1, -1,  1 }, //< Right
-		DirectionAxis { 1, 0, 2, -1,  1,  1 }, //< Up
+		DirectionAxis { 2, 0, 1, -1,  1,  1 }, //< Up
 	};
 
 	constexpr Direction DirectionFromNormal(const Nz::Vector3f& outsideNormal);

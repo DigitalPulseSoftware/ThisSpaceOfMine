@@ -67,7 +67,7 @@ namespace tsom
 			cameraComponent.UpdateZNear(0.1f);
 		}
 
-		m_planet = std::make_unique<ClientPlanet>(Nz::Vector3ui(180), 1.f, 16.f, 9.81f);
+		m_planet = std::make_unique<ClientPlanet>(1.f, 16.f, 9.81f);
 
 		m_sunLightEntity = CreateEntity();
 		{
@@ -137,7 +137,7 @@ namespace tsom
 
 		m_onChunkCreate.Connect(stateData.sessionHandler->OnChunkCreate, [&](const Packets::ChunkCreate& chunkCreate)
 		{
-			Nz::Vector3ui indices(chunkCreate.chunkLocX, chunkCreate.chunkLocY, chunkCreate.chunkLocZ);
+			ChunkIndices indices(chunkCreate.chunkLocX, chunkCreate.chunkLocY, chunkCreate.chunkLocZ);
 
 			Chunk& chunk = m_planet->AddChunk(chunkCreate.chunkId, indices, [&](BlockIndex* blocks)
 			{
@@ -487,12 +487,12 @@ namespace tsom
 				if (event.button == Nz::Mouse::Left)
 				{
 					// Mine
-					Nz::Vector3f localPos;
-					const Chunk* chunk = m_planet->GetChunkByPosition(hitPos - hitNormal * m_planet->GetTileSize() * 0.25f, &localPos);
+					Nz::Vector3f blockPos = hitPos - hitNormal * m_planet->GetTileSize() * 0.25f;
+					const Chunk* chunk = m_planet->GetChunk(m_planet->GetChunkIndicesByPosition(blockPos));
 					if (!chunk)
 						return;
 
-					auto coordinates = chunk->ComputeCoordinates(localPos);
+					auto coordinates = chunk->ComputeCoordinates(blockPos);
 					if (!coordinates)
 						return;
 
@@ -507,12 +507,12 @@ namespace tsom
 				else
 				{
 					// Place
-					Nz::Vector3f localPos;
-					const Chunk* chunk = m_planet->GetChunkByPosition(hitPos + hitNormal * m_planet->GetTileSize() * 0.25f, &localPos);
+					Nz::Vector3f blockPos = hitPos + hitNormal * m_planet->GetTileSize() * 0.25f;
+					const Chunk* chunk = m_planet->GetChunk(m_planet->GetChunkIndicesByPosition(blockPos));
 					if (!chunk)
 						return;
 
-					auto coordinates = chunk->ComputeCoordinates(localPos);
+					auto coordinates = chunk->ComputeCoordinates(blockPos);
 					if (!coordinates)
 						return;
 

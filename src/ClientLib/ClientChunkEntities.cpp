@@ -171,10 +171,10 @@ namespace tsom
 		return chunkMesh;
 	}
 
-	void ClientChunkEntities::HandleChunkUpdate(std::size_t chunkId, const Chunk* chunk)
+	void ClientChunkEntities::HandleChunkUpdate(const ChunkIndices& chunkIndices, const Chunk* chunk)
 	{
 		// Try to cancel current update job to void useless work
-		if (auto it = m_updateJobs.find(chunkId); it != m_updateJobs.end())
+		if (auto it = m_updateJobs.find(chunkIndices); it != m_updateJobs.end())
 		{
 			UpdateJob& job = *it->second;
 			job.cancelled = true;
@@ -183,19 +183,21 @@ namespace tsom
 		std::shared_ptr<ColliderModelUpdateJob> updateJob = std::make_shared<ColliderModelUpdateJob>();
 		updateJob->taskCount = 2;
 
-		updateJob->applyFunc = [this](std::size_t chunkId, UpdateJob&& job)
+		updateJob->applyFunc = [this](const ChunkIndices& chunkIndices, UpdateJob&& job)
 		{
 			ColliderModelUpdateJob&& colliderUpdateJob = static_cast<ColliderModelUpdateJob&&>(job);
 
-			auto& rigidBody = m_chunkEntities[chunkId].get<Nz::RigidBody3DComponent>();
+			entt::handle chunkEntity = Nz::Retrieve(m_chunkEntities, chunkIndices);
+
+			auto& rigidBody = chunkEntity.get<Nz::RigidBody3DComponent>();
 			rigidBody.SetGeom(std::move(colliderUpdateJob.collider), false);
 
-			auto& gfxComponent = m_chunkEntities[chunkId].get_or_emplace<Nz::GraphicsComponent>();
+			auto& gfxComponent = chunkEntity.get_or_emplace<Nz::GraphicsComponent>();
 			gfxComponent.Clear();
 
 			if (colliderUpdateJob.mesh)
 			{
-				// TODO: Move this to async task (should almost already work on Vulkan, problem is OpenGL)
+				// TODO: Move GPU upload to async task (should almost already work on Vulkan, problem is OpenGL)
 				std::shared_ptr<Nz::GraphicalMesh> gfxMesh = Nz::GraphicalMesh::BuildFromMesh(*colliderUpdateJob.mesh);
 
 				std::shared_ptr<Nz::Model> model = std::make_shared<Nz::Model>(std::move(gfxMesh));
@@ -204,7 +206,7 @@ namespace tsom
 				gfxComponent.AttachRenderable(std::move(model), tsom::Constants::RenderMask3D);
 			}
 
-			UpdateChunkDebugCollider(chunkId);
+			UpdateChunkDebugCollider(chunkIndices);
 		};
 
 		auto& taskScheduler = m_application.GetComponent<Nz::TaskSchedulerAppComponent>();
@@ -232,15 +234,17 @@ namespace tsom
 			updateJob->executionCounter++;
 		});
 
-		m_updateJobs[chunkId] = std::move(updateJob);
+		m_updateJobs.insert_or_assign(chunkIndices, std::move(updateJob));
 	}
 
-	void ClientChunkEntities::UpdateChunkDebugCollider(std::size_t chunkId)
+	void ClientChunkEntities::UpdateChunkDebugCollider(const ChunkIndices& chunkIndices)
 	{
 #if 0
 		std::shared_ptr<Nz::Model> colliderModel;
 		{
-			auto& rigidBodyComponent = m_chunkEntities[chunkId].get<Nz::RigidBody3DComponent>();
+			entt::handle chunkEntity = Nz::Retrieve(m_chunkEntities, chunkIndices);
+
+			auto& rigidBodyComponent = chunkEntity.get<Nz::RigidBody3DComponent>();
 			const std::shared_ptr<Nz::Collider3D>& geom = rigidBodyComponent.GetGeom();
 			if (!geom)
 				return;
@@ -260,7 +264,7 @@ namespace tsom
 			for (std::size_t i = 0; i < colliderModel->GetSubMeshCount(); ++i)
 				colliderModel->SetMaterial(i, colliderMat);
 
-			auto& gfxComponent = m_chunkEntities[chunkId].get_or_emplace<Nz::GraphicsComponent>();
+			auto& gfxComponent = chunkEntity.get_or_emplace<Nz::GraphicsComponent>();
 			gfxComponent.AttachRenderable(std::move(colliderModel), tsom::Constants::RenderMask3D);
 	}
 #endif

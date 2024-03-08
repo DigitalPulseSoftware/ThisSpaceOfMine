@@ -3,10 +3,11 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <Nazara/Math/Box.hpp>
+#include <cassert>
 
 namespace tsom
 {
-	inline Chunk::Chunk(ChunkContainer& owner, const Nz::Vector3ui& indices, const Nz::Vector3ui& size, float cellSize) :
+	inline Chunk::Chunk(ChunkContainer& owner, const ChunkIndices& indices, const Nz::Vector3ui& size, float cellSize) :
 	m_blocks(size.x * size.y * size.z, EmptyBlockIndex),
 	m_collisionCellMask(m_blocks.size(), false),
 	m_indices(indices),
@@ -23,12 +24,16 @@ namespace tsom
 		return m_collisionCellMask;
 	}
 
-	inline unsigned int Chunk::GetBlockIndex(const Nz::Vector3ui& indices) const
+	inline unsigned int Chunk::GetBlockLocalIndex(const Nz::Vector3ui& indices) const
 	{
+		assert(indices.x < m_size.x);
+		assert(indices.y < m_size.y);
+		assert(indices.z < m_size.z);
+
 		return m_size.x * (m_size.y * indices.z + indices.y) + indices.x;
 	}
 
-	inline Nz::Vector3ui Chunk::GetBlockIndices(unsigned int blockIndex) const
+	inline Nz::Vector3ui Chunk::GetBlockLocalIndices(unsigned int blockIndex) const
 	{
 		Nz::Vector3ui indices;
 		indices.x = blockIndex % m_size.x;
@@ -45,7 +50,7 @@ namespace tsom
 
 	inline BlockIndex Chunk::GetBlockContent(const Nz::Vector3ui& indices) const
 	{
-		return GetBlockContent(GetBlockIndex(indices));
+		return GetBlockContent(GetBlockLocalIndex(indices));
 	}
 
 	inline std::size_t Chunk::GetBlockCount() const
@@ -154,7 +159,7 @@ namespace tsom
 		return currentChunk->GetBlockContent(indices);
 	}
 
-	inline const Nz::Vector3ui& Chunk::GetIndices() const
+	inline const ChunkIndices& Chunk::GetIndices() const
 	{
 		return m_indices;
 	}
@@ -165,10 +170,10 @@ namespace tsom
 	}
 
 	template<typename F>
-	void Chunk::InitBlocks(F&& func)
+	void Chunk::Reset(F&& func)
 	{
 		func(m_blocks.data());
-		OnBlockReset();
+		OnChunkReset();
 	}
 
 	inline void Chunk::LockRead() const
@@ -183,7 +188,7 @@ namespace tsom
 
 	inline void Chunk::UpdateBlock(const Nz::Vector3ui& indices, BlockIndex newBlock)
 	{
-		unsigned int blockIndex = GetBlockIndex(indices);
+		unsigned int blockIndex = GetBlockLocalIndex(indices);
 		BlockIndex oldContent = m_blocks[blockIndex];
 		m_blocks[blockIndex] = newBlock;
 		m_collisionCellMask[blockIndex] = (newBlock != EmptyBlockIndex);
