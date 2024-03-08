@@ -16,7 +16,7 @@ namespace tsom
 	m_animationAssets(std::move(animationAssets)),
 	m_entity(entity),
 	m_idleRunBlender(m_animationAssets->referenceSkeleton),
-	m_playerVelocity(0.f)
+	m_playerVelocities(20)
 	{
 		m_idleRunBlender.AddPoint(0.f, m_animationAssets->idleAnimation);
 		m_idleRunBlender.AddPoint(Constants::PlayerWalkSpeed, m_animationAssets->walkingAnimation);
@@ -37,13 +37,12 @@ namespace tsom
 		// Client doesn't know player speed as physics is not yet replicated from server
 		Nz::NodeComponent& node = m_entity.get<Nz::NodeComponent>();
 		Nz::Vector3f newPosition = node.GetPosition();
-		if (newPosition == m_playerPosition) // FIXME: It's possible that Tick executes twice in a row before player updates, just ignore
-			return;
-
 		Nz::Vector3f up = node.GetUp();
 
-		m_playerVelocity = Nz::Vector3f::Distance(newPosition.ProjectOnPlane(up), m_playerPosition.ProjectOnPlane(up)) / elapsedTime.AsSeconds();
+		float playerVelocity = Nz::Vector3f::Distance(newPosition.ProjectOnPlane(up), m_playerPosition.ProjectOnPlane(up)) / elapsedTime.AsSeconds();
 		m_playerPosition = newPosition;
-		m_idleRunBlender.UpdateValue(m_playerVelocity);
+
+		m_playerVelocities.InsertValue(playerVelocity);
+		m_idleRunBlender.UpdateValue(m_playerVelocities.GetAverageValue());
 	}
 }

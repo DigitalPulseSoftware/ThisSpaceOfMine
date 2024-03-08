@@ -7,6 +7,7 @@
 #ifndef TSOM_CLIENTLIB_PLAYERANIMATIONCONTROLLER_HPP
 #define TSOM_CLIENTLIB_PLAYERANIMATIONCONTROLLER_HPP
 
+#include <CommonLib/Utility/AverageValues.hpp>
 #include <ClientLib/AnimationController.hpp>
 #include <Nazara/Core/Animation.hpp>
 #include <Nazara/Core/AnimationBlender.hpp>
@@ -45,7 +46,7 @@ namespace tsom
 			entt::handle m_entity;
 			Nz::AnimationBlender m_idleRunBlender;
 			Nz::Vector3f m_playerPosition;
-			float m_playerVelocity;
+			AverageValues<float> m_playerVelocities;
 	};
 }
 
