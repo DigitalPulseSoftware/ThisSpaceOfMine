@@ -2,6 +2,7 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
+#include <CommonLib/UpdaterAppComponent.hpp>
 #include <Game/GameAppComponent.hpp>
 #include <Nazara/Core/Application.hpp>
 #include <Nazara/Core/EntitySystemAppComponent.hpp>
@@ -39,10 +40,11 @@ int GameMain(int argc, char* argv[])
 	try
 	{
 		app.AddComponent<Nz::WebServiceAppComponent>();
+		app.AddComponent<tsom::UpdaterAppComponent>();
 	}
 	catch (const std::exception& e)
 	{
-		fmt::print(fg(fmt::color::red), "failed to enable web services (automatic update will be disabled): {0}!\n", e.what());
+		fmt::print(fg(fmt::color::red), "failed to enable web services (automatic updating will be disabled): {0}!\n", e.what());
 	}
 
 	// Game setup

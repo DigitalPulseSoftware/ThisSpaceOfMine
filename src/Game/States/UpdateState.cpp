@@ -4,11 +4,11 @@
 
 #include <Game/States/UpdateState.hpp>
 #include <CommonLib/Utils.hpp>
+#include <CommonLib/Version.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/File.hpp>
 #include <Nazara/Core/Process.hpp>
 #include <Nazara/Core/StateMachine.hpp>
-#include <Nazara/Network/WebServiceAppComponent.hpp>
 #include <Nazara/TextRenderer/SimpleTextDrawer.hpp>
 #include <Nazara/Widgets/BoxLayout.hpp>
 #include <Nazara/Widgets/ButtonWidget.hpp>
@@ -24,7 +24,6 @@ namespace tsom
 	UpdateState::UpdateState(std::shared_ptr<StateData> stateData, std::shared_ptr<Nz::State> previousState, UpdateInfo updateInfo) :
 	WidgetState(stateData),
 	m_previousState(std::move(previousState)),
-	m_downloadManager(*GetStateData().app),
 	m_updateInfo(std::move(updateInfo)),
 	m_isCancelled(false)
 	{
@@ -50,7 +49,8 @@ namespace tsom
 
 		m_cancelButton->OnButtonTrigger.Connect([this](const Nz::ButtonWidget*)
 		{
-			m_downloadManager.Cancel();
+			GetStateData().app->GetComponent<UpdaterAppComponent>().CancelUpdate();
+			m_isCancelled = true;
 		});
 	}
 
@@ -58,56 +58,22 @@ namespace tsom
 	{
 		WidgetState::Enter(fsm);
 
-		m_hasUpdateStarted = false;
+		semver::version currentGameVersion(GameMajorVersion, GameMinorVersion, GamePatchVersion);
 
-		m_activeDownloads.clear(); //< just in case
-		auto QueueDownload = [&](std::string_view filename, const UpdateInfo::DownloadInfo& info)
+		auto& updater = GetStateData().app->GetComponent<UpdaterAppComponent>();
+		m_onDownloadProgressSlot.Connect(updater.OnDownloadProgress, this, &UpdateState::UpdateProgressBar);
+		m_onUpdateFailed.Connect(updater.OnUpdateFailed, [this]()
 		{
-			auto download = m_downloadManager.QueueDownload(Nz::Utf8Path(filename), info.downloadUrl, info.size, info.sha256);
-			m_activeDownloads.push_back(download);
+			m_isCancelled = true;
+		});
 
-			return download;
-		};
-
-		if (m_updateInfo.assets)
-			m_updateArchives.push_back(QueueDownload("autoupdate_assets", m_updateInfo.assets.value()));
-
-		m_updateArchives.push_back(QueueDownload("autoupdate_binaries", m_updateInfo.binaries));
-
-		m_updaterDownload = QueueDownload("this_updater_of_mine", m_updateInfo.updater);
-
-		for (auto& downloadPtr : m_activeDownloads)
-		{
-			downloadPtr->OnDownloadFailed.Connect([this](const DownloadManager::Download&)
-			{
-				m_isCancelled = true;
-			});
-
-			downloadPtr->OnDownloadProgress.Connect([this](const DownloadManager::Download&)
-			{
-				UpdateProgressBar();
-			});
-		}
+		updater.DownloadAndUpdate(m_updateInfo, m_updateInfo.assetVersion > currentGameVersion, m_updateInfo.binaryVersion > currentGameVersion);
 	}
 
 	bool UpdateState::Update(Nz::StateMachine& fsm, Nz::Time elapsedTime)
 	{
-		if (!m_downloadManager.HasDownloadInProgress())
-		{
-			if (m_isCancelled)
-			{
-				fsm.ChangeState(std::move(m_previousState));
-				return true;
-			}
-
-			if (!m_hasUpdateStarted)
-			{
-				m_hasUpdateStarted = true;
-				StartUpdate();
-			}
-
-			return true;
-		}
+		if (m_isCancelled)
+			fsm.ChangeState(std::move(m_previousState));
 
 		return true;
 	}
@@ -121,52 +87,11 @@ namespace tsom
 			m_progressionLabel->Center();
 	}
 
-	void UpdateState::StartUpdate()
+	void UpdateState::UpdateProgressBar(std::size_t activeDownloadCount, Nz::UInt64 downloaded, Nz::UInt64 total)
 	{
-		Nz::Pid pid = Nz::Process::GetCurrentPid();
+		m_progressBar->SetFraction(float(downloaded) / float(total));
 
-		std::vector<std::string> args;
-		args.push_back(std::to_string(pid)); // pid to wait before starting update
-
-		// TODO: Add a way to retrieve executable name (or use argv[0]?)
-#ifdef NAZARA_PLATFORM_WINDOWS
-		args.push_back("ThisSpaceOfMine.exe");
-#else
-		args.push_back("./ThisSpaceOfMine");
-#endif
-
-		// Skip first download (as it's the updater)
-		for (auto& downloadPtr : m_updateArchives)
-			args.push_back(Nz::PathToString(downloadPtr->filepath));
-
-		Nz::Result updater = Nz::Process::SpawnDetached(m_updaterDownload->filepath, args);
-		if (!updater)
-		{
-			fmt::print(fg(fmt::color::red), "failed to start autoupdater process: {0}\n", updater.GetError());
-			return;
-		}
-
-		GetStateData().app->Quit();
-	}
-
-	void UpdateState::UpdateProgressBar()
-	{
-		std::size_t activeDownloadCount = 0;
-		Nz::UInt64 totalDownloaded = 0;
-		Nz::UInt64 totalSize = 0;
-
-		for (auto& downloadPtr : m_activeDownloads)
-		{
-			totalDownloaded += downloadPtr->downloadedSize;
-			totalSize += downloadPtr->totalSize;
-
-			if (downloadPtr->downloadedSize != downloadPtr->totalSize)
-				activeDownloadCount++;
-		}
-
-		m_progressBar->SetFraction(float(totalDownloaded) / float(totalSize));
-
-		m_progressionLabel->SetText(fmt::format("Downloading {0} file(s) - {1} / {2}", activeDownloadCount, ByteToString(totalDownloaded), ByteToString(totalSize)));
+		m_progressionLabel->SetText(fmt::format("Downloading {0} file(s) - {1} / {2}", activeDownloadCount, ByteToString(downloaded), ByteToString(total)));
 		m_progressionLabel->Resize(m_progressionLabel->GetPreferredSize());
 		m_progressionLabel->Center();
 	}

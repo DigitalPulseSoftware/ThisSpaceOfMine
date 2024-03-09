@@ -5,6 +5,7 @@
 #include <Game/States/MenuState.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/InternalConstants.hpp>
+#include <CommonLib/UpdaterAppComponent.hpp>
 #include <CommonLib/Version.hpp>
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/GameState.hpp>
@@ -18,34 +19,10 @@
 #include <Nazara/Network/Network.hpp>
 #include <Nazara/Network/WebServiceAppComponent.hpp>
 #include <Nazara/TextRenderer/SimpleTextDrawer.hpp>
-#include <semver.hpp>
 #include <fmt/color.h>
 #include <fmt/format.h>
 #include <nlohmann/json.hpp>
 #include <optional>
-
-namespace nlohmann
-{
-	template<>
-	struct adl_serializer<tsom::UpdateInfo::DownloadInfo>
-	{
-		static void from_json(const nlohmann::json& json, tsom::UpdateInfo::DownloadInfo& downloadInfo)
-		{
-			downloadInfo.downloadUrl = json.at("download_url");
-			downloadInfo.size = json.at("size");
-			downloadInfo.sha256 = json.value("sha256", "");
-		}
-	};
-
-	template<>
-	struct adl_serializer<semver::version>
-	{
-		static void from_json(const nlohmann::json& json, semver::version& downloadInfo)
-		{
-			downloadInfo.from_string(json.template get<std::string_view>());
-		}
-	};
-}
 
 namespace tsom
 {
@@ -135,71 +112,19 @@ namespace tsom
 		m_updateLayout->Hide();
 		m_newVersionInfo.reset();
 
-		auto* webService = GetStateData().app->TryGetComponent<Nz::WebServiceAppComponent>();
-		if (!webService)
+		auto* updater = GetStateData().app->TryGetComponent<UpdaterAppComponent>();
+		if (!updater)
 			return;
 
-		webService->QueueRequest([&](Nz::WebRequest& request)
+		updater->FetchLastVersion([state = std::static_pointer_cast<MenuState>(shared_from_this())](Nz::Result<UpdateInfo, std::string>&& result)
 		{
-			request.SetupGet();
-			request.SetURL(fmt::format("http://tsom-api.digitalpulse.software/game_version?platform={}", BuildConfig));
-			request.SetServiceName("TSOM Version Check");
-			request.SetResultCallback([this](Nz::WebRequestResult&& result)
+			if (!result)
 			{
-				if (!result.HasSucceeded() || result.GetStatusCode() != 200)
-				{
-					fmt::print(fg(fmt::color::red), "failed to get version update\n");
-					return;
-				}
+				fmt::print(fg(fmt::color::red), "failed to get version update: {}\n", result.GetError());
+				return;
+			}
 
-				semver::version newAssetVersion;
-				semver::version newGameVersion;
-				UpdateInfo::DownloadInfo assetInfo;
-				UpdateInfo::DownloadInfo gameBinariesInfo;
-				UpdateInfo::DownloadInfo updaterInfo;
-
-				try
-				{
-					nlohmann::json json = nlohmann::json::parse(result.GetBody());
-
-					newAssetVersion = json.at("assets_version");
-					newGameVersion = json.at("version");
-					assetInfo = json.at("assets");
-					gameBinariesInfo = json.at("binaries");
-					updaterInfo = json.at("updater");
-				}
-				catch (const std::exception& e)
-				{
-					fmt::print(fg(fmt::color::red), "failed to parse version data: {}\n", e.what());
-					return;
-				}
-
-				semver::version currentGameVersion(GameMajorVersion, GameMinorVersion, GamePatchVersion);
-
-				if (newGameVersion > currentGameVersion)
-				{
-					std::optional<UpdateInfo::DownloadInfo> assets;
-					if (newAssetVersion > currentGameVersion)
-						assets = std::move(assetInfo);
-
-					m_newVersionInfo.emplace(UpdateInfo{
-						.assets = std::move(assets),
-						.version = newGameVersion.to_string(),
-						.binaries = std::move(gameBinariesInfo),
-						.updater = std::move(updaterInfo)
-					});
-
-					fmt::print(fg(fmt::color::yellow), "new version available: {}\n", m_newVersionInfo->version);
-					m_updateButton->UpdateText(Nz::SimpleTextDrawer::Draw("Update game to " + m_newVersionInfo->version, 18, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
-					m_updateButton->SetMaximumWidth(m_updateButton->GetPreferredWidth());
-
-					m_updateLayout->Show();
-				}
-				else
-					fmt::print("no new version available\n");
-			});
-
-			return true;
+			state->OnUpdateInfoReceived(std::move(result).GetValue());
 		});
 	}
 
@@ -244,6 +169,27 @@ namespace tsom
 		auto& stateData = GetStateData();
 		if (stateData.connectionState)
 			stateData.connectionState->Connect(serverAddress, login, shared_from_this());
+	}
+
+	void MenuState::OnUpdateInfoReceived(UpdateInfo&& updateInfo)
+	{
+		semver::version currentGameVersion(GameMajorVersion, GameMinorVersion, GamePatchVersion);
+
+		if (updateInfo.assetVersion > currentGameVersion || updateInfo.binaryVersion > currentGameVersion)
+		{
+			fmt::print(fg(fmt::color::yellow), "new version available: {}\n", m_newVersionInfo->binaryVersion.to_string());
+			m_newVersionInfo = std::move(updateInfo);
+
+			// We're not supposed to be able to have asset-only version but let's prepare for this
+			semver::version biggestVer = std::max(updateInfo.assetVersion, updateInfo.binaryVersion);
+
+			m_updateButton->UpdateText(Nz::SimpleTextDrawer::Draw("Update game to " + biggestVer.to_string(), 18, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
+			m_updateButton->SetMaximumWidth(m_updateButton->GetPreferredWidth());
+
+			m_updateLayout->Show();
+		}
+		else
+			fmt::print("no new version available\n");
 	}
 
 	void MenuState::OnUpdatePressed()

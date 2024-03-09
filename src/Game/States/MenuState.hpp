@@ -7,7 +7,7 @@
 #ifndef TSOM_GAME_STATES_MENUSTATE_HPP
 #define TSOM_GAME_STATES_MENUSTATE_HPP
 
-#include <Game/States/UpdateInfo.hpp>
+#include <CommonLib/UpdateInfo.hpp>
 #include <Game/States/WidgetState.hpp>
 #include <string>
 
@@ -36,6 +36,7 @@ namespace tsom
 			void CheckVersion();
 			void LayoutWidgets(const Nz::Vector2f& newSize) override;
 			void OnConnectPressed();
+			void OnUpdateInfoReceived(UpdateInfo&& updateInfo);
 			void OnUpdatePressed();
 
 			std::optional<UpdateInfo> m_newVersionInfo;
