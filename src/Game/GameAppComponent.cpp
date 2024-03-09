@@ -7,8 +7,10 @@
 #include <ClientLib/Systems/AnimationSystem.hpp>
 #include <ClientLib/Systems/MovementInterpolationSystem.hpp>
 #include <ClientLib/Systems/PlayerAnimationSystem.hpp>
+#include <CommonLib/DownloadManager.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/InternalConstants.hpp>
+#include <CommonLib/UpdaterAppComponent.hpp>
 #include <Game/States/BackgroundState.hpp>
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/DebugInfoState.hpp>
@@ -78,14 +80,67 @@ namespace tsom
 		{
 			fmt::print(fg(fmt::color::red), "assets are missing!\n");
 
+			if (auto* updater = app.TryGetComponent<UpdaterAppComponent>())
+			{
+				Nz::MessageBox requestBox(Nz::MessageBoxType::Info, "Missing assets folder", "The assets folder was not found.\nDownload assets?");
+				requestBox.AddButton(0, Nz::MessageBoxStandardButton::No);
+				requestBox.AddButton(1, Nz::MessageBoxStandardButton::Yes);
+				if (auto result = requestBox.Show(); !result)
+				{
+					fmt::print(fg(fmt::color::red), "failed to open the prompt message box: {0}!\n", result.GetError());
+					app.Quit();
+					return false;
+				}
+				else if (result.GetValue() != 1)
+				{
+					app.Quit();
+					return false;
+				}
 
-			Nz::MessageBox errorBox(Nz::MessageBoxType::Error, "Missing assets folder", "The assets folder was not found, it should be located next to the executable.");
-			errorBox.AddButton(0, Nz::MessageBoxStandardButton::Close);
+				updater->FetchLastVersion([updater](Nz::Result<UpdateInfo, std::string>&& result)
+				{
+					if (!result)
+					{
+						Nz::MessageBox errorBox(Nz::MessageBoxType::Error, "Asset download failed", "Failed to fetch asset info: " + result.GetError());
+						errorBox.AddButton(0, Nz::MessageBoxStandardButton::Close);
 
-			if (auto result = errorBox.Show(); !result)
-				fmt::print(fg(fmt::color::red), "failed to open the error message box: {0}!\n", result.GetError());
+						if (auto result = errorBox.Show(); !result)
+							fmt::print(fg(fmt::color::red), "failed to open the error message box: {0}!\n", result.GetError());
 
-			app.Quit();
+						Nz::ApplicationBase::Instance()->Quit();
+						return;
+					}
+
+					updater->OnUpdateFailed.Connect([]
+					{
+						Nz::MessageBox errorBox(Nz::MessageBoxType::Error, "Asset download failed", "Failed to download assets");
+						errorBox.AddButton(0, Nz::MessageBoxStandardButton::Close);
+
+						if (auto result = errorBox.Show(); !result)
+							fmt::print(fg(fmt::color::red), "failed to open the error message box: {0}!\n", result.GetError());
+
+						Nz::ApplicationBase::Instance()->Quit();
+					});
+
+					updater->OnUpdateStarting.Connect([]
+					{
+						fmt::print("update is starting...\n");
+					});
+
+					updater->DownloadAndUpdate(result.GetValue(), true, false);
+				});
+			}
+			else
+			{
+				Nz::MessageBox errorBox(Nz::MessageBoxType::Error, "Missing assets folder", "The assets folder was not found, it should be located next to the executable.");
+				errorBox.AddButton(0, Nz::MessageBoxStandardButton::Close);
+
+				if (auto result = errorBox.Show(); !result)
+					fmt::print(fg(fmt::color::red), "failed to open the error message box: {0}!\n", result.GetError());
+
+				app.Quit();
+			}
+
 			return false;
 		}
 
