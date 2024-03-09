@@ -4,10 +4,11 @@
 
 #pragma once
 
-#ifndef TSOM_GAME_STATES_UPDATEINFO_HPP
-#define TSOM_GAME_STATES_UPDATEINFO_HPP
+#ifndef TSOM_COMMONLIB_UPDATEINFO_HPP
+#define TSOM_COMMONLIB_UPDATEINFO_HPP
 
 #include <NazaraUtils/Prerequisites.hpp>
+#include <semver.hpp>
 #include <optional>
 #include <string>
 
@@ -22,11 +23,12 @@ namespace tsom
 			Nz::UInt64 size;
 		};
 
-		std::optional<DownloadInfo> assets;
-		std::string version;
+		semver::version assetVersion;
+		semver::version binaryVersion;
+		DownloadInfo assets;
 		DownloadInfo binaries;
 		DownloadInfo updater;
 	};
 }
 
-#endif // TSOM_GAME_STATES_UPDATEINFO_HPP
+#endif // TSOM_COMMONLIB_UPDATEINFO_HPP

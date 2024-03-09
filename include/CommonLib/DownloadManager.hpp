@@ -29,8 +29,8 @@ namespace tsom
 			struct Download;
 
 			inline DownloadManager(Nz::ApplicationBase& application);
-			DownloadManager(const DownloadManager&) = delete;
-			DownloadManager(DownloadManager&&) = delete;
+			DownloadManager(const DownloadManager&) = default;
+			DownloadManager(DownloadManager&&) noexcept = default;
 			~DownloadManager() = default;
 
 			inline void Cancel();
