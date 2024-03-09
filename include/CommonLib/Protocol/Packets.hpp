@@ -7,8 +7,8 @@
 #ifndef TSOM_COMMONLIB_PROTOCOL_PACKETS_HPP
 #define TSOM_COMMONLIB_PROTOCOL_PACKETS_HPP
 
-#include <CommonLib/BlockIndex.hpp>
 #include <CommonLib/Export.hpp>
+#include <CommonLib/BlockIndex.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/PlayerIndex.hpp>
 #include <CommonLib/PlayerInputs.hpp>
