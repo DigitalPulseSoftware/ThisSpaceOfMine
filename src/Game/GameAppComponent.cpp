@@ -11,11 +11,13 @@
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/UpdaterAppComponent.hpp>
+#include <CommonLib/Utils.hpp>
 #include <Game/States/BackgroundState.hpp>
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/DebugInfoState.hpp>
 #include <Game/States/MenuState.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
+#include <Nazara/Core/Clock.hpp>
 #include <Nazara/Core/EntitySystemAppComponent.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
@@ -62,7 +64,6 @@ namespace tsom
 			m_stateMachine.PushState(std::make_shared<tsom::BackgroundState>(stateData));
 			m_stateMachine.PushState(std::make_shared<tsom::MenuState>(stateData));
 		}
-
 	}
 
 	void GameAppComponent::Update(Nz::Time elapsedTime)
@@ -120,6 +121,12 @@ namespace tsom
 							fmt::print(fg(fmt::color::red), "failed to open the error message box: {0}!\n", result.GetError());
 
 						Nz::ApplicationBase::Instance()->Quit();
+					});
+
+					updater->OnDownloadProgress.Connect([lastPrint = Nz::MillisecondClock()](std::size_t activeDownloadCount, Nz::UInt64 downloaded, Nz::UInt64 total) mutable
+					{
+						if (lastPrint.RestartIfOver(Nz::Time::Second()))
+							fmt::print("downloading {} file(s) ({}/{}) - {}%\n", activeDownloadCount, ByteToString(downloaded), ByteToString(total), 100 * downloaded / total);
 					});
 
 					updater->OnUpdateStarting.Connect([]
