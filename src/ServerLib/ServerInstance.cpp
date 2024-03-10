@@ -60,7 +60,7 @@ namespace tsom
 
 	ServerInstance::~ServerInstance()
 	{
-		//OnSave();
+		OnSave();
 
 		m_sessionManagers.clear();
 		m_players.Clear();

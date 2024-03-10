@@ -7,9 +7,9 @@
 #ifndef TSOM_GAME_GAMECONFIGAPPCOMPONENT_HPP
 #define TSOM_GAME_GAMECONFIGAPPCOMPONENT_HPP
 
-#include <NazaraUtils/Prerequisites.hpp>
-#include <Nazara/Core/ApplicationComponent.hpp>
 #include <CommonLib/ConfigFile.hpp>
+#include <Nazara/Core/ApplicationComponent.hpp>
+#include <NazaraUtils/Prerequisites.hpp>
 
 namespace tsom
 {

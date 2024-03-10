@@ -81,12 +81,12 @@ namespace tsom
 			callback(chunkIndices, *chunkData.chunk);
 	}
 
-	void Planet::GenerateChunk(const BlockLibrary& blockLibrary, Chunk& chunk, unsigned int seed, const Nz::Vector3ui& chunkCount)
+	void Planet::GenerateChunk(const BlockLibrary& blockLibrary, Chunk& chunk, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount)
 	{
 		constexpr std::size_t freeSpace = 30;
 
 		ChunkIndices chunkIndices = chunk.GetIndices();
-		unsigned int chunkSeed = seed + static_cast<unsigned int>(chunkIndices.x) + static_cast<unsigned int>(chunkIndices.y) + static_cast<unsigned int>(chunkIndices.z);
+		Nz::UInt32 chunkSeed = seed + static_cast<Nz::UInt32>(chunkIndices.x) + static_cast<Nz::UInt32>(chunkIndices.y) + static_cast<Nz::UInt32>(chunkIndices.z);
 
 		std::minstd_rand rand(chunkSeed);
 		std::bernoulli_distribution dis(0.9);
@@ -306,9 +306,8 @@ namespace tsom
 		});
 	}
 
-	void Planet::GenerateChunks(const BlockLibrary& blockLibrary, Nz::TaskScheduler& taskScheduler, unsigned int seed, const Nz::Vector3ui& chunkCount)
+	void Planet::GenerateChunks(const BlockLibrary& blockLibrary, Nz::TaskScheduler& taskScheduler, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount)
 	{
-		unsigned int chunkSeed = seed;
 		for (int chunkZ = 0; chunkZ < chunkCount.z; ++chunkZ)
 		{
 			for (int chunkY = 0; chunkY < chunkCount.y; ++chunkY)
