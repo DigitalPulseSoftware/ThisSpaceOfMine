@@ -616,7 +616,7 @@ namespace tsom
 			}
 			else
 			{
-				cameraNode.SetPosition(characterPos + characterRot * (Nz::Vector3f::Up() * Constants::PlayerCameraHeight + Nz::Vector3f::Forward() * 0.3f));
+				cameraNode.SetPosition(characterPos + characterRot * (Nz::Vector3f::Up() * Constants::PlayerCameraHeight));
 
 				Nz::Quaternionf cameraRotation = m_referenceRotation * Nz::Quaternionf(m_predictedCameraRotation);
 				cameraRotation.Normalize();
