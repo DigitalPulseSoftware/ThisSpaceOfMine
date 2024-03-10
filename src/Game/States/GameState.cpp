@@ -12,8 +12,8 @@
 #include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/NetworkSession.hpp>
 #include <CommonLib/PlayerInputs.hpp>
-#include <CommonLib/Components/PlanetGravityComponent.hpp>
 #include <CommonLib/Utils.hpp>
+#include <CommonLib/Components/PlanetGravityComponent.hpp>
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/StateData.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>

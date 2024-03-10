@@ -46,9 +46,9 @@ namespace tsom
 			Nz::Window& SetupWindow();
 			Nz::EnttWorld& SetupWorld();
 
-			Nz::StateMachine m_stateMachine;
 			std::optional<Nz::Canvas> m_canvas;
 			std::optional<ClientBlockLibrary> m_blockLibrary;
+			Nz::StateMachine m_stateMachine;
 	};
 }
 

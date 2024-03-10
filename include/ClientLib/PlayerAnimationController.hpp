@@ -7,8 +7,8 @@
 #ifndef TSOM_CLIENTLIB_PLAYERANIMATIONCONTROLLER_HPP
 #define TSOM_CLIENTLIB_PLAYERANIMATIONCONTROLLER_HPP
 
-#include <CommonLib/Utility/AverageValues.hpp>
 #include <ClientLib/AnimationController.hpp>
+#include <CommonLib/Utility/AverageValues.hpp>
 #include <Nazara/Core/Animation.hpp>
 #include <Nazara/Core/AnimationBlender.hpp>
 #include <Nazara/Core/Skeleton.hpp>
