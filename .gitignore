@@ -2,6 +2,7 @@ assets/*
 !assets/*.passlist
 !assets/shaders
 saves/
+gameconfig.lua
 
 # xmake-related files
 .xmake/*

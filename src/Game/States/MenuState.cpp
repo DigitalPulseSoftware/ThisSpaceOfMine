@@ -7,6 +7,7 @@
 #include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/UpdaterAppComponent.hpp>
 #include <CommonLib/Version.hpp>
+#include <Game/GameConfigAppComponent.hpp>
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/GameState.hpp>
 #include <Game/States/UpdateState.hpp>
@@ -29,8 +30,10 @@ namespace tsom
 	MenuState::MenuState(std::shared_ptr<StateData> stateData) :
 	WidgetState(stateData)
 	{
-		std::string_view address = "malcolm.digitalpulse.software";
-		std::string_view nickname = "Mingebag";
+		auto& gameConfig = GetStateData().app->GetComponent<GameConfigAppComponent>().GetConfig();
+
+		std::string_view address = gameConfig.GetStringValue("Menu.ServerAddress");
+		std::string_view nickname = gameConfig.GetStringValue("Menu.Login");
 
 		const Nz::CommandLineParameters& cmdParams = GetStateData().app->GetCommandLineParameters();
 		cmdParams.GetParameter("server-address", &address);
@@ -161,6 +164,12 @@ namespace tsom
 			fmt::print(fg(fmt::color::red), "failed to resolve {}: {}\n", m_serverAddressArea->GetText(), Nz::ErrorToString(resolveError));
 			return;
 		}
+
+		auto& gameConfig = GetStateData().app->GetComponent<GameConfigAppComponent>();
+		gameConfig.GetConfig().SetStringValue("Menu.Login", login);
+		gameConfig.GetConfig().SetStringValue("Menu.ServerAddress", m_serverAddressArea->GetText());
+
+		gameConfig.Save();
 
 		Nz::IpAddress serverAddress = hostVec[0].address;
 

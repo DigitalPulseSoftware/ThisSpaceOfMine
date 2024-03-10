@@ -16,7 +16,8 @@ add_requires(
 	"hopscotch-map",
 	"nlohmann_json",
 	"perlinnoise",
-	"semver"
+	"semver",
+	"sol2"
 )
 
 if is_plat("windows") then
@@ -49,6 +50,7 @@ set_targetdir("./bin/$(plat)_$(arch)_$(mode)")
 
 if is_mode("debug") then
 	add_defines("NAZARA_DEBUG")
+	set_symbols("debug", "edit")
 end
 
 if is_plat("windows") then
@@ -72,7 +74,7 @@ target("CommonLib", function ()
 	add_options("commonlib_static")
 
 	add_packages("nazaraengine", { components = { "physics3d", "network" }, public = true })
-	add_packages("concurrentqueue", "semver", "fmt", "hopscotch-map", "nlohmann_json", { public = true })
+	add_packages("concurrentqueue", "semver", "fmt", "hopscotch-map", "nlohmann_json", "sol2", { public = true })
 	add_packages("lz4", "perlinnoise")
 
 	if is_plat("windows") then

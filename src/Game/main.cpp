@@ -4,6 +4,7 @@
 
 #include <CommonLib/UpdaterAppComponent.hpp>
 #include <Game/GameAppComponent.hpp>
+#include <Game/GameConfigAppComponent.hpp>
 #include <Nazara/Core/Application.hpp>
 #include <Nazara/Core/EntitySystemAppComponent.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
@@ -48,6 +49,7 @@ int GameMain(int argc, char* argv[])
 	}
 
 	// Game setup
+	app.AddComponent<tsom::GameConfigAppComponent>();
 	app.AddComponent<tsom::GameAppComponent>();
 
 	return app.Run();
