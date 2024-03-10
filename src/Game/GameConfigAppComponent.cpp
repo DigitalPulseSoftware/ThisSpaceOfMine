@@ -23,6 +23,7 @@ namespace tsom
 		});
 
 		RegisterStringOption("Menu.ServerAddress", "tsom.digitalpulse.software");
+		RegisterIntegerOption("Server.Port", 1, 0xFFFF, 29536);
 	}
 
 	GameConfigAppComponent::GameConfigAppComponent(Nz::ApplicationBase& app) :

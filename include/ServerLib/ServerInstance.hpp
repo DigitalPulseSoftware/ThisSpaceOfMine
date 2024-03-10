@@ -16,6 +16,7 @@
 #include <Nazara/Core/EnttWorld.hpp>
 #include <NazaraUtils/Bitset.hpp>
 #include <NazaraUtils/MemoryPool.hpp>
+#include <NazaraUtils/PathUtils.hpp>
 #include <memory>
 #include <unordered_set>
 #include <vector>
@@ -30,7 +31,9 @@ namespace tsom
 	class TSOM_SERVERLIB_API ServerInstance
 	{
 		public:
-			ServerInstance(Nz::ApplicationBase& application);
+			struct Config;
+
+			ServerInstance(Nz::ApplicationBase& application, Config config);
 			ServerInstance(const ServerInstance&) = delete;
 			ServerInstance(ServerInstance&&) = delete;
 			~ServerInstance();
@@ -55,6 +58,15 @@ namespace tsom
 			ServerInstance& operator=(const ServerInstance&) = delete;
 			ServerInstance& operator=(ServerInstance&&) = delete;
 
+			struct Config
+			{
+				std::filesystem::path saveDirectory = Nz::Utf8Path("save/chunks");
+				Nz::Time saveInterval = Nz::Time::Seconds(30);
+				Nz::UInt32 planetSeed = 42;
+				Nz::Vector3ui planetChunkCount = Nz::Vector3ui(5);
+				bool pauseWhenEmpty = true;
+			};
+
 		private:
 			void LoadChunks();
 			void OnNetworkTick();
@@ -62,6 +74,7 @@ namespace tsom
 			void OnSave();
 
 			Nz::UInt16 m_tickIndex;
+			std::filesystem::path m_saveDirectory;
 			std::unique_ptr<Planet> m_planet;
 			std::unique_ptr<ChunkEntities> m_planetEntities;
 			std::unordered_set<ChunkIndices /*chunkIndex*/> m_dirtyChunks;
@@ -71,10 +84,12 @@ namespace tsom
 			Nz::EnttWorld m_world;
 			Nz::MemoryPool<ServerPlayer> m_players;
 			Nz::MillisecondClock m_saveClock;
+			Nz::Time m_saveInterval;
 			Nz::Time m_tickAccumulator;
 			Nz::Time m_tickDuration;
 			BlockLibrary m_blockLibrary;
 			Nz::ApplicationBase& m_application;
+			bool m_pauseWhenEmpty;
 	};
 }
 

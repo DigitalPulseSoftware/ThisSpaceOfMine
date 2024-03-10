@@ -156,8 +156,11 @@ namespace tsom
 			return;
 		}
 
+		auto& gameConfig = GetStateData().app->GetComponent<GameConfigAppComponent>();
+		Nz::UInt16 serverPort = gameConfig.GetConfig().GetIntegerValue<Nz::UInt16>("Server.Port");
+
 		Nz::ResolveError resolveError;
-		auto hostVec = Nz::IpAddress::ResolveHostname(Nz::NetProtocol::Any, m_serverAddressArea->GetText(), std::to_string(Constants::ServerPort), &resolveError);
+		auto hostVec = Nz::IpAddress::ResolveHostname(Nz::NetProtocol::Any, m_serverAddressArea->GetText(), std::to_string(serverPort), &resolveError);
 
 		if (hostVec.empty())
 		{
@@ -165,7 +168,6 @@ namespace tsom
 			return;
 		}
 
-		auto& gameConfig = GetStateData().app->GetComponent<GameConfigAppComponent>();
 		gameConfig.GetConfig().SetStringValue("Menu.Login", login);
 		gameConfig.GetConfig().SetStringValue("Menu.ServerAddress", m_serverAddressArea->GetText());
 

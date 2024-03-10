@@ -22,8 +22,9 @@ namespace tsom
 {
 	constexpr unsigned int chunkSaveVersion = 1;
 
-	ServerInstance::ServerInstance(Nz::ApplicationBase& application) :
+	ServerInstance::ServerInstance(Nz::ApplicationBase& application, Config config) :
 	m_tickIndex(0),
+	m_saveDirectory(std::move(config.saveDirectory)),
 	m_players(256),
 	m_tickAccumulator(Nz::Time::Zero()),
 	m_tickDuration(Constants::TickDuration),
@@ -42,13 +43,7 @@ namespace tsom
 		auto& taskScheduler = m_application.GetComponent<Nz::TaskSchedulerAppComponent>();
 
 		m_planet = std::make_unique<Planet>(1.f, 16.f, 9.81f);
-		m_planet->GenerateChunks(m_blockLibrary, taskScheduler.GetScheduler(), 42, Nz::Vector3ui(5));
-		/*m_planet->GeneratePlatform(m_blockLibrary, tsom::Direction::Up, { 92, 135, 165 });
-		m_planet->GeneratePlatform(m_blockLibrary, tsom::Direction::Back, { 33, 178, 60 });
-		m_planet->GeneratePlatform(m_blockLibrary, tsom::Direction::Front, { 50, 12, 63 });
-		m_planet->GeneratePlatform(m_blockLibrary, tsom::Direction::Left, { 8, 87, 111 });
-		m_planet->GeneratePlatform(m_blockLibrary, tsom::Direction::Right, { 173, 41, 89 });
-		m_planet->GeneratePlatform(m_blockLibrary, tsom::Direction::Down, { 121, 92, 2 });*/
+		m_planet->GenerateChunks(m_blockLibrary, taskScheduler.GetScheduler(), config.planetSeed, config.planetChunkCount);
 		LoadChunks();
 		m_planet->GeneratePlatform(m_blockLibrary, tsom::Direction::Right, { 65, -18, -39 });
 		m_planet->GeneratePlatform(m_blockLibrary, tsom::Direction::Back, { -34, 2, 53 });
@@ -118,14 +113,14 @@ namespace tsom
 
 	Nz::Time ServerInstance::Update(Nz::Time elapsedTime)
 	{
-		if (m_saveClock.RestartIfOver(Constants::SaveInterval))
+		if (m_saveClock.RestartIfOver(m_saveInterval))
 			OnSave();
 
 		for (auto&& sessionManagerPtr : m_sessionManagers)
 			sessionManagerPtr->Poll();
 
 		// No player? Pause instance for 100ms
-		if (m_players.begin() == m_players.end())
+		if (m_pauseWhenEmpty && m_players.begin() == m_players.end())
 			return Nz::Time::Milliseconds(100);
 
 		m_tickAccumulator += elapsedTime;
@@ -140,16 +135,15 @@ namespace tsom
 
 	void ServerInstance::LoadChunks()
 	{
-		std::filesystem::path savePath = Nz::Utf8Path(Constants::SaveDirectory);
-		if (!std::filesystem::is_directory(savePath))
+		if (!std::filesystem::is_directory(m_saveDirectory))
 		{
-			fmt::print("save directory {0} doesn't exist, not loading chunks\n", savePath);
+			fmt::print("save directory {0} doesn't exist, not loading chunks\n", m_saveDirectory);
 			return;
 		}
 
 		// Handle conversion
 		unsigned int saveVersion = 0;
-		if (std::filesystem::path versionPath = savePath / Nz::Utf8Path("version.txt"); std::filesystem::exists(versionPath))
+		if (std::filesystem::path versionPath = m_saveDirectory / Nz::Utf8Path("version.txt"); std::filesystem::exists(versionPath))
 		{
 			auto contentOpt = Nz::File::ReadWhole(versionPath);
 			if (contentOpt)
@@ -174,9 +168,9 @@ namespace tsom
 		bool didConvert = false;
 		if (saveVersion == 0)
 		{
-			std::filesystem::path oldSave = savePath / Nz::Utf8Path("old0");
+			std::filesystem::path oldSave = m_saveDirectory / Nz::Utf8Path("old0");
 			std::filesystem::create_directory(oldSave);
-			for (const auto& entry : std::filesystem::directory_iterator(savePath))
+			for (const auto& entry : std::filesystem::directory_iterator(m_saveDirectory))
 			{
 				if (!entry.is_regular_file())
 					continue;
@@ -199,7 +193,7 @@ namespace tsom
 
 				std::filesystem::path newFilename = Nz::Utf8Path(fmt::format("{0:+}_{1:+}_{2:+}.chunk", chunkIndices.x, chunkIndices.z, chunkIndices.y)); //< reverse y & z
 
-				std::filesystem::rename(entry.path(), savePath / newFilename);
+				std::filesystem::rename(entry.path(), m_saveDirectory / newFilename);
 			}
 
 			saveVersion++;
@@ -209,12 +203,12 @@ namespace tsom
 		if (didConvert)
 		{
 			std::string version = std::to_string(saveVersion);
-			Nz::File::WriteWhole(savePath / Nz::Utf8Path("version.txt"), version.data(), version.size());
+			Nz::File::WriteWhole(m_saveDirectory / Nz::Utf8Path("version.txt"), version.data(), version.size());
 		}
 
 		m_planet->ForEachChunk([&](const ChunkIndices& chunkIndices, Chunk& chunk)
 		{
-			Nz::File chunkFile(savePath / Nz::Utf8Path(fmt::format("{0:+}_{1:+}_{2:+}.chunk", chunkIndices.x, chunkIndices.y, chunkIndices.z)), Nz::OpenMode::Read);
+			Nz::File chunkFile(m_saveDirectory / Nz::Utf8Path(fmt::format("{0:+}_{1:+}_{2:+}.chunk", chunkIndices.x, chunkIndices.y, chunkIndices.z)), Nz::OpenMode::Read);
 			if (!chunkFile.IsOpen())
 				return;
 
@@ -313,9 +307,8 @@ namespace tsom
 
 		fmt::print("saving {} dirty chunks...\n", m_dirtyChunks.size());
 
-		std::filesystem::path savePath = Nz::Utf8Path(Constants::SaveDirectory);
-		if (!std::filesystem::is_directory(savePath))
-			std::filesystem::create_directories(savePath);
+		if (!std::filesystem::is_directory(m_saveDirectory))
+			std::filesystem::create_directories(m_saveDirectory);
 
 		Nz::ByteArray byteArray;
 		for (const ChunkIndices& chunkIndices : m_dirtyChunks)
@@ -325,12 +318,12 @@ namespace tsom
 			Nz::ByteStream byteStream(&byteArray);
 			m_planet->GetChunk(chunkIndices)->Serialize(m_blockLibrary, byteStream);
 
-			if (!Nz::File::WriteWhole(savePath / Nz::Utf8Path(fmt::format("{0:+}_{1:+}_{2:+}.chunk", chunkIndices.x, chunkIndices.y, chunkIndices.z)), byteArray.GetBuffer(), byteArray.GetSize()))
+			if (!Nz::File::WriteWhole(m_saveDirectory / Nz::Utf8Path(fmt::format("{0:+}_{1:+}_{2:+}.chunk", chunkIndices.x, chunkIndices.y, chunkIndices.z)), byteArray.GetBuffer(), byteArray.GetSize()))
 				fmt::print(stderr, "failed to save chunk {}\n", fmt::streamed(chunkIndices));
 		}
 		m_dirtyChunks.clear();
 
 		std::string version = std::to_string(chunkSaveVersion);
-		Nz::File::WriteWhole(savePath / Nz::Utf8Path("version.txt"), version.data(), version.size());
+		Nz::File::WriteWhole(m_saveDirectory / Nz::Utf8Path("version.txt"), version.data(), version.size());
 	}
 }
