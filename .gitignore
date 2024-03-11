@@ -3,6 +3,7 @@ assets/*
 !assets/shaders
 saves/
 gameconfig.lua
+serverconfig.lua
 
 # xmake-related files
 .xmake/*

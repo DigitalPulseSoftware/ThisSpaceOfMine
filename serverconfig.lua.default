@@ -1,0 +1,8 @@
+Server = {
+	Port = 29536,
+	SleepWhenEmpty = true
+}
+Save = {
+	Directory = "saves/chunks",
+	Interval = 30
+}

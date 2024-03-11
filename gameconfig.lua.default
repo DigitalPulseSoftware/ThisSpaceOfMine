@@ -1,0 +1,7 @@
+Server = {
+	Port = 29536,
+}
+Menu = {
+	ServerAddress = "tsom.digitalpulse.software",
+	Login = "Pilot" .. (os.time() % 1000),
+}
