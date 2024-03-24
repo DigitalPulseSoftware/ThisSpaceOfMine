@@ -33,18 +33,8 @@ namespace tsom
 		return m_blockLibrary;
 	}
 
-	inline Planet& ServerInstance::GetPlanet()
+	inline Nz::Time ServerInstance::GetTickDuration() const
 	{
-		return *m_planet;
-	}
-
-	inline const Planet& ServerInstance::GetPlanet() const
-	{
-		return *m_planet;
-	}
-
-	inline Nz::EnttWorld& ServerInstance::GetWorld()
-	{
-		return m_world;
+		return m_tickDuration;
 	}
 }

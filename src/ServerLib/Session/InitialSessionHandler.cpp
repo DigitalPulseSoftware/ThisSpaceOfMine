@@ -6,6 +6,7 @@
 #include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/Version.hpp>
 #include <ServerLib/NetworkedEntitiesSystem.hpp>
+#include <ServerLib/ServerEnvironment.hpp>
 #include <ServerLib/ServerInstance.hpp>
 #include <ServerLib/ServerPlayer.hpp>
 #include <ServerLib/Session/PlayerSessionHandler.hpp>
@@ -74,7 +75,7 @@ namespace tsom
 
 		GetSession()->SendPacket(response);
 
-		auto& networkedEntities = m_instance.GetWorld().GetSystem<NetworkedEntitiesSystem>();
+		auto& networkedEntities = player->GetEnvironment()->GetWorld().GetSystem<NetworkedEntitiesSystem>();
 		networkedEntities.CreateAllEntities(player->GetVisibilityHandler());
 
 		GetSession()->SetupHandler<PlayerSessionHandler>(player);

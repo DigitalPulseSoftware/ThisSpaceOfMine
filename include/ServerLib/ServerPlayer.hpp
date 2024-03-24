@@ -20,6 +20,7 @@ namespace tsom
 {
 	class CharacterController;
 	class NetworkSession;
+	class ServerEnvironment;
 	class ServerPlayer;
 	class ServerInstance;
 
@@ -37,6 +38,8 @@ namespace tsom
 
 			inline const std::shared_ptr<CharacterController>& GetCharacterController();
 			inline entt::handle GetControlledEntity() const;
+			inline ServerEnvironment* GetEnvironment();
+			inline const ServerEnvironment* GetEnvironment() const;
 			inline const std::string& GetNickname() const;
 			inline PlayerIndex GetPlayerIndex() const;
 			inline ServerInstance& GetServerInstance();
@@ -52,6 +55,8 @@ namespace tsom
 
 			void Tick();
 
+			void UpdateEnvironment(ServerEnvironment* environment);
+
 			ServerPlayer& operator=(const ServerPlayer&) = delete;
 			ServerPlayer& operator=(ServerPlayer&&) = delete;
 
@@ -61,6 +66,7 @@ namespace tsom
 			std::vector<PlayerInputs> m_inputQueue;
 			entt::handle m_controlledEntity;
 			NetworkSession* m_session;
+			ServerEnvironment* m_environment;
 			SessionVisibilityHandler m_visibilityHandler;
 			ServerInstance& m_instance;
 			PlayerIndex m_playerIndex;

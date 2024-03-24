@@ -23,6 +23,16 @@ namespace tsom
 		return m_controlledEntity;
 	}
 
+	inline ServerEnvironment* ServerPlayer::GetEnvironment()
+	{
+		return m_environment;
+	}
+
+	inline const ServerEnvironment* ServerPlayer::GetEnvironment() const
+	{
+		return m_environment;
+	}
+
 	inline const std::string& ServerPlayer::GetNickname() const
 	{
 		return m_nickname;

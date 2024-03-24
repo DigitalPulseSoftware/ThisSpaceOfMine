@@ -6,9 +6,11 @@
 #include <CommonLib/BlockIndex.hpp>
 #include <CommonLib/CharacterController.hpp>
 #include <CommonLib/ChunkEntities.hpp>
+#include <CommonLib/Planet.hpp>
 #include <CommonLib/Ship.hpp>
-#include <CommonLib/Components/PlanetGravityComponent.hpp>
+#include <CommonLib/Components/PlanetComponent.hpp>
 #include <CommonLib/Components/ShipComponent.hpp>
+#include <ServerLib/ServerEnvironment.hpp>
 #include <ServerLib/ServerInstance.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
@@ -47,38 +49,32 @@ namespace tsom
 
 	void PlayerSessionHandler::HandlePacket(Packets::MineBlock&& mineBlock)
 	{
-		const Chunk* targetChunk = m_player->GetVisibilityHandler().GetChunkByIndex(mineBlock.chunkId);
-		if (!targetChunk)
+		Chunk* chunk = m_player->GetVisibilityHandler().GetChunkByIndex(mineBlock.chunkId);
+		if (!chunk)
 			return; //< ignore
 
 		Nz::Vector3ui voxelLoc(mineBlock.voxelLoc.x, mineBlock.voxelLoc.y, mineBlock.voxelLoc.z);
-		if (!CheckCanMineBlock(targetChunk, voxelLoc))
+		if (!CheckCanMineBlock(chunk, voxelLoc))
 			return;
 
-		if (Chunk* chunk = m_player->GetServerInstance().GetPlanet().GetChunk(targetChunk->GetIndices()))
-		{
-			chunk->LockWrite();
-			chunk->UpdateBlock(voxelLoc, EmptyBlockIndex);
-			chunk->UnlockWrite();
-		}
+		chunk->LockWrite();
+		chunk->UpdateBlock(voxelLoc, EmptyBlockIndex);
+		chunk->UnlockWrite();
 	}
 
 	void PlayerSessionHandler::HandlePacket(Packets::PlaceBlock&& placeBlock)
 	{
-		const Chunk* targetChunk = m_player->GetVisibilityHandler().GetChunkByIndex(placeBlock.chunkId);
-		if (!targetChunk)
+		Chunk* chunk = m_player->GetVisibilityHandler().GetChunkByIndex(placeBlock.chunkId);
+		if (!chunk)
 			return; //< ignore
 
 		Nz::Vector3ui voxelLoc(placeBlock.voxelLoc.x, placeBlock.voxelLoc.y, placeBlock.voxelLoc.z);
-		if (!CheckCanPlaceBlock(targetChunk, voxelLoc))
+		if (!CheckCanPlaceBlock(chunk, voxelLoc))
 			return;
 
-		if (Chunk* chunk = m_player->GetServerInstance().GetPlanet().GetChunk(targetChunk->GetIndices()))
-		{
-			chunk->LockWrite();
-			chunk->UpdateBlock(voxelLoc, static_cast<BlockIndex>(placeBlock.newContent));
-			chunk->UnlockWrite();
-		}
+		chunk->LockWrite();
+		chunk->UpdateBlock(voxelLoc, static_cast<BlockIndex>(placeBlock.newContent));
+		chunk->UnlockWrite();
 	}
 
 	void PlayerSessionHandler::HandlePacket(Packets::SendChatMessage&& playerChat)
@@ -101,12 +97,19 @@ namespace tsom
 		}
 		else if (message == "/spawnship")
 		{
-			entt::handle controlledEntity = m_player->GetControlledEntity();
-			entt::registry* reg = controlledEntity.registry();
+			entt::handle playerEntity = m_player->GetControlledEntity();
+			if (!playerEntity)
+				return;
+
+			PlanetComponent* playerPlanet = playerEntity.try_get<PlanetComponent>();
+			if (!playerPlanet)
+				return;
+
+			entt::registry* reg = playerEntity.registry();
 
 			entt::handle ent = entt::handle(*reg, reg->create());
 			auto& node = ent.emplace<Nz::NodeComponent>();
-			node.SetPosition(controlledEntity.get<Nz::NodeComponent>().GetPosition());
+			node.SetPosition(playerEntity.get<Nz::NodeComponent>().GetPosition());
 
 			ServerInstance& serverInstance = m_player->GetServerInstance();
 			Nz::ApplicationBase& app = serverInstance.GetApplication();
@@ -115,14 +118,64 @@ namespace tsom
 			auto& shipComp = ent.emplace<ShipComponent>();
 			shipComp.ship = std::make_unique<Ship>(blockLibrary, Nz::Vector3ui(32), 1.f);
 
-			std::shared_ptr<Nz::Collider3D> chunkCollider = shipComp.ship->GetChunk(0)->BuildCollider(blockLibrary);
+			std::shared_ptr<Nz::Collider3D> chunkCollider = shipComp.ship->GetChunk().BuildCollider(blockLibrary);
 
 			ent.emplace<Nz::RigidBody3DComponent>(Nz::RigidBody3DComponent::DynamicSettings(chunkCollider, 100.f));
 
 			ent.emplace<NetworkedComponent>();
-			ent.emplace<PlanetGravityComponent>().planet = &serverInstance.GetPlanet();
+			ent.emplace<PlanetComponent>().planet = playerPlanet->planet;
 
 			//shipComp.chunkEntities = std::make_unique<ChunkEntities>(app, serverInstance.GetWorld(), *shipComp.ship, blockLibrary);
+			return;
+		}
+		else if (message == "/regenchunk")
+		{
+			entt::handle playerEntity = m_player->GetControlledEntity();
+			if (!playerEntity)
+				return;
+
+			PlanetComponent* playerPlanet = playerEntity.try_get<PlanetComponent>();
+			if (!playerPlanet)
+				return;
+
+			Nz::Vector3f playerPos = playerEntity.get<Nz::NodeComponent>().GetGlobalPosition();
+			ChunkIndices chunkIndices = playerPlanet->planet->GetChunkIndicesByPosition(playerPos);
+
+			const BlockLibrary& blockLibrary = m_player->GetServerInstance().GetBlockLibrary();
+
+			if (Chunk* chunk = playerPlanet->planet->GetChunk(chunkIndices))
+			{
+				playerPlanet->planet->GenerateChunk(blockLibrary, *chunk, 42, Nz::Vector3ui(5));
+				fmt::print("regenerated chunk {};{};{}\n", chunkIndices.x, chunkIndices.y, chunkIndices.z);
+			}
+			return;
+		}
+		else if (message == "/spawnplatform")
+		{
+			entt::handle playerEntity = m_player->GetControlledEntity();
+			if (playerEntity)
+			{
+				PlanetComponent* playerPlanet = playerEntity.try_get<PlanetComponent>();
+				if (playerPlanet)
+				{
+					const BlockLibrary& blockLibrary = m_player->GetServerInstance().GetBlockLibrary();
+
+					Nz::Vector3f playerPos = playerEntity.get<Nz::NodeComponent>().GetGlobalPosition();
+					ChunkIndices chunkIndices = playerPlanet->planet->GetChunkIndicesByPosition(playerPos);
+					if (Chunk* chunk = playerPlanet->planet->GetChunk(chunkIndices))
+					{
+						std::optional<Nz::Vector3ui> coords = chunk->ComputeCoordinates(playerPos);
+						if (coords)
+						{
+							Direction dir = DirectionFromNormal(playerPlanet->planet->ComputeUpDirection(playerPos));
+							BlockIndices blockIndices = playerPlanet->planet->GetBlockIndices(chunkIndices, *coords);
+							playerPlanet->planet->GeneratePlatform(blockLibrary, dir, blockIndices);
+
+							fmt::print("generated platform at {};{};{}\n", blockIndices.x, blockIndices.y, blockIndices.z);
+						}
+					}
+				}
+			}
 			return;
 		}
 
@@ -182,8 +235,8 @@ namespace tsom
 		Nz::Vector3f blockCenter = std::accumulate(corners.begin(), corners.end(), Nz::Vector3f::Zero()) / corners.size();
 		Nz::Vector3f offset = chunk->GetContainer().GetChunkOffset(chunk->GetIndices());
 
-		auto& instance = m_player->GetServerInstance();
-		auto& physicsSystem = instance.GetWorld().GetSystem<Nz::Physics3DSystem>();
+		ServerEnvironment* environment = m_player->GetEnvironment();
+		auto& physicsSystem = environment->GetWorld().GetSystem<Nz::Physics3DSystem>();
 		bool doesCollide = physicsSystem.CollisionQuery(boxCollider, Nz::Matrix4f::Translate(offset + blockCenter), [](const Nz::Physics3DSystem::ShapeCollisionInfo& hitInfo) -> std::optional<float>
 		{
 			return hitInfo.penetrationDepth;

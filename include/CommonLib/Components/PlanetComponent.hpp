@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com) (lynix680@gmail.com)
+// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -8,17 +8,18 @@
 #define TSOM_COMMONLIB_COMPONENTS_PLANETGRAVITYCOMPONENT_HPP
 
 #include <CommonLib/Export.hpp>
+#include <NazaraUtils/MovablePtr.hpp>
 
 namespace tsom
 {
 	class Planet;
 
-	struct PlanetGravityComponent
+	struct PlanetComponent
 	{
-		const Planet* planet = nullptr;
+		Nz::MovablePtr<Planet> planet;
 	};
 }
 
-#include <CommonLib/Components/PlanetGravityComponent.inl>
+#include <CommonLib/Components/PlanetComponent.inl>
 
 #endif // TSOM_COMMONLIB_COMPONENTS_PLANETGRAVITYCOMPONENT_HPP

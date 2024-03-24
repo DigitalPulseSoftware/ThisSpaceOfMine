@@ -28,7 +28,7 @@ namespace tsom
 			PlanetGravitySystem(PlanetGravitySystem&&) = delete;
 			~PlanetGravitySystem();
 
-			void PreSimulate(float elapsedTime);
+			void PreSimulate(float elapsedTime) override;
 
 			PlanetGravitySystem& operator=(const PlanetGravitySystem&) = delete;
 			PlanetGravitySystem& operator=(PlanetGravitySystem&&) = delete;

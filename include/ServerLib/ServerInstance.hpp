@@ -10,10 +10,8 @@
 #include <CommonLib/BlockLibrary.hpp>
 #include <CommonLib/ChunkEntities.hpp>
 #include <CommonLib/NetworkSessionManager.hpp>
-#include <CommonLib/Planet.hpp>
 #include <ServerLib/ServerPlayer.hpp>
 #include <Nazara/Core/Clock.hpp>
-#include <Nazara/Core/EnttWorld.hpp>
 #include <NazaraUtils/Bitset.hpp>
 #include <NazaraUtils/MemoryPool.hpp>
 #include <NazaraUtils/PathUtils.hpp>
@@ -28,6 +26,8 @@ namespace Nz
 
 namespace tsom
 {
+	class ServerPlanetEnvironment;
+
 	class TSOM_SERVERLIB_API ServerInstance
 	{
 		public:
@@ -50,9 +50,7 @@ namespace tsom
 
 			inline Nz::ApplicationBase& GetApplication();
 			inline const BlockLibrary& GetBlockLibrary() const;
-			inline Planet& GetPlanet();
-			inline const Planet& GetPlanet() const;
-			inline Nz::EnttWorld& GetWorld();
+			inline Nz::Time GetTickDuration() const;
 
 			Nz::Time Update(Nz::Time elapsedTime);
 
@@ -69,25 +67,21 @@ namespace tsom
 			};
 
 		private:
-			void LoadChunks();
 			void OnNetworkTick();
-			void OnTick(Nz::Time elapsedTime);
 			void OnSave();
+			void OnTick(Nz::Time elapsedTime);
 
-			Nz::UInt16 m_tickIndex;
 			std::filesystem::path m_saveDirectory;
-			std::unique_ptr<Planet> m_planet;
-			std::unique_ptr<ChunkEntities> m_planetEntities;
-			std::unordered_set<ChunkIndices /*chunkIndex*/> m_dirtyChunks;
+			std::unique_ptr<ServerPlanetEnvironment> m_planetEnv;
 			std::vector<std::unique_ptr<NetworkSessionManager>> m_sessionManagers;
 			Nz::Bitset<> m_disconnectedPlayers;
 			Nz::Bitset<> m_newPlayers;
-			Nz::EnttWorld m_world;
 			Nz::MemoryPool<ServerPlayer> m_players;
 			Nz::MillisecondClock m_saveClock;
 			Nz::Time m_saveInterval;
 			Nz::Time m_tickAccumulator;
 			Nz::Time m_tickDuration;
+			Nz::UInt16 m_tickIndex;
 			Nz::ApplicationBase& m_application;
 			BlockLibrary m_blockLibrary;
 			bool m_pauseWhenEmpty;

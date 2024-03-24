@@ -5,8 +5,9 @@
 #include <ServerLib/ServerPlayer.hpp>
 #include <CommonLib/CharacterController.hpp>
 #include <CommonLib/GameConstants.hpp>
-#include <CommonLib/Components/PlanetGravityComponent.hpp>
+#include <CommonLib/Components/PlanetComponent.hpp>
 #include <ServerLib/ServerInstance.hpp>
+#include <ServerLib/ServerPlanetEnvironment.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
 #include <ServerLib/Components/ServerPlayerControlledComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
@@ -29,22 +30,24 @@ namespace tsom
 		constexpr Nz::Vector3f position = Nz::Vector3f::Up() * 100.f + Nz::Vector3f::Backward() * 5.f;
 		const Nz::Quaternionf rotation = Nz::EulerAnglesf(0.f, 0.f, 0.f);
 
+		ServerPlanetEnvironment* serverPlanet = Nz::SafeCast<ServerPlanetEnvironment*>(m_environment);
+
 		if (m_controlledEntity)
 			m_controlledEntity.destroy();
 
-		m_controlledEntity = m_instance.GetWorld().CreateEntity();
+		m_controlledEntity = serverPlanet->GetWorld().CreateEntity();
 		m_controlledEntity.emplace<Nz::NodeComponent>(position, rotation);
 		m_controlledEntity.emplace<NetworkedComponent>();
-		auto& planetGravity = m_controlledEntity.emplace<PlanetGravityComponent>();
-		planetGravity.planet = &m_instance.GetPlanet();
+		auto& planetGravity = m_controlledEntity.emplace<PlanetComponent>();
+		planetGravity.planet = &serverPlanet->GetPlanet();
 
 		auto collider = std::make_shared<Nz::CapsuleCollider3D>(Constants::PlayerCapsuleHeight, Constants::PlayerColliderRadius);
 
 		m_controller = std::make_shared<CharacterController>();
-		m_controller->SetCurrentPlanet(&m_instance.GetPlanet());
+		m_controller->SetCurrentPlanet(&serverPlanet->GetPlanet());
 		m_visibilityHandler.UpdateControlledEntity(m_controlledEntity, m_controller.get()); // TODO: Reset to nullptr when player entity is destroyed
 
-		auto& physicsSystem = m_instance.GetWorld().GetSystem<Nz::Physics3DSystem>();
+		auto& physicsSystem = serverPlanet->GetWorld().GetSystem<Nz::Physics3DSystem>();
 
 		Nz::PhysCharacter3DComponent::Settings characterSettings;
 		characterSettings.collider = collider;
@@ -71,5 +74,10 @@ namespace tsom
 
 			m_inputQueue.erase(m_inputQueue.begin());
 		}
+	}
+
+	void ServerPlayer::UpdateEnvironment(ServerEnvironment* environment)
+	{
+		m_environment = environment;
 	}
 }
