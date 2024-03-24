@@ -19,6 +19,7 @@
 #include <fmt/core.h>
 #include <fmt/ostream.h>
 #include <fmt/std.h>
+#include <charconv>
 
 namespace tsom
 {
