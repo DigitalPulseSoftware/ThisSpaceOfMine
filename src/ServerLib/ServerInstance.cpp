@@ -4,11 +4,10 @@
 
 #include <ServerLib/ServerInstance.hpp>
 #include <CommonLib/InternalConstants.hpp>
-#include <CommonLib/Systems/PlanetGravitySystem.hpp>
-#include <ServerLib/NetworkedEntitiesSystem.hpp>
+#include <CommonLib/Planet.hpp>
+#include <ServerLib/ServerPlanetEnvironment.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/File.hpp>
-#include <Nazara/Core/TaskSchedulerAppComponent.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <NazaraUtils/PathUtils.hpp>
 #include <fmt/color.h>
@@ -20,8 +19,6 @@
 
 namespace tsom
 {
-	constexpr unsigned int chunkSaveVersion = 1;
-
 	ServerInstance::ServerInstance(Nz::ApplicationBase& application, Config config) :
 	m_connectionTokenEncryptionKey(config.connectionTokenEncryptionKey),
 	m_saveDirectory(std::move(config.saveDirectory)),
@@ -33,32 +30,8 @@ namespace tsom
 	m_application(application),
 	m_pauseWhenEmpty(config.pauseWhenEmpty)
 	{
-		m_world.AddSystem<NetworkedEntitiesSystem>(*this);
-		auto& physicsSystem = m_world.AddSystem<Nz::Physics3DSystem>();
-		{
-			auto& physWorld = physicsSystem.GetPhysWorld();
-			physWorld.SetStepSize(m_tickDuration);
-			physWorld.SetGravity(Nz::Vector3f::Zero());
-
-			m_world.AddSystem<PlanetGravitySystem>(physWorld);
-		}
-
-		auto& taskScheduler = m_application.GetComponent<Nz::TaskSchedulerAppComponent>();
-
-		m_planet = std::make_unique<Planet>(1.f, 16.f, 9.81f);
-		m_planet->GenerateChunks(m_blockLibrary, taskScheduler, config.planetSeed, config.planetChunkCount);
-		LoadChunks();
-		m_planet->GeneratePlatform(m_blockLibrary, tsom::Direction::Right, { 65, -18, -39 });
-		m_planet->GeneratePlatform(m_blockLibrary, tsom::Direction::Back, { -34, 2, 53 });
-		m_planet->GeneratePlatform(m_blockLibrary, tsom::Direction::Front, { 22, -35, -59 });
-		m_planet->GeneratePlatform(m_blockLibrary, tsom::Direction::Down, { 23, -62, 26 });
-
-		m_planet->OnChunkUpdated.Connect([this](ChunkContainer* /*planet*/, Chunk* chunk, DirectionMask /*neighborMask*/)
-		{
-			m_dirtyChunks.insert(chunk->GetIndices());
-		});
-
-		m_planetEntities = std::make_unique<ChunkEntities>(m_application, m_world, *m_planet, m_blockLibrary);
+		m_planetEnv = std::make_unique<ServerPlanetEnvironment>(*this, config.planetSeed, config.planetChunkCount);
+		m_planetEnv->OnLoad(m_saveDirectory);
 	}
 
 	ServerInstance::~ServerInstance()
@@ -104,11 +77,13 @@ namespace tsom
 		ServerPlayer* player = m_players.Allocate(m_players.DeferConstruct, playerIndex);
 		std::construct_at(player, *this, Nz::SafeCast<PlayerIndex>(playerIndex), session, std::nullopt, std::move(nickname), 0);
 
+		player->UpdateEnvironment(m_planetEnv.get());
+
 		m_newPlayers.UnboundedSet(playerIndex);
 
 		// Send all chunks (waiting for chunk streaming based on visibility)
 		auto& playerVisibility = player->GetVisibilityHandler();
-		m_planet->ForEachChunk([&](const ChunkIndices& chunkIndices, const Chunk& chunk)
+		m_planetEnv->GetPlanet().ForEachChunk([&](const ChunkIndices& chunkIndices, Chunk& chunk)
 		{
 			playerVisibility.CreateChunk(chunk);
 		});
@@ -149,7 +124,7 @@ namespace tsom
 
 		// Send all chunks (waiting for chunk streaming based on visibility)
 		auto& playerVisibility = player->GetVisibilityHandler();
-		m_planet->ForEachChunk([&](const ChunkIndices& chunkIndices, const Chunk& chunk)
+		m_planetEnv->GetPlanet().ForEachChunk([&](const ChunkIndices& chunkIndices, Chunk& chunk)
 		{
 			playerVisibility.CreateChunk(chunk);
 		});
@@ -189,97 +164,6 @@ namespace tsom
 		}
 
 		return m_tickDuration - m_tickAccumulator;
-	}
-
-	void ServerInstance::LoadChunks()
-	{
-		if (!std::filesystem::is_directory(m_saveDirectory))
-		{
-			fmt::print("save directory {0} doesn't exist, not loading chunks\n", m_saveDirectory);
-			return;
-		}
-
-		// Handle conversion
-		unsigned int saveVersion = 0;
-		if (std::filesystem::path versionPath = m_saveDirectory / Nz::Utf8Path("version.txt"); std::filesystem::exists(versionPath))
-		{
-			auto contentOpt = Nz::File::ReadWhole(versionPath);
-			if (contentOpt)
-			{
-				const char* ptr = reinterpret_cast<const char*>(contentOpt->data());
-				if (auto err = std::from_chars(ptr, ptr + contentOpt->size(), saveVersion); err.ec != std::errc{})
-				{
-					fmt::print(stderr, fg(fmt::color::red), "failed to load planet: invalid version file (not a number)\n");
-					return;
-				}
-
-				if (saveVersion > chunkSaveVersion)
-				{
-					fmt::print(stderr, fg(fmt::color::red), "failed to load planet: unknown save version {0}\n", saveVersion);
-					return;
-				}
-			}
-			else
-				fmt::print(stderr, fg(fmt::color::red), "failed to load planet: failed to load version file\n");
-		}
-
-		bool didConvert = false;
-		if (saveVersion == 0)
-		{
-			std::filesystem::path oldSave = m_saveDirectory / Nz::Utf8Path("old0");
-			std::filesystem::create_directory(oldSave);
-			for (const auto& entry : std::filesystem::directory_iterator(m_saveDirectory))
-			{
-				if (!entry.is_regular_file())
-					continue;
-
-				if (entry.path().extension() != Nz::Utf8Path(".chunk"))
-					continue;
-
-				std::filesystem::copy_file(entry.path(), oldSave / entry.path().filename());
-
-				std::string fileName = Nz::PathToString(entry.path().filename());
-				unsigned int x, y, z;
-				if (std::sscanf(fileName.c_str(), "%u_%u_%u.chunk", &x, &y, &z) != 3)
-				{
-					fmt::print(stderr, fg(fmt::color::red), "planet conversion: failed to parse chunk name {}\n", fileName);
-					continue;
-				}
-
-				ChunkIndices chunkIndices(Nz::Vector3ui(x, y, z));
-				chunkIndices -= Nz::Vector3i(3); // previous planet had 6x6x6 chunks
-
-				std::filesystem::path newFilename = Nz::Utf8Path(fmt::format("{0:+}_{1:+}_{2:+}.chunk", chunkIndices.x, chunkIndices.z, chunkIndices.y)); //< reverse y & z
-
-				std::filesystem::rename(entry.path(), m_saveDirectory / newFilename);
-			}
-
-			saveVersion++;
-			didConvert = true;
-		}
-
-		if (didConvert)
-		{
-			std::string version = std::to_string(saveVersion);
-			Nz::File::WriteWhole(m_saveDirectory / Nz::Utf8Path("version.txt"), version.data(), version.size());
-		}
-
-		m_planet->ForEachChunk([&](const ChunkIndices& chunkIndices, Chunk& chunk)
-		{
-			Nz::File chunkFile(m_saveDirectory / Nz::Utf8Path(fmt::format("{0:+}_{1:+}_{2:+}.chunk", chunkIndices.x, chunkIndices.y, chunkIndices.z)), Nz::OpenMode::Read);
-			if (!chunkFile.IsOpen())
-				return;
-
-			try
-			{
-				Nz::ByteStream fileStream(&chunkFile);
-				chunk.Deserialize(m_blockLibrary, fileStream);
-			}
-			catch (const std::exception& e)
-			{
-				fmt::print(stderr, fg(fmt::color::red), "failed to load chunk {}: {}\n", fmt::streamed(chunkIndices), e.what());
-			}
-		});
 	}
 
 	void ServerInstance::OnNetworkTick()
@@ -367,6 +251,11 @@ namespace tsom
 		});
 	}
 
+	void ServerInstance::OnSave()
+	{
+		m_planetEnv->OnSave(m_saveDirectory);
+	}
+
 	void ServerInstance::OnTick(Nz::Time elapsedTime)
 	{
 		m_tickIndex++;
@@ -376,37 +265,8 @@ namespace tsom
 			serverPlayer.Tick();
 		});
 
-		m_planetEntities->Update();
-
-		m_world.Update(elapsedTime);
+		m_planetEnv->OnTick(elapsedTime);
 
 		OnNetworkTick();
-	}
-
-	void ServerInstance::OnSave()
-	{
-		if (m_dirtyChunks.empty())
-			return;
-
-		fmt::print("saving {} dirty chunks...\n", m_dirtyChunks.size());
-
-		if (!std::filesystem::is_directory(m_saveDirectory))
-			std::filesystem::create_directories(m_saveDirectory);
-
-		Nz::ByteArray byteArray;
-		for (const ChunkIndices& chunkIndices : m_dirtyChunks)
-		{
-			byteArray.Clear();
-
-			Nz::ByteStream byteStream(&byteArray);
-			m_planet->GetChunk(chunkIndices)->Serialize(m_blockLibrary, byteStream);
-
-			if (!Nz::File::WriteWhole(m_saveDirectory / Nz::Utf8Path(fmt::format("{0:+}_{1:+}_{2:+}.chunk", chunkIndices.x, chunkIndices.y, chunkIndices.z)), byteArray.GetBuffer(), byteArray.GetSize()))
-				fmt::print(stderr, "failed to save chunk {}\n", fmt::streamed(chunkIndices));
-		}
-		m_dirtyChunks.clear();
-
-		std::string version = std::to_string(chunkSaveVersion);
-		Nz::File::WriteWhole(m_saveDirectory / Nz::Utf8Path("version.txt"), version.data(), version.size());
 	}
 }

@@ -11,7 +11,7 @@
 
 namespace tsom
 {
-	void SessionVisibilityHandler::CreateChunk(const Chunk& chunk)
+	void SessionVisibilityHandler::CreateChunk(Chunk& chunk)
 	{
 		// Check if this chunk was marked for destruction
 		if (auto it = m_chunkIndices.find(&chunk); it != m_chunkIndices.end())
@@ -44,7 +44,7 @@ namespace tsom
 		}
 	}
 
-	void SessionVisibilityHandler::DestroyChunk(const Chunk& chunk)
+	void SessionVisibilityHandler::DestroyChunk(Chunk& chunk)
 	{
 		std::size_t chunkIndex = Nz::Retrieve(m_chunkIndices, &chunk);
 
@@ -76,7 +76,7 @@ namespace tsom
 		DispatchEntities(tickIndex);
 	}
 
-	const Chunk* SessionVisibilityHandler::GetChunkByIndex(std::size_t chunkIndex) const
+	Chunk* SessionVisibilityHandler::GetChunkByIndex(std::size_t chunkIndex) const
 	{
 		if (chunkIndex >= m_visibleChunks.size())
 			return nullptr;

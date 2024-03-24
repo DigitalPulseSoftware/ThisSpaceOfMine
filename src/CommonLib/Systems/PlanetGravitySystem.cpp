@@ -4,7 +4,7 @@
 
 #include <CommonLib/Systems/PlanetGravitySystem.hpp>
 #include <CommonLib/Planet.hpp>
-#include <CommonLib/Components/PlanetGravityComponent.hpp>
+#include <CommonLib/Components/PlanetComponent.hpp>
 #include <Nazara/Core/Log.hpp>
 #include <Nazara/Core/Components/DisabledComponent.hpp>
 #include <Nazara/Physics3D/PhysWorld3D.hpp>
@@ -27,7 +27,7 @@ namespace tsom
 
 	void PlanetGravitySystem::PreSimulate(float /*elapsedTime*/)
 	{
-		auto view = m_registry.view<Nz::RigidBody3DComponent, PlanetGravityComponent>(entt::exclude<Nz::DisabledComponent>);
+		auto view = m_registry.view<Nz::RigidBody3DComponent, PlanetComponent>(entt::exclude<Nz::DisabledComponent>);
 		for (auto&& [entity, rigidBody, planetComponent] : view.each())
 		{
 			if (rigidBody.IsSleeping() || !planetComponent.planet)

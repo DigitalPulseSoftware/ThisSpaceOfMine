@@ -14,6 +14,7 @@
 #include <CommonLib/PlayerInputs.hpp>
 #include <CommonLib/Utils.hpp>
 #include <CommonLib/Components/PlanetGravityComponent.hpp>
+#include <CommonLib/Components/PlanetComponent.hpp>
 #include <Game/GameConfigAppComponent.hpp>
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/StateData.hpp>
@@ -182,6 +183,9 @@ namespace tsom
 
 		m_onControlledEntityStateUpdate.Connect(stateData.sessionHandler->OnControlledEntityStateUpdate, [&](InputIndex inputIndex, const Packets::EntitiesStateUpdate::ControlledCharacter& characterStates)
 		{
+			if (!m_controlledEntity)
+				return;
+
 			m_referenceRotation = characterStates.referenceRotation;
 
 			// Remove processed inputs
@@ -314,7 +318,7 @@ namespace tsom
 					dynSettings.allowSleeping = false;
 
 					entt::handle debugEntity = stateData.world->CreateEntity();
-					debugEntity.emplace<PlanetGravityComponent>().planet = m_planet.get();
+					debugEntity.emplace<PlanetComponent>().planet = m_planet.get();
 					debugEntity.emplace<Nz::NodeComponent>(cameraNode.GetPosition());
 					debugEntity.emplace<Nz::RigidBody3DComponent>(dynSettings);
 
