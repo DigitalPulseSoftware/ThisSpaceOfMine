@@ -11,6 +11,10 @@
 
 #include <CommonLib/Utility/CrashHandler.hpp>
 #include <Nazara/Core/DynLib.hpp>
+
+#define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
+
 #include <Windows.h>
 #include <Dbghelp.h> //< Must be included after Windows.h
 
