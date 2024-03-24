@@ -1,46 +1,50 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com) (lynix680@gmail.com)
+// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
+#include <Nazara/Core/Error.hpp>
+
 namespace tsom
 {
+	inline void Ship::ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, Chunk& chunk)> callback)
+	{
+		callback(ChunkIndices{ 0, 0, 0 }, m_chunk);
+	}
+
+	inline void Ship::ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, const Chunk& chunk)> callback) const
+	{
+		callback(ChunkIndices{ 0, 0, 0}, m_chunk);
+	}
+
 	inline Nz::Vector3f Ship::GetCenter() const
 	{
 		return Nz::Vector3f::Zero();
 	}
 
-	inline Chunk* Ship::GetChunk(std::size_t chunkIndex)
+	inline Chunk& Ship::GetChunk()
 	{
-		return m_chunks[chunkIndex].chunk.get();
+		return m_chunk;
 	}
 
-	inline const Chunk* Ship::GetChunk(std::size_t chunkIndex) const
+	inline const Chunk& Ship::GetChunk() const
 	{
-		return m_chunks[chunkIndex].chunk.get();
+		return m_chunk;
 	}
 
-	inline Chunk& Ship::GetChunk(const Nz::Vector3ui& indices)
+	inline Chunk* Ship::GetChunk(const ChunkIndices& chunkIndices)
 	{
-		return *m_chunks[GetChunkIndex(indices)].chunk;
+		NazaraAssert(chunkIndices == ChunkIndices(0, 0, 0), "invalid indices");
+		return &m_chunk;
 	}
 
-	inline const Chunk& Ship::GetChunk(const Nz::Vector3ui& indices) const
+	inline const Chunk* Ship::GetChunk(const ChunkIndices& chunkIndices) const
 	{
-		return *m_chunks[GetChunkIndex(indices)].chunk;
-	}
-
-	inline Nz::Vector3ui Ship::GetChunkIndices(std::size_t chunkIndex) const
-	{
-		Nz::Vector3ui indices;
-		indices.x = chunkIndex % ChunkSize;
-		indices.y = (chunkIndex / ChunkSize) % ChunkSize;
-		indices.z = chunkIndex / (ChunkSize * ChunkSize);
-
-		return indices;
+		NazaraAssert(chunkIndices == ChunkIndices(0, 0, 0), "invalid indices");
+		return &m_chunk;
 	}
 
 	inline std::size_t Ship::GetChunkCount() const
 	{
-		return m_chunks.size();
+		return 1;
 	}
 }

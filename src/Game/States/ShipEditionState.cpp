@@ -224,18 +224,13 @@ namespace tsom
 				{
 					float sign = (m_currentBlock != EmptyBlockIndex) ? 1.f : -1.f;
 
-					Nz::Vector3f localPos;
-					Chunk* chunk = m_ship->GetChunkByPosition(hitPos + sign * hitNormal * m_ship->GetTileSize() * 0.25f, &localPos);
-					if (!chunk)
-						return;
-
-					auto coordinates = chunk->ComputeCoordinates(localPos);
+					auto coordinates = m_ship->GetChunk().ComputeCoordinates(hitPos + sign * hitNormal * m_ship->GetTileSize() * 0.25f);
 					if (!coordinates)
 						return;
 
 					std::lock_guard lock(m_integrityMutex);
 
-					chunk->UpdateBlock(*coordinates, m_currentBlock);
+					m_ship->GetChunk().UpdateBlock(*coordinates, m_currentBlock);
 					CheckHullIntegrity();
 				}
 			}
@@ -264,6 +259,7 @@ namespace tsom
 
 		m_shipEntities->Update();
 
+		#if 0
 		auto& debugDrawer = GetStateData().world->GetSystem<Nz::RenderSystem>().GetFramePipeline().GetDebugDrawer();
 		for (const Area& area : m_shipAreas)
 		{
@@ -275,14 +271,12 @@ namespace tsom
 				if (!chunk)
 					continue;
 
-				Nz::Vector3f offset = m_ship->GetChunkOffset(m_ship->GetChunkIndices(chunkIndex));
-				Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> blockCorners = chunk->ComputeVoxelCorners(chunk->GetBlockIndices(localBlockIndex));
-				for (Nz::Vector3f& corner : blockCorners)
-					corner += offset;
+				Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> blockCorners = chunk->ComputeVoxelCorners(m_ship->GetBlockIndices({0, 0, 0}, localBlockIndex));
 
 				debugDrawer.DrawBoxCorners(blockCorners, Nz::Color::Blue());
 			}
 		}
+		#endif
 
 		float cameraSpeed = (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::LShift)) ? 50.f : 10.f;
 		float updateTime = elapsedTime.AsSeconds();
@@ -313,6 +307,7 @@ namespace tsom
 
 	auto ShipEditionState::BuildArea(std::size_t firstBlockIndex, Nz::Bitset<Nz::UInt64>& remainingBlocks) const -> Area
 	{
+#if 0
 		constexpr unsigned int ChunkBlockCount = Ship::ChunkSize * Ship::ChunkSize * Ship::ChunkSize;
 
 		std::size_t chunkCount = m_ship->GetChunkCount();
@@ -380,9 +375,9 @@ namespace tsom
 				}
 			}
 		}
-
+		#endif
 		Area area;
-		area.blocks = std::move(areaBlocks);
+		//area.blocks = std::move(areaBlocks);
 
 		return area;
 	}
@@ -409,6 +404,7 @@ namespace tsom
 			{
 				for (std::size_t chunkIndex = 0; chunkIndex < chunkCount; ++chunkIndex)
 				{
+					#if 0
 					const Chunk* chunk = m_ship->GetChunk(chunkIndex);
 					if (!chunk)
 						continue; //< TODO: Empty chunks should be handled in visitedBlock/candidateBlock (?)
@@ -426,6 +422,7 @@ namespace tsom
 							return chunkIndex * ChunkBlockCount + localBlockIndex;
 						}
 					}
+					#endif
 				}
 
 				return std::numeric_limits<std::size_t>::max();
@@ -466,6 +463,7 @@ namespace tsom
 
 		Nz::Vector3f startPos = camera.Unproject({ mousePos.x, mousePos.y, 0.f });
 		Nz::Vector3f endPos = camera.Unproject({ mousePos.x, mousePos.y, 1.f });
+#if 0
 
 		// Raycast
 		auto& physSystem = GetStateData().world->GetSystem<Nz::Physics3DSystem>();
@@ -514,6 +512,7 @@ namespace tsom
 				}
 			}
 		}
+#endif
 	}
 
 	void ShipEditionState::LayoutWidgets(const Nz::Vector2f& newSize)
