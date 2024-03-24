@@ -8,17 +8,18 @@
 #define TSOM_COMMONLIB_COMPONENTS_PLANETGRAVITYCOMPONENT_HPP
 
 #include <CommonLib/Export.hpp>
+#include <NazaraUtils/MovablePtr.hpp>
 
 namespace tsom
 {
 	class Planet;
 
-	struct PlanetGravityComponent
+	struct PlanetComponent
 	{
-		const Planet* planet = nullptr;
+		Nz::MovablePtr<Planet> planet;
 	};
 }
 
-#include <CommonLib/Components/PlanetGravityComponent.inl>
+#include <CommonLib/Components/PlanetComponent.inl>
 
 #endif // TSOM_COMMONLIB_COMPONENTS_PLANETGRAVITYCOMPONENT_HPP

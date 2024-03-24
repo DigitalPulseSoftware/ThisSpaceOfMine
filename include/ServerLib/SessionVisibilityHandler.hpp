@@ -32,15 +32,15 @@ namespace tsom
 			SessionVisibilityHandler(SessionVisibilityHandler&&) = delete;
 			~SessionVisibilityHandler() = default;
 
-			void CreateChunk(const Chunk& chunk);
+			void CreateChunk(Chunk& chunk);
 			void CreateEntity(entt::handle entity, CreateEntityData entityData);
 
-			void DestroyChunk(const Chunk& chunk);
+			void DestroyChunk(Chunk& chunk);
 			void DestroyEntity(entt::handle entity);
 
 			void Dispatch(Nz::UInt16 tickIndex);
 
-			const Chunk* GetChunkByIndex(std::size_t chunkIndex) const;
+			Chunk* GetChunkByIndex(std::size_t chunkIndex) const;
 
 			inline void UpdateControlledEntity(entt::handle entity, CharacterController* controller);
 			inline void UpdateLastInputIndex(InputIndex inputIndex);
@@ -83,7 +83,7 @@ namespace tsom
 				NazaraSlot(Chunk, OnBlockUpdated, onBlockUpdatedSlot);
 				NazaraSlot(Chunk, OnReset, onResetSlot);
 
-				const Chunk* chunk;
+				Chunk* chunk;
 				Packets::ChunkUpdate chunkUpdatePacket;
 			};
 
@@ -91,7 +91,7 @@ namespace tsom
 			tsl::hopscotch_map<entt::handle, CreateEntityData, HandlerHasher> m_createdEntities;
 			tsl::hopscotch_set<entt::handle, HandlerHasher> m_deletedEntities;
 			tsl::hopscotch_set<entt::handle, HandlerHasher> m_movingEntities;
-			tsl::hopscotch_map<const Chunk*, std::size_t> m_chunkIndices;
+			tsl::hopscotch_map<Chunk*, std::size_t> m_chunkIndices;
 			std::shared_ptr<std::size_t> m_activeChunkUpdates;
 			std::vector<ChunkWithPos> m_orderedChunkList;
 			std::vector<VisibleChunk> m_visibleChunks;
