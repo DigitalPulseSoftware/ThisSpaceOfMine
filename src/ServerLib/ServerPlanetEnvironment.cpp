@@ -50,7 +50,10 @@ namespace tsom
 		m_world.AddSystem<PlanetGravitySystem>(physicsSystem.GetPhysWorld());
 	}
 
-	ServerPlanetEnvironment::~ServerPlanetEnvironment() = default;
+	ServerPlanetEnvironment::~ServerPlanetEnvironment()
+	{
+		m_planetEntities.reset();
+	}
 
 	void ServerPlanetEnvironment::OnLoad(const std::filesystem::path& loadPath)
 	{

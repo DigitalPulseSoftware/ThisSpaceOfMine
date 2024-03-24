@@ -28,6 +28,7 @@ namespace Nz
 namespace tsom
 {
 	class ServerPlanetEnvironment;
+	class ServerShipEnvironment;
 
 	class TSOM_SERVERLIB_API ServerInstance
 	{
@@ -45,7 +46,9 @@ namespace tsom
 
 			ServerPlayer* CreateAnonymousPlayer(NetworkSession* session, std::string nickname);
 			ServerPlayer* CreateAuthenticatedPlayer(NetworkSession* session, const Nz::Uuid& uuid, std::string nickname, PlayerPermissionFlags permissions);
+			ServerShipEnvironment* CreateShip();
 			void DestroyPlayer(PlayerIndex playerIndex);
+			void DestroyShip(ServerShipEnvironment* ship);
 
 			inline ServerPlayer* FindPlayerByNickname(std::string_view nickname);
 			inline const ServerPlayer* FindPlayerByNickname(std::string_view nickname) const;
@@ -88,8 +91,9 @@ namespace tsom
 
 			std::array<std::uint8_t, 32> m_connectionTokenEncryptionKey;
 			std::filesystem::path m_saveDirectory;
-			std::unique_ptr<ServerPlanetEnvironment> m_planetEnv;
+			std::unique_ptr<ServerPlanetEnvironment> m_planetEnvironment;
 			std::vector<std::unique_ptr<NetworkSessionManager>> m_sessionManagers;
+			std::vector<std::unique_ptr<ServerShipEnvironment>> m_shipEnvironments;
 			std::vector<PlayerRename> m_pendingPlayerRename;
 			Nz::Bitset<> m_disconnectedPlayers;
 			Nz::Bitset<> m_newPlayers;

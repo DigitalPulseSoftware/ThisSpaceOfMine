@@ -9,15 +9,16 @@
 
 #include <CommonLib/Export.hpp>
 #include <CommonLib/ChunkEntities.hpp>
-#include <CommonLib/Ship.hpp>
+#include <NazaraUtils/MovablePtr.hpp>
 #include <memory>
 
 namespace tsom
 {
+	class Ship;
+
 	struct ShipComponent
 	{
-		std::unique_ptr<Ship> ship;
-		std::unique_ptr<ChunkEntities> chunkEntities;
+		Nz::MovablePtr<Ship> ship;
 	};
 }
 
