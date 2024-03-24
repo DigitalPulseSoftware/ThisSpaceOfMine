@@ -6,6 +6,7 @@
 #include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/Planet.hpp>
 #include <ServerLib/ServerPlanetEnvironment.hpp>
+#include <ServerLib/ServerShipEnvironment.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/File.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
@@ -30,8 +31,8 @@ namespace tsom
 	m_application(application),
 	m_pauseWhenEmpty(config.pauseWhenEmpty)
 	{
-		m_planetEnv = std::make_unique<ServerPlanetEnvironment>(*this, config.planetSeed, config.planetChunkCount);
-		m_planetEnv->OnLoad(m_saveDirectory);
+		m_planetEnvironment = std::make_unique<ServerPlanetEnvironment>(*this, config.planetSeed, config.planetChunkCount);
+		m_planetEnvironment->OnLoad(m_saveDirectory);
 	}
 
 	ServerInstance::~ServerInstance()
@@ -77,7 +78,7 @@ namespace tsom
 		ServerPlayer* player = m_players.Allocate(m_players.DeferConstruct, playerIndex);
 		std::construct_at(player, *this, Nz::SafeCast<PlayerIndex>(playerIndex), session, std::nullopt, std::move(nickname), 0);
 
-		player->UpdateEnvironment(m_planetEnv.get());
+		player->UpdateEnvironment(m_planetEnvironment.get());
 
 		m_newPlayers.UnboundedSet(playerIndex);
 
@@ -124,12 +125,21 @@ namespace tsom
 
 		// Send all chunks (waiting for chunk streaming based on visibility)
 		auto& playerVisibility = player->GetVisibilityHandler();
-		m_planetEnv->GetPlanet().ForEachChunk([&](const ChunkIndices& chunkIndices, Chunk& chunk)
+		m_planetEnvironment->GetPlanet().ForEachChunk([&](const ChunkIndices& chunkIndices, Chunk& chunk)
 		{
 			playerVisibility.CreateChunk(chunk);
 		});
 
 		return player;
+	}
+
+	ServerShipEnvironment* ServerInstance::CreateShip()
+	{
+		auto shipEnv = std::make_unique<ServerShipEnvironment>(*this);
+		ServerShipEnvironment* shipEnvPtr = shipEnv.get();
+		m_shipEnvironments.emplace_back(std::move(shipEnv));
+
+		return shipEnvPtr;
 	}
 
 	void ServerInstance::DestroyPlayer(PlayerIndex playerIndex)
@@ -142,6 +152,17 @@ namespace tsom
 		m_newPlayers.UnboundedReset(playerIndex);
 
 		m_players.Free(playerIndex);
+	}
+
+	void ServerInstance::DestroyShip(ServerShipEnvironment* ship)
+	{
+		auto it = std::find_if(m_shipEnvironments.begin(), m_shipEnvironments.end(), [ship](auto& shipEnvPtr)
+		{
+			return shipEnvPtr.get() == ship;
+		});
+
+		assert(it != m_shipEnvironments.end());
+		m_shipEnvironments.erase(it);
 	}
 
 	Nz::Time ServerInstance::Update(Nz::Time elapsedTime)
@@ -253,7 +274,7 @@ namespace tsom
 
 	void ServerInstance::OnSave()
 	{
-		m_planetEnv->OnSave(m_saveDirectory);
+		m_planetEnvironment->OnSave(m_saveDirectory);
 	}
 
 	void ServerInstance::OnTick(Nz::Time elapsedTime)
@@ -265,7 +286,9 @@ namespace tsom
 			serverPlayer.Tick();
 		});
 
-		m_planetEnv->OnTick(elapsedTime);
+		m_planetEnvironment->OnTick(elapsedTime);
+		for (auto& shipEnv : m_shipEnvironments)
+			shipEnv->OnTick(elapsedTime);
 
 		OnNetworkTick();
 	}
