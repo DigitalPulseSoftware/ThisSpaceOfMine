@@ -21,19 +21,19 @@ namespace tsom
 		BlockIndices adjustedIndices = indices + BlockIndices(Nz::Int32(ChunkSize)) / 2;
 
 		// Correctly map negative indices to the right values
-		BlockIndices adjustedIndicesOffseted = BlockIndices::Apply([](int val) -> int
+		BlockIndices adjustedIndicesOffseted = BlockIndices::Apply(adjustedIndices, [](int val) -> int
 		{
 			return (val < 0) ? val - int(ChunkSize) + 1 : val;
-		}, adjustedIndices);
+		});
 
 		ChunkIndices chunkIndices = adjustedIndicesOffseted / Nz::Int32(ChunkSize);
 		if (localIndices)
 		{
 			Nz::Vector3i localBlockIndices = adjustedIndices - chunkIndices * Nz::Int32(ChunkSize);
-			localBlockIndices = Nz::Vector3i::Apply([](int val)
+			localBlockIndices = Nz::Vector3i::Apply(localBlockIndices, [](int val)
 			{
 				return (val < 0) ? val + int(ChunkSize) : val;
-			}, localBlockIndices);
+			});
 
 			*localIndices = Nz::Vector3ui(Nz::SafeCast<unsigned int>(localBlockIndices.x), Nz::SafeCast<unsigned int>(localBlockIndices.z), Nz::SafeCast<unsigned int>(localBlockIndices.y));
 		}
@@ -46,7 +46,7 @@ namespace tsom
 		Nz::Vector3f relativePos = position - GetCenter();
 		Nz::Vector3f chunkSize(ChunkSize * m_tileSize);
 
-		Nz::Vector3f indices = Nz::Vector3f::Apply(std::round, (relativePos + chunkSize * 0.5f) / chunkSize - Nz::Vector3f(0.5f));
+		Nz::Vector3f indices = Nz::Vector3f::Apply((relativePos + chunkSize * 0.5f) / chunkSize - Nz::Vector3f(0.5f), std::roundf);
 		return ChunkIndices(indices.x, indices.y, indices.z);
 	}
 
