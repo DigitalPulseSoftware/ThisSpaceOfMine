@@ -10,8 +10,8 @@ namespace tsom
 	inline Chunk::Chunk(ChunkContainer& owner, const ChunkIndices& indices, const Nz::Vector3ui& size, float cellSize) :
 	m_blocks(size.x * size.y * size.z, EmptyBlockIndex),
 	m_collisionCellMask(m_blocks.size(), false),
-	m_indices(indices),
 	m_size(size),
+	m_indices(indices),
 	m_owner(owner),
 	m_blockSize(cellSize)
 	{

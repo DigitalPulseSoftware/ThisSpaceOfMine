@@ -5,11 +5,12 @@
 namespace tsom
 {
 	inline ServerPlayer::ServerPlayer(ServerInstance& instance, PlayerIndex playerIndex, NetworkSession* session, std::string nickname) :
-	m_playerIndex(playerIndex),
 	m_nickname(std::move(nickname)),
 	m_session(session),
+	m_environment(nullptr),
 	m_visibilityHandler(m_session),
-	m_instance(instance)
+	m_instance(instance),
+	m_playerIndex(playerIndex)
 	{
 	}
 

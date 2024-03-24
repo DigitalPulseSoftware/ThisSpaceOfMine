@@ -20,8 +20,8 @@ namespace tsom
 	}
 
 	ChunkEntities::ChunkEntities(Nz::ApplicationBase& application, Nz::EnttWorld& world, const ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary, NoInit) :
-	m_world(world),
 	m_application(application),
+	m_world(world),
 	m_blockLibrary(blockLibrary),
 	m_chunkContainer(chunkContainer),
 	m_staticRigidBodies(true)

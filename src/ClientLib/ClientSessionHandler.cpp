@@ -3,8 +3,8 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ClientLib/ClientSessionHandler.hpp>
-#include <ClientLib/PlayerAnimationController.hpp>
 #include <ClientLib/ClientBlockLibrary.hpp>
+#include <ClientLib/PlayerAnimationController.hpp>
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Components/AnimationComponent.hpp>
 #include <ClientLib/Components/MovementInterpolationComponent.hpp>

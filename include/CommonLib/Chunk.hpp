@@ -105,8 +105,8 @@ namespace tsom
 			std::vector<Nz::UInt16> m_blockTypeCount;
 			Nz::Bitset<Nz::UInt64> m_collisionCellMask;
 			Nz::Vector3ui m_size;
-			ChunkContainer& m_owner;
 			ChunkIndices m_indices;
+			ChunkContainer& m_owner;
 			float m_blockSize;
 	};
 }

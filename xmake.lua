@@ -14,6 +14,7 @@ add_requires(
 	"concurrentqueue",
 	"lz4",
 	"hopscotch-map",
+	"nazarautils",
 	"nlohmann_json",
 	"perlinnoise",
 	"semver",
@@ -55,9 +56,9 @@ end
 
 if is_plat("windows") then
 	set_runtimes(is_mode("debug") and "MDd" or "MD")
-	add_cxflags("/bigobj", "/permissive-", "/Zc:__cplusplus", "/Zc:externConstexpr", "/Zc:inline", "/Zc:lambda", "/Zc:preprocessor", "/Zc:referenceBinding", "/Zc:strictStrings", "/Zc:throwingNew", {tools = "cl"})
-	add_defines("_CRT_SECURE_NO_WARNINGS", "_ENABLE_EXTENDED_ALIGNED_STORAGE", "NOMINMAX", "WIN32_LEAN_AND_MEAN")
 end
+
+add_rules("@nazarautils/compiler_setup")
 
 target("CommonLib", function ()
 	set_group("Common")

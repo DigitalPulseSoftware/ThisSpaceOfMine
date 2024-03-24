@@ -123,7 +123,7 @@ namespace tsom
 
 			template<typename T> void RegisterOption(std::string optionName, T&& optionData);
 			void RegisterConfig(std::string optionName, ConfigData value);
-	
+
 			void SaveSectionToFile(std::fstream& file, const ConfigSection& section, std::size_t indentCount);
 
 			std::unordered_map<std::string, std::size_t> m_optionByName;
