@@ -18,7 +18,7 @@ namespace tsom
 	class TSOM_SERVERLIB_API ServerEnvironment
 	{
 		public:
-			inline ServerEnvironment(ServerInstance& serverInstance);
+			ServerEnvironment(ServerInstance& serverInstance);
 			ServerEnvironment(const ServerEnvironment&) = delete;
 			ServerEnvironment(ServerEnvironment&&) = delete;
 			virtual ~ServerEnvironment();

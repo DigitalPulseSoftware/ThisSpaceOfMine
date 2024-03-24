@@ -54,7 +54,7 @@ namespace tsom
 			static constexpr float Padding = 5.f;
 
 		private:
-			void Layout();
+			void Layout() override;
 
 			std::size_t m_selectedIndex;
 			std::vector<Nz::ImageWidget*> m_inventorySprites;
