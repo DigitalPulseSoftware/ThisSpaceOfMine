@@ -96,7 +96,9 @@ jobs:
         rm -rf dest/lib/
       shell: bash
 
+    # For some reason macOS-14 doesn't seem to have Python
     - uses: actions/setup-python@v5
+      if: ${{ matrix.platform.runner == 'macos-14' }}
       with:
         python-version: "3.11"
 
