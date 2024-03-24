@@ -12,44 +12,13 @@
 namespace tsom
 {
 	Ship::Ship(const BlockLibrary& blockLibrary, const Nz::Vector3ui& gridSize, float tileSize) :
-	ChunkContainer(gridSize, tileSize)
+	ChunkContainer(tileSize),
+	m_chunk(*this, { 0, 0, 0 }, gridSize, tileSize)
 	{
-		m_chunks.resize(m_chunkCount.x * m_chunkCount.y * m_chunkCount.z);
-
-		SetupChunks(blockLibrary);
+		SetupChunk(blockLibrary);
 	}
 
-	Chunk& Ship::AddChunk(const Nz::Vector3ui& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback)
-	{
-		std::size_t index = GetChunkIndex(indices);
-		assert(!m_chunks[index].chunk);
-		m_chunks[index].chunk = std::make_unique<FlatChunk>(*this, indices, Nz::Vector3ui{ ChunkSize }, m_tileSize);
-
-		if (initCallback)
-			m_chunks[index].chunk->InitBlocks(initCallback);
-
-		m_chunks[index].onUpdated.Connect(m_chunks[index].chunk->OnBlockUpdated, [this](Chunk* chunk, const Nz::Vector3ui& /*indices*/, BlockIndex /*newBlock*/)
-		{
-			OnChunkUpdated(this, chunk);
-		});
-
-		OnChunkAdded(this, m_chunks[index].chunk.get());
-
-		return *m_chunks[index].chunk;
-	}
-
-	void Ship::RemoveChunk(const Nz::Vector3ui& indices)
-	{
-		std::size_t index = GetChunkIndex(indices);
-		assert(m_chunks[index].chunk);
-
-		OnChunkRemove(this, m_chunks[index].chunk.get());
-
-		m_chunks[index].chunk = nullptr;
-		m_chunks[index].onUpdated.Disconnect();
-	}
-
-	void Ship::SetupChunks(const BlockLibrary& blockLibrary)
+	void Ship::SetupChunk(const BlockLibrary& blockLibrary)
 	{
 		constexpr unsigned int freespace = 5;
 
@@ -57,25 +26,24 @@ namespace tsom
 		if (hullIndex == InvalidBlockIndex)
 			return;
 
-		Chunk& chunk = AddChunk({ 0, 0, 0 });
+		constexpr unsigned int boxSize = 12;
+		constexpr unsigned int heightSize = 5;
+		Nz::Vector3ui startPos = m_chunk.GetSize() / 2 - Nz::Vector3ui(boxSize / 2, boxSize / 2, heightSize / 2);
 
-		constexpr unsigned int boxSize = 5;
-		Nz::Vector3ui startPos = chunk.GetSize() / 2 - Nz::Vector3ui(boxSize / 2);
-
-		for (unsigned int z = 0; z < boxSize; ++z)
+		for (unsigned int z = 0; z < heightSize; ++z)
 		{
 			for (unsigned int y = 0; y < boxSize; ++y)
 			{
 				for (unsigned int x = 0; x < boxSize; ++x)
 				{
 					if (x != 0 && x != boxSize - 1 &&
-						y != 0 && y != boxSize - 1 &&
-					    z != 0 && z != boxSize - 1)
+					    y != 0 && y != boxSize - 1 &&
+					    z != 0 && z != heightSize - 1)
 					{
 						continue;
 					}
 
-					chunk.UpdateBlock(startPos + Nz::Vector3ui{ x, y, z }, hullIndex);
+					m_chunk.UpdateBlock(startPos + Nz::Vector3ui{ x, y, z }, hullIndex);
 				}
 			}
 		}

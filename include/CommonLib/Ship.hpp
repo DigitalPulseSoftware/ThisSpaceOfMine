@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com) (lynix680@gmail.com)
+// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -10,7 +10,9 @@
 #include <CommonLib/Export.hpp>
 #include <CommonLib/ChunkContainer.hpp>
 #include <CommonLib/Direction.hpp>
+#include <CommonLib/FlatChunk.hpp>
 #include <NazaraUtils/FunctionRef.hpp>
+#include <tsl/hopscotch_map.h>
 #include <memory>
 #include <vector>
 
@@ -26,34 +28,23 @@ namespace tsom
 			Ship(Ship&&) = delete;
 			~Ship() = default;
 
-			Chunk& AddChunk(const Nz::Vector3ui& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback = nullptr);
+			void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, Chunk& chunk)> callback) override;
+			void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, const Chunk& chunk)> callback) const override;
 
 			inline Nz::Vector3f GetCenter() const override;
-			inline Chunk* GetChunk(std::size_t chunkIndex) override;
-			inline const Chunk* GetChunk(std::size_t chunkIndex) const override;
-			inline Chunk& GetChunk(const Nz::Vector3ui& indices) override;
-			inline const Chunk& GetChunk(const Nz::Vector3ui& indices) const override;
-			inline Nz::Vector3ui GetChunkIndices(std::size_t chunkIndex) const;
+			inline Chunk& GetChunk();
+			inline const Chunk& GetChunk() const;
+			inline Chunk* GetChunk(const ChunkIndices& chunkIndices) override;
+			inline const Chunk* GetChunk(const ChunkIndices& chunkIndices) const override;
 			inline std::size_t GetChunkCount() const override;
-
-			void RemoveChunk(const Nz::Vector3ui& indices);
 
 			Ship& operator=(const Ship&) = delete;
 			Ship& operator=(Ship&&) = delete;
 
-			static constexpr unsigned int ChunkSize = 32;
-
 		private:
-			void SetupChunks(const BlockLibrary& blockLibrary);
+			void SetupChunk(const BlockLibrary& blockLibrary);
 
-			struct ChunkData
-			{
-				std::unique_ptr<Chunk> chunk;
-
-				NazaraSlot(Chunk, OnBlockUpdated, onUpdated);
-			};
-
-			std::vector<ChunkData> m_chunks;
+			FlatChunk m_chunk;
 	};
 }
 
