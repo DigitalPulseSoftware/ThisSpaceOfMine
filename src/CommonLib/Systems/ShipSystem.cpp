@@ -10,11 +10,11 @@ namespace tsom
 {
 	void ShipSystem::Update(Nz::Time elapsedTime)
 	{
-		auto view = m_registry.view<ShipComponent>();
+		/*auto view = m_registry.view<ShipComponent>();
 		for (auto&& [entity, ship] : view.each())
 		{
 			NazaraUnused(entity);
 			ship.chunkEntities->Update();
-		}
+		}*/
 	}
 }

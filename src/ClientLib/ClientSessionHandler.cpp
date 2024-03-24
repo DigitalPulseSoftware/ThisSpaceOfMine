@@ -317,10 +317,9 @@ namespace tsom
 
 	void ClientSessionHandler::SetupEntity(entt::handle entity, Packets::Helper::ShipData&& entityData)
 	{
-		auto& shipComp = entity.emplace<ShipComponent>();
-		shipComp.ship = std::make_unique<Ship>(m_blockLibrary, Nz::Vector3ui(32), 1.f);
+		Ship tempShip(m_blockLibrary, Nz::Vector3ui(32), 1.f);
 
-		std::shared_ptr<Nz::Collider3D> chunkCollider = shipComp.ship->GetChunk({0,0,0})->BuildCollider(m_blockLibrary);
+		std::shared_ptr<Nz::Collider3D> chunkCollider = tempShip.GetChunk({0,0,0})->BuildCollider(m_blockLibrary);
 
 		entity.emplace<Nz::RigidBody3DComponent>(Nz::RigidBody3DComponent::DynamicSettings(chunkCollider, 100.f));
 

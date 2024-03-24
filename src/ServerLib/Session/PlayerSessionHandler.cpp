@@ -12,6 +12,7 @@
 #include <CommonLib/Components/ShipComponent.hpp>
 #include <ServerLib/ServerEnvironment.hpp>
 #include <ServerLib/ServerInstance.hpp>
+#include <ServerLib/ServerShipEnvironment.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Collider3D.hpp>
@@ -115,17 +116,17 @@ namespace tsom
 			Nz::ApplicationBase& app = serverInstance.GetApplication();
 			const BlockLibrary& blockLibrary = serverInstance.GetBlockLibrary();
 
-			auto& shipComp = ent.emplace<ShipComponent>();
-			shipComp.ship = std::make_unique<Ship>(blockLibrary, Nz::Vector3ui(32), 1.f);
+			ServerShipEnvironment* shipEnv = serverInstance.CreateShip();
 
-			std::shared_ptr<Nz::Collider3D> chunkCollider = shipComp.ship->GetChunk().BuildCollider(blockLibrary);
+			auto& shipComp = ent.emplace<ShipComponent>();
+			shipComp.ship = &shipEnv->GetShip();
+
+			std::shared_ptr<Nz::Collider3D> chunkCollider = shipEnv->GetShip().GetChunk().BuildCollider(blockLibrary);
 
 			ent.emplace<Nz::RigidBody3DComponent>(Nz::RigidBody3DComponent::DynamicSettings(chunkCollider, 100.f));
 
 			ent.emplace<NetworkedComponent>();
 			ent.emplace<PlanetComponent>().planet = playerPlanet->planet;
-
-			//shipComp.chunkEntities = std::make_unique<ChunkEntities>(app, serverInstance.GetWorld(), *shipComp.ship, blockLibrary);
 			return;
 		}
 		else if (message == "/regenchunk")

@@ -36,8 +36,8 @@ namespace tsom
 			ServerPlanetEnvironment& operator=(ServerPlanetEnvironment&&) = delete;
 
 		private:
-			std::unique_ptr<Planet> m_planet;
 			std::unique_ptr<ChunkEntities> m_planetEntities;
+			std::unique_ptr<Planet> m_planet;
 			std::unordered_set<ChunkIndices /*chunkIndex*/> m_dirtyChunks;
 	};
 }
