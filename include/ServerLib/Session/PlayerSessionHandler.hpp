@@ -25,9 +25,9 @@ namespace tsom
 			void HandlePacket(Packets::SendChatMessage&& chatMessage);
 			void HandlePacket(Packets::UpdatePlayerInputs&& playerInputs);
 
-			void OnDeserializationError(std::size_t packetIndex);
-			void OnUnexpectedPacket(std::size_t packetIndex);
-			void OnUnknownOpcode(Nz::UInt8 opcode);
+			void OnDeserializationError(std::size_t packetIndex) override;
+			void OnUnexpectedPacket(std::size_t packetIndex) override;
+			void OnUnknownOpcode(Nz::UInt8 opcode) override;
 
 		private:
 			bool CheckCanMineBlock(const Chunk* chunk, const Nz::Vector3ui& blockIndices) const;
