@@ -34,7 +34,7 @@ namespace tsom
 			inline ServerPlayer(ServerInstance& instance, PlayerIndex playerIndex, NetworkSession* session, const std::optional<Nz::Uuid>& uuid, std::string nickname, PlayerPermissionFlags permissions);
 			ServerPlayer(const ServerPlayer&) = delete;
 			ServerPlayer(ServerPlayer&&) = delete;
-			~ServerPlayer() = default;
+			~ServerPlayer();
 
 			void Destroy();
 
@@ -59,7 +59,7 @@ namespace tsom
 
 			void PushInputs(const PlayerInputs& inputs);
 
-			void Respawn();
+			void Respawn(const Nz::Vector3f& position, const Nz::Quaternionf& rotation);
 
 			void Tick();
 

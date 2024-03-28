@@ -12,6 +12,7 @@
 #include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/UpdaterAppComponent.hpp>
 #include <CommonLib/Utils.hpp>
+#include <CommonLib/Systems/PlanetSystem.hpp>
 #include <Game/States/BackgroundState.hpp>
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/DebugInfoState.hpp>
@@ -249,15 +250,14 @@ namespace tsom
 		// World systems
 		world.AddSystem<AnimationSystem>();
 		world.AddSystem<MovementInterpolationSystem>(Constants::TickDuration);
-		auto& renderSystem = world.AddSystem<Nz::RenderSystem>();
+		world.AddSystem<PlanetSystem>();
+		world.AddSystem<Nz::RenderSystem>();
 
 		auto& physicsSystem = world.AddSystem<Nz::Physics3DSystem>();
 		{
 			auto& physWorld = physicsSystem.GetPhysWorld();
 			physWorld.SetGravity(Nz::Vector3f::Zero());
 			physWorld.SetStepSize(Constants::TickDuration);
-
-			world.AddSystem<PlanetGravitySystem>(physWorld);
 		}
 
 		return world;

@@ -4,6 +4,8 @@
 
 #include <CommonLib/ChunkEntities.hpp>
 #include <CommonLib/BlockLibrary.hpp>
+#include <CommonLib/Components/ChunkComponent.hpp>
+#include <CommonLib/Components/EntityOwnerComponent.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/EnttWorld.hpp>
 #include <Nazara/Core/TaskSchedulerAppComponent.hpp>
@@ -15,13 +17,13 @@
 
 namespace tsom
 {
-	ChunkEntities::ChunkEntities(Nz::ApplicationBase& application, Nz::EnttWorld& world, const ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary) :
+	ChunkEntities::ChunkEntities(Nz::ApplicationBase& application, Nz::EnttWorld& world, ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary) :
 	ChunkEntities(application, world, chunkContainer, blockLibrary, NoInit{})
 	{
 		FillChunks();
 	}
 
-	ChunkEntities::ChunkEntities(Nz::ApplicationBase& application, Nz::EnttWorld& world, const ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary, NoInit) :
+	ChunkEntities::ChunkEntities(Nz::ApplicationBase& application, Nz::EnttWorld& world, ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary, NoInit) :
 	m_application(application),
 	m_world(world),
 	m_blockLibrary(blockLibrary),
@@ -112,12 +114,19 @@ namespace tsom
 		m_invalidatedChunks.clear();
 	}
 
-	void ChunkEntities::CreateChunkEntity(const ChunkIndices& chunkIndices, const Chunk* chunk)
+	void ChunkEntities::CreateChunkEntity(const ChunkIndices& chunkIndices, Chunk* chunk)
 	{
 		entt::handle chunkEntity = m_world.CreateEntity();
+
 		auto& nodeComponent = chunkEntity.emplace<Nz::NodeComponent>(m_chunkContainer.GetChunkOffset(chunkIndices));
 		if (m_parentEntity)
+		{
+			m_parentEntity.get_or_emplace<EntityOwnerComponent>().Register(chunkEntity);
 			nodeComponent.SetParent(m_parentEntity);
+		}
+
+		auto& chunkComponent = chunkEntity.emplace<ChunkComponent>();
+		chunkComponent.chunk = chunk;
 
 		if (m_staticRigidBodies)
 			chunkEntity.emplace<Nz::RigidBody3DComponent>(Nz::RigidBody3D::StaticSettings(nullptr));
@@ -152,7 +161,7 @@ namespace tsom
 
 	void ChunkEntities::FillChunks()
 	{
-		m_chunkContainer.ForEachChunk([this](const ChunkIndices& chunkIndices, const Chunk& chunk)
+		m_chunkContainer.ForEachChunk([this](const ChunkIndices& chunkIndices, Chunk& chunk)
 		{
 			CreateChunkEntity(chunkIndices, &chunk);
 		});

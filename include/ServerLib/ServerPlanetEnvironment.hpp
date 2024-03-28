@@ -10,6 +10,7 @@
 #include <ServerLib/Export.hpp>
 #include <CommonLib/Chunk.hpp>
 #include <ServerLib/ServerEnvironment.hpp>
+#include <entt/entt.hpp>
 #include <memory>
 
 namespace tsom
@@ -25,21 +26,22 @@ namespace tsom
 			ServerPlanetEnvironment(ServerPlanetEnvironment&&) = delete;
 			~ServerPlanetEnvironment();
 
-			inline Planet& GetPlanet();
-			inline const Planet& GetPlanet() const;
+			entt::handle CreateEntity() override;
+
 			const GravityController* GetGravityController() const override;
+			Planet& GetPlanet();
+			const Planet& GetPlanet() const;
+			inline entt::handle GetPlanetEntity() const;
 
 			void OnLoad(const std::filesystem::path& loadPath) override;
 			void OnSave(const std::filesystem::path& savePath) override;
-			void OnTick(Nz::Time elapsedTime) override;
 
 			ServerPlanetEnvironment& operator=(const ServerPlanetEnvironment&) = delete;
 			ServerPlanetEnvironment& operator=(ServerPlanetEnvironment&&) = delete;
 
 		private:
-			std::unique_ptr<ChunkEntities> m_planetEntities;
-			std::unique_ptr<Planet> m_planet;
 			std::unordered_set<ChunkIndices /*chunkIndex*/> m_dirtyChunks;
+			entt::handle m_planetEntity;
 	};
 }
 

@@ -54,10 +54,6 @@ namespace tsom
 
 			NazaraSignal(OnAuthResponse, const Packets::AuthResponse& /*authResponse*/);
 			NazaraSignal(OnChatMessage, const std::string& /*message*/);
-			NazaraSignal(OnChunkCreate, const Packets::ChunkCreate& /*chunkCreate*/);
-			NazaraSignal(OnChunkDestroy, const Packets::ChunkDestroy& /*chunkDestroy*/);
-			NazaraSignal(OnChunkReset, const Packets::ChunkReset& /*chunkReset*/);
-			NazaraSignal(OnChunkUpdate, const Packets::ChunkUpdate& /*chunkUpdate*/);
 			NazaraSignal(OnControlledEntityChanged, entt::handle /*newEntity*/);
 			NazaraSignal(OnControlledEntityStateUpdate, InputIndex /*lastInputIndex*/, const Packets::EntitiesStateUpdate::ControlledCharacter& /*characterData*/);
 			NazaraSignal(OnPlayerChatMessage, const std::string& /*message*/, const PlayerInfo& /*playerInfo*/);
@@ -77,6 +73,7 @@ namespace tsom
 		private:
 			inline PlayerInfo* FetchPlayerInfo(PlayerIndex playerIndex);
 			inline const PlayerInfo* FetchPlayerInfo(PlayerIndex playerIndex) const;
+			void SetupEntity(entt::handle entity, Packets::Helper::PlanetData&& entityData);
 			void SetupEntity(entt::handle entity, Packets::Helper::PlayerControlledData&& entityData);
 			void SetupEntity(entt::handle entity, Packets::Helper::ShipData&& entityData);
 

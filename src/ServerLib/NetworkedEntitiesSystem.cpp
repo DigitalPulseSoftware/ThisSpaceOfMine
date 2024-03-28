@@ -3,8 +3,10 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ServerLib/NetworkedEntitiesSystem.hpp>
+#include <CommonLib/Planet.hpp>
+#include <CommonLib/Components/PlanetComponent.hpp>
 #include <CommonLib/Components/ShipComponent.hpp>
-#include <ServerLib/ServerInstance.hpp>
+#include <ServerLib/ServerEnvironment.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
 #include <ServerLib/Components/ServerPlayerControlledComponent.hpp>
 #include <Nazara/Core/Components/DisabledComponent.hpp>
@@ -14,10 +16,10 @@
 
 namespace tsom
 {
-	NetworkedEntitiesSystem::NetworkedEntitiesSystem(entt::registry& registry, ServerInstance& instance) :
+	NetworkedEntitiesSystem::NetworkedEntitiesSystem(entt::registry& registry, ServerEnvironment& environment) :
 	m_networkedConstructObserver(registry, entt::collector.group<Nz::NodeComponent, NetworkedComponent>(entt::exclude<Nz::DisabledComponent>)),
 	m_registry(registry),
-	m_instance(instance)
+	m_environment(environment)
 	{
 		m_disabledConstructConnection = m_registry.on_construct<Nz::DisabledComponent>().connect<&NetworkedEntitiesSystem::OnNetworkedDestroy>(this);
 		m_networkedDestroyConnection = m_registry.on_destroy<NetworkedComponent>().connect<&NetworkedEntitiesSystem::OnNetworkedDestroy>(this);
@@ -33,7 +35,7 @@ namespace tsom
 
 	void NetworkedEntitiesSystem::ForEachVisibility(const Nz::FunctionRef<void(SessionVisibilityHandler& visibility)>& functor)
 	{
-		m_instance.ForEachPlayer([&](ServerPlayer& player)
+		m_environment.ForEachPlayer([&](ServerPlayer& player)
 		{
 			functor(player.GetVisibilityHandler());
 		});
@@ -64,6 +66,14 @@ namespace tsom
 		createData.initialPosition = entityNode.GetPosition();
 		createData.initialRotation = entityNode.GetRotation();
 		createData.isMoving = isMoving;
+
+		if (auto* planetComp = m_registry.try_get<PlanetComponent>(entity))
+		{
+			auto& data = createData.planetData.emplace();
+			data.cellSize = planetComp->planet->GetTileSize();
+			data.cornerRadius = planetComp->planet->GetCornerRadius();
+			data.gravity = planetComp->planet->GetGravity();
+		}
 
 		if (auto* playerControlled = m_registry.try_get<ServerPlayerControlledComponent>(entity))
 		{

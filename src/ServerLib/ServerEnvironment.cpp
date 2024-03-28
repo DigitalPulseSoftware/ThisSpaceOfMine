@@ -12,7 +12,7 @@ namespace tsom
 	ServerEnvironment::ServerEnvironment(ServerInstance& serverInstance) :
 	m_serverInstance(serverInstance)
 	{
-		m_world.AddSystem<NetworkedEntitiesSystem>(serverInstance);
+		m_world.AddSystem<NetworkedEntitiesSystem>(*this);
 		auto& physicsSystem = m_world.AddSystem<Nz::Physics3DSystem>();
 		{
 			auto& physWorld = physicsSystem.GetPhysWorld();
@@ -22,6 +22,13 @@ namespace tsom
 	}
 
 	ServerEnvironment::~ServerEnvironment() = default;
+
+	entt::handle ServerEnvironment::CreateEntity()
+	{
+		entt::handle entity = m_world.CreateEntity();
+
+		return entity;
+	}
 
 	void ServerEnvironment::OnTick(Nz::Time elapsedTime)
 	{

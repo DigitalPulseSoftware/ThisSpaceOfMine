@@ -38,6 +38,13 @@ namespace tsom
 				serializer &= data.rotation;
 			}
 
+			void Serialize(PacketSerializer& serializer, PlanetData& data)
+			{
+				serializer &= data.cellSize;
+				serializer &= data.cornerRadius;
+				serializer &= data.gravity;
+			}
+
 			void Serialize(PacketSerializer& serializer, PlayerControlledData& data)
 			{
 				serializer &= data.controllingPlayerId;
@@ -118,6 +125,7 @@ namespace tsom
 
 		void Serialize(PacketSerializer& serializer, ChunkCreate& data)
 		{
+			serializer &= data.entityId;
 			serializer &= data.chunkId;
 			serializer &= data.chunkLocX;
 			serializer &= data.chunkLocY;
@@ -130,6 +138,7 @@ namespace tsom
 
 		void Serialize(PacketSerializer& serializer, ChunkDestroy& data)
 		{
+			serializer &= data.entityId;
 			serializer &= data.chunkId;
 		}
 
@@ -137,6 +146,7 @@ namespace tsom
 		{
 			// FIXME: Handle endianness
 
+			serializer &= data.entityId;
 			serializer &= data.chunkId;
 
 			serializer.SerializeArraySize(data.content);
@@ -178,6 +188,7 @@ namespace tsom
 
 		void Serialize(PacketSerializer& serializer, ChunkUpdate& data)
 		{
+			serializer &= data.entityId;
 			serializer &= data.chunkId;
 
 			serializer.SerializeArraySize(data.updates);
@@ -195,11 +206,16 @@ namespace tsom
 			serializer.SerializeArraySize(data.entities);
 			for (auto& entity : data.entities)
 			{
+				serializer &= entity.environmentId;
 				serializer &= entity.entityId;
 				Helper::Serialize(serializer, entity.initialStates);
 
+				serializer.SerializePresence(entity.planet);
 				serializer.SerializePresence(entity.playerControlled);
 				serializer.SerializePresence(entity.ship);
+
+				if (entity.planet)
+					Helper::Serialize(serializer, *entity.planet);
 
 				if (entity.playerControlled)
 					Helper::Serialize(serializer, *entity.playerControlled);

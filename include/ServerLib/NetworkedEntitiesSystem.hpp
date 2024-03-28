@@ -17,7 +17,7 @@
 
 namespace tsom
 {
-	class ServerInstance;
+	class ServerEnvironment;
 
 	class TSOM_SERVERLIB_API NetworkedEntitiesSystem
 	{
@@ -26,7 +26,7 @@ namespace tsom
 			static constexpr Nz::Int64 ExecutionOrder = 10'000'000;
 			using Components = Nz::TypeList<class NetworkedComponent>;
 
-			NetworkedEntitiesSystem(entt::registry& registry, ServerInstance& instance);
+			NetworkedEntitiesSystem(entt::registry& registry, ServerEnvironment& environment);
 			NetworkedEntitiesSystem(const NetworkedEntitiesSystem&) = delete;
 			NetworkedEntitiesSystem(NetworkedEntitiesSystem&&) = delete;
 			~NetworkedEntitiesSystem() = default;
@@ -50,7 +50,7 @@ namespace tsom
 			entt::scoped_connection m_networkedDestroyConnection;
 			entt::scoped_connection m_nodeDestroyConnection;
 			entt::registry& m_registry;
-			ServerInstance& m_instance;
+			ServerEnvironment& m_environment;
 	};
 }
 

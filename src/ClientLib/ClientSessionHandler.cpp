@@ -4,6 +4,8 @@
 
 #include <ClientLib/ClientSessionHandler.hpp>
 #include <ClientLib/ClientBlockLibrary.hpp>
+#include <ClientLib/ClientChunkEntities.hpp>
+#include <ClientLib/ClientPlanet.hpp>
 #include <ClientLib/PlayerAnimationController.hpp>
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Components/AnimationComponent.hpp>
@@ -11,6 +13,7 @@
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/Ship.hpp>
 #include <CommonLib/Components/EntityOwnerComponent.hpp>
+#include <CommonLib/Components/PlanetComponent.hpp>
 #include <CommonLib/Components/ShipComponent.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/EnttWorld.hpp>
@@ -89,22 +92,62 @@ namespace tsom
 
 	void ClientSessionHandler::HandlePacket(Packets::ChunkCreate&& chunkCreate)
 	{
-		OnChunkCreate(chunkCreate);
+		entt::handle entity = Nz::Retrieve(m_networkIdToEntity, chunkCreate.entityId);
+
+		auto& planetComponent = entity.get<PlanetComponent>();
+		ClientPlanet& clientPlanet = static_cast<ClientPlanet&>(*planetComponent.planet);
+
+		ChunkIndices indices(chunkCreate.chunkLocX, chunkCreate.chunkLocY, chunkCreate.chunkLocZ);
+		clientPlanet.AddChunk(chunkCreate.chunkId, indices);
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::ChunkDestroy&& chunkDestroy)
 	{
-		OnChunkDestroy(chunkDestroy);
+		entt::handle entity = Nz::Retrieve(m_networkIdToEntity, chunkDestroy.entityId);
+
+		auto& planetComponent = entity.get<PlanetComponent>();
+		ClientPlanet& clientPlanet = static_cast<ClientPlanet&>(*planetComponent.planet);
+
+		clientPlanet.RemoveChunk(chunkDestroy.chunkId);
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::ChunkReset&& chunkReset)
 	{
-		OnChunkReset(chunkReset);
+		entt::handle entity = Nz::Retrieve(m_networkIdToEntity, chunkReset.entityId);
+
+		auto& planetComponent = entity.get<PlanetComponent>();
+		ClientPlanet& clientPlanet = static_cast<ClientPlanet&>(*planetComponent.planet);
+
+		Chunk* chunk = clientPlanet.GetChunkByNetworkIndex(chunkReset.chunkId);
+		if (!chunk)
+		{
+			fmt::print(fg(fmt::color::red), "ChunkReset handler: unknown chunk {}\n", chunkReset.chunkId);
+			return;
+		}
+
+		chunk->LockWrite();
+		chunk->Reset([&](BlockIndex* blocks)
+		{
+			for (BlockIndex blockContent : chunkReset.content)
+				*blocks++ = blockContent;
+		});
+		chunk->UnlockWrite();
 	}
 
-	void ClientSessionHandler::HandlePacket(Packets::ChunkUpdate&& stateUpdate)
+	void ClientSessionHandler::HandlePacket(Packets::ChunkUpdate&& chunkUpdate)
 	{
-		OnChunkUpdate(stateUpdate);
+		entt::handle entity = Nz::Retrieve(m_networkIdToEntity, chunkUpdate.entityId);
+
+		auto& planetComponent = entity.get<PlanetComponent>();
+		ClientPlanet& clientPlanet = static_cast<ClientPlanet&>(*planetComponent.planet);
+
+		Chunk* chunk = clientPlanet.GetChunkByNetworkIndex(chunkUpdate.chunkId);
+		chunk->LockWrite();
+
+		for (auto&& [blockPos, blockIndex] : chunkUpdate.updates)
+			chunk->UpdateBlock({ blockPos.x, blockPos.y, blockPos.z }, Nz::SafeCast<BlockIndex>(blockIndex));
+
+		chunk->UnlockWrite();
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::EntitiesCreation&& entitiesCreation)
@@ -115,6 +158,9 @@ namespace tsom
 			entity.emplace<Nz::NodeComponent>(entityData.initialStates.position, entityData.initialStates.rotation);
 
 			m_networkIdToEntity[entityData.entityId] = entity;
+
+			if (entityData.planet)
+				SetupEntity(entity, std::move(entityData.planet.value()));
 
 			if (entityData.playerControlled)
 				SetupEntity(entity, std::move(entityData.playerControlled.value()));
@@ -130,7 +176,7 @@ namespace tsom
 	{
 		for (auto entityId : entitiesDelete.entities)
 		{
-			entt::handle entity = m_networkIdToEntity[entityId];
+			entt::handle entity = Nz::Retrieve(m_networkIdToEntity, entityId);
 
 			if (m_playerControlledEntity == entity)
 				OnControlledEntityChanged({});
@@ -144,7 +190,7 @@ namespace tsom
 	{
 		for (auto& entityData : stateUpdate.entities)
 		{
-			entt::handle& entity = m_networkIdToEntity[entityData.entityId];
+			entt::handle entity = Nz::Retrieve(m_networkIdToEntity, entityData.entityId);
 
 			if (MovementInterpolationComponent* movementInterpolation = entity.try_get<MovementInterpolationComponent>())
 				movementInterpolation->PushMovement(stateUpdate.tickIndex, entityData.newStates.position, entityData.newStates.rotation);
@@ -212,6 +258,14 @@ namespace tsom
 		playerInfo.nickname = std::move(playerNameUpdate.newNickname).Str();
 		if (playerInfo.textSprite)
 			playerInfo.textSprite->Update(Nz::SimpleTextDrawer::Draw(playerInfo.nickname, 48, Nz::TextStyle_Regular, (playerInfo.isAuthenticated) ? Nz::Color::White() : Nz::Color::Gray()), 0.01f);
+	}
+
+	void ClientSessionHandler::SetupEntity(entt::handle entity, Packets::Helper::PlanetData&& entityData)
+	{
+		auto& planetComponent = entity.emplace<PlanetComponent>();
+		planetComponent.planet = std::make_unique<ClientPlanet>(entityData.cellSize, entityData.cornerRadius, entityData.gravity);
+		planetComponent.planetEntities = std::make_unique<ClientChunkEntities>(m_app, m_world, *planetComponent.planet, m_blockLibrary);
+		planetComponent.planetEntities->SetParentEntity(entity);
 	}
 
 	void ClientSessionHandler::SetupEntity(entt::handle entity, Packets::Helper::PlayerControlledData&& entityData)

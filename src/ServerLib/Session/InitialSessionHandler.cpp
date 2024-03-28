@@ -3,6 +3,7 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ServerLib/Session/InitialSessionHandler.hpp>
+#include <CommonLib/GameConstants.hpp>
 #include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/Version.hpp>
 #include <ServerLib/NetworkedEntitiesSystem.hpp>
@@ -125,7 +126,7 @@ namespace tsom
 
 		GetSession()->SetupHandler<PlayerSessionHandler>(player);
 
-		player->Respawn();
+		player->Respawn(Constants::PlayerSpawnPos, Constants::PlayerSpawnRot);
 	}
 
 	void InitialSessionHandler::OnDeserializationError(std::size_t packetIndex)

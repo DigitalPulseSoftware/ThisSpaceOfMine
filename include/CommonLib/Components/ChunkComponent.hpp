@@ -8,16 +8,14 @@
 #define TSOM_COMMONLIB_COMPONENTS_PLANETCOMPONENT_HPP
 
 #include <CommonLib/Export.hpp>
-#include <CommonLib/ChunkEntities.hpp>
-#include <CommonLib/Planet.hpp>
-#include <memory>
+#include <CommonLib/Chunk.hpp>
+#include <NazaraUtils/MovablePtr.hpp>
 
 namespace tsom
 {
-	struct PlanetComponent
+	struct ChunkComponent
 	{
-		std::unique_ptr<Planet> planet;
-		std::unique_ptr<ChunkEntities> planetEntities;
+		Nz::MovablePtr<Chunk> chunk;
 	};
 }
 
