@@ -5,7 +5,9 @@
 #include <ServerLib/ServerShipEnvironment.hpp>
 #include <CommonLib/ChunkEntities.hpp>
 #include <CommonLib/Ship.hpp>
+#include <CommonLib/Components/ShipComponent.hpp>
 #include <ServerLib/ServerInstance.hpp>
+#include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 
 namespace tsom
 {
@@ -16,11 +18,25 @@ namespace tsom
 
 		m_ship = std::make_unique<Ship>(blockLibrary, Nz::Vector3ui(32), 1.f);
 		m_shipEntities = std::make_unique<ChunkEntities>(serverInstance.GetApplication(), m_world, *m_ship, blockLibrary);
+
+		auto& physicsSystem = m_world.GetSystem<Nz::Physics3DSystem>();
+		auto& physWorld = physicsSystem.GetPhysWorld();
+		physWorld.SetGravity(Nz::Vector3f::Down() * 9.81f);
 	}
 
 	ServerShipEnvironment::~ServerShipEnvironment()
 	{
 		m_shipEntities.reset();
+	}
+
+	entt::handle ServerShipEnvironment::CreateEntity()
+	{
+		entt::handle entity = ServerEnvironment::CreateEntity();
+
+		auto& shipComponent = entity.emplace<ShipComponent>();
+		shipComponent.ship = m_ship.get();
+
+		return entity;
 	}
 
 	const GravityController* ServerShipEnvironment::GetGravityController() const

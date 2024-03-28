@@ -10,10 +10,13 @@
 #include <ServerLib/Export.hpp>
 #include <Nazara/Core/EnttWorld.hpp>
 #include <filesystem>
+#include <vector>
 
 namespace tsom
 {
+	class GravityController;
 	class ServerInstance;
+	class ServerPlayer;
 
 	class TSOM_SERVERLIB_API ServerEnvironment
 	{
@@ -23,6 +26,9 @@ namespace tsom
 			ServerEnvironment(ServerEnvironment&&) = delete;
 			virtual ~ServerEnvironment();
 
+			virtual entt::handle CreateEntity() = 0;
+
+			template<typename F> void ForEachPlayer(F&& callback) const;
 
 			virtual const GravityController* GetGravityController() const = 0;
 			inline Nz::EnttWorld& GetWorld();
@@ -32,10 +38,14 @@ namespace tsom
 			virtual void OnSave(const std::filesystem::path& savePath) = 0;
 			virtual void OnTick(Nz::Time elapsedTime);
 
+			inline void RegisterPlayer(ServerPlayer* player);
+			inline void UnregisterPlayer(ServerPlayer* player);
+
 			ServerEnvironment& operator=(const ServerEnvironment&) = delete;
 			ServerEnvironment& operator=(ServerEnvironment&&) = delete;
 
 		protected:
+			std::vector<ServerPlayer*> m_players;
 			Nz::EnttWorld m_world;
 			ServerInstance& m_serverInstance;
 	};

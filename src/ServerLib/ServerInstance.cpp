@@ -24,6 +24,7 @@ namespace tsom
 	m_connectionTokenEncryptionKey(config.connectionTokenEncryptionKey),
 	m_saveDirectory(std::move(config.saveDirectory)),
 	m_players(256),
+	m_saveInterval(config.saveInterval),
 	m_tickAccumulator(Nz::Time::Zero()),
 	m_tickDuration(Constants::TickDuration),
 	m_saveInterval(config.saveInterval),
@@ -127,7 +128,7 @@ namespace tsom
 		auto& playerVisibility = player->GetVisibilityHandler();
 		m_planetEnvironment->GetPlanet().ForEachChunk([&](const ChunkIndices& chunkIndices, Chunk& chunk)
 		{
-			playerVisibility.CreateChunk(chunk);
+			playerVisibility.CreateChunk(m_planetEnvironment->GetPlanetEntity(), chunk);
 		});
 
 		return player;
@@ -145,8 +146,6 @@ namespace tsom
 	void ServerInstance::DestroyPlayer(PlayerIndex playerIndex)
 	{
 		ServerPlayer* player = m_players.RetrieveFromIndex(playerIndex);
-		if (entt::handle controlledEntity = player->GetControlledEntity())
-			controlledEntity.destroy();
 
 		m_disconnectedPlayers.UnboundedSet(playerIndex);
 		m_newPlayers.UnboundedReset(playerIndex);

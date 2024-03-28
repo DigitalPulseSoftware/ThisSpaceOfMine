@@ -5,14 +5,17 @@
 #include <ServerLib/ServerPlanetEnvironment.hpp>
 #include <CommonLib/BlockLibrary.hpp>
 #include <CommonLib/ChunkEntities.hpp>
-#include <CommonLib/Planet.hpp>
+#include <CommonLib/Components/PlanetComponent.hpp>
 #include <CommonLib/Systems/PlanetGravitySystem.hpp>
+#include <CommonLib/Systems/PlanetSystem.hpp>
 #include <ServerLib/ServerInstance.hpp>
+#include <ServerLib/Components/NetworkedComponent.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/ByteArray.hpp>
 #include <Nazara/Core/ByteStream.hpp>
 #include <Nazara/Core/File.hpp>
 #include <Nazara/Core/TaskSchedulerAppComponent.hpp>
+#include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <NazaraUtils/PathUtils.hpp>
 #include <fmt/color.h>
@@ -33,32 +36,55 @@ namespace tsom
 
 		auto& blockLibrary = serverInstance.GetBlockLibrary();
 
-		m_planet = std::make_unique<Planet>(1.f, 16.f, 9.81f);
-		m_planet->GenerateChunks(blockLibrary, taskScheduler.GetScheduler(), seed, chunkCount);
-		m_planet->GeneratePlatform(blockLibrary, tsom::Direction::Right, { 65, -18, -39 });
-		m_planet->GeneratePlatform(blockLibrary, tsom::Direction::Back, { -34, 2, 53 });
-		m_planet->GeneratePlatform(blockLibrary, tsom::Direction::Front, { 22, -35, -59 });
-		m_planet->GeneratePlatform(blockLibrary, tsom::Direction::Down, { 23, -62, 26 });
+		m_planetEntity = CreateEntity();
+		m_planetEntity.emplace<Nz::NodeComponent>();
+		m_planetEntity.emplace<NetworkedComponent>();
 
-		m_planet->OnChunkUpdated.Connect([this](ChunkContainer* /*planet*/, Chunk* chunk)
+		auto& planetComponent = m_planetEntity.emplace<PlanetComponent>();
+
+		planetComponent.planet = std::make_unique<Planet>(1.f, 16.f, 9.81f);
+		planetComponent.planet->GenerateChunks(blockLibrary, taskScheduler.GetScheduler(), seed, chunkCount);
+		planetComponent.planet->GeneratePlatform(blockLibrary, tsom::Direction::Right, { 65, -18, -39 });
+		planetComponent.planet->GeneratePlatform(blockLibrary, tsom::Direction::Back, { -34, 2, 53 });
+		planetComponent.planet->GeneratePlatform(blockLibrary, tsom::Direction::Front, { 22, -35, -59 });
+		planetComponent.planet->GeneratePlatform(blockLibrary, tsom::Direction::Down, { 23, -62, 26 });
+
+		planetComponent.planet->OnChunkUpdated.Connect([this](ChunkContainer* /*planet*/, Chunk* chunk)
 		{
 			m_dirtyChunks.insert(chunk->GetIndices());
 		});
 
-		m_planetEntities = std::make_unique<ChunkEntities>(app, m_world, *m_planet, blockLibrary);
+		planetComponent.planetEntities = std::make_unique<ChunkEntities>(app, m_world, *planetComponent.planet, blockLibrary);
+		planetComponent.planetEntities->SetParentEntity(m_planetEntity);
 
 		auto& physicsSystem = m_world.GetSystem<Nz::Physics3DSystem>();
-		m_world.AddSystem<PlanetGravitySystem>(physicsSystem.GetPhysWorld());
+		m_world.AddSystem<PlanetGravitySystem>(*planetComponent.planet, physicsSystem.GetPhysWorld());
+		m_world.AddSystem<PlanetSystem>();
 	}
 
 	ServerPlanetEnvironment::~ServerPlanetEnvironment()
 	{
-		m_planetEntities.reset();
+		m_planetEntity.destroy();
+	}
+
+	entt::handle ServerPlanetEnvironment::CreateEntity()
+	{
+		return ServerEnvironment::CreateEntity();
+	}
+
 	const GravityController* ServerPlanetEnvironment::GetGravityController() const
 	{
 		return m_planetEntity.get<PlanetComponent>().planet.get();
 	}
 
+	Planet& ServerPlanetEnvironment::GetPlanet()
+	{
+		return *m_planetEntity.get<PlanetComponent>().planet;
+	}
+
+	const Planet& ServerPlanetEnvironment::GetPlanet() const
+	{
+		return *m_planetEntity.get<PlanetComponent>().planet;
 	}
 
 	void ServerPlanetEnvironment::OnLoad(const std::filesystem::path& loadPath)
@@ -134,7 +160,7 @@ namespace tsom
 			Nz::File::WriteWhole(loadPath / Nz::Utf8Path("version.txt"), version.data(), version.size());
 		}
 
-		m_planet->ForEachChunk([&](const ChunkIndices& chunkIndices, Chunk& chunk)
+		m_planetEntity.get<PlanetComponent>().planet->ForEachChunk([&](const ChunkIndices& chunkIndices, Chunk& chunk)
 		{
 			Nz::File chunkFile(loadPath / Nz::Utf8Path(fmt::format("{0:+}_{1:+}_{2:+}.chunk", chunkIndices.x, chunkIndices.y, chunkIndices.z)), Nz::OpenMode::Read);
 			if (!chunkFile.IsOpen())
@@ -168,7 +194,7 @@ namespace tsom
 			byteArray.Clear();
 
 			Nz::ByteStream byteStream(&byteArray);
-			m_planet->GetChunk(chunkIndices)->Serialize(m_serverInstance.GetBlockLibrary(), byteStream);
+			m_planetEntity.get<PlanetComponent>().planet->GetChunk(chunkIndices)->Serialize(m_serverInstance.GetBlockLibrary(), byteStream);
 
 			if (!Nz::File::WriteWhole(savePath / Nz::Utf8Path(fmt::format("{0:+}_{1:+}_{2:+}.chunk", chunkIndices.x, chunkIndices.y, chunkIndices.z)), byteArray.GetBuffer(), byteArray.GetSize()))
 				fmt::print(stderr, "failed to save chunk {}\n", fmt::streamed(chunkIndices));
@@ -177,12 +203,5 @@ namespace tsom
 
 		std::string version = std::to_string(chunkSaveVersion);
 		Nz::File::WriteWhole(savePath / Nz::Utf8Path("version.txt"), version.data(), version.size());
-	}
-
-	void ServerPlanetEnvironment::OnTick(Nz::Time elapsedTime)
-	{
-		ServerEnvironment::OnTick(elapsedTime);
-
-		m_planetEntities->Update();
 	}
 }

@@ -11,7 +11,7 @@
 
 namespace tsom
 {
-	void SessionVisibilityHandler::CreateChunk(Chunk& chunk)
+	void SessionVisibilityHandler::CreateChunk(entt::handle entity, Chunk& chunk)
 	{
 		// Check if this chunk was marked for destruction
 		if (auto it = m_chunkIndices.find(&chunk); it != m_chunkIndices.end())
@@ -41,6 +41,7 @@ namespace tsom
 			VisibleChunk& chunkData = m_visibleChunks[chunkIndex];
 			chunkData.chunk = &chunk;
 			chunkData.chunkUpdatePacket.chunkId = Nz::SafeCast<Packets::Helper::ChunkId>(chunkIndex);
+			chunkData.entity = entity;
 		}
 	}
 
@@ -72,8 +73,8 @@ namespace tsom
 
 	void SessionVisibilityHandler::Dispatch(Nz::UInt16 tickIndex)
 	{
-		DispatchChunks();
 		DispatchEntities(tickIndex);
+		DispatchChunks();
 	}
 
 	Chunk* SessionVisibilityHandler::GetChunkByIndex(std::size_t chunkIndex) const
@@ -88,19 +89,22 @@ namespace tsom
 	{
 		for (std::size_t chunkIndex = m_newlyHiddenChunk.FindFirst(); chunkIndex != m_newlyHiddenChunk.npos; chunkIndex = m_newlyHiddenChunk.FindNext(chunkIndex))
 		{
+			VisibleChunk& visibleChunk = m_visibleChunks[chunkIndex];
+
 			// Mark chunk index as free on dispatch to prevent chunk index reuse while resurrecting it
 			m_freeChunkIds.Set(chunkIndex);
 			m_resetChunk.UnboundedReset(chunkIndex);
 			m_updatedChunk.UnboundedReset(chunkIndex);
 
-			VisibleChunk& visibleChunk = m_visibleChunks[chunkIndex];
-			visibleChunk.chunk = nullptr;
-			visibleChunk.onBlockUpdatedSlot.Disconnect();
-
 			Packets::ChunkDestroy chunkDestroyPacket;
 			chunkDestroyPacket.chunkId = Nz::SafeCast<Packets::Helper::ChunkId>(chunkIndex);
+			chunkDestroyPacket.entityId = Nz::Retrieve(m_entityToNetworkId, visibleChunk.entity);
 
 			m_networkSession->SendPacket(chunkDestroyPacket);
+
+			visibleChunk.chunk = nullptr;
+			visibleChunk.entity = entt::handle{};
+			visibleChunk.onBlockUpdatedSlot.Disconnect();
 		}
 		m_newlyHiddenChunk.Clear();
 
@@ -126,6 +130,8 @@ namespace tsom
 			VisibleChunk& visibleChunk = m_visibleChunks[chunkIndex];
 
 			// Connect update signal on dispatch to prevent updates made during the same tick to be sent as update
+			visibleChunk.chunkUpdatePacket.entityId = Nz::Retrieve(m_entityToNetworkId, visibleChunk.entity);
+
 			visibleChunk.onBlockUpdatedSlot.Connect(visibleChunk.chunk->OnBlockUpdated, [this, chunkIndex]([[maybe_unused]] Chunk* chunk, const Nz::Vector3ui& indices, BlockIndex newBlock)
 			{
 				m_updatedChunk.UnboundedSet(chunkIndex);
@@ -171,6 +177,7 @@ namespace tsom
 			chunkCreatePacket.chunkSizeY = chunkSize.y;
 			chunkCreatePacket.chunkSizeZ = chunkSize.z;
 			chunkCreatePacket.cellSize = visibleChunk.chunk->GetBlockSize();
+			chunkCreatePacket.entityId = Nz::Retrieve(m_entityToNetworkId, visibleChunk.entity);
 
 			m_networkSession->SendPacket(chunkCreatePacket);
 
@@ -213,6 +220,7 @@ namespace tsom
 
 			Packets::ChunkReset chunkResetPacket;
 			chunkResetPacket.chunkId = Nz::SafeCast<Packets::Helper::ChunkId>(chunk.chunkIndex);
+			chunkResetPacket.entityId = Nz::Retrieve(m_entityToNetworkId, visibleChunk.entity);
 
 			unsigned int blockCount = chunkSize.x * chunkSize.y * chunkSize.z;
 			chunkResetPacket.content.resize(blockCount);
@@ -281,6 +289,7 @@ namespace tsom
 				entityData.entityId = Nz::SafeCast<Nz::UInt32>(networkId);
 				entityData.initialStates.position = data.initialPosition;
 				entityData.initialStates.rotation = data.initialRotation;
+				entityData.planet = std::move(data.planetData);
 				entityData.playerControlled = std::move(data.playerControlledData);
 				entityData.ship = std::move(data.shipData);
 			}

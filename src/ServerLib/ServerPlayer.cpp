@@ -12,9 +12,19 @@
 #include <ServerLib/Components/ServerPlayerControlledComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
+#include <cassert>
 
 namespace tsom
 {
+	ServerPlayer::~ServerPlayer()
+	{
+		if (m_controlledEntity)
+			m_controlledEntity.destroy();
+
+		if (m_environment)
+			m_environment->UnregisterPlayer(this);
+	}
+
 	void ServerPlayer::Destroy()
 	{
 		m_instance.DestroyPlayer(m_playerIndex);
@@ -25,32 +35,22 @@ namespace tsom
 		m_inputQueue.push_back(inputs);
 	}
 
-	void ServerPlayer::Respawn()
+	void ServerPlayer::Respawn(const Nz::Vector3f& position, const Nz::Quaternionf& rotation)
 	{
-		constexpr Nz::Vector3f position = Nz::Vector3f::Up() * 100.f + Nz::Vector3f::Backward() * 5.f;
-		const Nz::Quaternionf rotation = Nz::EulerAnglesf(0.f, 0.f, 0.f);
-
-		ServerPlanetEnvironment* serverPlanet = Nz::SafeCast<ServerPlanetEnvironment*>(m_environment);
-
 		if (m_controlledEntity)
 			m_controlledEntity.destroy();
 
-		m_controlledEntity = serverPlanet->GetWorld().CreateEntity();
+		m_controlledEntity = m_environment->CreateEntity();
 		m_controlledEntity.emplace<Nz::NodeComponent>(position, rotation);
 		m_controlledEntity.emplace<NetworkedComponent>();
-		auto& planetGravity = m_controlledEntity.emplace<PlanetComponent>();
-		planetGravity.planet = &serverPlanet->GetPlanet();
-
-		auto collider = std::make_shared<Nz::CapsuleCollider3D>(Constants::PlayerCapsuleHeight, Constants::PlayerColliderRadius);
 
 		m_controller = std::make_shared<CharacterController>();
-		m_controller->SetCurrentPlanet(&serverPlanet->GetPlanet());
+		m_controller->SetGravityController(m_environment->GetGravityController());
+
 		m_visibilityHandler.UpdateControlledEntity(m_controlledEntity, m_controller.get()); // TODO: Reset to nullptr when player entity is destroyed
 
-		auto& physicsSystem = serverPlanet->GetWorld().GetSystem<Nz::Physics3DSystem>();
-
 		Nz::PhysCharacter3DComponent::Settings characterSettings;
-		characterSettings.collider = collider;
+		characterSettings.collider = std::make_shared<Nz::CapsuleCollider3D>(Constants::PlayerCapsuleHeight, Constants::PlayerColliderRadius);
 		characterSettings.position = position;
 		characterSettings.rotation = rotation;
 
@@ -78,7 +78,18 @@ namespace tsom
 
 	void ServerPlayer::UpdateEnvironment(ServerEnvironment* environment)
 	{
+		assert(environment);
+
+		if (m_environment)
+			m_environment->UnregisterPlayer(this);
+
 		m_environment = environment;
+		m_environment->RegisterPlayer(this);
+
+		if (!m_controlledEntity)
+			return;
+
+		Respawn(Nz::Vector3f::Zero(), Nz::Quaternionf::Identity());
 	}
 
 	void ServerPlayer::UpdateNickname(std::string nickname)

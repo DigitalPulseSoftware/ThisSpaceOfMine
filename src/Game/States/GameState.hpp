@@ -59,10 +59,6 @@ namespace tsom
 			void UpdateMouseLock();
 
 			NazaraSlot(ClientSessionHandler, OnChatMessage, m_onChatMessage);
-			NazaraSlot(ClientSessionHandler, OnChunkCreate, m_onChunkCreate);
-			NazaraSlot(ClientSessionHandler, OnChunkDestroy, m_onChunkDestroy);
-			NazaraSlot(ClientSessionHandler, OnChunkReset, m_onChunkReset);
-			NazaraSlot(ClientSessionHandler, OnChunkUpdate, m_onChunkUpdate);
 			NazaraSlot(ClientSessionHandler, OnControlledEntityChanged, m_onControlledEntityChanged);
 			NazaraSlot(ClientSessionHandler, OnControlledEntityStateUpdate, m_onControlledEntityStateUpdate);
 			NazaraSlot(ClientSessionHandler, OnPlayerChatMessage, m_onPlayerChatMessage);
@@ -90,7 +86,6 @@ namespace tsom
 			};
 
 			std::shared_ptr<DebugOverlay> m_debugOverlay;
-			std::unique_ptr<ClientPlanet> m_planet;
 			std::unique_ptr<ClientChunkEntities> m_planetEntities;
 			std::vector<InputRotation> m_predictedInputRotations;
 			entt::handle m_cameraEntity;
