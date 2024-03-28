@@ -116,7 +116,7 @@ namespace tsom
 inlineTemplate = [[
 // Copyright (C) %COPYRIGHT%
 // This file is part of the "This Space Of Mine" project
-// For conditions of distribution and use, see copyright notice in Config.hpp
+// For conditions of distribution and use, see copyright notice in LICENSE
 
 namespace tsom
 {
@@ -126,7 +126,7 @@ namespace tsom
 sourceTemplate = [[
 // Copyright (C) %COPYRIGHT%
 // This file is part of the "This Space Of Mine" project
-// For conditions of distribution and use, see copyright notice in Config.hpp
+// For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <%MODULE_NAME%/%CLASS_PATH%.hpp>
 
