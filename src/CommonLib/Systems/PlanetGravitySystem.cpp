@@ -13,8 +13,9 @@
 
 namespace tsom
 {
-	PlanetGravitySystem::PlanetGravitySystem(entt::registry& registry, Nz::PhysWorld3D& physWorld) :
+	PlanetGravitySystem::PlanetGravitySystem(entt::registry& registry, const Planet& planet, Nz::PhysWorld3D& physWorld) :
 	m_registry(registry),
+	m_planet(planet),
 	m_physWorld(physWorld)
 	{
 		m_physWorld.RegisterStepListener(this);
@@ -27,15 +28,15 @@ namespace tsom
 
 	void PlanetGravitySystem::PreSimulate(float /*elapsedTime*/)
 	{
-		auto view = m_registry.view<Nz::RigidBody3DComponent, PlanetComponent>(entt::exclude<Nz::DisabledComponent>);
-		for (auto&& [entity, rigidBody, planetComponent] : view.each())
+		auto view = m_registry.view<Nz::RigidBody3DComponent>(entt::exclude<Nz::DisabledComponent>);
+		for (auto&& [entity, rigidBody] : view.each())
 		{
-			if (rigidBody.IsSleeping() || !planetComponent.planet)
+			if (rigidBody.IsSleeping())
 				continue;
 
 			Nz::Vector3f pos = rigidBody.GetPosition();
-			Nz::Vector3f up = planetComponent.planet->ComputeUpDirection(rigidBody.GetPosition());
-			rigidBody.AddForce(-up * planetComponent.planet->GetGravityFactor(pos) * rigidBody.GetMass());
+			Nz::Vector3f up = m_planet.ComputeUpDirection(rigidBody.GetPosition());
+			rigidBody.AddForce(-up * m_planet.ComputeGravityAcceleration(pos) * rigidBody.GetMass());
 		}
 	}
 }

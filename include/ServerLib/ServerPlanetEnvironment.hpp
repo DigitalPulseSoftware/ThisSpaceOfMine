@@ -27,6 +27,7 @@ namespace tsom
 
 			inline Planet& GetPlanet();
 			inline const Planet& GetPlanet() const;
+			const GravityController* GetGravityController() const override;
 
 			void OnLoad(const std::filesystem::path& loadPath) override;
 			void OnSave(const std::filesystem::path& savePath) override;

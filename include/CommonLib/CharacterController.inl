@@ -34,9 +34,9 @@ namespace tsom
 		return m_isFlying;
 	}
 
-	inline void CharacterController::SetCurrentPlanet(const Planet* planet)
+	inline void CharacterController::SetGravityController(const GravityController* gravityController)
 	{
-		m_planet = planet;
+		m_gravityController = gravityController;
 	}
 
 	inline void CharacterController::SetInputs(const PlayerInputs& inputs)

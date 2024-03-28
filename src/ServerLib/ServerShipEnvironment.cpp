@@ -23,6 +23,11 @@ namespace tsom
 		m_shipEntities.reset();
 	}
 
+	const GravityController* ServerShipEnvironment::GetGravityController() const
+	{
+		return m_ship.get();
+	}
+
 	Ship& ServerShipEnvironment::GetShip()
 	{
 		return *m_ship;

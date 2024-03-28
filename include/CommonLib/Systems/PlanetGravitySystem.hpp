@@ -20,10 +20,12 @@ namespace Nz
 
 namespace tsom
 {
+	class Planet;
+
 	class TSOM_COMMONLIB_API PlanetGravitySystem : public Nz::PhysWorld3DStepListener
 	{
 		public:
-			PlanetGravitySystem(entt::registry& registry, Nz::PhysWorld3D& physWorld);
+			PlanetGravitySystem(entt::registry& registry, const Planet& planet, Nz::PhysWorld3D& physWorld);
 			PlanetGravitySystem(const PlanetGravitySystem&) = delete;
 			PlanetGravitySystem(PlanetGravitySystem&&) = delete;
 			~PlanetGravitySystem();
@@ -35,6 +37,7 @@ namespace tsom
 
 		private:
 			entt::registry& m_registry;
+			const Planet& m_planet;
 			Nz::PhysWorld3D& m_physWorld;
 	};
 }
