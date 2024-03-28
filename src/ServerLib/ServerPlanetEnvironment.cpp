@@ -54,6 +54,11 @@ namespace tsom
 	ServerPlanetEnvironment::~ServerPlanetEnvironment()
 	{
 		m_planetEntities.reset();
+	const GravityController* ServerPlanetEnvironment::GetGravityController() const
+	{
+		return m_planetEntity.get<PlanetComponent>().planet.get();
+	}
+
 	}
 
 	void ServerPlanetEnvironment::OnLoad(const std::filesystem::path& loadPath)

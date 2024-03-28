@@ -29,6 +29,9 @@ namespace tsom::Constants
 	constexpr Nz::DegreeAnglef GravityMaxRotationSpeed = 180.f;
 	constexpr Nz::DegreeAnglef PlayerRotationSpeed = 90.f;
 
+	// Ship constants
+	constexpr float ShipGravityAcceleration = 9.81f;
+
 	// Computed constants
 	constexpr float PlayerCapsuleHeight = PlayerColliderHeight - PlayerColliderRadius * 2.f;
 	constexpr float PlayerCameraHeight = PlayerEyesHeight - PlayerColliderHeight * 0.5f;

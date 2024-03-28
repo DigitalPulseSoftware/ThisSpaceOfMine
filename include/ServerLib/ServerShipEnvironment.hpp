@@ -23,6 +23,7 @@ namespace tsom
 			ServerShipEnvironment(ServerShipEnvironment&&) = delete;
 			~ServerShipEnvironment();
 
+			const GravityController* GetGravityController() const override;
 			Ship& GetShip();
 			const Ship& GetShip() const;
 

@@ -23,6 +23,8 @@ namespace tsom
 			ServerEnvironment(ServerEnvironment&&) = delete;
 			virtual ~ServerEnvironment();
 
+
+			virtual const GravityController* GetGravityController() const = 0;
 			inline Nz::EnttWorld& GetWorld();
 			inline const Nz::EnttWorld& GetWorld() const;
 

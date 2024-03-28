@@ -18,10 +18,10 @@
 
 namespace tsom
 {
-	Planet::Planet(float tileSize, float cornerRadius, float gravityFactor) :
+	Planet::Planet(float tileSize, float cornerRadius, float gravity) :
 	ChunkContainer(tileSize),
 	m_cornerRadius(cornerRadius),
-	m_gravityFactor(gravityFactor)
+	m_gravity(gravity)
 	{
 	}
 
@@ -65,6 +65,14 @@ namespace tsom
 			it->second.chunk->Reset(initCallback);
 
 		return *it->second.chunk;
+	}
+
+	float Planet::ComputeGravityAcceleration(const Nz::Vector3f& position) const
+	{
+		if (position.SquaredDistance(GetCenter()) < Nz::IntegralPow(10.f, 2))
+			return 0.f;
+
+		return m_gravity;
 	}
 
 	Nz::Vector3f Planet::ComputeUpDirection(const Nz::Vector3f& position) const

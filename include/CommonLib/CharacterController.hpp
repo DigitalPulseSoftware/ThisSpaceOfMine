@@ -18,7 +18,7 @@
 
 namespace tsom
 {
-	class Planet;
+	class GravityController;
 
 	class TSOM_COMMONLIB_API CharacterController : public Nz::PhysCharacter3DImpl
 	{
@@ -40,7 +40,7 @@ namespace tsom
 			void PostSimulate(Nz::PhysCharacter3D& character, float elapsedTime) override;
 			void PreSimulate(Nz::PhysCharacter3D& character, float elapsedTime) override;
 
-			inline void SetCurrentPlanet(const Planet* planet);
+			inline void SetGravityController(const GravityController* planet);
 
 			void SetInputs(const PlayerInputs& inputs);
 
@@ -54,7 +54,7 @@ namespace tsom
 			Nz::Vector3f m_characterPosition;
 			Nz::Vector3f m_gravityUp;
 			PlayerInputs m_lastInputs;
-			const Planet* m_planet;
+			const GravityController* m_gravityController;
 			bool m_allowInputRotation;
 			bool m_isFlying;
 	};

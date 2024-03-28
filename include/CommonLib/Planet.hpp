@@ -10,6 +10,7 @@
 #include <CommonLib/Export.hpp>
 #include <CommonLib/ChunkContainer.hpp>
 #include <CommonLib/Direction.hpp>
+#include <CommonLib/GravityController.hpp>
 #include <NazaraUtils/FunctionRef.hpp>
 #include <tsl/hopscotch_map.h>
 #include <memory>
@@ -22,17 +23,18 @@ namespace Nz
 
 namespace tsom
 {
-	class TSOM_COMMONLIB_API Planet : public ChunkContainer
+	class TSOM_COMMONLIB_API Planet : public ChunkContainer, public GravityController
 	{
 		public:
-			Planet(float tileSize, float cornerRadius, float gravityFactor);
+			Planet(float tileSize, float cornerRadius, float gravity);
 			Planet(const Planet&) = delete;
 			Planet(Planet&&) = delete;
 			~Planet() = default;
 
 			Chunk& AddChunk(const ChunkIndices& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback = nullptr);
 
-			Nz::Vector3f ComputeUpDirection(const Nz::Vector3f& position) const;
+			float ComputeGravityAcceleration(const Nz::Vector3f& position) const override;
+			Nz::Vector3f ComputeUpDirection(const Nz::Vector3f& position) const override;
 
 			void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, Chunk& chunk)> callback) override;
 			void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, const Chunk& chunk)> callback) const override;
@@ -46,7 +48,7 @@ namespace tsom
 			inline const Chunk* GetChunk(const ChunkIndices& chunkIndices) const override;
 			inline std::size_t GetChunkCount() const override;
 			inline float GetCornerRadius() const;
-			inline float GetGravityFactor(const Nz::Vector3f& position) const;
+			inline float GetGravity() const;
 
 			void RemoveChunk(const ChunkIndices& indices);
 
@@ -68,7 +70,7 @@ namespace tsom
 
 			tsl::hopscotch_map<ChunkIndices, ChunkData> m_chunks;
 			float m_cornerRadius;
-			float m_gravityFactor;
+			float m_gravity;
 	};
 }
 

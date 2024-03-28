@@ -5,7 +5,7 @@
 #include <CommonLib/CharacterController.hpp>
 #include <CommonLib/Direction.hpp>
 #include <CommonLib/GameConstants.hpp>
-#include <CommonLib/Planet.hpp>
+#include <CommonLib/GravityController.hpp>
 #include <Nazara/Physics3D/PhysWorld3D.hpp>
 #include <Nazara/Physics3D/RigidBody3D.hpp>
 #include <fmt/ostream.h>
@@ -19,7 +19,7 @@ namespace tsom
 	CharacterController::CharacterController() :
 	m_cameraRotation(Nz::EulerAnglesf::Zero()),
 	m_referenceRotation(Nz::Quaternionf::Identity()),
-	m_planet(nullptr),
+	m_gravityController(nullptr),
 	m_allowInputRotation(false),
 	m_isFlying(false)
 	{
@@ -84,19 +84,19 @@ namespace tsom
 
 		Nz::Vector3f velocity = character.GetLinearVelocity();
 		Nz::Vector3f up = character.GetUp();
-		if (m_planet && m_planet->GetGravityFactor(m_characterPosition) > 0.3f)
-			m_gravityUp = m_planet->ComputeUpDirection(m_characterPosition);
+		if (m_gravityController && m_gravityController->ComputeGravityAcceleration(m_characterPosition) > 0.3f)
+			m_gravityUp = m_gravityController->ComputeUpDirection(m_characterPosition);
 		else
 			m_gravityUp = Nz::Vector3f::Zero();
 
 		Nz::Quaternionf movementRotation;
-		if (m_planet)
+		if (m_gravityController)
 		{
 			if (!m_isFlying)
 			{
 				// Apply gravity
 				Nz::Vector3f position = character.GetPosition();
-				velocity -= m_planet->GetGravityFactor(position) * m_planet->ComputeUpDirection(character.GetPosition()) * elapsedTime;
+				velocity -= m_gravityController->ComputeGravityAcceleration(position) * m_gravityController->ComputeUpDirection(character.GetPosition()) * elapsedTime;
 			}
 
 			movementRotation = character.GetRotation();

@@ -5,7 +5,7 @@
 #include <CommonLib/Ship.hpp>
 #include <CommonLib/BlockLibrary.hpp>
 #include <CommonLib/FlatChunk.hpp>
-#include <PerlinNoise.hpp>
+#include <CommonLib/GameConstants.hpp>
 #include <fmt/format.h>
 #include <random>
 
@@ -16,6 +16,16 @@ namespace tsom
 	m_chunk(*this, { 0, 0, 0 }, gridSize, tileSize)
 	{
 		SetupChunk(blockLibrary);
+	}
+
+	float Ship::ComputeGravityAcceleration(const Nz::Vector3f& /*position*/) const
+	{
+		return Constants::ShipGravityAcceleration;
+	}
+
+	Nz::Vector3f Ship::ComputeUpDirection(const Nz::Vector3f& position) const
+	{
+		return Nz::Vector3f::Up();
 	}
 
 	void Ship::SetupChunk(const BlockLibrary& blockLibrary)

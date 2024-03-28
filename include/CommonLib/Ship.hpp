@@ -11,6 +11,7 @@
 #include <CommonLib/ChunkContainer.hpp>
 #include <CommonLib/Direction.hpp>
 #include <CommonLib/FlatChunk.hpp>
+#include <CommonLib/GravityController.hpp>
 #include <NazaraUtils/FunctionRef.hpp>
 #include <tsl/hopscotch_map.h>
 #include <memory>
@@ -20,13 +21,16 @@ namespace tsom
 {
 	class BlockLibrary;
 
-	class TSOM_COMMONLIB_API Ship : public ChunkContainer
+	class TSOM_COMMONLIB_API Ship : public ChunkContainer, public GravityController
 	{
 		public:
 			Ship(const BlockLibrary& blockLibrary, const Nz::Vector3ui& gridSize, float tileSize);
 			Ship(const Ship&) = delete;
 			Ship(Ship&&) = delete;
 			~Ship() = default;
+
+			float ComputeGravityAcceleration(const Nz::Vector3f& position) const override;
+			Nz::Vector3f ComputeUpDirection(const Nz::Vector3f& position) const override;
 
 			void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, Chunk& chunk)> callback) override;
 			void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, const Chunk& chunk)> callback) const override;
