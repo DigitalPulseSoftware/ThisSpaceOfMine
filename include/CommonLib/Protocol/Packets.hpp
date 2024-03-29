@@ -57,6 +57,7 @@ namespace tsom
 		{
 			using ChunkId = Nz::UInt16;
 			using EntityId = Nz::UInt16;
+			using EnvironmentId = Nz::UInt8;
 
 			struct EntityState
 			{
@@ -131,6 +132,7 @@ namespace tsom
 
 		struct ChunkCreate
 		{
+			Nz::UInt16 tickIndex;
 			Helper::ChunkId chunkId;
 			Helper::EntityId entityId;
 			CompressedSigned<Nz::Int32> chunkLocX;
@@ -144,12 +146,14 @@ namespace tsom
 
 		struct ChunkDestroy
 		{
+			Nz::UInt16 tickIndex;
 			Helper::ChunkId chunkId;
 			Helper::EntityId entityId;
 		};
 
 		struct ChunkReset
 		{
+			Nz::UInt16 tickIndex;
 			Helper::ChunkId chunkId;
 			Helper::EntityId entityId;
 			std::vector<BlockIndex> content;
@@ -163,6 +167,7 @@ namespace tsom
 				BlockIndex newContent;
 			};
 
+			Nz::UInt16 tickIndex;
 			Helper::ChunkId chunkId;
 			Helper::EntityId entityId;
 			std::vector<BlockUpdate> updates;
@@ -172,7 +177,7 @@ namespace tsom
 		{
 			struct EntityData
 			{
-				Nz::UInt8 environmentId;
+				Helper::EnvironmentId environmentId;
 				Helper::EntityId entityId;
 				Helper::EntityState initialStates;
 				std::optional<Helper::PlanetData> planet;
@@ -210,6 +215,18 @@ namespace tsom
 			InputIndex lastInputIndex;
 			std::optional<ControlledCharacter> controlledCharacter;
 			std::vector<EntityData> entities;
+		};
+
+		struct EnvironmentCreate
+		{
+			Nz::UInt16 tickIndex;
+			Helper::EnvironmentId id;
+		};
+
+		struct EnvironmentDestroy
+		{
+			Nz::UInt16 tickIndex;
+			Helper::EnvironmentId id;
 		};
 
 		struct GameData
@@ -282,6 +299,8 @@ namespace tsom
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntitiesCreation& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntitiesDelete& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntitiesStateUpdate& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EnvironmentCreate& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EnvironmentDestroy& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, GameData& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, MineBlock& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, NetworkStrings& data);

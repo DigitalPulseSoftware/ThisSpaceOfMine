@@ -10,6 +10,7 @@
 #include <ServerLib/ServerPlanetEnvironment.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
 #include <ServerLib/Components/ServerPlayerControlledComponent.hpp>
+#include <ServerLib/Systems/NetworkedEntitiesSystem.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <cassert>
@@ -81,10 +82,18 @@ namespace tsom
 		assert(environment);
 
 		if (m_environment)
+		{
 			m_environment->UnregisterPlayer(this);
+			m_visibilityHandler.DestroyEnvironment(*m_environment);
+		}
 
 		m_environment = environment;
 		m_environment->RegisterPlayer(this);
+
+		m_visibilityHandler.CreateEnvironment(*environment);
+
+		auto& networkedEntities = m_environment->GetWorld().GetSystem<NetworkedEntitiesSystem>();
+		networkedEntities.CreateAllEntities(m_visibilityHandler);
 
 		if (!m_controlledEntity)
 			return;

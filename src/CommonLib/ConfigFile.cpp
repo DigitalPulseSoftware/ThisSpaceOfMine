@@ -63,9 +63,9 @@ namespace tsom
 			if (!LoadSection(configEnv, m_globalSection, missingOptions))
 				hasError = true;
 
-			for (std::size_t i = missingOptions.FindFirst(); i != missingOptions.npos; i = missingOptions.FindNext(i))
+			for (std::size_t optionIndex : missingOptions.IterBits())
 			{
-				ConfigOption& option = m_options[i];
+				ConfigOption& option = m_options[optionIndex];
 
 				bool hasDefaultDefault = std::visit([](auto&& arg)
 				{

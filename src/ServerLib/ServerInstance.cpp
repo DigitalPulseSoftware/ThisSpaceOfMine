@@ -189,7 +189,7 @@ namespace tsom
 	void ServerInstance::OnNetworkTick()
 	{
 		// Handle disconnected players
-		for (std::size_t playerIndex = m_disconnectedPlayers.FindFirst(); playerIndex != m_disconnectedPlayers.npos; playerIndex = m_disconnectedPlayers.FindNext(playerIndex))
+		for (std::size_t playerIndex : m_disconnectedPlayers.IterBits())
 		{
 			Packets::PlayerLeave playerLeave;
 			playerLeave.index = Nz::SafeCast<PlayerIndex>(playerIndex);
@@ -226,7 +226,7 @@ namespace tsom
 		m_pendingPlayerRename.clear();
 
 		// Handle newly connected players
-		for (std::size_t playerIndex = m_newPlayers.FindFirst(); playerIndex != m_newPlayers.npos; playerIndex = m_newPlayers.FindNext(playerIndex))
+		for (std::size_t playerIndex : m_newPlayers.IterBits())
 		{
 			ServerPlayer* player = m_players.RetrieveFromIndex(playerIndex);
 

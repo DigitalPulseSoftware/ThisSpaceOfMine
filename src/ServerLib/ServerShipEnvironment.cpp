@@ -31,12 +31,7 @@ namespace tsom
 
 	entt::handle ServerShipEnvironment::CreateEntity()
 	{
-		entt::handle entity = ServerEnvironment::CreateEntity();
-
-		auto& shipComponent = entity.emplace<ShipComponent>();
-		shipComponent.ship = m_ship.get();
-
-		return entity;
+		return ServerEnvironment::CreateEntity();
 	}
 
 	const GravityController* ServerShipEnvironment::GetGravityController() const
