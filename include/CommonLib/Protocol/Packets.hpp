@@ -79,11 +79,7 @@ namespace tsom
 
 			struct ShipData
 			{
-				CompressedUnsigned<Nz::UInt32> chunkSizeX;
-				CompressedUnsigned<Nz::UInt32> chunkSizeY;
-				CompressedUnsigned<Nz::UInt32> chunkSizeZ;
 				float cellSize;
-				std::vector<Nz::UInt8> content;
 			};
 
 			struct VoxelLocation

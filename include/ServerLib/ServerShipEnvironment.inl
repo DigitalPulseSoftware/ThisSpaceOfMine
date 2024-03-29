@@ -4,4 +4,8 @@
 
 namespace tsom
 {
+	inline entt::handle ServerShipEnvironment::GetShipEntity() const
+	{
+		return m_shipEntity;
+	}
 }

@@ -10,15 +10,17 @@
 #include <CommonLib/Export.hpp>
 #include <CommonLib/Chunk.hpp>
 #include <NazaraUtils/MovablePtr.hpp>
+#include <entt/entt.hpp>
 
 namespace tsom
 {
 	struct ChunkComponent
 	{
 		Nz::MovablePtr<Chunk> chunk;
+		entt::handle parentEntity;
 	};
 }
 
-#include <CommonLib/Components/PlanetComponent.inl>
+#include <CommonLib/Components/ChunkComponent.inl>
 
 #endif // TSOM_COMMONLIB_COMPONENTS_CHUNKCOMPONENT_HPP

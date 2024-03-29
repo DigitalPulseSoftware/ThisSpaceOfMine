@@ -110,23 +110,30 @@ namespace tsom
 				return;
 
 			ServerInstance& serverInstance = m_player->GetServerInstance();
-			Nz::ApplicationBase& app = serverInstance.GetApplication();
 			const BlockLibrary& blockLibrary = serverInstance.GetBlockLibrary();
 
 			ServerShipEnvironment* shipEnv = serverInstance.CreateShip();
 			m_player->UpdateEnvironment(shipEnv);
 
-			entt::handle shipEntity = shipEnv->CreateEntity();
+			/*entt::handle shipEntity = shipEnv->CreateEntity();
 			shipEntity.emplace<Nz::NodeComponent>();
-
-			auto& shipComp = shipEntity.emplace<ShipComponent>();
-			shipComp.ship = &shipEnv->GetShip();
-
-			std::shared_ptr<Nz::Collider3D> chunkCollider = shipEnv->GetShip().GetChunk().BuildCollider(blockLibrary);
-
-			shipEntity.emplace<Nz::RigidBody3DComponent>(Nz::RigidBody3DComponent::StaticSettings(chunkCollider));
-
 			shipEntity.emplace<NetworkedComponent>();
+
+			auto& shipComp = shipEntity.emplace<ShipComponent>(1.f);
+			shipComp.shipEntities = std::make_unique<ChunkEntities>(serverInstance.GetApplication(), shipEnv->GetWorld(), shipComp, serverInstance.GetBlockLibrary());
+			shipComp.shipEntities->SetParentEntity(shipEntity);*/
+
+			entt::handle shipEntity = shipEnv->GetShipEntity();
+			auto& shipComp = shipEntity.get<ShipComponent>();
+
+			shipEnv->ForEachPlayer([&](ServerPlayer& player)
+			{
+				auto& playerVisibility = player.GetVisibilityHandler();
+				shipComp.ForEachChunk([&](const ChunkIndices& chunkIndices, Chunk& chunk)
+				{
+					playerVisibility.CreateChunk(shipEntity, chunk);
+				});
+			});
 			return;
 		}
 		else if (message == "/regenchunk")
@@ -140,13 +147,13 @@ namespace tsom
 				return;
 
 			Nz::Vector3f playerPos = playerEntity.get<Nz::NodeComponent>().GetGlobalPosition();
-			ChunkIndices chunkIndices = playerPlanet->planet->GetChunkIndicesByPosition(playerPos);
+			ChunkIndices chunkIndices = playerPlanet->GetChunkIndicesByPosition(playerPos);
 
 			const BlockLibrary& blockLibrary = m_player->GetServerInstance().GetBlockLibrary();
 
-			if (Chunk* chunk = playerPlanet->planet->GetChunk(chunkIndices))
+			if (Chunk* chunk = playerPlanet->GetChunk(chunkIndices))
 			{
-				playerPlanet->planet->GenerateChunk(blockLibrary, *chunk, 42, Nz::Vector3ui(5));
+				playerPlanet->GenerateChunk(blockLibrary, *chunk, 42, Nz::Vector3ui(5));
 				fmt::print("regenerated chunk {};{};{}\n", chunkIndices.x, chunkIndices.y, chunkIndices.z);
 			}
 			return;
@@ -162,15 +169,15 @@ namespace tsom
 					const BlockLibrary& blockLibrary = m_player->GetServerInstance().GetBlockLibrary();
 
 					Nz::Vector3f playerPos = playerEntity.get<Nz::NodeComponent>().GetGlobalPosition();
-					ChunkIndices chunkIndices = playerPlanet->planet->GetChunkIndicesByPosition(playerPos);
-					if (Chunk* chunk = playerPlanet->planet->GetChunk(chunkIndices))
+					ChunkIndices chunkIndices = playerPlanet->GetChunkIndicesByPosition(playerPos);
+					if (Chunk* chunk = playerPlanet->GetChunk(chunkIndices))
 					{
 						std::optional<Nz::Vector3ui> coords = chunk->ComputeCoordinates(playerPos);
 						if (coords)
 						{
-							Direction dir = DirectionFromNormal(playerPlanet->planet->ComputeUpDirection(playerPos));
-							BlockIndices blockIndices = playerPlanet->planet->GetBlockIndices(chunkIndices, *coords);
-							playerPlanet->planet->GeneratePlatform(blockLibrary, dir, blockIndices);
+							Direction dir = DirectionFromNormal(playerPlanet->ComputeUpDirection(playerPos));
+							BlockIndices blockIndices = playerPlanet->GetBlockIndices(chunkIndices, *coords);
+							playerPlanet->GeneratePlatform(blockLibrary, dir, blockIndices);
 
 							fmt::print("generated platform at {};{};{}\n", blockIndices.x, blockIndices.y, blockIndices.z);
 						}
@@ -191,26 +198,26 @@ namespace tsom
 			newPlanetEntity.emplace<Nz::NodeComponent>().CopyTransform(playerEntity.get<Nz::NodeComponent>());
 			newPlanetEntity.emplace<NetworkedComponent>();
 
-			auto& planetComponent = newPlanetEntity.emplace<PlanetComponent>();
+			auto& planetComponent = newPlanetEntity.emplace<PlanetComponent>(1.f, 16.f, 9.81f);
 
 			ServerInstance& serverInstance = m_player->GetServerInstance();
 
 			auto& taskScheduler = serverInstance.GetApplication().GetComponent<Nz::TaskSchedulerAppComponent>();
 
-			planetComponent.planet = std::make_unique<Planet>(1.f, 16.f, 9.81f);
-			planetComponent.planet->GenerateChunks(serverInstance.GetBlockLibrary(), taskScheduler.GetScheduler(), std::rand(), Nz::Vector3ui(5));
+			planetComponent.GenerateChunks(serverInstance.GetBlockLibrary(), taskScheduler.GetScheduler(), std::rand(), Nz::Vector3ui(5));
 
-			planetComponent.planetEntities = std::make_unique<ChunkEntities>(serverInstance.GetApplication(), environment->GetWorld(), *planetComponent.planet, serverInstance.GetBlockLibrary());
+			planetComponent.planetEntities = std::make_unique<ChunkEntities>(serverInstance.GetApplication(), environment->GetWorld(), planetComponent, serverInstance.GetBlockLibrary());
 			planetComponent.planetEntities->SetParentEntity(newPlanetEntity);
 
 			serverInstance.ForEachPlayer([&](ServerPlayer& player)
 			{
 				auto& playerVisibility = player.GetVisibilityHandler();
-				planetComponent.planet->ForEachChunk([&](const ChunkIndices& chunkIndices, Chunk& chunk)
+				planetComponent.ForEachChunk([&](const ChunkIndices& chunkIndices, Chunk& chunk)
 				{
 					playerVisibility.CreateChunk(newPlanetEntity, chunk);
 				});
 			});
+			return;
 		}
 
 		m_player->GetServerInstance().BroadcastChatMessage(std::move(playerChat.message), m_player->GetPlayerIndex());

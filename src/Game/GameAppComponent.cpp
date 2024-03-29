@@ -13,6 +13,7 @@
 #include <CommonLib/UpdaterAppComponent.hpp>
 #include <CommonLib/Utils.hpp>
 #include <CommonLib/Systems/PlanetSystem.hpp>
+#include <CommonLib/Systems/ShipSystem.hpp>
 #include <Game/States/BackgroundState.hpp>
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/DebugInfoState.hpp>
@@ -251,6 +252,7 @@ namespace tsom
 		world.AddSystem<AnimationSystem>();
 		world.AddSystem<MovementInterpolationSystem>(Constants::TickDuration);
 		world.AddSystem<PlanetSystem>();
+		world.AddSystem<ShipSystem>();
 		world.AddSystem<Nz::RenderSystem>();
 
 		auto& physicsSystem = world.AddSystem<Nz::Physics3DSystem>();

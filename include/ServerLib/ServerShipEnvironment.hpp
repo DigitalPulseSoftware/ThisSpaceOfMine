@@ -28,17 +28,16 @@ namespace tsom
 			const GravityController* GetGravityController() const override;
 			Ship& GetShip();
 			const Ship& GetShip() const;
+			inline entt::handle GetShipEntity() const;
 
 			void OnLoad(const std::filesystem::path& loadPath) override;
 			void OnSave(const std::filesystem::path& savePath) override;
-			void OnTick(Nz::Time elapsedTime) override;
 
 			ServerShipEnvironment& operator=(const ServerShipEnvironment&) = delete;
 			ServerShipEnvironment& operator=(ServerShipEnvironment&&) = delete;
 
 		private:
-			std::unique_ptr<ChunkEntities> m_shipEntities;
-			std::unique_ptr<Ship> m_ship;
+			entt::handle m_shipEntity;
 	};
 }
 

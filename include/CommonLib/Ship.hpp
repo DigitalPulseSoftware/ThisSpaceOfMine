@@ -24,10 +24,12 @@ namespace tsom
 	class TSOM_COMMONLIB_API Ship : public ChunkContainer, public GravityController
 	{
 		public:
-			Ship(const BlockLibrary& blockLibrary, const Nz::Vector3ui& gridSize, float tileSize);
+			Ship(float tileSize);
 			Ship(const Ship&) = delete;
-			Ship(Ship&&) = delete;
+			Ship(Ship&&) noexcept = default;
 			~Ship() = default;
+
+			FlatChunk& AddChunk(const ChunkIndices& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback = nullptr);
 
 			float ComputeGravityAcceleration(const Nz::Vector3f& position) const override;
 			Nz::Vector3f ComputeUpDirection(const Nz::Vector3f& position) const override;
@@ -35,20 +37,30 @@ namespace tsom
 			void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, Chunk& chunk)> callback) override;
 			void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, const Chunk& chunk)> callback) const override;
 
+			void Generate(const BlockLibrary& blockLibrary);
+
 			inline Nz::Vector3f GetCenter() const override;
-			inline Chunk& GetChunk();
-			inline const Chunk& GetChunk() const;
-			inline Chunk* GetChunk(const ChunkIndices& chunkIndices) override;
-			inline const Chunk* GetChunk(const ChunkIndices& chunkIndices) const override;
+			inline FlatChunk* GetChunk(const ChunkIndices& chunkIndices) override;
+			inline const FlatChunk* GetChunk(const ChunkIndices& chunkIndices) const override;
 			inline std::size_t GetChunkCount() const override;
 
+			void RemoveChunk(const ChunkIndices& indices) override;
+
 			Ship& operator=(const Ship&) = delete;
-			Ship& operator=(Ship&&) = delete;
+			Ship& operator=(Ship&&) noexcept = default;
+
+			static constexpr unsigned int ChunkSize = 32;
 
 		private:
-			void SetupChunk(const BlockLibrary& blockLibrary);
+			struct ChunkData
+			{
+				std::unique_ptr<FlatChunk> chunk;
 
-			FlatChunk m_chunk;
+				NazaraSlot(FlatChunk, OnBlockUpdated, onUpdated);
+				NazaraSlot(FlatChunk, OnReset, onReset);
+			};
+
+			tsl::hopscotch_map<ChunkIndices, ChunkData> m_chunks;
 	};
 }
 

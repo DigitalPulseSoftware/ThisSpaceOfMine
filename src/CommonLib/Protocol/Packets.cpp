@@ -45,6 +45,11 @@ namespace tsom
 				serializer &= data.gravity;
 			}
 
+			void Serialize(PacketSerializer& serializer, ShipData& data)
+			{
+				serializer &= data.cellSize;
+			}
+
 			void Serialize(PacketSerializer& serializer, PlayerControlledData& data)
 			{
 				serializer &= data.controllingPlayerId;
@@ -223,6 +228,9 @@ namespace tsom
 
 				if (entity.playerControlled)
 					Helper::Serialize(serializer, *entity.playerControlled);
+
+				if (entity.ship)
+					Helper::Serialize(serializer, *entity.ship);
 			}
 		}
 

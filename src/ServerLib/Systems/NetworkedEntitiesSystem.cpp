@@ -28,8 +28,7 @@ namespace tsom
 
 	void NetworkedEntitiesSystem::CreateAllEntities(SessionVisibilityHandler& visibility) const
 	{
-		auto networkedView = m_registry.view<Nz::NodeComponent, NetworkedComponent>(entt::exclude<Nz::DisabledComponent>);
-		for (entt::entity entity : networkedView)
+		for (entt::entity entity : m_networkedEntities)
 			visibility.CreateEntity(entt::handle(m_registry, entity), BuildCreateEntityData(entity));
 	}
 
@@ -45,6 +44,9 @@ namespace tsom
 	{
 		m_networkedConstructObserver.each([&](entt::entity entity)
 		{
+			assert(!m_networkedEntities.contains(entity));
+			m_networkedEntities.insert(entity);
+
 			SessionVisibilityHandler::CreateEntityData createData = BuildCreateEntityData(entity);
 			if (createData.isMoving)
 				m_movingEntities.insert(entity);
@@ -71,9 +73,9 @@ namespace tsom
 		if (auto* planetComp = m_registry.try_get<PlanetComponent>(entity))
 		{
 			auto& data = createData.planetData.emplace();
-			data.cellSize = planetComp->planet->GetTileSize();
-			data.cornerRadius = planetComp->planet->GetCornerRadius();
-			data.gravity = planetComp->planet->GetGravity();
+			data.cellSize = planetComp->GetTileSize();
+			data.cornerRadius = planetComp->GetCornerRadius();
+			data.gravity = planetComp->GetGravity();
 		}
 
 		if (auto* playerControlled = m_registry.try_get<ServerPlayerControlledComponent>(entity))
@@ -88,6 +90,7 @@ namespace tsom
 		if (auto* shipComp = m_registry.try_get<ShipComponent>(entity))
 		{
 			auto& data = createData.shipData.emplace();
+			data.cellSize = shipComp->GetTileSize();
 		}
 
 		return createData;
@@ -97,6 +100,10 @@ namespace tsom
 	{
 		assert(&m_registry == &registry);
 
+		if (!m_networkedEntities.contains(entity))
+			return;
+
+		m_networkedEntities.erase(entity);
 		m_movingEntities.erase(entity);
 
 		ForEachVisibility([&](SessionVisibilityHandler& visibility)

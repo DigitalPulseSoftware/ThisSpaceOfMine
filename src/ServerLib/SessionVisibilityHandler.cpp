@@ -324,6 +324,7 @@ namespace tsom
 
 				m_visibleEntities[entityIndex].entity = handle;
 				m_visibleEntities[entityIndex].envIndex = envIndex;
+				m_visibleEnvironments[envIndex].entities.UnboundedSet(entityIndex);
 
 				m_entityIndices[handle] = entityIndex;
 
@@ -386,14 +387,15 @@ namespace tsom
 				for (std::size_t entityIndex : visibleEnvironment.entities.IterBits())
 				{
 					auto& entityData = m_visibleEntities[entityIndex];
-					entityData.entity = entt::handle{};
-					entityData.envIndex = std::numeric_limits<EnvironmentId>::max();
 
 					m_createdEntities.erase(entityData.entity);
 					m_deletedEntities.erase(entityData.entity);
 					m_movingEntities.erase(entityData.entity);
 					m_entityIndices.erase(entityData.entity);
 					m_freeEntityIds.Set(entityIndex, true);
+
+					entityData.entity = entt::handle{};
+					entityData.envIndex = std::numeric_limits<EnvironmentId>::max();
 				}
 
 				for (std::size_t chunkIndex : visibleEnvironment.chunks.IterBits())

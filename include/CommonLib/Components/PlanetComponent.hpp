@@ -14,9 +14,10 @@
 
 namespace tsom
 {
-	struct PlanetComponent
+	struct PlanetComponent : Planet
 	{
-		std::unique_ptr<Planet> planet;
+		using Planet::Planet;
+
 		std::unique_ptr<ChunkEntities> planetEntities;
 	};
 }

@@ -5,10 +5,10 @@
 #include <ClientLib/ClientSessionHandler.hpp>
 #include <ClientLib/ClientBlockLibrary.hpp>
 #include <ClientLib/ClientChunkEntities.hpp>
-#include <ClientLib/ClientPlanet.hpp>
 #include <ClientLib/PlayerAnimationController.hpp>
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Components/AnimationComponent.hpp>
+#include <ClientLib/Components/ChunkNetworkMapComponent.hpp>
 #include <ClientLib/Components/MovementInterpolationComponent.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/Ship.hpp>
@@ -92,33 +92,41 @@ namespace tsom
 
 	void ClientSessionHandler::HandlePacket(Packets::ChunkCreate&& chunkCreate)
 	{
+		ChunkIndices indices(chunkCreate.chunkLocX, chunkCreate.chunkLocY, chunkCreate.chunkLocZ);
+
 		entt::handle entity = m_networkIdToEntity[chunkCreate.entityId];
 
-		auto& planetComponent = entity.get<PlanetComponent>();
-		ClientPlanet& clientPlanet = static_cast<ClientPlanet&>(*planetComponent.planet);
+		Chunk* chunk;
+		if (PlanetComponent* planetComponent = entity.try_get<PlanetComponent>())
+			chunk = &planetComponent->AddChunk(indices);
+		else if (ShipComponent* shipComponent = entity.try_get<ShipComponent>())
+			chunk = &shipComponent->AddChunk(indices);
 
-		ChunkIndices indices(chunkCreate.chunkLocX, chunkCreate.chunkLocY, chunkCreate.chunkLocZ);
-		clientPlanet.AddChunk(chunkCreate.chunkId, indices);
+		auto& chunkNetworkMap = entity.get<ChunkNetworkMapComponent>();
+		chunkNetworkMap.chunkByNetworkIndex.emplace(chunkCreate.chunkId, chunk);
+		chunkNetworkMap.chunkNetworkIndices.emplace(chunk, chunkCreate.chunkId);
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::ChunkDestroy&& chunkDestroy)
 	{
 		entt::handle entity = m_networkIdToEntity[chunkDestroy.entityId];
+		auto& chunkNetworkMap = entity.get<ChunkNetworkMapComponent>();
 
-		auto& planetComponent = entity.get<PlanetComponent>();
-		ClientPlanet& clientPlanet = static_cast<ClientPlanet&>(*planetComponent.planet);
+		auto it = chunkNetworkMap.chunkByNetworkIndex.find(chunkDestroy.chunkId);
 
-		clientPlanet.RemoveChunk(chunkDestroy.chunkId);
+		Chunk* chunk = it->second;
+		chunk->GetContainer().RemoveChunk(chunk->GetIndices());
+
+		chunkNetworkMap.chunkNetworkIndices.erase(chunk);
+		chunkNetworkMap.chunkByNetworkIndex.erase(it);
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::ChunkReset&& chunkReset)
 	{
 		entt::handle entity = m_networkIdToEntity[chunkReset.entityId];
+		auto& chunkNetworkMap = entity.get<ChunkNetworkMapComponent>();
 
-		auto& planetComponent = entity.get<PlanetComponent>();
-		ClientPlanet& clientPlanet = static_cast<ClientPlanet&>(*planetComponent.planet);
-
-		Chunk* chunk = clientPlanet.GetChunkByNetworkIndex(chunkReset.chunkId);
+		Chunk* chunk = Nz::Retrieve(chunkNetworkMap.chunkByNetworkIndex, chunkReset.chunkId);
 		if (!chunk)
 		{
 			fmt::print(fg(fmt::color::red), "ChunkReset handler: unknown chunk {}\n", chunkReset.chunkId);
@@ -137,11 +145,9 @@ namespace tsom
 	void ClientSessionHandler::HandlePacket(Packets::ChunkUpdate&& chunkUpdate)
 	{
 		entt::handle entity = m_networkIdToEntity[chunkUpdate.entityId];
+		auto& chunkNetworkMap = entity.get<ChunkNetworkMapComponent>();
 
-		auto& planetComponent = entity.get<PlanetComponent>();
-		ClientPlanet& clientPlanet = static_cast<ClientPlanet&>(*planetComponent.planet);
-
-		Chunk* chunk = clientPlanet.GetChunkByNetworkIndex(chunkUpdate.chunkId);
+		Chunk* chunk = Nz::Retrieve(chunkNetworkMap.chunkByNetworkIndex, chunkUpdate.chunkId);
 		chunk->LockWrite();
 
 		for (auto&& [blockPos, blockIndex] : chunkUpdate.updates)
@@ -163,16 +169,38 @@ namespace tsom
 			m_networkIdToEntity[entityData.entityId] = entity;
 			m_environments[entityData.environmentId]->entities.UnboundedSet(entityData.entityId);
 
+			std::string entityTypes;
 			if (entityData.planet)
+			{
+				if (!entityTypes.empty())
+					entityTypes += ", ";
+
+				entityTypes += "planet";
 				SetupEntity(entity, std::move(entityData.planet.value()));
+			}
 
 			if (entityData.playerControlled)
+			{
+				if (!entityTypes.empty())
+					entityTypes += ", ";
+
+				entityTypes += "player";
 				SetupEntity(entity, std::move(entityData.playerControlled.value()));
+			}
 
 			if (entityData.ship)
-				SetupEntity(entity, std::move(entityData.ship.value()));
+			{
+				if (!entityTypes.empty())
+					entityTypes += ", ";
 
-			fmt::print("Created entity {}\n", entityData.entityId);
+				entityTypes += "ship";
+				SetupEntity(entity, std::move(entityData.ship.value()));
+			}
+
+			if (!entityTypes.empty())
+				entityTypes = fmt::format(" ({})", entityTypes);
+
+			fmt::print("Created entity {}{}\n", entityData.entityId, entityTypes);
 		}
 	}
 
@@ -282,9 +310,9 @@ namespace tsom
 
 	void ClientSessionHandler::SetupEntity(entt::handle entity, Packets::Helper::PlanetData&& entityData)
 	{
-		auto& planetComponent = entity.emplace<PlanetComponent>();
-		planetComponent.planet = std::make_unique<ClientPlanet>(entityData.cellSize, entityData.cornerRadius, entityData.gravity);
-		planetComponent.planetEntities = std::make_unique<ClientChunkEntities>(m_app, m_world, *planetComponent.planet, m_blockLibrary);
+		entity.emplace<ChunkNetworkMapComponent>();
+		auto& planetComponent = entity.emplace<PlanetComponent>(entityData.cellSize, entityData.cornerRadius, entityData.gravity);
+		planetComponent.planetEntities = std::make_unique<ClientChunkEntities>(m_app, m_world, planetComponent, m_blockLibrary);
 		planetComponent.planetEntities->SetParentEntity(entity);
 	}
 
@@ -447,30 +475,9 @@ namespace tsom
 
 	void ClientSessionHandler::SetupEntity(entt::handle entity, Packets::Helper::ShipData&& entityData)
 	{
-		Ship tempShip(m_blockLibrary, Nz::Vector3ui(32), 1.f);
-
-		std::shared_ptr<Nz::Collider3D> chunkCollider = tempShip.GetChunk({0,0,0})->BuildCollider(m_blockLibrary);
-
-		entity.emplace<Nz::RigidBody3DComponent>(Nz::RigidBody3DComponent::DynamicSettings(chunkCollider, 100.f));
-
-		// Fallback
-		std::shared_ptr<Nz::Mesh> mesh = Nz::Mesh::Build(chunkCollider->GenerateDebugMesh());
-
-		std::shared_ptr<Nz::MaterialInstance> colliderMat = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic);
-		colliderMat->SetValueProperty("BaseColor", Nz::Color::Green());
-		colliderMat->UpdatePassesStates([](Nz::RenderStates& states)
-		{
-			states.primitiveMode = Nz::PrimitiveMode::LineList;
-			return true;
-		});
-
-		std::shared_ptr<Nz::GraphicalMesh> colliderGraphicalMesh = Nz::GraphicalMesh::BuildFromMesh(*mesh);
-
-		std::shared_ptr<Nz::Model> model = std::make_shared<Nz::Model>(colliderGraphicalMesh);
-		for (std::size_t i = 0; i < model->GetSubMeshCount(); ++i)
-			model->SetMaterial(i, colliderMat);
-
-		auto& gfx = entity.emplace<Nz::GraphicsComponent>();
-		gfx.AttachRenderable(model);
+		entity.emplace<ChunkNetworkMapComponent>();
+		auto& shipComponent = entity.emplace<ShipComponent>(entityData.cellSize);
+		shipComponent.shipEntities = std::make_unique<ClientChunkEntities>(m_app, m_world, shipComponent, m_blockLibrary);
+		shipComponent.shipEntities->SetParentEntity(entity);
 	}
 }

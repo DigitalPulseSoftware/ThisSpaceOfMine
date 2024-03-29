@@ -119,7 +119,8 @@ namespace tsom
 			dirLight.UpdateShadowMapSize(2048);
 		}
 
-		m_ship = std::make_unique<Ship>(*stateData.blockLibrary, Nz::Vector3ui(20, 20, 20), 2.f);
+		m_ship = std::make_unique<Ship>(2.f);
+		m_ship->Generate(*stateData.blockLibrary);
 
 		m_infoLabel = CreateWidget<Nz::LabelWidget>();
 
@@ -224,13 +225,13 @@ namespace tsom
 				{
 					float sign = (m_currentBlock != EmptyBlockIndex) ? 1.f : -1.f;
 
-					auto coordinates = m_ship->GetChunk().ComputeCoordinates(hitPos + sign * hitNormal * m_ship->GetTileSize() * 0.25f);
+					auto coordinates = m_ship->GetChunk({ 0, 0, 0 })->ComputeCoordinates(hitPos + sign * hitNormal * m_ship->GetTileSize() * 0.25f);
 					if (!coordinates)
 						return;
 
 					std::lock_guard lock(m_integrityMutex);
 
-					m_ship->GetChunk().UpdateBlock(*coordinates, m_currentBlock);
+					m_ship->GetChunk({ 0, 0, 0 })->UpdateBlock(*coordinates, m_currentBlock);
 					CheckHullIntegrity();
 				}
 			}

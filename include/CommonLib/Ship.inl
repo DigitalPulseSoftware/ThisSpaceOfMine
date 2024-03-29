@@ -6,45 +6,31 @@
 
 namespace tsom
 {
-	inline void Ship::ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, Chunk& chunk)> callback)
-	{
-		callback(ChunkIndices{ 0, 0, 0 }, m_chunk);
-	}
-
-	inline void Ship::ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, const Chunk& chunk)> callback) const
-	{
-		callback(ChunkIndices{ 0, 0, 0}, m_chunk);
-	}
-
 	inline Nz::Vector3f Ship::GetCenter() const
 	{
 		return Nz::Vector3f::Zero();
 	}
 
-	inline Chunk& Ship::GetChunk()
+	inline FlatChunk* Ship::GetChunk(const ChunkIndices& chunkIndices)
 	{
-		return m_chunk;
+		auto it = m_chunks.find(chunkIndices);
+		if (it == m_chunks.end())
+			return nullptr;
+
+		return it->second.chunk.get();
 	}
 
-	inline const Chunk& Ship::GetChunk() const
+	inline const FlatChunk* Ship::GetChunk(const ChunkIndices& chunkIndices) const
 	{
-		return m_chunk;
-	}
+		auto it = m_chunks.find(chunkIndices);
+		if (it == m_chunks.end())
+			return nullptr;
 
-	inline Chunk* Ship::GetChunk(const ChunkIndices& chunkIndices)
-	{
-		NazaraAssert(chunkIndices == ChunkIndices(0, 0, 0), "invalid indices");
-		return &m_chunk;
-	}
-
-	inline const Chunk* Ship::GetChunk(const ChunkIndices& chunkIndices) const
-	{
-		NazaraAssert(chunkIndices == ChunkIndices(0, 0, 0), "invalid indices");
-		return &m_chunk;
+		return it->second.chunk.get();
 	}
 
 	inline std::size_t Ship::GetChunkCount() const
 	{
-		return 1;
+		return m_chunks.size();
 	}
 }
