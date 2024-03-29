@@ -125,6 +125,7 @@ namespace tsom
 
 		void Serialize(PacketSerializer& serializer, ChunkCreate& data)
 		{
+			serializer &= data.tickIndex;
 			serializer &= data.entityId;
 			serializer &= data.chunkId;
 			serializer &= data.chunkLocX;
@@ -138,6 +139,7 @@ namespace tsom
 
 		void Serialize(PacketSerializer& serializer, ChunkDestroy& data)
 		{
+			serializer &= data.tickIndex;
 			serializer &= data.entityId;
 			serializer &= data.chunkId;
 		}
@@ -146,6 +148,7 @@ namespace tsom
 		{
 			// FIXME: Handle endianness
 
+			serializer &= data.tickIndex;
 			serializer &= data.entityId;
 			serializer &= data.chunkId;
 
@@ -188,6 +191,7 @@ namespace tsom
 
 		void Serialize(PacketSerializer& serializer, ChunkUpdate& data)
 		{
+			serializer &= data.tickIndex;
 			serializer &= data.entityId;
 			serializer &= data.chunkId;
 
@@ -252,6 +256,18 @@ namespace tsom
 				serializer &= data.controlledCharacter->cameraPitch;
 				serializer &= data.controlledCharacter->cameraYaw;
 			}
+		}
+
+		void Serialize(PacketSerializer& serializer, EnvironmentCreate& data)
+		{
+			serializer &= data.tickIndex;
+			serializer &= data.id;
+		}
+
+		void Serialize(PacketSerializer& serializer, EnvironmentDestroy& data)
+		{
+			serializer &= data.tickIndex;
+			serializer &= data.id;
 		}
 
 		void Serialize(PacketSerializer& serializer, GameData& data)

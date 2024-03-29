@@ -63,6 +63,7 @@ namespace tsom
 		auto& entityNode = m_registry.get<Nz::NodeComponent>(entity);
 
 		SessionVisibilityHandler::CreateEntityData createData;
+		createData.environment = &m_environment;
 		createData.initialPosition = entityNode.GetPosition();
 		createData.initialRotation = entityNode.GetRotation();
 		createData.isMoving = isMoving;
@@ -83,7 +84,8 @@ namespace tsom
 				data.controllingPlayerId = controllingPlayer->GetPlayerIndex();
 			}
 		}
-		else if (auto* shipComp = m_registry.try_get<ShipComponent>(entity))
+
+		if (auto* shipComp = m_registry.try_get<ShipComponent>(entity))
 		{
 			auto& data = createData.shipData.emplace();
 		}

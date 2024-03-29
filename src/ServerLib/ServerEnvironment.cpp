@@ -25,9 +25,7 @@ namespace tsom
 
 	entt::handle ServerEnvironment::CreateEntity()
 	{
-		entt::handle entity = m_world.CreateEntity();
-
-		return entity;
+		return m_world.CreateEntity();
 	}
 
 	void ServerEnvironment::OnTick(Nz::Time elapsedTime)

@@ -10,7 +10,6 @@
 #include <ServerLib/ServerInstance.hpp>
 #include <ServerLib/ServerPlayer.hpp>
 #include <ServerLib/Session/PlayerSessionHandler.hpp>
-#include <ServerLib/Systems/NetworkedEntitiesSystem.hpp>
 #include <fmt/color.h>
 #include <fmt/format.h>
 
@@ -120,9 +119,6 @@ namespace tsom
 		response.ownPlayerIndex = player->GetPlayerIndex();
 
 		GetSession()->SendPacket(response);
-
-		auto& networkedEntities = player->GetEnvironment()->GetWorld().GetSystem<NetworkedEntitiesSystem>();
-		networkedEntities.CreateAllEntities(player->GetVisibilityHandler());
 
 		GetSession()->SetupHandler<PlayerSessionHandler>(player);
 

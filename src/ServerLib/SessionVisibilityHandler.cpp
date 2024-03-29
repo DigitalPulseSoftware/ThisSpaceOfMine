@@ -33,15 +33,15 @@ namespace tsom
 			m_newlyVisibleChunk.UnboundedSet(chunkIndex);
 
 			assert(!m_chunkIndices.contains(&chunk));
-			m_chunkIndices.emplace(&chunk, chunkIndex);
+			m_chunkIndices.emplace(&chunk, Nz::SafeCaster(chunkIndex));
 
 			if (chunkIndex >= m_visibleChunks.size())
 				m_visibleChunks.resize(chunkIndex + 1);
 
-			VisibleChunk& chunkData = m_visibleChunks[chunkIndex];
+			ChunkData& chunkData = m_visibleChunks[chunkIndex];
 			chunkData.chunk = &chunk;
-			chunkData.chunkUpdatePacket.chunkId = Nz::SafeCast<Packets::Helper::ChunkId>(chunkIndex);
-			chunkData.entity = entity;
+			chunkData.chunkUpdatePacket.chunkId = Nz::SafeCast<ChunkId>(chunkIndex);
+			chunkData.entityOwner = entity;
 		}
 	}
 
@@ -64,17 +64,37 @@ namespace tsom
 		m_createdEntities.emplace(entity, std::move(entityData));
 	}
 
+	void SessionVisibilityHandler::CreateEnvironment(ServerEnvironment& environment)
+	{
+		if (auto it = std::find(m_destroyedEnvironments.begin(), m_destroyedEnvironments.end(), &environment); it != m_destroyedEnvironments.end())
+			m_destroyedEnvironments.erase(it);
+
+		assert(std::find(m_createdEnvironments.begin(), m_createdEnvironments.end(), &environment) == m_createdEnvironments.end());
+		m_createdEnvironments.push_back(&environment);
+	}
+
 	void SessionVisibilityHandler::DestroyEntity(entt::handle entity)
 	{
+		assert(!m_deletedEntities.contains(entity));
 		m_createdEntities.erase(entity);
 		m_movingEntities.erase(entity);
 		m_deletedEntities.emplace(entity);
 	}
 
+	void SessionVisibilityHandler::DestroyEnvironment(ServerEnvironment& environment)
+	{
+		if (auto it = std::find(m_createdEnvironments.begin(), m_createdEnvironments.end(), &environment); it != m_createdEnvironments.end())
+			m_createdEnvironments.erase(it);
+
+		assert(std::find(m_destroyedEnvironments.begin(), m_destroyedEnvironments.end(), &environment) == m_destroyedEnvironments.end());
+		m_destroyedEnvironments.push_back(&environment);
+	}
+
 	void SessionVisibilityHandler::Dispatch(Nz::UInt16 tickIndex)
 	{
+		DispatchEnvironments(tickIndex);
 		DispatchEntities(tickIndex);
-		DispatchChunks();
+		DispatchChunks(tickIndex);
 	}
 
 	Chunk* SessionVisibilityHandler::GetChunkByIndex(std::size_t chunkIndex) const
@@ -85,11 +105,15 @@ namespace tsom
 		return m_visibleChunks[chunkIndex].chunk;
 	}
 
-	void SessionVisibilityHandler::DispatchChunks()
+	void SessionVisibilityHandler::DispatchChunks(Nz::UInt16 tickIndex)
 	{
-		for (std::size_t chunkIndex = m_newlyHiddenChunk.FindFirst(); chunkIndex != m_newlyHiddenChunk.npos; chunkIndex = m_newlyHiddenChunk.FindNext(chunkIndex))
+		for (std::size_t chunkIndex : m_newlyHiddenChunk.IterBits())
 		{
-			VisibleChunk& visibleChunk = m_visibleChunks[chunkIndex];
+			ChunkData& visibleChunk = m_visibleChunks[chunkIndex];
+
+			EntityId entityIndex = Nz::Retrieve(m_entityIndices, visibleChunk.entityOwner);
+			EnvironmentId envIndex = m_visibleEntities[entityIndex].envIndex;
+			m_visibleEnvironments[envIndex].chunks.Reset(chunkIndex);
 
 			// Mark chunk index as free on dispatch to prevent chunk index reuse while resurrecting it
 			m_freeChunkIds.Set(chunkIndex);
@@ -97,46 +121,47 @@ namespace tsom
 			m_updatedChunk.UnboundedReset(chunkIndex);
 
 			Packets::ChunkDestroy chunkDestroyPacket;
-			chunkDestroyPacket.chunkId = Nz::SafeCast<Packets::Helper::ChunkId>(chunkIndex);
-			chunkDestroyPacket.entityId = Nz::Retrieve(m_entityToNetworkId, visibleChunk.entity);
+			chunkDestroyPacket.chunkId = Nz::SafeCast<ChunkId>(chunkIndex);
+			chunkDestroyPacket.entityId = entityIndex;
+			chunkDestroyPacket.tickIndex = tickIndex;
 
 			m_networkSession->SendPacket(chunkDestroyPacket);
 
 			visibleChunk.chunk = nullptr;
-			visibleChunk.entity = entt::handle{};
+			visibleChunk.entityOwner = entt::handle{};
 			visibleChunk.onBlockUpdatedSlot.Disconnect();
 		}
 		m_newlyHiddenChunk.Clear();
 
 		if (m_newlyVisibleChunk.GetSize() > 0)
-			DispatchChunkCreation();
+			DispatchChunkCreation(tickIndex);
 
 		if (m_resetChunk.GetSize() > 0)
-			DispatchChunkReset();
+			DispatchChunkReset(tickIndex);
 
-		for (std::size_t chunkIndex = m_updatedChunk.FindFirst(); chunkIndex != m_updatedChunk.npos; chunkIndex = m_updatedChunk.FindNext(chunkIndex))
+		for (std::size_t chunkIndex : m_updatedChunk.IterBits())
 		{
-			VisibleChunk& visibleChunk = m_visibleChunks[chunkIndex];
+			ChunkData& visibleChunk = m_visibleChunks[chunkIndex];
 			m_networkSession->SendPacket(visibleChunk.chunkUpdatePacket);
 			visibleChunk.chunkUpdatePacket.updates.clear();
 		}
 		m_updatedChunk.Clear();
 	}
 
-	void SessionVisibilityHandler::DispatchChunkCreation()
+	void SessionVisibilityHandler::DispatchChunkCreation(Nz::UInt16 tickIndex)
 	{
-		for (std::size_t chunkIndex = m_newlyVisibleChunk.FindFirst(); chunkIndex != m_newlyVisibleChunk.npos; chunkIndex = m_newlyVisibleChunk.FindNext(chunkIndex))
+		for (std::size_t chunkIndex : m_newlyVisibleChunk.IterBits())
 		{
-			VisibleChunk& visibleChunk = m_visibleChunks[chunkIndex];
+			ChunkData& visibleChunk = m_visibleChunks[chunkIndex];
 
 			// Connect update signal on dispatch to prevent updates made during the same tick to be sent as update
-			visibleChunk.chunkUpdatePacket.entityId = Nz::Retrieve(m_entityToNetworkId, visibleChunk.entity);
+			visibleChunk.chunkUpdatePacket.entityId = Nz::Retrieve(m_entityIndices, visibleChunk.entityOwner);
 
 			visibleChunk.onBlockUpdatedSlot.Connect(visibleChunk.chunk->OnBlockUpdated, [this, chunkIndex]([[maybe_unused]] Chunk* chunk, const Nz::Vector3ui& indices, BlockIndex newBlock)
 			{
 				m_updatedChunk.UnboundedSet(chunkIndex);
 
-				VisibleChunk& visibleChunk = m_visibleChunks[chunkIndex];
+				ChunkData& visibleChunk = m_visibleChunks[chunkIndex];
 				assert(visibleChunk.chunk == chunk);
 
 				// Chunk content has been reset or wasn't already sent
@@ -165,11 +190,16 @@ namespace tsom
 				m_resetChunk.UnboundedSet(chunkIndex);
 			});
 
+			// Register chunk to environment
+			EntityId entityIndex = Nz::Retrieve(m_entityIndices, visibleChunk.entityOwner);
+			EnvironmentId envIndex = m_visibleEntities[entityIndex].envIndex;
+			m_visibleEnvironments[envIndex].chunks.UnboundedSet(chunkIndex);
+
 			ChunkIndices chunkLocation = visibleChunk.chunk->GetIndices();
 			Nz::Vector3ui chunkSize = visibleChunk.chunk->GetSize();
 
 			Packets::ChunkCreate chunkCreatePacket;
-			chunkCreatePacket.chunkId = Nz::SafeCast<Packets::Helper::ChunkId>(chunkIndex);
+			chunkCreatePacket.chunkId = Nz::SafeCast<ChunkId>(chunkIndex);
 			chunkCreatePacket.chunkLocX = chunkLocation.x;
 			chunkCreatePacket.chunkLocY = chunkLocation.y;
 			chunkCreatePacket.chunkLocZ = chunkLocation.z;
@@ -177,7 +207,8 @@ namespace tsom
 			chunkCreatePacket.chunkSizeY = chunkSize.y;
 			chunkCreatePacket.chunkSizeZ = chunkSize.z;
 			chunkCreatePacket.cellSize = visibleChunk.chunk->GetBlockSize();
-			chunkCreatePacket.entityId = Nz::Retrieve(m_entityToNetworkId, visibleChunk.entity);
+			chunkCreatePacket.entityId = entityIndex;
+			chunkCreatePacket.tickIndex = tickIndex;
 
 			m_networkSession->SendPacket(chunkCreatePacket);
 
@@ -187,10 +218,10 @@ namespace tsom
 		m_newlyVisibleChunk.Clear();
 	}
 
-	void SessionVisibilityHandler::DispatchChunkReset()
+	void SessionVisibilityHandler::DispatchChunkReset(Nz::UInt16 tickIndex)
 	{
 		m_orderedChunkList.clear();
-		for (std::size_t chunkIndex = m_resetChunk.FindFirst(); chunkIndex != m_resetChunk.npos; chunkIndex = m_resetChunk.FindNext(chunkIndex))
+		for (std::size_t chunkIndex : m_resetChunk.IterBits())
 		{
 			const Chunk* chunk = m_visibleChunks[chunkIndex].chunk;
 			Nz::Vector3f chunkPosition = chunk->GetContainer().GetChunkOffset(chunk->GetIndices());
@@ -213,14 +244,15 @@ namespace tsom
 			if (*m_activeChunkUpdates >= MaxConcurrentChunkUpdate)
 				return;
 
-			VisibleChunk& visibleChunk = m_visibleChunks[chunk.chunkIndex];
+			ChunkData& visibleChunk = m_visibleChunks[chunk.chunkIndex];
 
 			ChunkIndices chunkLocation = visibleChunk.chunk->GetIndices();
 			Nz::Vector3ui chunkSize = visibleChunk.chunk->GetSize();
 
 			Packets::ChunkReset chunkResetPacket;
-			chunkResetPacket.chunkId = Nz::SafeCast<Packets::Helper::ChunkId>(chunk.chunkIndex);
-			chunkResetPacket.entityId = Nz::Retrieve(m_entityToNetworkId, visibleChunk.entity);
+			chunkResetPacket.chunkId = Nz::SafeCast<ChunkId>(chunk.chunkIndex);
+			chunkResetPacket.entityId = Nz::Retrieve(m_entityIndices, visibleChunk.entityOwner);
+			chunkResetPacket.tickIndex = tickIndex;
 
 			unsigned int blockCount = chunkSize.x * chunkSize.y * chunkSize.z;
 			chunkResetPacket.content.resize(blockCount);
@@ -252,12 +284,14 @@ namespace tsom
 
 			for (const entt::handle& handle : m_deletedEntities)
 			{
-				Nz::UInt32 entityId = Nz::Retrieve(m_entityToNetworkId, handle);
+				Nz::UInt32 entityId = Nz::Retrieve(m_entityIndices, handle);
 				deletePacket.entities.push_back(entityId);
 
 				m_freeEntityIds.Set(entityId, true);
+				m_visibleEntities[entityId].entity = entt::handle{};
+				m_visibleEntities[entityId].envIndex = std::numeric_limits<EnvironmentId>::max();
 
-				m_entityToNetworkId.erase(handle);
+				m_entityIndices.erase(handle);
 			}
 
 			m_networkSession->SendPacket(deletePacket);
@@ -274,19 +308,28 @@ namespace tsom
 				entt::handle handle = it.key();
 				auto& data = it.value();
 
-				std::size_t networkId = m_freeEntityIds.FindFirst();
-				if (networkId == m_freeEntityIds.npos)
+				std::size_t entityIndex = m_freeEntityIds.FindFirst();
+				if (entityIndex == m_freeEntityIds.npos)
 				{
-					networkId = m_freeEntityIds.GetSize();
-					m_freeEntityIds.Resize(networkId + FreeEntityIdGrowRate, true);
+					entityIndex = m_freeEntityIds.GetSize();
+					m_freeEntityIds.Resize(entityIndex + FreeEntityIdGrowRate, true);
 				}
 
-				m_freeEntityIds.Set(networkId, false);
+				m_freeEntityIds.Set(entityIndex, false);
 
-				m_entityToNetworkId[handle] = networkId;
+				if (entityIndex >= m_visibleEntities.size())
+					m_visibleEntities.resize(entityIndex + 1);
+
+				EnvironmentId envIndex = Nz::Retrieve(m_environmentIndices, data.environment);
+
+				m_visibleEntities[entityIndex].entity = handle;
+				m_visibleEntities[entityIndex].envIndex = envIndex;
+
+				m_entityIndices[handle] = entityIndex;
 
 				auto& entityData = creationPacket.entities.emplace_back();
-				entityData.entityId = Nz::SafeCast<Nz::UInt32>(networkId);
+				entityData.entityId = Nz::SafeCast<EntityId>(entityIndex);
+				entityData.environmentId = envIndex;
 				entityData.initialStates.position = data.initialPosition;
 				entityData.initialStates.rotation = data.initialRotation;
 				entityData.planet = std::move(data.planetData);
@@ -319,7 +362,7 @@ namespace tsom
 
 			auto& entityNode = handle.get<Nz::NodeComponent>();
 
-			entityData.entityId = Nz::Retrieve(m_entityToNetworkId, handle);
+			entityData.entityId = Nz::Retrieve(m_entityIndices, handle);
 
 			entityData.newStates.position = entityNode.GetPosition();
 			entityData.newStates.rotation = entityNode.GetRotation();
@@ -327,5 +370,80 @@ namespace tsom
 
 		if (!stateUpdate.entities.empty() || stateUpdate.controlledCharacter.has_value())
 			m_networkSession->SendPacket(stateUpdate);
+	}
+
+	void SessionVisibilityHandler::DispatchEnvironments(Nz::UInt16 tickIndex)
+	{
+		if (!m_destroyedEnvironments.empty())
+		{
+			for (ServerEnvironment* environment : m_destroyedEnvironments)
+			{
+				Nz::UInt8 envId = Nz::Retrieve(m_environmentIndices, environment);
+
+				m_freeEnvironmentIds.Set(envId, true);
+
+				auto& visibleEnvironment = m_visibleEnvironments[envId];
+				for (std::size_t entityIndex : visibleEnvironment.entities.IterBits())
+				{
+					auto& entityData = m_visibleEntities[entityIndex];
+					entityData.entity = entt::handle{};
+					entityData.envIndex = std::numeric_limits<EnvironmentId>::max();
+
+					m_createdEntities.erase(entityData.entity);
+					m_deletedEntities.erase(entityData.entity);
+					m_movingEntities.erase(entityData.entity);
+					m_entityIndices.erase(entityData.entity);
+					m_freeEntityIds.Set(entityIndex, true);
+				}
+
+				for (std::size_t chunkIndex : visibleEnvironment.chunks.IterBits())
+				{
+					auto& visibleChunk = m_visibleChunks[chunkIndex];
+					visibleChunk.chunk = nullptr;
+					visibleChunk.entityOwner = entt::handle{};
+					visibleChunk.onBlockUpdatedSlot.Disconnect();
+
+					m_freeChunkIds.Set(chunkIndex);
+					m_resetChunk.UnboundedReset(chunkIndex);
+					m_updatedChunk.UnboundedReset(chunkIndex);
+				}
+
+				m_environmentIndices.erase(environment);
+
+				Packets::EnvironmentDestroy destroyPacket;
+				destroyPacket.id = envId;
+				destroyPacket.tickIndex = tickIndex;
+				m_networkSession->SendPacket(destroyPacket);
+			}
+
+			m_destroyedEnvironments.clear();
+		}
+
+		if (!m_createdEnvironments.empty())
+		{
+			for (ServerEnvironment* environment : m_createdEnvironments)
+			{
+				std::size_t envIndex = m_freeEnvironmentIds.FindFirst();
+				if (envIndex == m_freeEnvironmentIds.npos)
+				{
+					envIndex = m_freeEnvironmentIds.GetSize();
+					m_freeEnvironmentIds.Resize(envIndex + FreeNetworkIdGrowRate, true);
+				}
+
+				m_freeEnvironmentIds.Set(envIndex, false);
+
+				m_environmentIndices[environment] = Nz::SafeCast<Nz::UInt8>(envIndex);
+
+				if (envIndex >= m_visibleEnvironments.size())
+					m_visibleEnvironments.resize(envIndex + 1);
+
+				Packets::EnvironmentCreate createPacket;
+				createPacket.id = Nz::SafeCast<Nz::UInt8>(envIndex);
+				createPacket.tickIndex = tickIndex;
+				m_networkSession->SendPacket(createPacket);
+			}
+
+			m_createdEnvironments.clear();
+		}
 	}
 }

@@ -58,9 +58,9 @@ namespace tsom
 
 	ClientSessionHandler::~ClientSessionHandler()
 	{
-		for (auto it = m_networkIdToEntity.begin(); it != m_networkIdToEntity.end(); ++it)
+		for (entt::handle entity : m_networkIdToEntity)
 		{
-			if (entt::handle entity = it.value(); entity.valid())
+			if (entity)
 				entity.destroy();
 		}
 		m_networkIdToEntity.clear();
@@ -92,7 +92,7 @@ namespace tsom
 
 	void ClientSessionHandler::HandlePacket(Packets::ChunkCreate&& chunkCreate)
 	{
-		entt::handle entity = Nz::Retrieve(m_networkIdToEntity, chunkCreate.entityId);
+		entt::handle entity = m_networkIdToEntity[chunkCreate.entityId];
 
 		auto& planetComponent = entity.get<PlanetComponent>();
 		ClientPlanet& clientPlanet = static_cast<ClientPlanet&>(*planetComponent.planet);
@@ -103,7 +103,7 @@ namespace tsom
 
 	void ClientSessionHandler::HandlePacket(Packets::ChunkDestroy&& chunkDestroy)
 	{
-		entt::handle entity = Nz::Retrieve(m_networkIdToEntity, chunkDestroy.entityId);
+		entt::handle entity = m_networkIdToEntity[chunkDestroy.entityId];
 
 		auto& planetComponent = entity.get<PlanetComponent>();
 		ClientPlanet& clientPlanet = static_cast<ClientPlanet&>(*planetComponent.planet);
@@ -113,7 +113,7 @@ namespace tsom
 
 	void ClientSessionHandler::HandlePacket(Packets::ChunkReset&& chunkReset)
 	{
-		entt::handle entity = Nz::Retrieve(m_networkIdToEntity, chunkReset.entityId);
+		entt::handle entity = m_networkIdToEntity[chunkReset.entityId];
 
 		auto& planetComponent = entity.get<PlanetComponent>();
 		ClientPlanet& clientPlanet = static_cast<ClientPlanet&>(*planetComponent.planet);
@@ -136,7 +136,7 @@ namespace tsom
 
 	void ClientSessionHandler::HandlePacket(Packets::ChunkUpdate&& chunkUpdate)
 	{
-		entt::handle entity = Nz::Retrieve(m_networkIdToEntity, chunkUpdate.entityId);
+		entt::handle entity = m_networkIdToEntity[chunkUpdate.entityId];
 
 		auto& planetComponent = entity.get<PlanetComponent>();
 		ClientPlanet& clientPlanet = static_cast<ClientPlanet&>(*planetComponent.planet);
@@ -157,7 +157,11 @@ namespace tsom
 			entt::handle entity = m_world.CreateEntity();
 			entity.emplace<Nz::NodeComponent>(entityData.initialStates.position, entityData.initialStates.rotation);
 
+			if (entityData.entityId >= m_networkIdToEntity.size())
+				m_networkIdToEntity.resize(entityData.entityId + 1);
+
 			m_networkIdToEntity[entityData.entityId] = entity;
+			m_environments[entityData.environmentId]->entities.UnboundedSet(entityData.entityId);
 
 			if (entityData.planet)
 				SetupEntity(entity, std::move(entityData.planet.value()));
@@ -176,7 +180,7 @@ namespace tsom
 	{
 		for (auto entityId : entitiesDelete.entities)
 		{
-			entt::handle entity = Nz::Retrieve(m_networkIdToEntity, entityId);
+			entt::handle entity = m_networkIdToEntity[entityId];
 
 			if (m_playerControlledEntity == entity)
 				OnControlledEntityChanged({});
@@ -190,7 +194,7 @@ namespace tsom
 	{
 		for (auto& entityData : stateUpdate.entities)
 		{
-			entt::handle entity = Nz::Retrieve(m_networkIdToEntity, entityData.entityId);
+			entt::handle entity = m_networkIdToEntity[entityData.entityId];
 
 			if (MovementInterpolationComponent* movementInterpolation = entity.try_get<MovementInterpolationComponent>())
 				movementInterpolation->PushMovement(stateUpdate.tickIndex, entityData.newStates.position, entityData.newStates.rotation);
@@ -203,6 +207,22 @@ namespace tsom
 
 		if (stateUpdate.controlledCharacter)
 			OnControlledEntityStateUpdate(stateUpdate.lastInputIndex, *stateUpdate.controlledCharacter);
+	}
+
+	void ClientSessionHandler::HandlePacket(Packets::EnvironmentCreate&& envCreate)
+	{
+		if (envCreate.id >= m_environments.size())
+			m_environments.resize(envCreate.id + 1);
+
+		m_environments[envCreate.id].emplace();
+	}
+
+	void ClientSessionHandler::HandlePacket(Packets::EnvironmentDestroy&& envDestroy)
+	{
+		for (std::size_t entityIndex : m_environments[envDestroy.id]->entities.IterBits())
+			m_networkIdToEntity[entityIndex].destroy();
+
+		m_environments[envDestroy.id].reset();
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::GameData&& gameData)

@@ -21,6 +21,7 @@ namespace tsom
 {
 	class CharacterController;
 	class NetworkSession;
+	class ServerEnvironment;
 
 	class TSOM_SERVERLIB_API SessionVisibilityHandler
 	{
@@ -34,9 +35,11 @@ namespace tsom
 
 			void CreateChunk(entt::handle entity, Chunk& chunk);
 			void CreateEntity(entt::handle entity, CreateEntityData entityData);
+			void CreateEnvironment(ServerEnvironment& environment);
 
 			void DestroyChunk(Chunk& chunk);
 			void DestroyEntity(entt::handle entity);
+			void DestroyEnvironment(ServerEnvironment& environment);
 
 			void Dispatch(Nz::UInt16 tickIndex);
 
@@ -50,6 +53,7 @@ namespace tsom
 
 			struct CreateEntityData
 			{
+				ServerEnvironment* environment;
 				Nz::Quaternionf initialRotation;
 				Nz::Vector3f initialPosition;
 				std::optional<Packets::Helper::PlanetData> planetData;
@@ -59,14 +63,35 @@ namespace tsom
 			};
 
 		private:
-			void DispatchChunks();
-			void DispatchChunkCreation();
-			void DispatchChunkReset();
+			void DispatchChunks(Nz::UInt16 tickIndex);
+			void DispatchChunkCreation(Nz::UInt16 tickIndex);
+			void DispatchChunkReset(Nz::UInt16 tickIndex);
 			void DispatchEntities(Nz::UInt16 tickIndex);
+			void DispatchEnvironments(Nz::UInt16 tickIndex);
 
 			static constexpr std::size_t MaxConcurrentChunkUpdate = 3;
 			static constexpr std::size_t FreeChunkIdGrowRate = 128;
 			static constexpr std::size_t FreeEntityIdGrowRate = 512;
+			static constexpr std::size_t FreeNetworkIdGrowRate = 64;
+
+			using ChunkId = Packets::Helper::ChunkId;
+			using EntityId = Packets::Helper::EntityId;
+			using EnvironmentId = Packets::Helper::EnvironmentId;
+
+			struct HandlerHasher
+			{
+				inline std::size_t operator()(const entt::handle& handle) const;
+			};
+
+			struct ChunkData
+			{
+				NazaraSlot(Chunk, OnBlockUpdated, onBlockUpdatedSlot);
+				NazaraSlot(Chunk, OnReset, onResetSlot);
+
+				entt::handle entityOwner;
+				Chunk* chunk;
+				Packets::ChunkUpdate chunkUpdatePacket;
+			};
 
 			struct ChunkWithPos
 			{
@@ -74,31 +99,34 @@ namespace tsom
 				Nz::Vector3f chunkCenter;
 			};
 
-			struct HandlerHasher
+			struct EntityData
 			{
-				inline std::size_t operator()(const entt::handle& handle) const;
-			};
-
-			struct VisibleChunk
-			{
-				NazaraSlot(Chunk, OnBlockUpdated, onBlockUpdatedSlot);
-				NazaraSlot(Chunk, OnReset, onResetSlot);
-
 				entt::handle entity;
-				Chunk* chunk;
-				Packets::ChunkUpdate chunkUpdatePacket;
+				EnvironmentId envIndex;
 			};
 
-			tsl::hopscotch_map<entt::handle, Nz::UInt32, HandlerHasher> m_entityToNetworkId;
+			struct EnvironmentData
+			{
+				Nz::Bitset<Nz::UInt64> chunks;
+				Nz::Bitset<Nz::UInt64> entities;
+			};
+
+			tsl::hopscotch_map<entt::handle, EntityId, HandlerHasher> m_entityIndices;
 			tsl::hopscotch_map<entt::handle, CreateEntityData, HandlerHasher> m_createdEntities;
-			tsl::hopscotch_map<Chunk*, std::size_t> m_chunkIndices;
+			tsl::hopscotch_map<Chunk*, ChunkId> m_chunkIndices;
+			tsl::hopscotch_map<ServerEnvironment*, EnvironmentId> m_environmentIndices;
 			tsl::hopscotch_set<entt::handle, HandlerHasher> m_deletedEntities;
 			tsl::hopscotch_set<entt::handle, HandlerHasher> m_movingEntities;
 			std::shared_ptr<std::size_t> m_activeChunkUpdates;
+			std::vector<ServerEnvironment*> m_createdEnvironments;
+			std::vector<ServerEnvironment*> m_destroyedEnvironments;
+			std::vector<ChunkData> m_visibleChunks;
 			std::vector<ChunkWithPos> m_orderedChunkList;
-			std::vector<VisibleChunk> m_visibleChunks;
+			std::vector<EntityData> m_visibleEntities;
+			std::vector<EnvironmentData> m_visibleEnvironments;
 			Nz::Bitset<Nz::UInt64> m_freeChunkIds;
 			Nz::Bitset<Nz::UInt64> m_freeEntityIds;
+			Nz::Bitset<Nz::UInt64> m_freeEnvironmentIds;
 			Nz::Bitset<Nz::UInt64> m_newlyHiddenChunk;
 			Nz::Bitset<Nz::UInt64> m_newlyVisibleChunk;
 			Nz::Bitset<Nz::UInt64> m_resetChunk;

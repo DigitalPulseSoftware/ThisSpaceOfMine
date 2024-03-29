@@ -34,6 +34,8 @@ namespace tsom
 		{ PacketIndex<Packets::EntitiesCreation>,    { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::EntitiesDelete>,      { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::EntitiesStateUpdate>, { .channel = 1, .flags = Nz::ENetPacketFlag_Unreliable } },
+		{ PacketIndex<Packets::EnvironmentCreate>,   { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::EnvironmentDestroy>,  { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::GameData>,            { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::PlayerJoin>,          { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::PlayerLeave>,         { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
@@ -107,16 +109,6 @@ namespace tsom
 			if (!playerEntity)
 				return;
 
-			PlanetComponent* playerPlanet = playerEntity.try_get<PlanetComponent>();
-			if (!playerPlanet)
-				return;
-
-			entt::registry* reg = playerEntity.registry();
-
-			entt::handle ent = entt::handle(*reg, reg->create());
-			auto& node = ent.emplace<Nz::NodeComponent>();
-			node.SetPosition(playerEntity.get<Nz::NodeComponent>().GetPosition());
-
 			ServerInstance& serverInstance = m_player->GetServerInstance();
 			Nz::ApplicationBase& app = serverInstance.GetApplication();
 			const BlockLibrary& blockLibrary = serverInstance.GetBlockLibrary();
@@ -124,14 +116,17 @@ namespace tsom
 			ServerShipEnvironment* shipEnv = serverInstance.CreateShip();
 			m_player->UpdateEnvironment(shipEnv);
 
-			auto& shipComp = ent.emplace<ShipComponent>();
+			entt::handle shipEntity = shipEnv->CreateEntity();
+			shipEntity.emplace<Nz::NodeComponent>();
+
+			auto& shipComp = shipEntity.emplace<ShipComponent>();
 			shipComp.ship = &shipEnv->GetShip();
 
 			std::shared_ptr<Nz::Collider3D> chunkCollider = shipEnv->GetShip().GetChunk().BuildCollider(blockLibrary);
 
-			ent.emplace<Nz::RigidBody3DComponent>(Nz::RigidBody3DComponent::DynamicSettings(chunkCollider, 100.f));
+			shipEntity.emplace<Nz::RigidBody3DComponent>(Nz::RigidBody3DComponent::StaticSettings(chunkCollider));
 
-			ent.emplace<NetworkedComponent>();
+			shipEntity.emplace<NetworkedComponent>();
 			return;
 		}
 		else if (message == "/regenchunk")
