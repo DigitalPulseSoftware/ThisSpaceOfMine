@@ -35,7 +35,7 @@ end
 
 add_rules("mode.debug", "mode.releasedbg", "mode.release")
 add_rules("plugin.vsxmake.autoupdate")
-add_rules("natvis")
+add_rules("dbgdll", "natvis")
 
 --set_policy("package.requires_lock", true)
 
