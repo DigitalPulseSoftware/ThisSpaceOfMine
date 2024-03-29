@@ -4,8 +4,8 @@
 
 #pragma once
 
-#ifndef TSOM_SERVERLIB_NETWORKEDENTITIESSYSTEM_HPP
-#define TSOM_SERVERLIB_NETWORKEDENTITIESSYSTEM_HPP
+#ifndef TSOM_SERVERLIB_SYSTEMS_NETWORKEDENTITIESSYSTEM_HPP
+#define TSOM_SERVERLIB_SYSTEMS_NETWORKEDENTITIESSYSTEM_HPP
 
 #include <ServerLib/Export.hpp>
 #include <ServerLib/SessionVisibilityHandler.hpp>
@@ -54,6 +54,6 @@ namespace tsom
 	};
 }
 
-#include <ServerLib/NetworkedEntitiesSystem.inl>
+#include <ServerLib/Systems/NetworkedEntitiesSystem.inl>
 
-#endif // TSOM_SERVERLIB_NETWORKEDENTITIESSYSTEM_HPP
+#endif // TSOM_SERVERLIB_SYSTEMS_NETWORKEDENTITIESSYSTEM_HPP

@@ -2,7 +2,7 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
-#include <ServerLib/NetworkedEntitiesSystem.hpp>
+#include <ServerLib/Systems/NetworkedEntitiesSystem.hpp>
 #include <CommonLib/Planet.hpp>
 #include <CommonLib/Components/PlanetComponent.hpp>
 #include <CommonLib/Components/ShipComponent.hpp>
@@ -83,8 +83,7 @@ namespace tsom
 				data.controllingPlayerId = controllingPlayer->GetPlayerIndex();
 			}
 		}
-
-		if (auto* shipComp = m_registry.try_get<ShipComponent>(entity))
+		else if (auto* shipComp = m_registry.try_get<ShipComponent>(entity))
 		{
 			auto& data = createData.shipData.emplace();
 		}
