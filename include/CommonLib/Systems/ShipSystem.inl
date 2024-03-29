@@ -4,4 +4,8 @@
 
 namespace tsom
 {
+	inline ShipSystem::ShipSystem(entt::registry& registry) :
+	m_registry(registry)
+	{
+	}
 }

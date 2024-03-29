@@ -45,6 +45,7 @@ namespace tsom
 			void OnNetworkedDestroy(entt::registry& registry, entt::entity entity);
 
 			tsl::hopscotch_set<entt::entity> m_movingEntities;
+			tsl::hopscotch_set<entt::entity> m_networkedEntities;
 			entt::observer m_networkedConstructObserver;
 			entt::scoped_connection m_disabledConstructConnection;
 			entt::scoped_connection m_networkedDestroyConnection;

@@ -11,11 +11,35 @@
 
 namespace tsom
 {
-	Ship::Ship(const BlockLibrary& blockLibrary, const Nz::Vector3ui& gridSize, float tileSize) :
-	ChunkContainer(tileSize),
-	m_chunk(*this, { 0, 0, 0 }, gridSize, tileSize)
+	Ship::Ship(float tileSize) :
+	ChunkContainer(tileSize)
 	{
-		SetupChunk(blockLibrary);
+	}
+
+	FlatChunk& Ship::AddChunk(const ChunkIndices& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback)
+	{
+		assert(!m_chunks.contains(indices));
+		ChunkData chunkData;
+		chunkData.chunk = std::make_unique<FlatChunk>(*this, indices, Nz::Vector3ui{ ChunkSize }, m_tileSize);
+
+		if (initCallback)
+			chunkData.chunk->Reset(initCallback);
+
+		chunkData.onReset.Connect(chunkData.chunk->OnReset, [this](Chunk* chunk)
+		{
+			OnChunkUpdated(this, chunk);
+		});
+
+		chunkData.onUpdated.Connect(chunkData.chunk->OnBlockUpdated, [this](Chunk* chunk, const Nz::Vector3ui& /*indices*/, BlockIndex /*newBlock*/)
+		{
+			OnChunkUpdated(this, chunk);
+		});
+
+		auto it = m_chunks.insert_or_assign(indices, std::move(chunkData)).first;
+
+		OnChunkAdded(this, it->second.chunk.get());
+
+		return *it->second.chunk;
 	}
 
 	float Ship::ComputeGravityAcceleration(const Nz::Vector3f& /*position*/) const
@@ -28,9 +52,23 @@ namespace tsom
 		return Nz::Vector3f::Up();
 	}
 
-	void Ship::SetupChunk(const BlockLibrary& blockLibrary)
+	void Ship::ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, Chunk& chunk)> callback)
+	{
+		for (auto&& [chunkIndices, chunkData] : m_chunks)
+			callback(chunkIndices, *chunkData.chunk);
+	}
+
+	void Ship::ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, const Chunk& chunk)> callback) const
+	{
+		for (auto&& [chunkIndices, chunkData] : m_chunks)
+			callback(chunkIndices, *chunkData.chunk);
+	}
+
+	void Ship::Generate(const BlockLibrary& blockLibrary)
 	{
 		constexpr unsigned int freespace = 5;
+
+		FlatChunk& chunk = AddChunk({ 0, 0, 0 });
 
 		BlockIndex hullIndex = blockLibrary.GetBlockIndex("hull");
 		if (hullIndex == InvalidBlockIndex)
@@ -38,7 +76,7 @@ namespace tsom
 
 		constexpr unsigned int boxSize = 12;
 		constexpr unsigned int heightSize = 5;
-		Nz::Vector3ui startPos = m_chunk.GetSize() / 2 - Nz::Vector3ui(boxSize / 2, boxSize / 2, heightSize / 2);
+		Nz::Vector3ui startPos = chunk.GetSize() / 2 - Nz::Vector3ui(boxSize / 2, boxSize / 2, heightSize / 2);
 
 		for (unsigned int z = 0; z < heightSize; ++z)
 		{
@@ -53,9 +91,18 @@ namespace tsom
 						continue;
 					}
 
-					m_chunk.UpdateBlock(startPos + Nz::Vector3ui{ x, y, z }, hullIndex);
+					chunk.UpdateBlock(startPos + Nz::Vector3ui{ x, y, z }, hullIndex);
 				}
 			}
 		}
+	}
+
+	void Ship::RemoveChunk(const ChunkIndices& indices)
+	{
+		auto it = m_chunks.find(indices);
+		assert(it != m_chunks.end());
+
+		OnChunkRemove(this, it->second.chunk.get());
+		m_chunks.erase(it);
 	}
 }

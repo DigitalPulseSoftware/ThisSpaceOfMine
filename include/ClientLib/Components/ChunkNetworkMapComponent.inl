@@ -4,8 +4,4 @@
 
 namespace tsom
 {
-	inline entt::handle ServerPlanetEnvironment::GetPlanetEntity() const
-	{
-		return m_planetEntity;
-	}
 }

@@ -8,7 +8,6 @@
 #define TSOM_GAME_STATES_GAMESTATE_HPP
 
 #include <ClientLib/ClientChunkEntities.hpp>
-#include <ClientLib/ClientPlanet.hpp>
 #include <ClientLib/ClientSessionHandler.hpp>
 #include <CommonLib/NetworkReactor.hpp>
 #include <Game/States/WidgetState.hpp>

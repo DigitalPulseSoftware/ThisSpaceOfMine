@@ -127,6 +127,7 @@ namespace tsom
 
 		auto& chunkComponent = chunkEntity.emplace<ChunkComponent>();
 		chunkComponent.chunk = chunk;
+		chunkComponent.parentEntity = m_parentEntity;
 
 		if (m_staticRigidBodies)
 			chunkEntity.emplace<Nz::RigidBody3DComponent>(Nz::RigidBody3D::StaticSettings(nullptr));

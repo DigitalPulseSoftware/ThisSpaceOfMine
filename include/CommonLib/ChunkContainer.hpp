@@ -20,7 +20,7 @@ namespace tsom
 		public:
 			inline ChunkContainer(float tileSize);
 			ChunkContainer(const ChunkContainer&) = delete;
-			ChunkContainer(ChunkContainer&&) = delete;
+			ChunkContainer(ChunkContainer&&) noexcept = default;
 			virtual ~ChunkContainer();
 
 			virtual void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, Chunk& chunk)> callback) = 0;
@@ -36,8 +36,10 @@ namespace tsom
 			inline Nz::Vector3f GetChunkOffset(const ChunkIndices& indices) const;
 			inline float GetTileSize() const;
 
+			virtual void RemoveChunk(const ChunkIndices& indices) = 0;
+
 			ChunkContainer& operator=(const ChunkContainer&) = delete;
-			ChunkContainer& operator=(ChunkContainer&&) = delete;
+			ChunkContainer& operator=(ChunkContainer&&) noexcept = default;
 
 			static constexpr unsigned int ChunkSize = 32;
 

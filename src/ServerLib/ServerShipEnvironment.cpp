@@ -6,7 +6,10 @@
 #include <CommonLib/ChunkEntities.hpp>
 #include <CommonLib/Ship.hpp>
 #include <CommonLib/Components/ShipComponent.hpp>
+#include <CommonLib/Systems/ShipSystem.hpp>
 #include <ServerLib/ServerInstance.hpp>
+#include <ServerLib/Components/NetworkedComponent.hpp>
+#include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 
 namespace tsom
@@ -14,19 +17,25 @@ namespace tsom
 	ServerShipEnvironment::ServerShipEnvironment(ServerInstance& serverInstance) :
 	ServerEnvironment(serverInstance)
 	{
+		auto& app = serverInstance.GetApplication();
 		auto& blockLibrary = serverInstance.GetBlockLibrary();
 
-		m_ship = std::make_unique<Ship>(blockLibrary, Nz::Vector3ui(32), 1.f);
-		m_shipEntities = std::make_unique<ChunkEntities>(serverInstance.GetApplication(), m_world, *m_ship, blockLibrary);
+		m_shipEntity = CreateEntity();
+		m_shipEntity.emplace<Nz::NodeComponent>();
+		m_shipEntity.emplace<NetworkedComponent>();
 
-		auto& physicsSystem = m_world.GetSystem<Nz::Physics3DSystem>();
-		auto& physWorld = physicsSystem.GetPhysWorld();
-		physWorld.SetGravity(Nz::Vector3f::Down() * 9.81f);
+		auto& shipComponent = m_shipEntity.emplace<ShipComponent>(1.f);
+		shipComponent.Generate(blockLibrary);
+
+		shipComponent.shipEntities = std::make_unique<ChunkEntities>(app, m_world, shipComponent, blockLibrary);
+		shipComponent.shipEntities->SetParentEntity(m_shipEntity);
+
+		m_world.AddSystem<ShipSystem>();
 	}
 
 	ServerShipEnvironment::~ServerShipEnvironment()
 	{
-		m_shipEntities.reset();
+		m_shipEntity.destroy();
 	}
 
 	entt::handle ServerShipEnvironment::CreateEntity()
@@ -36,17 +45,17 @@ namespace tsom
 
 	const GravityController* ServerShipEnvironment::GetGravityController() const
 	{
-		return m_ship.get();
+		return &m_shipEntity.get<ShipComponent>();
 	}
 
 	Ship& ServerShipEnvironment::GetShip()
 	{
-		return *m_ship;
+		return m_shipEntity.get<ShipComponent>();
 	}
 
 	const Ship& ServerShipEnvironment::GetShip() const
 	{
-		return *m_ship;
+		return m_shipEntity.get<ShipComponent>();
 	}
 
 	void ServerShipEnvironment::OnLoad(const std::filesystem::path& loadPath)
@@ -55,12 +64,5 @@ namespace tsom
 
 	void ServerShipEnvironment::OnSave(const std::filesystem::path& savePath)
 	{
-	}
-
-	void ServerShipEnvironment::OnTick(Nz::Time elapsedTime)
-	{
-		ServerEnvironment::OnTick(elapsedTime);
-
-		m_shipEntities->Update();
 	}
 }

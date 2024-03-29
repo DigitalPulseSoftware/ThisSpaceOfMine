@@ -7,6 +7,7 @@
 #include <ClientLib/Chatbox.hpp>
 #include <ClientLib/EscapeMenu.hpp>
 #include <ClientLib/RenderConstants.hpp>
+#include <ClientLib/Components/ChunkNetworkMapComponent.hpp>
 #include <ClientLib/Systems/AnimationSystem.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/InternalConstants.hpp>
@@ -493,11 +494,10 @@ namespace tsom
 			if (physSystem.RaycastQuery(cameraNode.GetPosition(), cameraNode.GetPosition() + cameraNode.GetForward() * 10.f, filter))
 			{
 				auto& chunkComponent = hitEntity.get<ChunkComponent>();
+				auto& chunkNetworkMap = chunkComponent.parentEntity.get<ChunkNetworkMapComponent>();
 
 				const Chunk& chunk = *chunkComponent.chunk;
 				const ChunkContainer& chunkContainer = chunk.GetContainer();
-
-				const ClientPlanet& fixme = Nz::SafeCast<const ClientPlanet&>(chunkContainer);
 
 				if (event.button == Nz::Mouse::Left)
 				{
@@ -508,7 +508,7 @@ namespace tsom
 						return;
 
 					Packets::MineBlock mineBlock;
-					mineBlock.chunkId = fixme.GetChunkNetworkIndex(&chunk);
+					mineBlock.chunkId = Nz::Retrieve(chunkNetworkMap.chunkNetworkIndices, &chunk);
 					mineBlock.voxelLoc.x = coordinates->x;
 					mineBlock.voxelLoc.y = coordinates->y;
 					mineBlock.voxelLoc.z = coordinates->z;
@@ -524,7 +524,7 @@ namespace tsom
 						return;
 
 					Packets::PlaceBlock placeBlock;
-					placeBlock.chunkId = fixme.GetChunkNetworkIndex(&chunk);
+					placeBlock.chunkId = Nz::Retrieve(chunkNetworkMap.chunkNetworkIndices, &chunk);
 					placeBlock.voxelLoc.x = coordinates->x;
 					placeBlock.voxelLoc.y = coordinates->y;
 					placeBlock.voxelLoc.z = coordinates->z;
