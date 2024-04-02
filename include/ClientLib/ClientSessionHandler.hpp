@@ -79,9 +79,15 @@ namespace tsom
 			void SetupEntity(entt::handle entity, Packets::Helper::PlayerControlledData&& entityData);
 			void SetupEntity(entt::handle entity, Packets::Helper::ShipData&& entityData);
 
-			struct Environment
+			struct EnvironmentData
 			{
 				Nz::Bitset<Nz::UInt64> entities;
+			};
+
+			struct EntityData
+			{
+				Packets::Helper::EnvironmentId environmentIndex;
+				entt::handle entity;
 			};
 
 			struct PlayerModel
@@ -92,8 +98,8 @@ namespace tsom
 			entt::handle m_playerControlledEntity;
 			std::optional<PlayerModel> m_playerModel;
 			std::shared_ptr<PlayerAnimationAssets> m_playerAnimAssets;
-			std::vector<entt::handle> m_networkIdToEntity;
-			std::vector<std::optional<Environment>> m_environments; //< FIXME: Nz::SparseVector
+			std::vector<std::optional<EntityData>> m_entities; //< FIXME: Nz::SparseVector
+			std::vector<std::optional<EnvironmentData>> m_environments; //< FIXME: Nz::SparseVector
 			std::vector<std::optional<PlayerInfo>> m_players; //< FIXME: Nz::SparseVector
 			Nz::ApplicationBase& m_app;
 			Nz::EnttWorld& m_world;
