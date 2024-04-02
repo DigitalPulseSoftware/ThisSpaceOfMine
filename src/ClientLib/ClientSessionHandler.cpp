@@ -58,12 +58,11 @@ namespace tsom
 
 	ClientSessionHandler::~ClientSessionHandler()
 	{
-		for (entt::handle entity : m_networkIdToEntity)
+		for (auto& entityDataOpt : m_entities)
 		{
-			if (entity)
-				entity.destroy();
+			if (entityDataOpt)
+				entityDataOpt->entity.destroy();
 		}
-		m_networkIdToEntity.clear();
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::AuthResponse&& authResponse)
@@ -94,7 +93,8 @@ namespace tsom
 	{
 		ChunkIndices indices(chunkCreate.chunkLocX, chunkCreate.chunkLocY, chunkCreate.chunkLocZ);
 
-		entt::handle entity = m_networkIdToEntity[chunkCreate.entityId];
+		assert(m_entities[chunkCreate.entityId]);
+		entt::handle& entity = m_entities[chunkCreate.entityId]->entity;
 
 		Chunk* chunk;
 		if (PlanetComponent* planetComponent = entity.try_get<PlanetComponent>())
@@ -109,7 +109,8 @@ namespace tsom
 
 	void ClientSessionHandler::HandlePacket(Packets::ChunkDestroy&& chunkDestroy)
 	{
-		entt::handle entity = m_networkIdToEntity[chunkDestroy.entityId];
+		assert(m_entities[chunkDestroy.entityId]);
+		entt::handle& entity = m_entities[chunkDestroy.entityId]->entity;
 		auto& chunkNetworkMap = entity.get<ChunkNetworkMapComponent>();
 
 		auto it = chunkNetworkMap.chunkByNetworkIndex.find(chunkDestroy.chunkId);
@@ -123,7 +124,8 @@ namespace tsom
 
 	void ClientSessionHandler::HandlePacket(Packets::ChunkReset&& chunkReset)
 	{
-		entt::handle entity = m_networkIdToEntity[chunkReset.entityId];
+		assert(m_entities[chunkReset.entityId]);
+		entt::handle& entity = m_entities[chunkReset.entityId]->entity;
 		auto& chunkNetworkMap = entity.get<ChunkNetworkMapComponent>();
 
 		Chunk* chunk = Nz::Retrieve(chunkNetworkMap.chunkByNetworkIndex, chunkReset.chunkId);
@@ -144,7 +146,8 @@ namespace tsom
 
 	void ClientSessionHandler::HandlePacket(Packets::ChunkUpdate&& chunkUpdate)
 	{
-		entt::handle entity = m_networkIdToEntity[chunkUpdate.entityId];
+		assert(m_entities[chunkUpdate.entityId]);
+		entt::handle& entity = m_entities[chunkUpdate.entityId]->entity;
 		auto& chunkNetworkMap = entity.get<ChunkNetworkMapComponent>();
 
 		Chunk* chunk = Nz::Retrieve(chunkNetworkMap.chunkByNetworkIndex, chunkUpdate.chunkId);
@@ -163,10 +166,14 @@ namespace tsom
 			entt::handle entity = m_world.CreateEntity();
 			entity.emplace<Nz::NodeComponent>(entityData.initialStates.position, entityData.initialStates.rotation);
 
-			if (entityData.entityId >= m_networkIdToEntity.size())
-				m_networkIdToEntity.resize(entityData.entityId + 1);
+			if (entityData.entityId >= m_entities.size())
+				m_entities.resize(entityData.entityId + 1);
 
-			m_networkIdToEntity[entityData.entityId] = entity;
+			assert(!m_entities[entityData.entityId]);
+			m_entities[entityData.entityId] = EntityData{
+				.environmentIndex = entityData.environmentId,
+				.entity = entity
+			};
 			m_environments[entityData.environmentId]->entities.UnboundedSet(entityData.entityId);
 
 			std::string entityTypes;
@@ -200,7 +207,7 @@ namespace tsom
 			if (!entityTypes.empty())
 				entityTypes = fmt::format(" ({})", entityTypes);
 
-			fmt::print("Created entity {}{}\n", entityData.entityId, entityTypes);
+			fmt::print("Created entity {} in environment {}{}\n", entityData.entityId, entityData.environmentId, entityTypes);
 		}
 	}
 
@@ -208,28 +215,35 @@ namespace tsom
 	{
 		for (auto entityId : entitiesDelete.entities)
 		{
-			entt::handle entity = m_networkIdToEntity[entityId];
+			assert(m_entities[entityId]);
+			EntityData& entityData = *m_entities[entityId];
+			Packets::Helper::EnvironmentId environmentIndex = entityData.environmentIndex;
+			assert(m_environments[environmentIndex]);
+			EnvironmentData& environmentData = *m_environments[environmentIndex];
+			environmentData.entities.Reset(entityId);
 
-			if (m_playerControlledEntity == entity)
+			if (m_playerControlledEntity == entityData.entity)
 				OnControlledEntityChanged({});
 
-			entity.destroy();
-			fmt::print("Delete entity {}\n", entityId);
+			entityData.entity.destroy();
+			m_entities[entityId].reset();
+			fmt::print("Deleted entity {} from environment {}\n", entityId, environmentIndex);
 		}
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::EntitiesStateUpdate&& stateUpdate)
 	{
-		for (auto& entityData : stateUpdate.entities)
+		for (auto& entityStates : stateUpdate.entities)
 		{
-			entt::handle entity = m_networkIdToEntity[entityData.entityId];
+			assert(m_entities[entityStates.entityId]);
+			EntityData& entityData = *m_entities[entityStates.entityId];
 
-			if (MovementInterpolationComponent* movementInterpolation = entity.try_get<MovementInterpolationComponent>())
-				movementInterpolation->PushMovement(stateUpdate.tickIndex, entityData.newStates.position, entityData.newStates.rotation);
+			if (MovementInterpolationComponent* movementInterpolation = entityData.entity.try_get<MovementInterpolationComponent>())
+				movementInterpolation->PushMovement(stateUpdate.tickIndex, entityStates.newStates.position, entityStates.newStates.rotation);
 			else
 			{
-				auto& entityNode = entity.get<Nz::NodeComponent>();
-				entityNode.SetTransform(entityData.newStates.position, entityData.newStates.rotation);
+				auto& entityNode = entityData.entity.get<Nz::NodeComponent>();
+				entityNode.SetTransform(entityStates.newStates.position, entityStates.newStates.rotation);
 			}
 		}
 
@@ -239,6 +253,7 @@ namespace tsom
 
 	void ClientSessionHandler::HandlePacket(Packets::EnvironmentCreate&& envCreate)
 	{
+		fmt::print("created environment #{}\n", envCreate.id);
 		if (envCreate.id >= m_environments.size())
 			m_environments.resize(envCreate.id + 1);
 
@@ -247,8 +262,15 @@ namespace tsom
 
 	void ClientSessionHandler::HandlePacket(Packets::EnvironmentDestroy&& envDestroy)
 	{
+		fmt::print("destroyed environment #{}\n", envDestroy.id);
 		for (std::size_t entityIndex : m_environments[envDestroy.id]->entities.IterBits())
-			m_networkIdToEntity[entityIndex].destroy();
+		{
+			assert(m_entities[entityIndex]);
+			EntityData& entityData = *m_entities[entityIndex];
+			entityData.entity.destroy();
+
+			m_entities[entityIndex].reset();
+		}
 
 		m_environments[envDestroy.id].reset();
 	}
