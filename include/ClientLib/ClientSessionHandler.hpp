@@ -8,8 +8,10 @@
 #define TSOM_CLIENTLIB_CLIENTSESSIONHANDLER_HPP
 
 #include <ClientLib/Export.hpp>
+#include <CommonLib/EnvironmentTransform.hpp>
 #include <CommonLib/SessionHandler.hpp>
 #include <CommonLib/Protocol/Packets.hpp>
+#include <Nazara/Core/Node.hpp>
 #include <NazaraUtils/Signal.hpp>
 #include <entt/entt.hpp>
 #include <tsl/hopscotch_map.h>
@@ -49,10 +51,12 @@ namespace tsom
 			void HandlePacket(Packets::EntitiesStateUpdate&& stateUpdate);
 			void HandlePacket(Packets::EnvironmentCreate&& envCreate);
 			void HandlePacket(Packets::EnvironmentDestroy&& envDestroy);
+			void HandlePacket(Packets::EnvironmentUpdate&& envUpdate);
 			void HandlePacket(Packets::GameData&& gameData);
 			void HandlePacket(Packets::PlayerJoin&& playerJoin);
 			void HandlePacket(Packets::PlayerLeave&& playerLeave);
 			void HandlePacket(Packets::PlayerNameUpdate&& playerNameUpdate);
+			void HandlePacket(Packets::UpdatePlayerEnvironment&& playerEnv);
 
 			NazaraSignal(OnAuthResponse, const Packets::AuthResponse& /*authResponse*/);
 			NazaraSignal(OnChatMessage, const std::string& /*message*/);
@@ -82,6 +86,8 @@ namespace tsom
 			struct EnvironmentData
 			{
 				Nz::Bitset<Nz::UInt64> entities;
+				Nz::Node rootNode;
+				EnvironmentTransform transform;
 			};
 
 			struct EntityData
@@ -106,6 +112,7 @@ namespace tsom
 			ClientBlockLibrary& m_blockLibrary;
 			Nz::UInt16 m_lastTickIndex;
 			Nz::UInt16 m_ownPlayerIndex;
+			Packets::Helper::EnvironmentId m_currentEnvironmentIndex;
 			InputIndex m_lastInputIndex;
 	};
 }

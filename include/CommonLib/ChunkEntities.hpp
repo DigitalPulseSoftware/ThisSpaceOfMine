@@ -9,6 +9,7 @@
 
 #include <CommonLib/ChunkContainer.hpp>
 #include <NazaraUtils/FixedVector.hpp>
+#include <Nazara/Core/Node.hpp>
 #include <entt/entt.hpp>
 #include <tsl/hopscotch_map.h>
 #include <tsl/hopscotch_set.h>
@@ -34,7 +35,6 @@ namespace tsom
 			~ChunkEntities();
 
 			void SetParentEntity(entt::handle entity);
-			void SetStaticRigidBodies(bool isStatic);
 
 			void Update();
 
@@ -51,6 +51,7 @@ namespace tsom
 			void DestroyChunkEntity(const ChunkIndices& chunkIndices);
 			void FillChunks();
 			virtual UpdateJob* ProcessChunkUpdate(const Chunk* chunk, DirectionMask neighborMask);
+			void OnParentNodeInvalidated(const Nz::Node* node);
 			inline void UpdateChunkEntity(const ChunkIndices& chunkIndices, DirectionMask neighborMask);
 
 			struct UpdateJob
@@ -75,6 +76,7 @@ namespace tsom
 			NazaraSlot(ChunkContainer, OnChunkAdded, m_onChunkAdded);
 			NazaraSlot(ChunkContainer, OnChunkRemove, m_onChunkRemove);
 			NazaraSlot(ChunkContainer, OnChunkUpdated, m_onChunkUpdated);
+			NazaraSlot(Nz::Node, OnNodeInvalidation, m_onParentNodeInvalidated);
 
 			entt::handle m_parentEntity;
 			tsl::hopscotch_map<ChunkIndices, DirectionMask> m_invalidatedChunks;
@@ -85,7 +87,6 @@ namespace tsom
 			Nz::EnttWorld& m_world;
 			const BlockLibrary& m_blockLibrary;
 			ChunkContainer& m_chunkContainer;
-			bool m_staticRigidBodies;
 	};
 }
 

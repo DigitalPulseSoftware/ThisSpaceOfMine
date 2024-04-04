@@ -50,6 +50,7 @@ namespace tsom
 	m_world(world),
 	m_blockLibrary(blockLibrary),
 	m_ownPlayerIndex(InvalidPlayerIndex),
+	m_currentEnvironmentIndex(std::numeric_limits<Packets::Helper::EnvironmentId>::max()),
 	m_lastInputIndex(0)
 	{
 		SetupHandlerTable(this);
@@ -164,7 +165,6 @@ namespace tsom
 		for (auto&& entityData : entitiesCreation.entities)
 		{
 			entt::handle entity = m_world.CreateEntity();
-			entity.emplace<Nz::NodeComponent>(entityData.initialStates.position, entityData.initialStates.rotation);
 
 			if (entityData.entityId >= m_entities.size())
 				m_entities.resize(entityData.entityId + 1);
@@ -174,7 +174,13 @@ namespace tsom
 				.environmentIndex = entityData.environmentId,
 				.entity = entity
 			};
-			m_environments[entityData.environmentId]->entities.UnboundedSet(entityData.entityId);
+
+			assert(m_environments[entityData.environmentId]);
+			auto& environment = *m_environments[entityData.environmentId];
+			environment.entities.UnboundedSet(entityData.entityId);
+
+			auto& entityNode = entity.emplace<Nz::NodeComponent>(entityData.initialStates.position, entityData.initialStates.rotation);
+			entityNode.SetParent(environment.rootNode);
 
 			std::string entityTypes;
 			if (entityData.planet)
@@ -253,16 +259,18 @@ namespace tsom
 
 	void ClientSessionHandler::HandlePacket(Packets::EnvironmentCreate&& envCreate)
 	{
-		fmt::print("created environment #{}\n", envCreate.id);
+		fmt::print("Created environment #{}\n", envCreate.id);
 		if (envCreate.id >= m_environments.size())
 			m_environments.resize(envCreate.id + 1);
 
-		m_environments[envCreate.id].emplace();
+		auto& environment = m_environments[envCreate.id].emplace();
+		environment.transform = EnvironmentTransform(envCreate.states.position, envCreate.states.rotation);
+		environment.rootNode.SetTransform(envCreate.states.position, envCreate.states.rotation);
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::EnvironmentDestroy&& envDestroy)
 	{
-		fmt::print("destroyed environment #{}\n", envDestroy.id);
+		fmt::print("Destroyed environment #{}\n", envDestroy.id);
 		for (std::size_t entityIndex : m_environments[envDestroy.id]->entities.IterBits())
 		{
 			assert(m_entities[entityIndex]);
@@ -273,6 +281,10 @@ namespace tsom
 		}
 
 		m_environments[envDestroy.id].reset();
+	}
+
+	void ClientSessionHandler::HandlePacket(Packets::EnvironmentUpdate&& envUpdate)
+	{
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::GameData&& gameData)
@@ -328,6 +340,40 @@ namespace tsom
 		playerInfo.nickname = std::move(playerNameUpdate.newNickname).Str();
 		if (playerInfo.textSprite)
 			playerInfo.textSprite->Update(Nz::SimpleTextDrawer::Draw(playerInfo.nickname, 48, Nz::TextStyle_Regular, (playerInfo.isAuthenticated) ? Nz::Color::White() : Nz::Color::Gray()), 0.01f);
+	}
+
+	void ClientSessionHandler::HandlePacket(Packets::UpdatePlayerEnvironment&& playerEnv)
+	{
+		if (m_currentEnvironmentIndex != std::numeric_limits<Packets::Helper::EnvironmentId>::max())
+		{
+			assert(m_environments[playerEnv.newEnvironment]);
+			EnvironmentTransform inverseTransform = -m_environments[playerEnv.newEnvironment]->transform;
+
+			for (auto& envOpt : m_environments)
+			{
+				if (!envOpt)
+					continue;
+
+				auto& env = *envOpt;
+				env.rootNode.Move(inverseTransform.translation, Nz::Node::Invalidation::DontInvalidate);
+				env.rootNode.Rotate(inverseTransform.rotation);
+				env.transform += inverseTransform;
+
+				// Teleport physical entities
+				for (std::size_t entityIndex : env.entities.IterBits())
+				{
+					assert(m_entities[entityIndex]);
+					EntityData& entityData = *m_entities[entityIndex];
+
+					Nz::NodeComponent& entityNode = entityData.entity.get<Nz::NodeComponent>();
+
+					if (Nz::RigidBody3DComponent* rigidBody = entityData.entity.try_get<Nz::RigidBody3DComponent>())
+						rigidBody->TeleportTo(entityNode.GetGlobalPosition(), entityNode.GetGlobalRotation());
+				}
+			}
+		}
+
+		m_currentEnvironmentIndex = playerEnv.newEnvironment;
 	}
 
 	void ClientSessionHandler::SetupEntity(entt::handle entity, Packets::Helper::PlanetData&& entityData)

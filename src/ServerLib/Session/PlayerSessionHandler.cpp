@@ -21,25 +21,28 @@
 #include <numeric>
 
 #include <Nazara/Core/ApplicationBase.hpp>
+#include <ServerLib/ServerPlanetEnvironment.hpp>
 #include <Nazara/Core/TaskSchedulerAppComponent.hpp>
 
 namespace tsom
 {
 	constexpr SessionHandler::SendAttributeTable s_packetAttributes = SessionHandler::BuildAttributeTable({
-		{ PacketIndex<Packets::ChatMessage>,         { .channel = 0, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::ChunkCreate>,         { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::ChunkDestroy>,        { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::ChunkReset>,          { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::ChunkUpdate>,         { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::EntitiesCreation>,    { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::EntitiesDelete>,      { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::EntitiesStateUpdate>, { .channel = 1, .flags = Nz::ENetPacketFlag_Unreliable } },
-		{ PacketIndex<Packets::EnvironmentCreate>,   { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::EnvironmentDestroy>,  { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::GameData>,            { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::PlayerJoin>,          { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::PlayerLeave>,         { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::PlayerNameUpdate>,    { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::ChatMessage>,             { .channel = 0, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::ChunkCreate>,             { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::ChunkDestroy>,            { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::ChunkReset>,              { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::ChunkUpdate>,             { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::EntitiesCreation>,        { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::EntitiesDelete>,          { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::EntitiesStateUpdate>,     { .channel = 1, .flags = Nz::ENetPacketFlag_Unreliable } },
+		{ PacketIndex<Packets::EnvironmentCreate>,       { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::EnvironmentDestroy>,      { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::EnvironmentUpdate>,       { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::GameData>,                { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::PlayerJoin>,              { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::PlayerLeave>,             { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::PlayerNameUpdate>,        { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::UpdatePlayerEnvironment>, { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
 	});
 
 	PlayerSessionHandler::PlayerSessionHandler(NetworkSession* session, ServerPlayer* player) :
@@ -112,23 +115,39 @@ namespace tsom
 			ServerInstance& serverInstance = m_player->GetServerInstance();
 			const BlockLibrary& blockLibrary = serverInstance.GetBlockLibrary();
 
+			ServerEnvironment* currentEnvironment = m_player->GetEnvironment();
+			if (!currentEnvironment)
+				return;
+
+			Nz::NodeComponent& playerNode = playerEntity.get<Nz::NodeComponent>();
+
 			ServerShipEnvironment* shipEnv = serverInstance.CreateShip();
+
+			EnvironmentTransform planetToShip(playerNode.GetPosition(), playerNode.GetRotation());
+
+			currentEnvironment->Connect(*shipEnv, planetToShip);
+			shipEnv->Connect(*currentEnvironment, -planetToShip);
+
 			m_player->UpdateEnvironment(shipEnv);
-
-			/*entt::handle shipEntity = shipEnv->CreateEntity();
-			shipEntity.emplace<Nz::NodeComponent>();
-			shipEntity.emplace<NetworkedComponent>();
-
-			auto& shipComp = shipEntity.emplace<ShipComponent>(1.f);
-			shipComp.shipEntities = std::make_unique<ChunkEntities>(serverInstance.GetApplication(), shipEnv->GetWorld(), shipComp, serverInstance.GetBlockLibrary());
-			shipComp.shipEntities->SetParentEntity(shipEntity);*/
 
 			entt::handle shipEntity = shipEnv->GetShipEntity();
 			auto& shipComp = shipEntity.get<ShipComponent>();
 
-			shipEnv->ForEachPlayer([&](ServerPlayer& player)
+			auto& playerVisibility = m_player->GetVisibilityHandler();
+			shipComp.ForEachChunk([&](const ChunkIndices& chunkIndices, Chunk& chunk)
 			{
+				playerVisibility.CreateChunk(shipEntity, chunk);
+			});
+
+			currentEnvironment->ForEachPlayer([&](ServerPlayer& player)
+			{
+				if (&player == m_player)
+					return;
+
 				auto& playerVisibility = player.GetVisibilityHandler();
+				shipEnv->RegisterPlayer(&player);
+				playerVisibility.CreateEnvironment(*shipEnv, planetToShip);
+
 				shipComp.ForEachChunk([&](const ChunkIndices& chunkIndices, Chunk& chunk)
 				{
 					playerVisibility.CreateChunk(shipEntity, chunk);

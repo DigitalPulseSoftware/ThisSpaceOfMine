@@ -81,19 +81,41 @@ namespace tsom
 	{
 		assert(environment);
 
+		EnvironmentTransform oldToNewEnv(Nz::Vector3f::Zero(), Nz::Quaternionf::Identity());
 		if (m_environment)
 		{
+			m_environment->GetEnvironmentTransformation(*environment, &oldToNewEnv);
+
 			m_environment->UnregisterPlayer(this);
 			m_visibilityHandler.DestroyEnvironment(*m_environment);
+
+			m_environment->ForEachConnectedEnvironment([&](ServerEnvironment& connectedEnvironment, const EnvironmentTransform& /*transform*/)
+			{
+				if (connectedEnvironment.IsPlayerRegistered(this))
+				{
+					connectedEnvironment.UnregisterPlayer(this);
+					m_visibilityHandler.DestroyEnvironment(connectedEnvironment);
+				}
+			});
 		}
 
 		m_environment = environment;
 		m_environment->RegisterPlayer(this);
 
-		m_visibilityHandler.CreateEnvironment(*environment);
+		m_visibilityHandler.CreateEnvironment(*environment, oldToNewEnv);
+		m_visibilityHandler.UpdateCurrentEnvironment(*environment);
 
 		auto& networkedEntities = m_environment->GetWorld().GetSystem<NetworkedEntitiesSystem>();
 		networkedEntities.CreateAllEntities(m_visibilityHandler);
+
+		m_environment->ForEachConnectedEnvironment([&](ServerEnvironment& connectedEnvironment, const EnvironmentTransform& transform)
+		{
+			connectedEnvironment.RegisterPlayer(this);
+			m_visibilityHandler.CreateEnvironment(connectedEnvironment, transform);
+
+			auto& networkedEntities = connectedEnvironment.GetWorld().GetSystem<NetworkedEntitiesSystem>();
+			networkedEntities.CreateAllEntities(m_visibilityHandler);
+		});
 
 		if (!m_controlledEntity)
 			return;

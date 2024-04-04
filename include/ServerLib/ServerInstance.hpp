@@ -46,9 +46,7 @@ namespace tsom
 
 			ServerPlayer* CreateAnonymousPlayer(NetworkSession* session, std::string nickname);
 			ServerPlayer* CreateAuthenticatedPlayer(NetworkSession* session, const Nz::Uuid& uuid, std::string nickname, PlayerPermissionFlags permissions);
-			ServerShipEnvironment* CreateShip();
 			void DestroyPlayer(PlayerIndex playerIndex);
-			void DestroyShip(ServerShipEnvironment* ship);
 
 			inline ServerPlayer* FindPlayerByNickname(std::string_view nickname);
 			inline const ServerPlayer* FindPlayerByNickname(std::string_view nickname) const;
@@ -64,6 +62,11 @@ namespace tsom
 			inline Nz::Time GetTickDuration() const;
 
 			Nz::Time Update(Nz::Time elapsedTime);
+
+			// TEMP
+			ServerShipEnvironment* CreateShip();
+			void DestroyShip(ServerShipEnvironment* ship);
+			ServerPlanetEnvironment& GetPlanetEnvironment();
 
 			ServerInstance& operator=(const ServerInstance&) = delete;
 			ServerInstance& operator=(ServerInstance&&) = delete;

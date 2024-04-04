@@ -9,8 +9,10 @@
 
 #include <ServerLib/Export.hpp>
 #include <CommonLib/Chunk.hpp>
+#include <CommonLib/EnvironmentTransform.hpp>
 #include <CommonLib/PlayerInputs.hpp>
 #include <CommonLib/Protocol/Packets.hpp>
+#include <Nazara/Core/Node.hpp>
 #include <NazaraUtils/Bitset.hpp>
 #include <entt/entt.hpp>
 #include <tsl/hopscotch_map.h>
@@ -35,7 +37,7 @@ namespace tsom
 
 			void CreateChunk(entt::handle entity, Chunk& chunk);
 			void CreateEntity(entt::handle entity, CreateEntityData entityData);
-			void CreateEnvironment(ServerEnvironment& environment);
+			void CreateEnvironment(ServerEnvironment& environment, const EnvironmentTransform& transform);
 
 			void DestroyChunk(Chunk& chunk);
 			void DestroyEntity(entt::handle entity);
@@ -43,9 +45,12 @@ namespace tsom
 
 			void Dispatch(Nz::UInt16 tickIndex);
 
-			Chunk* GetChunkByIndex(std::size_t chunkIndex) const;
+			inline Chunk* GetChunkByIndex(std::size_t chunkIndex) const;
+
+			inline void MoveEnvironment(ServerEnvironment& environment, const EnvironmentTransform& transform);
 
 			inline void UpdateControlledEntity(entt::handle entity, CharacterController* controller);
+			inline void UpdateCurrentEnvironment(ServerEnvironment& environment);
 			inline void UpdateLastInputIndex(InputIndex inputIndex);
 
 			SessionVisibilityHandler& operator=(const SessionVisibilityHandler&) = delete;
@@ -109,6 +114,13 @@ namespace tsom
 			{
 				Nz::Bitset<Nz::UInt64> chunks;
 				Nz::Bitset<Nz::UInt64> entities;
+				EnvironmentTransform transform;
+			};
+
+			struct EnvironmentTransformation
+			{
+				ServerEnvironment* environment;
+				EnvironmentTransform transform;
 			};
 
 			tsl::hopscotch_map<entt::handle, EntityId, HandlerHasher> m_entityIndices;
@@ -118,12 +130,13 @@ namespace tsom
 			tsl::hopscotch_set<entt::handle, HandlerHasher> m_deletedEntities;
 			tsl::hopscotch_set<entt::handle, HandlerHasher> m_movingEntities;
 			std::shared_ptr<std::size_t> m_activeChunkUpdates;
-			std::vector<ServerEnvironment*> m_createdEnvironments;
 			std::vector<ServerEnvironment*> m_destroyedEnvironments;
 			std::vector<ChunkData> m_visibleChunks;
 			std::vector<ChunkWithPos> m_orderedChunkList;
 			std::vector<EntityData> m_visibleEntities;
 			std::vector<EnvironmentData> m_visibleEnvironments;
+			std::vector<EnvironmentTransformation> m_createdEnvironments;
+			std::vector<EnvironmentTransformation> m_environmentTransformations;
 			Nz::Bitset<Nz::UInt64> m_freeChunkIds;
 			Nz::Bitset<Nz::UInt64> m_freeEntityIds;
 			Nz::Bitset<Nz::UInt64> m_freeEnvironmentIds;
@@ -135,6 +148,7 @@ namespace tsom
 			InputIndex m_lastInputIndex;
 			CharacterController* m_controlledCharacter;
 			NetworkSession* m_networkSession;
+			ServerEnvironment* m_nextEnvironment;
 	};
 }
 
