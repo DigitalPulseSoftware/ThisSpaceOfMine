@@ -8,7 +8,7 @@
 #include <Nazara/Core/Application.hpp>
 #include <Nazara/Core/EntitySystemAppComponent.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
-#include <Nazara/Core/PluginLoader.hpp>
+#include <Nazara/Core/PluginManagerAppComponent.hpp>
 #include <Nazara/Core/TaskSchedulerAppComponent.hpp>
 #include <Nazara/Core/Plugins/AssimpPlugin.hpp>
 #include <Nazara/Graphics/Graphics.hpp>
@@ -30,8 +30,8 @@ int GameMain(int argc, char* argv[])
 	// Engine setup
 	Nz::Application<Nz::Graphics, Nz::Physics3D, Nz::Network, Nz::Widgets> app(argc, argv);
 
-	Nz::PluginLoader pluginLoader;
-	Nz::Plugin<Nz::AssimpPlugin> assimp = pluginLoader.Load<Nz::AssimpPlugin>();
+	Nz::PluginManagerAppComponent& pluginManager = app.AddComponent<Nz::PluginManagerAppComponent>();
+	pluginManager.Load<Nz::AssimpPlugin>();
 
 	app.AddComponent<Nz::EntitySystemAppComponent>();
 	app.AddComponent<Nz::FilesystemAppComponent>();

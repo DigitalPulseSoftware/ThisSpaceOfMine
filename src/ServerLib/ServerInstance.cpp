@@ -43,7 +43,7 @@ namespace tsom
 		auto& taskScheduler = m_application.GetComponent<Nz::TaskSchedulerAppComponent>();
 
 		m_planet = std::make_unique<Planet>(1.f, 16.f, 9.81f);
-		m_planet->GenerateChunks(m_blockLibrary, taskScheduler.GetScheduler(), config.planetSeed, config.planetChunkCount);
+		m_planet->GenerateChunks(m_blockLibrary, taskScheduler, config.planetSeed, config.planetChunkCount);
 		LoadChunks();
 		m_planet->GeneratePlatform(m_blockLibrary, tsom::Direction::Right, { 65, -18, -39 });
 		m_planet->GeneratePlatform(m_blockLibrary, tsom::Direction::Back, { -34, 2, 53 });
