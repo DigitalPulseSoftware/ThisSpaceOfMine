@@ -14,6 +14,31 @@ namespace tsom
 		m_activeChunkUpdates = std::make_shared<std::size_t>(0);
 	}
 
+	inline Chunk* SessionVisibilityHandler::GetChunkByIndex(std::size_t chunkIndex) const
+	{
+		if (chunkIndex >= m_visibleChunks.size())
+			return nullptr;
+
+		return m_visibleChunks[chunkIndex].chunk;
+	}
+
+	inline void SessionVisibilityHandler::MoveEnvironment(ServerEnvironment& environment, const EnvironmentTransform& transform)
+	{
+		auto it = std::find_if(m_environmentTransformations.begin(), m_environmentTransformations.end(), [&](const EnvironmentTransformation& transform) { return transform.environment == &environment; });
+		if (it == m_environmentTransformations.end())
+		{
+			m_environmentTransformations.push_back({
+				.environment = &environment,
+				.transform = transform
+			});
+		}
+		else
+		{
+			EnvironmentTransformation& transformation = *it;
+			transformation.transform = transform;
+		}
+	}
+
 	inline void SessionVisibilityHandler::UpdateControlledEntity(entt::handle entity, CharacterController* controller)
 	{
 		if (m_controlledEntity)
@@ -22,6 +47,11 @@ namespace tsom
 		m_controlledEntity = entity;
 		m_controlledCharacter = controller;
 		m_movingEntities.erase(m_controlledEntity);
+	}
+
+	inline void SessionVisibilityHandler::UpdateCurrentEnvironment(ServerEnvironment& environment)
+	{
+		m_nextEnvironment = &environment;
 	}
 
 	inline void SessionVisibilityHandler::UpdateLastInputIndex(InputIndex inputIndex)

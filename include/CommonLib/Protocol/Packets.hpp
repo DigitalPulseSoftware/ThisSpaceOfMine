@@ -217,12 +217,19 @@ namespace tsom
 		{
 			Nz::UInt16 tickIndex;
 			Helper::EnvironmentId id;
+			Helper::EntityState states;
 		};
 
 		struct EnvironmentDestroy
 		{
 			Nz::UInt16 tickIndex;
 			Helper::EnvironmentId id;
+		};
+
+		struct EnvironmentUpdate
+		{
+			Helper::EnvironmentId id;
+			Helper::EntityState states;
 		};
 
 		struct GameData
@@ -280,6 +287,11 @@ namespace tsom
 			SecuredString<Constants::ChatMaxPlayerMessageLength> message;
 		};
 
+		struct UpdatePlayerEnvironment
+		{
+			Helper::EnvironmentId newEnvironment;
+		};
+
 		struct UpdatePlayerInputs
 		{
 			PlayerInputs inputs;
@@ -297,6 +309,7 @@ namespace tsom
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntitiesStateUpdate& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EnvironmentCreate& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EnvironmentDestroy& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EnvironmentUpdate& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, GameData& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, MineBlock& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, NetworkStrings& data);
@@ -305,6 +318,7 @@ namespace tsom
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, PlayerJoin& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, PlayerNameUpdate& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, SendChatMessage& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, UpdatePlayerEnvironment& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, UpdatePlayerInputs& data);
 	}
 }

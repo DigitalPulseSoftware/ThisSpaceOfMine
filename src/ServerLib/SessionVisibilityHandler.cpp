@@ -64,13 +64,18 @@ namespace tsom
 		m_createdEntities.emplace(entity, std::move(entityData));
 	}
 
-	void SessionVisibilityHandler::CreateEnvironment(ServerEnvironment& environment)
+	void SessionVisibilityHandler::CreateEnvironment(ServerEnvironment& environment, const EnvironmentTransform& transform)
 	{
 		if (auto it = std::find(m_destroyedEnvironments.begin(), m_destroyedEnvironments.end(), &environment); it != m_destroyedEnvironments.end())
 			m_destroyedEnvironments.erase(it);
-
-		assert(std::find(m_createdEnvironments.begin(), m_createdEnvironments.end(), &environment) == m_createdEnvironments.end());
-		m_createdEnvironments.push_back(&environment);
+		else
+		{
+			assert(std::find_if(m_createdEnvironments.begin(), m_createdEnvironments.end(), [&](const EnvironmentTransformation& transform) { return transform.environment == &environment; }) == m_createdEnvironments.end());
+			m_createdEnvironments.push_back({
+				.environment = &environment,
+				.transform = transform
+			});
+		}
 	}
 
 	void SessionVisibilityHandler::DestroyEntity(entt::handle entity)
@@ -83,11 +88,16 @@ namespace tsom
 
 	void SessionVisibilityHandler::DestroyEnvironment(ServerEnvironment& environment)
 	{
-		if (auto it = std::find(m_createdEnvironments.begin(), m_createdEnvironments.end(), &environment); it != m_createdEnvironments.end())
+		if (auto it = std::find_if(m_createdEnvironments.begin(), m_createdEnvironments.end(), [&](const EnvironmentTransformation& transform) { return transform.environment == &environment; }); it != m_createdEnvironments.end())
 			m_createdEnvironments.erase(it);
+		else
+		{
+			assert(std::find(m_destroyedEnvironments.begin(), m_destroyedEnvironments.end(), &environment) == m_destroyedEnvironments.end());
+			m_destroyedEnvironments.push_back(&environment);
+		}
 
-		assert(std::find(m_destroyedEnvironments.begin(), m_destroyedEnvironments.end(), &environment) == m_destroyedEnvironments.end());
-		m_destroyedEnvironments.push_back(&environment);
+		if (auto it = std::find_if(m_environmentTransformations.begin(), m_environmentTransformations.end(), [&](const EnvironmentTransformation& transform) { return transform.environment == &environment; }); it != m_environmentTransformations.end())
+			m_environmentTransformations.erase(it);
 	}
 
 	void SessionVisibilityHandler::Dispatch(Nz::UInt16 tickIndex)
@@ -95,14 +105,6 @@ namespace tsom
 		DispatchEnvironments(tickIndex);
 		DispatchEntities(tickIndex);
 		DispatchChunks(tickIndex);
-	}
-
-	Chunk* SessionVisibilityHandler::GetChunkByIndex(std::size_t chunkIndex) const
-	{
-		if (chunkIndex >= m_visibleChunks.size())
-			return nullptr;
-
-		return m_visibleChunks[chunkIndex].chunk;
 	}
 
 	void SessionVisibilityHandler::DispatchChunks(Nz::UInt16 tickIndex)
@@ -379,7 +381,7 @@ namespace tsom
 		{
 			for (ServerEnvironment* environment : m_destroyedEnvironments)
 			{
-				Nz::UInt8 envId = Nz::Retrieve(m_environmentIndices, environment);
+				EnvironmentId envId = Nz::Retrieve(m_environmentIndices, environment);
 
 				m_freeEnvironmentIds.Set(envId, true);
 
@@ -423,7 +425,7 @@ namespace tsom
 
 		if (!m_createdEnvironments.empty())
 		{
-			for (ServerEnvironment* environment : m_createdEnvironments)
+			for (EnvironmentTransformation& environment : m_createdEnvironments)
 			{
 				std::size_t envIndex = m_freeEnvironmentIds.FindFirst();
 				if (envIndex == m_freeEnvironmentIds.npos)
@@ -434,7 +436,7 @@ namespace tsom
 
 				m_freeEnvironmentIds.Set(envIndex, false);
 
-				m_environmentIndices[environment] = Nz::SafeCast<Nz::UInt8>(envIndex);
+				m_environmentIndices[environment.environment] = Nz::SafeCast<Nz::UInt8>(envIndex);
 
 				if (envIndex >= m_visibleEnvironments.size())
 					m_visibleEnvironments.resize(envIndex + 1);
@@ -442,10 +444,23 @@ namespace tsom
 				Packets::EnvironmentCreate createPacket;
 				createPacket.id = Nz::SafeCast<Nz::UInt8>(envIndex);
 				createPacket.tickIndex = tickIndex;
+				createPacket.states.position = environment.transform.translation;
+				createPacket.states.rotation = environment.transform.rotation;
+
 				m_networkSession->SendPacket(createPacket);
 			}
 
 			m_createdEnvironments.clear();
+		}
+
+		if (m_nextEnvironment)
+		{
+			Packets::UpdatePlayerEnvironment updateEnvironmentPacket;
+			updateEnvironmentPacket.newEnvironment = Nz::Retrieve(m_environmentIndices, m_nextEnvironment);
+
+			m_networkSession->SendPacket(updateEnvironmentPacket);
+
+			m_nextEnvironment = nullptr;
 		}
 	}
 }

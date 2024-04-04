@@ -4,6 +4,7 @@
 
 #include <ServerLib/ServerEnvironment.hpp>
 #include <ServerLib/ServerInstance.hpp>
+#include <ServerLib/SessionVisibilityHandler.hpp>
 #include <ServerLib/Systems/NetworkedEntitiesSystem.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 
@@ -23,6 +24,19 @@ namespace tsom
 
 	ServerEnvironment::~ServerEnvironment() = default;
 
+	void ServerEnvironment::Connect(ServerEnvironment& environment, const EnvironmentTransform& transform)
+	{
+		NazaraAssert(!m_connectedEnvironments.contains(&environment), "environment is already connected");
+		m_connectedEnvironments.emplace(&environment, transform);
+	}
+
+	void ServerEnvironment::Disconnect(ServerEnvironment& environment)
+	{
+		auto it = m_connectedEnvironments.find(&environment);
+		NazaraAssert(it != m_connectedEnvironments.end(), "environment is not connected");
+		m_connectedEnvironments.erase(it);
+	}
+
 	entt::handle ServerEnvironment::CreateEntity()
 	{
 		return m_world.CreateEntity();
@@ -31,5 +45,18 @@ namespace tsom
 	void ServerEnvironment::OnTick(Nz::Time elapsedTime)
 	{
 		m_world.Update(elapsedTime);
+	}
+
+	void ServerEnvironment::RegisterPlayer(ServerPlayer* player)
+	{
+		NazaraAssert(std::find(m_players.begin(), m_players.end(), player) == m_players.end(), "player was already registered");
+		m_players.push_back(player);
+	}
+
+	void ServerEnvironment::UnregisterPlayer(ServerPlayer* player)
+	{
+		auto it = std::find(m_players.begin(), m_players.end(), player);
+		NazaraAssert(it != m_players.end(), "player is not registered");
+		m_players.erase(it);
 	}
 }
