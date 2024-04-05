@@ -41,7 +41,7 @@ namespace tsom
 		m_planetEntity.emplace<NetworkedComponent>();
 
 		auto& planetComponent = m_planetEntity.emplace<PlanetComponent>(1.f, 16.f, 9.81f);
-		planetComponent.GenerateChunks(blockLibrary, taskScheduler.GetScheduler(), seed, chunkCount);
+		planetComponent.GenerateChunks(blockLibrary, taskScheduler, seed, chunkCount);
 		planetComponent.GeneratePlatform(blockLibrary, tsom::Direction::Right, { 65, -18, -39 });
 		planetComponent.GeneratePlatform(blockLibrary, tsom::Direction::Back, { -34, 2, 53 });
 		planetComponent.GeneratePlatform(blockLibrary, tsom::Direction::Front, { 22, -35, -59 });
