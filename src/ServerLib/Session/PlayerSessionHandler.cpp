@@ -223,7 +223,7 @@ namespace tsom
 
 			auto& taskScheduler = serverInstance.GetApplication().GetComponent<Nz::TaskSchedulerAppComponent>();
 
-			planetComponent.GenerateChunks(serverInstance.GetBlockLibrary(), taskScheduler.GetScheduler(), std::rand(), Nz::Vector3ui(5));
+			planetComponent.GenerateChunks(serverInstance.GetBlockLibrary(), taskScheduler, std::rand(), Nz::Vector3ui(5));
 
 			planetComponent.planetEntities = std::make_unique<ChunkEntities>(serverInstance.GetApplication(), environment->GetWorld(), planetComponent, serverInstance.GetBlockLibrary());
 			planetComponent.planetEntities->SetParentEntity(newPlanetEntity);
