@@ -499,6 +499,22 @@ namespace tsom
 			m_createdEnvironments.clear();
 		}
 
+		if (!m_environmentTransformations.empty())
+		{
+			for (auto& envTransformation : m_environmentTransformations)
+			{
+				EnvironmentId envId = Nz::Retrieve(m_environmentIndices, envTransformation.environment);
+
+				Packets::EnvironmentUpdate envMovementPacket;
+				envMovementPacket.tickIndex = tickIndex;
+				envMovementPacket.id = envId;
+				envMovementPacket.transform = envTransformation.transform;
+
+				m_networkSession->SendPacket(envMovementPacket);
+			}
+			m_environmentTransformations.clear();
+		}
+
 		if (m_nextRootEnvironment)
 		{
 			m_currentEnvironmentId = Nz::Retrieve(m_environmentIndices, m_nextRootEnvironment);

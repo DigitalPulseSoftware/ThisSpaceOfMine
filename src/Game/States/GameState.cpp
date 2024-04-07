@@ -607,21 +607,27 @@ namespace tsom
 
 				case 1:
 				{
-					Nz::Quaternionf cameraRot = characterRot * Nz::EulerAnglesf(predictedCameraRotation.pitch, 0.f, 0.f);
-					cameraRot.Normalize();
+					const Nz::Node* environmentNode = characterNode.GetParent();
+					assert(environmentNode);
 
-					cameraNode.SetPosition(characterPos + characterRot * (Nz::Vector3f::Up() * 1.f) + cameraRot * Nz::Vector3f::Backward() * 1.f);
-					cameraNode.SetRotation(cameraRot);
+					Nz::Quaternionf cameraRotation = environmentNode->GetRotation() * characterRot * Nz::EulerAnglesf(predictedCameraRotation.pitch, 0.f, 0.f);
+					cameraRotation.Normalize();
+
+					cameraNode.SetPosition(characterPos + characterRot * (Nz::Vector3f::Up() * 1.f) + cameraRotation * Nz::Vector3f::Backward() * 1.f);
+					cameraNode.SetRotation(cameraRotation);
 					break;
 				}
 
 				case 2:
 				{
-					Nz::Quaternionf cameraRot = characterRot * Nz::EulerAnglesf(predictedCameraRotation.pitch, 180.f, 0.f);
-					cameraRot.Normalize();
+					const Nz::Node* environmentNode = characterNode.GetParent();
+					assert(environmentNode);
 
-					cameraNode.SetPosition(characterPos + characterRot * (Nz::Vector3f::Up() * 0.5f) + cameraRot * Nz::Vector3f::Backward() * 1.f);
-					cameraNode.SetRotation(cameraRot);
+					Nz::Quaternionf cameraRotation = environmentNode->GetRotation() * characterRot * Nz::EulerAnglesf(predictedCameraRotation.pitch, 180.f, 0.f);
+					cameraRotation.Normalize();
+
+					cameraNode.SetPosition(characterPos + characterRot * (Nz::Vector3f::Up() * Constants::PlayerCameraHeight));
+					cameraNode.SetRotation(cameraRotation);
 					break;
 				}
 
@@ -735,7 +741,6 @@ namespace tsom
 					}
 
 					auto cornerPos = chunk.ComputeVoxelCorners(*coordinates);
-					Nz::Vector3f offset = chunkNode.GetGlobalPosition();
 
 					constexpr Nz::EnumArray<Direction, std::array<Nz::BoxCorner, 4>> directionToCorners = {
 						// Back
@@ -752,12 +757,13 @@ namespace tsom
 						std::array{ Nz::BoxCorner::RightBottomNear, Nz::BoxCorner::LeftBottomNear, Nz::BoxCorner::LeftTopNear, Nz::BoxCorner::RightTopNear },
 					};
 
-					auto& corners = directionToCorners[DirectionFromNormal(hitNormal)];
+					Nz::Vector3f localHitNormal = chunkNode.GetGlobalRotation().GetConjugate() * hitNormal;
+					auto& corners = directionToCorners[DirectionFromNormal(localHitNormal)];
 
-					debugDrawer.DrawLine(offset + cornerPos[corners[0]], offset + cornerPos[corners[1]], Nz::Color::Green());
-					debugDrawer.DrawLine(offset + cornerPos[corners[1]], offset + cornerPos[corners[2]], Nz::Color::Green());
-					debugDrawer.DrawLine(offset + cornerPos[corners[2]], offset + cornerPos[corners[3]], Nz::Color::Green());
-					debugDrawer.DrawLine(offset + cornerPos[corners[3]], offset + cornerPos[corners[0]], Nz::Color::Green());
+					debugDrawer.DrawLine(chunkNode.ToGlobalPosition(cornerPos[corners[0]]), chunkNode.ToGlobalPosition(cornerPos[corners[1]]), Nz::Color::Green());
+					debugDrawer.DrawLine(chunkNode.ToGlobalPosition(cornerPos[corners[1]]), chunkNode.ToGlobalPosition(cornerPos[corners[2]]), Nz::Color::Green());
+					debugDrawer.DrawLine(chunkNode.ToGlobalPosition(cornerPos[corners[2]]), chunkNode.ToGlobalPosition(cornerPos[corners[3]]), Nz::Color::Green());
+					debugDrawer.DrawLine(chunkNode.ToGlobalPosition(cornerPos[corners[3]]), chunkNode.ToGlobalPosition(cornerPos[corners[0]]), Nz::Color::Green());
 				}
 			}
 		}

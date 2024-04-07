@@ -33,4 +33,9 @@ namespace tsom
 	{
 		return m_chunks.size();
 	}
+
+	inline void Ship::UpdateUpDirection(const Nz::Vector3f& upDirection)
+	{
+		m_upDirection = upDirection;
+	}
 }

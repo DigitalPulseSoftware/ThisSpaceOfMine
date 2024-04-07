@@ -46,6 +46,8 @@ namespace tsom
 
 			void RemoveChunk(const ChunkIndices& indices) override;
 
+			inline void UpdateUpDirection(const Nz::Vector3f& upDirection);
+
 			Ship& operator=(const Ship&) = delete;
 			Ship& operator=(Ship&&) noexcept = default;
 
@@ -61,6 +63,7 @@ namespace tsom
 			};
 
 			tsl::hopscotch_map<ChunkIndices, ChunkData> m_chunks;
+			Nz::Vector3f m_upDirection;
 	};
 }
 

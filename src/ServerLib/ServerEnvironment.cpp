@@ -4,7 +4,9 @@
 
 #include <ServerLib/ServerEnvironment.hpp>
 #include <ServerLib/SessionVisibilityHandler.hpp>
+#include <ServerLib/Systems/EnvironmentProxySystem.hpp>
 #include <ServerLib/Systems/NetworkedEntitiesSystem.hpp>
+#include <ServerLib/Systems/TempShipEntrySystem.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 
 namespace tsom
@@ -12,6 +14,7 @@ namespace tsom
 	ServerEnvironment::ServerEnvironment(ServerInstance& serverInstance) :
 	m_serverInstance(serverInstance)
 	{
+		m_world.AddSystem<EnvironmentProxySystem>();
 		m_world.AddSystem<NetworkedEntitiesSystem>(*this);
 		auto& physicsSystem = m_world.AddSystem<Nz::Physics3DSystem>();
 		{
@@ -56,5 +59,12 @@ namespace tsom
 	{
 		NazaraAssert(m_registeredPlayers.UnboundedTest(player->GetPlayerIndex()), "player is not registered");
 		m_registeredPlayers.Reset(player->GetPlayerIndex());
+	}
+
+	void ServerEnvironment::UpdateConnectedTransform(ServerEnvironment& environment, const EnvironmentTransform& transform)
+	{
+		auto it = m_connectedEnvironments.find(&environment);
+		NazaraAssert(it != m_connectedEnvironments.end(), "unknown environment");
+		it.value() = transform;
 	}
 }

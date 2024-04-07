@@ -8,8 +8,8 @@
 #define TSOM_SERVERLIB_SERVERENVIRONMENT_HPP
 
 #include <ServerLib/Export.hpp>
-#include <ServerLib/ServerInstance.hpp>
 #include <CommonLib/EnvironmentTransform.hpp>
+#include <ServerLib/ServerInstance.hpp>
 #include <Nazara/Core/EnttWorld.hpp>
 #include <Nazara/Core/Node.hpp>
 #include <tsl/hopscotch_map.h>
@@ -49,6 +49,8 @@ namespace tsom
 
 			void RegisterPlayer(ServerPlayer* player);
 			void UnregisterPlayer(ServerPlayer* player);
+
+			void UpdateConnectedTransform(ServerEnvironment& environment, const EnvironmentTransform& transform);
 
 			ServerEnvironment& operator=(const ServerEnvironment&) = delete;
 			ServerEnvironment& operator=(ServerEnvironment&&) = delete;
