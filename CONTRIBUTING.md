@@ -1,0 +1,4 @@
+- Ne pas écrire de code comme Lynix
+- Respecter les conventions de [https://google.github.io/styleguide/cppguide.html#C++_Version](google)
+- faire des tests unitaire
+- 
