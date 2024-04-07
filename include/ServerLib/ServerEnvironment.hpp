@@ -8,6 +8,7 @@
 #define TSOM_SERVERLIB_SERVERENVIRONMENT_HPP
 
 #include <ServerLib/Export.hpp>
+#include <ServerLib/ServerInstance.hpp>
 #include <CommonLib/EnvironmentTransform.hpp>
 #include <Nazara/Core/EnttWorld.hpp>
 #include <Nazara/Core/Node.hpp>
@@ -18,7 +19,6 @@
 namespace tsom
 {
 	class GravityController;
-	class ServerInstance;
 	class ServerPlayer;
 
 	class TSOM_SERVERLIB_API ServerEnvironment
@@ -35,14 +35,13 @@ namespace tsom
 			virtual entt::handle CreateEntity() = 0;
 
 			template<typename F> void ForEachConnectedEnvironment(F&& callback) const;
+			template<typename F> void ForEachPlayer(F&& callback);
 			template<typename F> void ForEachPlayer(F&& callback) const;
 
 			inline bool GetEnvironmentTransformation(ServerEnvironment& targetEnv, EnvironmentTransform* transform) const;
 			virtual const GravityController* GetGravityController() const = 0;
 			inline Nz::EnttWorld& GetWorld();
 			inline const Nz::EnttWorld& GetWorld() const;
-
-			inline bool IsPlayerRegistered(ServerPlayer* player) const;
 
 			virtual void OnLoad(const std::filesystem::path& loadPath) = 0;
 			virtual void OnSave(const std::filesystem::path& savePath) = 0;
@@ -55,8 +54,8 @@ namespace tsom
 			ServerEnvironment& operator=(ServerEnvironment&&) = delete;
 
 		protected:
-			std::vector<ServerPlayer*> m_players;
 			tsl::hopscotch_map<ServerEnvironment*, EnvironmentTransform> m_connectedEnvironments;
+			Nz::Bitset<Nz::UInt64> m_registeredPlayers;
 			Nz::EnttWorld m_world;
 			ServerInstance& m_serverInstance;
 	};

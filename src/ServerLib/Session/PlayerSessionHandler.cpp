@@ -35,6 +35,7 @@ namespace tsom
 		{ PacketIndex<Packets::EntitiesCreation>,        { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::EntitiesDelete>,          { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::EntitiesStateUpdate>,     { .channel = 1, .flags = Nz::ENetPacketFlag_Unreliable } },
+		{ PacketIndex<Packets::EntityEnvironmentUpdate>, { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::EnvironmentCreate>,       { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::EnvironmentDestroy>,      { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::EnvironmentUpdate>,       { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
@@ -42,7 +43,7 @@ namespace tsom
 		{ PacketIndex<Packets::PlayerJoin>,              { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::PlayerLeave>,             { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::PlayerNameUpdate>,        { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::UpdatePlayerEnvironment>, { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::UpdateRootEnvironment>,   { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
 	});
 
 	PlayerSessionHandler::PlayerSessionHandler(NetworkSession* session, ServerPlayer* player) :
@@ -93,7 +94,7 @@ namespace tsom
 		std::string_view message = static_cast<std::string_view>(playerChat.message);
 		if (message == "/respawn")
 		{
-			m_player->Respawn(Constants::PlayerSpawnPos, Constants::PlayerSpawnRot);
+			m_player->Respawn(m_player->GetRootEnvironment(), Constants::PlayerSpawnPos, Constants::PlayerSpawnRot);
 			return;
 		}
 		else if (message == "/fly")
@@ -115,44 +116,25 @@ namespace tsom
 			ServerInstance& serverInstance = m_player->GetServerInstance();
 			const BlockLibrary& blockLibrary = serverInstance.GetBlockLibrary();
 
-			ServerEnvironment* currentEnvironment = m_player->GetEnvironment();
-			if (!currentEnvironment)
+			ServerEnvironment* currentRootEnvironment = m_player->GetRootEnvironment();
+			if (currentRootEnvironment != &serverInstance.GetPlanetEnvironment())
 				return;
 
 			Nz::NodeComponent& playerNode = playerEntity.get<Nz::NodeComponent>();
 
 			ServerShipEnvironment* shipEnv = serverInstance.CreateShip();
 
-			EnvironmentTransform planetToShip(playerNode.GetPosition(), playerNode.GetRotation());
+			EnvironmentTransform planetToShip(playerNode.GetPosition(), Nz::Quaternionf::Identity()); //< FIXME
 
-			currentEnvironment->Connect(*shipEnv, planetToShip);
-			shipEnv->Connect(*currentEnvironment, -planetToShip);
+			currentRootEnvironment->Connect(*shipEnv, planetToShip);
+			shipEnv->Connect(*currentRootEnvironment, -planetToShip);
 
-			m_player->UpdateEnvironment(shipEnv);
-
-			entt::handle shipEntity = shipEnv->GetShipEntity();
-			auto& shipComp = shipEntity.get<ShipComponent>();
-
-			auto& playerVisibility = m_player->GetVisibilityHandler();
-			shipComp.ForEachChunk([&](const ChunkIndices& chunkIndices, Chunk& chunk)
+			currentRootEnvironment->ForEachPlayer([&](ServerPlayer& player)
 			{
-				playerVisibility.CreateChunk(shipEntity, chunk);
+				player.AddToEnvironment(shipEnv);
 			});
 
-			currentEnvironment->ForEachPlayer([&](ServerPlayer& player)
-			{
-				if (&player == m_player)
-					return;
-
-				auto& playerVisibility = player.GetVisibilityHandler();
-				shipEnv->RegisterPlayer(&player);
-				playerVisibility.CreateEnvironment(*shipEnv, planetToShip);
-
-				shipComp.ForEachChunk([&](const ChunkIndices& chunkIndices, Chunk& chunk)
-				{
-					playerVisibility.CreateChunk(shipEntity, chunk);
-				});
-			});
+			m_player->MoveEntityToEnvironment(shipEnv);
 			return;
 		}
 		else if (message == "/regenchunk")
@@ -179,30 +161,30 @@ namespace tsom
 		}
 		else if (message == "/spawnplatform")
 		{
-			entt::handle playerEntity = m_player->GetControlledEntity();
-			if (playerEntity)
-			{
-				PlanetComponent* playerPlanet = playerEntity.try_get<PlanetComponent>();
-				if (playerPlanet)
-				{
-					const BlockLibrary& blockLibrary = m_player->GetServerInstance().GetBlockLibrary();
-
-					Nz::Vector3f playerPos = playerEntity.get<Nz::NodeComponent>().GetGlobalPosition();
-					ChunkIndices chunkIndices = playerPlanet->GetChunkIndicesByPosition(playerPos);
-					if (Chunk* chunk = playerPlanet->GetChunk(chunkIndices))
-					{
-						std::optional<Nz::Vector3ui> coords = chunk->ComputeCoordinates(playerPos);
-						if (coords)
-						{
-							Direction dir = DirectionFromNormal(playerPlanet->ComputeUpDirection(playerPos));
-							BlockIndices blockIndices = playerPlanet->GetBlockIndices(chunkIndices, *coords);
-							playerPlanet->GeneratePlatform(blockLibrary, dir, blockIndices);
-
-							fmt::print("generated platform at {};{};{}\n", blockIndices.x, blockIndices.y, blockIndices.z);
-						}
-					}
-				}
-			}
+// 			entt::handle playerEntity = m_player->GetControlledEntity();
+// 			if (playerEntity)
+// 			{
+// 				PlanetComponent* playerPlanet = playerEntity.try_get<PlanetComponent>();
+// 				if (playerPlanet)
+// 				{
+// 					const BlockLibrary& blockLibrary = m_player->GetServerInstance().GetBlockLibrary();
+// 
+// 					Nz::Vector3f playerPos = playerEntity.get<Nz::NodeComponent>().GetGlobalPosition();
+// 					ChunkIndices chunkIndices = playerPlanet->GetChunkIndicesByPosition(playerPos);
+// 					if (Chunk* chunk = playerPlanet->GetChunk(chunkIndices))
+// 					{
+// 						std::optional<Nz::Vector3ui> coords = chunk->ComputeCoordinates(playerPos);
+// 						if (coords)
+// 						{
+// 							Direction dir = DirectionFromNormal(playerPlanet->ComputeUpDirection(playerPos));
+// 							BlockIndices blockIndices = playerPlanet->GetBlockIndices(chunkIndices, *coords);
+// 							playerPlanet->GeneratePlatform(blockLibrary, dir, blockIndices);
+// 
+// 							fmt::print("generated platform at {};{};{}\n", blockIndices.x, blockIndices.y, blockIndices.z);
+// 						}
+// 					}
+// 				}
+// 			}
 			return;
 		}
 		else if (message == "/spawnplanet")
@@ -211,7 +193,7 @@ namespace tsom
 			if (!playerEntity)
 				return;
 
-			ServerEnvironment* environment = m_player->GetEnvironment();
+			ServerEnvironment* environment = m_player->GetRootEnvironment();
 
 			entt::handle newPlanetEntity = environment->CreateEntity();
 			newPlanetEntity.emplace<Nz::NodeComponent>().CopyTransform(playerEntity.get<Nz::NodeComponent>());
@@ -227,15 +209,6 @@ namespace tsom
 
 			planetComponent.planetEntities = std::make_unique<ChunkEntities>(serverInstance.GetApplication(), environment->GetWorld(), planetComponent, serverInstance.GetBlockLibrary());
 			planetComponent.planetEntities->SetParentEntity(newPlanetEntity);
-
-			serverInstance.ForEachPlayer([&](ServerPlayer& player)
-			{
-				auto& playerVisibility = player.GetVisibilityHandler();
-				planetComponent.ForEachChunk([&](const ChunkIndices& chunkIndices, Chunk& chunk)
-				{
-					playerVisibility.CreateChunk(newPlanetEntity, chunk);
-				});
-			});
 			return;
 		}
 
@@ -295,7 +268,7 @@ namespace tsom
 		Nz::Vector3f blockCenter = std::accumulate(corners.begin(), corners.end(), Nz::Vector3f::Zero()) / corners.size();
 		Nz::Vector3f offset = chunk->GetContainer().GetChunkOffset(chunk->GetIndices());
 
-		ServerEnvironment* environment = m_player->GetEnvironment();
+		ServerEnvironment* environment = m_player->GetRootEnvironment();
 		auto& physicsSystem = environment->GetWorld().GetSystem<Nz::Physics3DSystem>();
 		bool doesCollide = physicsSystem.CollisionQuery(boxCollider, Nz::Matrix4f::Translate(offset + blockCenter), [](const Nz::Physics3DSystem::ShapeCollisionInfo& hitInfo) -> std::optional<float>
 		{

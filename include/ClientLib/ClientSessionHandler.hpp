@@ -56,7 +56,7 @@ namespace tsom
 			void HandlePacket(Packets::PlayerJoin&& playerJoin);
 			void HandlePacket(Packets::PlayerLeave&& playerLeave);
 			void HandlePacket(Packets::PlayerNameUpdate&& playerNameUpdate);
-			void HandlePacket(Packets::UpdatePlayerEnvironment&& playerEnv);
+			void HandlePacket(Packets::UpdateRootEnvironment&& playerEnv);
 
 			NazaraSignal(OnAuthResponse, const Packets::AuthResponse& /*authResponse*/);
 			NazaraSignal(OnChatMessage, const std::string& /*message*/);

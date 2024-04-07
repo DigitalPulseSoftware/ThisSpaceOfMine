@@ -22,8 +22,20 @@ namespace tsom
 		if (m_controlledEntity)
 			m_controlledEntity.destroy();
 
-		if (m_environment)
-			m_environment->UnregisterPlayer(this);
+		for (ServerEnvironment* environment : m_registeredEnvironments)
+			environment->UnregisterPlayer(this);
+	}
+
+	void ServerPlayer::AddToEnvironment(ServerEnvironment* environment)
+	{
+		assert(m_rootEnvironment);
+		assert(!IsInEnvironment(environment));
+
+		EnvironmentTransform transform;
+		if (!m_rootEnvironment->GetEnvironmentTransformation(*environment, &transform))
+			assert(false && "environment is not linked to root environment");
+
+		HandleNewEnvironment(environment, transform);
 	}
 
 	void ServerPlayer::Destroy()
@@ -36,17 +48,21 @@ namespace tsom
 		m_inputQueue.push_back(inputs);
 	}
 
-	void ServerPlayer::Respawn(const Nz::Vector3f& position, const Nz::Quaternionf& rotation)
+	void ServerPlayer::Respawn(ServerEnvironment* environment, const Nz::Vector3f& position, const Nz::Quaternionf& rotation)
 	{
+		assert(IsInEnvironment(environment));
+
 		if (m_controlledEntity)
 			m_controlledEntity.destroy();
 
-		m_controlledEntity = m_environment->CreateEntity();
+		m_controlledEntityEnvironment = environment;
+
+		m_controlledEntity = environment->CreateEntity();
 		m_controlledEntity.emplace<Nz::NodeComponent>(position, rotation);
 		m_controlledEntity.emplace<NetworkedComponent>();
 
 		m_controller = std::make_shared<CharacterController>();
-		m_controller->SetGravityController(m_environment->GetGravityController());
+		m_controller->SetGravityController(environment->GetGravityController());
 
 		m_visibilityHandler.UpdateControlledEntity(m_controlledEntity, m_controller.get()); // TODO: Reset to nullptr when player entity is destroyed
 
@@ -77,50 +93,51 @@ namespace tsom
 		}
 	}
 
-	void ServerPlayer::UpdateEnvironment(ServerEnvironment* environment)
+	void ServerPlayer::UpdateRootEnvironment(ServerEnvironment* environment)
 	{
 		assert(environment);
 
 		EnvironmentTransform oldToNewEnv(Nz::Vector3f::Zero(), Nz::Quaternionf::Identity());
-		if (m_environment)
+		if (m_rootEnvironment)
 		{
-			m_environment->GetEnvironmentTransformation(*environment, &oldToNewEnv);
-
-			m_environment->UnregisterPlayer(this);
-			m_visibilityHandler.DestroyEnvironment(*m_environment);
-
-			m_environment->ForEachConnectedEnvironment([&](ServerEnvironment& connectedEnvironment, const EnvironmentTransform& /*transform*/)
-			{
-				if (connectedEnvironment.IsPlayerRegistered(this))
-				{
-					connectedEnvironment.UnregisterPlayer(this);
-					m_visibilityHandler.DestroyEnvironment(connectedEnvironment);
-				}
-			});
+			m_rootEnvironment->GetEnvironmentTransformation(*environment, &oldToNewEnv);
+			ClearEnvironments();
 		}
 
-		m_environment = environment;
-		m_environment->RegisterPlayer(this);
+		m_rootEnvironment = environment;
+		HandleNewEnvironment(m_rootEnvironment, oldToNewEnv);
 
-		m_visibilityHandler.CreateEnvironment(*environment, oldToNewEnv);
-		m_visibilityHandler.UpdateCurrentEnvironment(*environment);
-
-		auto& networkedEntities = m_environment->GetWorld().GetSystem<NetworkedEntitiesSystem>();
-		networkedEntities.CreateAllEntities(m_visibilityHandler);
-
-		m_environment->ForEachConnectedEnvironment([&](ServerEnvironment& connectedEnvironment, const EnvironmentTransform& transform)
+		m_rootEnvironment->ForEachConnectedEnvironment([&](ServerEnvironment& connectedEnvironment, const EnvironmentTransform& transform)
 		{
-			connectedEnvironment.RegisterPlayer(this);
-			m_visibilityHandler.CreateEnvironment(connectedEnvironment, transform);
-
-			auto& networkedEntities = connectedEnvironment.GetWorld().GetSystem<NetworkedEntitiesSystem>();
-			networkedEntities.CreateAllEntities(m_visibilityHandler);
+			// avoid cycles
+			EnvironmentTransform globalTransform = oldToNewEnv + transform;
+			HandleNewEnvironment(&connectedEnvironment, oldToNewEnv + transform);
 		});
 
-		if (!m_controlledEntity)
-			return;
+		m_visibilityHandler.UpdateRootEnvironment(*m_rootEnvironment);
+	}
 
-		Respawn(Nz::Vector3f::Zero(), Nz::Quaternionf::Identity());
+	void ServerPlayer::ClearEnvironments()
+	{
+		for (ServerEnvironment* environment : m_registeredEnvironments)
+		{
+			environment->UnregisterPlayer(this);
+			m_visibilityHandler.DestroyEnvironment(*environment);
+		}
+		m_registeredEnvironments.clear();
+	}
+
+	void ServerPlayer::HandleNewEnvironment(ServerEnvironment* environment, const EnvironmentTransform& transform)
+	{
+		assert(!IsInEnvironment(environment));
+		m_registeredEnvironments.push_back(environment);
+		environment->RegisterPlayer(this);
+
+		if (m_visibilityHandler.CreateEnvironment(*environment, transform))
+		{
+			auto& networkedEntities = environment->GetWorld().GetSystem<NetworkedEntitiesSystem>();
+			networkedEntities.CreateAllEntities(m_visibilityHandler);
+		}
 	}
 
 	void ServerPlayer::UpdateNickname(std::string nickname)
