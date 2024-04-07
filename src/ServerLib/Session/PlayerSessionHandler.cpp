@@ -118,8 +118,8 @@ namespace tsom
 			ServerInstance& serverInstance = m_player->GetServerInstance();
 			const BlockLibrary& blockLibrary = serverInstance.GetBlockLibrary();
 
-			ServerEnvironment* currentRootEnvironment = m_player->GetRootEnvironment();
-			if (currentRootEnvironment != &serverInstance.GetPlanetEnvironment())
+			ServerEnvironment* currentEnvironment = m_player->GetControlledEntityEnvironment();
+			if (currentEnvironment != &serverInstance.GetPlanetEnvironment())
 				return;
 
 			Nz::NodeComponent& playerNode = playerEntity.get<Nz::NodeComponent>();
@@ -128,22 +128,22 @@ namespace tsom
 
 			EnvironmentTransform planetToShip(playerNode.GetPosition(), Nz::Quaternionf::Identity()); //< FIXME
 
-			currentRootEnvironment->Connect(*shipEnv, planetToShip);
-			shipEnv->Connect(*currentRootEnvironment, -planetToShip);
+			currentEnvironment->Connect(*shipEnv, planetToShip);
+			shipEnv->Connect(*currentEnvironment, -planetToShip);
 
-			currentRootEnvironment->ForEachPlayer([&](ServerPlayer& player)
+			currentEnvironment->ForEachPlayer([&](ServerPlayer& player)
 			{
 				player.AddToEnvironment(shipEnv);
 			});
 
-			entt::handle environmentProxy = currentRootEnvironment->CreateEntity();
+			entt::handle environmentProxy = currentEnvironment->CreateEntity();
 			environmentProxy.emplace<Nz::NodeComponent>(planetToShip.translation, planetToShip.rotation);
 
 			std::shared_ptr<Nz::Collider3D> chunkCollider = shipEnv->GetShip().GetChunk({0, 0, 0})->BuildCollider(blockLibrary);
 			environmentProxy.emplace<Nz::RigidBody3DComponent>(Nz::RigidBody3DComponent::DynamicSettings(chunkCollider, 100.f));
 
 			auto& envProxy = environmentProxy.emplace<EnvironmentProxyComponent>();
-			envProxy.fromEnv = currentRootEnvironment;
+			envProxy.fromEnv = currentEnvironment;
 			envProxy.toEnv = shipEnv;
 
 			auto& shipEntry = environmentProxy.emplace<TempShipEntryComponent>();
