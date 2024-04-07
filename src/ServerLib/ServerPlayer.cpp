@@ -43,6 +43,63 @@ namespace tsom
 		m_instance.DestroyPlayer(m_playerIndex);
 	}
 
+	void ServerPlayer::MoveEntityToEnvironment(ServerEnvironment* environment)
+	{
+		assert(IsInEnvironment(environment));
+
+		if (m_controlledEntityEnvironment == environment)
+			return;
+
+		if (!m_controlledEntity)
+			return;
+
+		entt::handle previousEntity = m_controlledEntity;
+		Nz::NodeComponent& previousNode = previousEntity.get<Nz::NodeComponent>();
+		Nz::Vector3f position = previousNode.GetPosition();
+		Nz::Quaternionf rotation = previousNode.GetRotation();
+
+		auto& networkedSystem = m_controlledEntityEnvironment->GetWorld().GetSystem<NetworkedEntitiesSystem>();
+		networkedSystem.ForgetEntity(previousEntity);
+
+		EnvironmentTransform prevToNewTransform;
+		if (!environment->GetEnvironmentTransformation(*m_controlledEntityEnvironment, &prevToNewTransform))
+			assert(false && "old environment is not linked to the new");
+
+		position = prevToNewTransform.Apply(position);
+		rotation = prevToNewTransform.Apply(rotation);
+
+		m_controlledEntity = environment->CreateEntity();
+		m_controlledEntity.emplace<Nz::NodeComponent>(position, rotation);
+		m_controlledEntity.emplace<NetworkedComponent>(false); //< Don't create entity
+
+		m_controller->SetGravityController(environment->GetGravityController());
+
+		Nz::PhysCharacter3DComponent::Settings characterSettings;
+		characterSettings.collider = std::make_shared<Nz::CapsuleCollider3D>(Constants::PlayerCapsuleHeight, Constants::PlayerColliderRadius);
+		characterSettings.position = position;
+		characterSettings.rotation = rotation;
+
+		auto& characterComponent = m_controlledEntity.emplace<Nz::PhysCharacter3DComponent>(std::move(characterSettings));
+		characterComponent.SetImpl(m_controller);
+		characterComponent.DisableSleeping();
+
+		m_controlledEntity.emplace<ServerPlayerControlledComponent>(CreateHandle());
+
+		m_controlledEntityEnvironment->ForEachPlayer([&](ServerPlayer& serverPlayer)
+		{
+			auto& visibilityHandler = serverPlayer.GetVisibilityHandler();
+			visibilityHandler.UpdateEntityEnvironment(*environment, previousEntity, m_controlledEntity);
+		});
+
+		// Destroy previous entity before updating controlled entity, as entity destruction will not be forwarded to visibility handler
+		// we need it to not add back entity to its moving entity list (FIXME: maybe the visibility handler should be the only one to handle that)
+		previousEntity.destroy();
+
+		m_visibilityHandler.UpdateControlledEntity(m_controlledEntity, m_controller.get()); // TODO: Reset to nullptr when player entity is destroyed
+
+		m_controlledEntityEnvironment = environment;
+	}
+
 	void ServerPlayer::PushInputs(const PlayerInputs& inputs)
 	{
 		m_inputQueue.push_back(inputs);

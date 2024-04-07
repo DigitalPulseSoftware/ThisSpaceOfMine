@@ -272,6 +272,13 @@ namespace tsom
 			}
 		}
 
+		void Serialize(PacketSerializer& serializer, EntityEnvironmentUpdate& data)
+		{
+			serializer &= data.tickIndex;
+			serializer &= data.entity;
+			serializer &= data.newEnvironmentId;
+		}
+
 		void Serialize(PacketSerializer& serializer, EnvironmentCreate& data)
 		{
 			serializer &= data.tickIndex;

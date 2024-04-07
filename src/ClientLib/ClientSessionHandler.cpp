@@ -257,6 +257,20 @@ namespace tsom
 			OnControlledEntityStateUpdate(stateUpdate.lastInputIndex, *stateUpdate.controlledCharacter);
 	}
 
+	void ClientSessionHandler::HandlePacket(Packets::EntityEnvironmentUpdate&& environmentUpdate)
+	{
+		assert(m_entities[environmentUpdate.entity]);
+		EntityData& entityData = *m_entities[environmentUpdate.entity];
+		fmt::print("Entity {} moved to environment #{} to environment #{}\n", environmentUpdate.entity, entityData.environmentIndex, environmentUpdate.newEnvironmentId);
+		entityData.environmentIndex = environmentUpdate.newEnvironmentId;
+
+		assert(m_environments[environmentUpdate.newEnvironmentId]);
+		auto& newEnvironment = *m_environments[environmentUpdate.newEnvironmentId];
+
+		auto& entityNode = entityData.entity.get<Nz::NodeComponent>();
+		entityNode.SetParent(newEnvironment.rootNode);
+	}
+
 	void ClientSessionHandler::HandlePacket(Packets::EnvironmentCreate&& envCreate)
 	{
 		fmt::print("Created environment #{} at {};{};{}\n", envCreate.id, envCreate.transform.translation.x, envCreate.transform.translation.y, envCreate.transform.translation.z);
