@@ -145,6 +145,11 @@ namespace tsom
 			auto& envProxy = environmentProxy.emplace<EnvironmentProxyComponent>();
 			envProxy.fromEnv = currentRootEnvironment;
 			envProxy.toEnv = shipEnv;
+
+			auto& shipEntry = environmentProxy.emplace<TempShipEntryComponent>();
+			shipEntry.aabb = Nz::Boxf(-6.f, -2.5f, -6.f, 12.f, 5.f, 12.f);
+			shipEntry.shipEnv = shipEnv;
+
 			m_player->MoveEntityToEnvironment(shipEnv);
 			return;
 		}
