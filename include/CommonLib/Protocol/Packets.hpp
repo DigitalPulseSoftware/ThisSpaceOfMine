@@ -215,6 +215,13 @@ namespace tsom
 			std::vector<EntityData> entities;
 		};
 
+		struct EntityEnvironmentUpdate
+		{
+			Nz::UInt16 tickIndex;
+			Helper::EntityId entity;
+			Helper::EnvironmentId newEnvironmentId;
+		};
+
 		struct EnvironmentCreate
 		{
 			Nz::UInt16 tickIndex;
@@ -309,6 +316,7 @@ namespace tsom
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntitiesCreation& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntitiesDelete& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntitiesStateUpdate& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntityEnvironmentUpdate& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EnvironmentCreate& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EnvironmentDestroy& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EnvironmentUpdate& data);

@@ -34,6 +34,7 @@ namespace tsom
 			void CreateAllEntities(SessionVisibilityHandler& visibility) const;
 
 			void ForEachVisibility(const Nz::FunctionRef<void(SessionVisibilityHandler& visibility)>& functor);
+			void ForgetEntity(entt::entity entity);
 
 			void Update(Nz::Time elapsedTime);
 
