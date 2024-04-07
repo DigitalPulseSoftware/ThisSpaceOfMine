@@ -10,6 +10,7 @@
 #include <CommonLib/Systems/PlanetSystem.hpp>
 #include <ServerLib/ServerInstance.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
+#include <ServerLib/Systems/TempShipEntrySystem.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/ByteArray.hpp>
 #include <Nazara/Core/ByteStream.hpp>

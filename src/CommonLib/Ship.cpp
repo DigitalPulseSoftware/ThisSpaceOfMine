@@ -12,7 +12,8 @@
 namespace tsom
 {
 	Ship::Ship(float tileSize) :
-	ChunkContainer(tileSize)
+	ChunkContainer(tileSize),
+	m_upDirection(Nz::Vector3f::Up())
 	{
 	}
 
@@ -49,7 +50,7 @@ namespace tsom
 
 	Nz::Vector3f Ship::ComputeUpDirection(const Nz::Vector3f& position) const
 	{
-		return Nz::Vector3f::Up();
+		return m_upDirection;
 	}
 
 	void Ship::ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, Chunk& chunk)> callback)
@@ -90,6 +91,9 @@ namespace tsom
 					{
 						continue;
 					}
+
+					if (x == 0 && y == boxSize / 2 && z > 0 && z < heightSize - 1)
+						continue;
 
 					chunk.UpdateBlock(startPos + Nz::Vector3ui{ x, y, z }, hullIndex);
 				}

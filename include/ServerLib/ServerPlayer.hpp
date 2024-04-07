@@ -42,6 +42,8 @@ namespace tsom
 
 			inline const std::shared_ptr<CharacterController>& GetCharacterController();
 			inline entt::handle GetControlledEntity() const;
+			inline ServerEnvironment* GetControlledEntityEnvironment();
+			inline const ServerEnvironment* GetControlledEntityEnvironment() const;
 			inline ServerEnvironment* GetRootEnvironment();
 			inline const ServerEnvironment* GetRootEnvironment() const;
 			inline const std::string& GetNickname() const;

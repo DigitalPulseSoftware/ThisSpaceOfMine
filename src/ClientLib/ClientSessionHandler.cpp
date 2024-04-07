@@ -264,8 +264,13 @@ namespace tsom
 		fmt::print("Entity {} moved to environment #{} to environment #{}\n", environmentUpdate.entity, entityData.environmentIndex, environmentUpdate.newEnvironmentId);
 		entityData.environmentIndex = environmentUpdate.newEnvironmentId;
 
+		assert(m_environments[entityData.environmentIndex]);
+		auto& oldEnvironment = *m_environments[entityData.environmentIndex];
+		oldEnvironment.entities.Reset(environmentUpdate.entity);
+
 		assert(m_environments[environmentUpdate.newEnvironmentId]);
 		auto& newEnvironment = *m_environments[environmentUpdate.newEnvironmentId];
+		newEnvironment.entities.UnboundedSet(environmentUpdate.entity);
 
 		auto& entityNode = entityData.entity.get<Nz::NodeComponent>();
 		entityNode.SetParent(newEnvironment.rootNode);
@@ -299,6 +304,10 @@ namespace tsom
 
 	void ClientSessionHandler::HandlePacket(Packets::EnvironmentUpdate&& envUpdate)
 	{
+		assert(m_environments[envUpdate.id]);
+		auto& environmentData = *m_environments[envUpdate.id];
+		environmentData.transform = envUpdate.transform;
+		environmentData.rootNode.SetTransform(environmentData.transform.translation, environmentData.transform.rotation);
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::GameData&& gameData)

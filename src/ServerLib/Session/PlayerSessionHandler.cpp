@@ -14,6 +14,7 @@
 #include <ServerLib/ServerEnvironment.hpp>
 #include <ServerLib/ServerInstance.hpp>
 #include <ServerLib/ServerShipEnvironment.hpp>
+#include <ServerLib/Components/EnvironmentProxyComponent.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Collider3D.hpp>
@@ -23,6 +24,7 @@
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <ServerLib/ServerPlanetEnvironment.hpp>
 #include <Nazara/Core/TaskSchedulerAppComponent.hpp>
+#include <ServerLib/Components/TempShipEntryComponent.hpp>
 
 namespace tsom
 {
@@ -134,6 +136,15 @@ namespace tsom
 				player.AddToEnvironment(shipEnv);
 			});
 
+			entt::handle environmentProxy = currentRootEnvironment->CreateEntity();
+			environmentProxy.emplace<Nz::NodeComponent>(planetToShip.translation, planetToShip.rotation);
+
+			std::shared_ptr<Nz::Collider3D> chunkCollider = shipEnv->GetShip().GetChunk({0, 0, 0})->BuildCollider(blockLibrary);
+			environmentProxy.emplace<Nz::RigidBody3DComponent>(Nz::RigidBody3DComponent::DynamicSettings(chunkCollider, 100.f));
+
+			auto& envProxy = environmentProxy.emplace<EnvironmentProxyComponent>();
+			envProxy.fromEnv = currentRootEnvironment;
+			envProxy.toEnv = shipEnv;
 			m_player->MoveEntityToEnvironment(shipEnv);
 			return;
 		}

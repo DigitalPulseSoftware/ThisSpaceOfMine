@@ -14,7 +14,7 @@ namespace tsom
 	{
 		return translation + rotation * localPosition;
 	}
-	
+
 	inline Nz::Quaternionf EnvironmentTransform::Apply(const Nz::Quaternionf& localRotation) const
 	{
 		return Nz::Quaternionf::Normalize(rotation * localRotation);

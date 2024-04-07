@@ -237,6 +237,7 @@ namespace tsom
 
 		struct EnvironmentUpdate
 		{
+			Nz::UInt16 tickIndex;
 			Helper::EnvironmentId id;
 			EnvironmentTransform transform;
 		};
