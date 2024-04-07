@@ -42,6 +42,7 @@ namespace tsom
 
 		private:
 			SessionVisibilityHandler::CreateEntityData BuildCreateEntityData(entt::entity entity) const;
+			void CreateEntity(SessionVisibilityHandler& visibility, entt::handle entity, const SessionVisibilityHandler::CreateEntityData& createData) const;
 			void OnNetworkedDestroy(entt::registry& registry, entt::entity entity);
 
 			tsl::hopscotch_set<entt::entity> m_movingEntities;

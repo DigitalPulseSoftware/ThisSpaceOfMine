@@ -3,7 +3,6 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ServerLib/ServerEnvironment.hpp>
-#include <ServerLib/ServerInstance.hpp>
 #include <ServerLib/SessionVisibilityHandler.hpp>
 #include <ServerLib/Systems/NetworkedEntitiesSystem.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
@@ -49,14 +48,13 @@ namespace tsom
 
 	void ServerEnvironment::RegisterPlayer(ServerPlayer* player)
 	{
-		NazaraAssert(std::find(m_players.begin(), m_players.end(), player) == m_players.end(), "player was already registered");
-		m_players.push_back(player);
+		NazaraAssert(!m_registeredPlayers.UnboundedTest(player->GetPlayerIndex()), "player was already registered");
+		m_registeredPlayers.UnboundedSet(player->GetPlayerIndex());
 	}
 
 	void ServerEnvironment::UnregisterPlayer(ServerPlayer* player)
 	{
-		auto it = std::find(m_players.begin(), m_players.end(), player);
-		NazaraAssert(it != m_players.end(), "player is not registered");
-		m_players.erase(it);
+		NazaraAssert(m_registeredPlayers.UnboundedTest(player->GetPlayerIndex()), "player is not registered");
+		m_registeredPlayers.Reset(player->GetPlayerIndex());
 	}
 }

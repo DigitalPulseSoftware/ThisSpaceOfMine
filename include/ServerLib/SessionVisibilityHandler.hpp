@@ -35,9 +35,9 @@ namespace tsom
 			SessionVisibilityHandler(SessionVisibilityHandler&&) = delete;
 			~SessionVisibilityHandler() = default;
 
-			void CreateChunk(entt::handle entity, Chunk& chunk);
+			bool CreateChunk(entt::handle entity, Chunk& chunk);
 			void CreateEntity(entt::handle entity, CreateEntityData entityData);
-			void CreateEnvironment(ServerEnvironment& environment, const EnvironmentTransform& transform);
+			bool CreateEnvironment(ServerEnvironment& environment, const EnvironmentTransform& transform);
 
 			void DestroyChunk(Chunk& chunk);
 			void DestroyEntity(entt::handle entity);
@@ -50,8 +50,9 @@ namespace tsom
 			inline void MoveEnvironment(ServerEnvironment& environment, const EnvironmentTransform& transform);
 
 			inline void UpdateControlledEntity(entt::handle entity, CharacterController* controller);
-			inline void UpdateCurrentEnvironment(ServerEnvironment& environment);
+			void UpdateEntityEnvironment(ServerEnvironment& newEnvironment, entt::handle oldEntity, entt::handle newEntity);
 			inline void UpdateLastInputIndex(InputIndex inputIndex);
+			inline void UpdateRootEnvironment(ServerEnvironment& environment);
 
 			SessionVisibilityHandler& operator=(const SessionVisibilityHandler&) = delete;
 			SessionVisibilityHandler& operator=(SessionVisibilityHandler&&) = delete;
@@ -114,13 +115,18 @@ namespace tsom
 			{
 				Nz::Bitset<Nz::UInt64> chunks;
 				Nz::Bitset<Nz::UInt64> entities;
-				EnvironmentTransform transform;
 			};
 
 			struct EnvironmentTransformation
 			{
 				ServerEnvironment* environment;
 				EnvironmentTransform transform;
+			};
+
+			struct EnvironmentUpdate
+			{
+				EntityId entityId;
+				ServerEnvironment* newEnvironment;
 			};
 
 			tsl::hopscotch_map<entt::handle, EntityId, HandlerHasher> m_entityIndices;
@@ -137,6 +143,7 @@ namespace tsom
 			std::vector<EnvironmentData> m_visibleEnvironments;
 			std::vector<EnvironmentTransformation> m_createdEnvironments;
 			std::vector<EnvironmentTransformation> m_environmentTransformations;
+			std::vector<EnvironmentUpdate> m_environmentUpdates;
 			Nz::Bitset<Nz::UInt64> m_freeChunkIds;
 			Nz::Bitset<Nz::UInt64> m_freeEntityIds;
 			Nz::Bitset<Nz::UInt64> m_freeEnvironmentIds;
@@ -145,10 +152,11 @@ namespace tsom
 			Nz::Bitset<Nz::UInt64> m_resetChunk;
 			Nz::Bitset<Nz::UInt64> m_updatedChunk;
 			entt::handle m_controlledEntity;
+			EnvironmentId m_currentEnvironmentId;
 			InputIndex m_lastInputIndex;
 			CharacterController* m_controlledCharacter;
 			NetworkSession* m_networkSession;
-			ServerEnvironment* m_nextEnvironment;
+			ServerEnvironment* m_nextRootEnvironment;
 	};
 }
 

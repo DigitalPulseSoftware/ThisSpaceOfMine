@@ -122,7 +122,7 @@ namespace tsom
 
 		GetSession()->SetupHandler<PlayerSessionHandler>(player);
 
-		player->Respawn(Constants::PlayerSpawnPos, Constants::PlayerSpawnRot);
+		player->Respawn(player->GetRootEnvironment(), Constants::PlayerSpawnPos, Constants::PlayerSpawnRot);
 	}
 
 	void InitialSessionHandler::OnDeserializationError(std::size_t packetIndex)

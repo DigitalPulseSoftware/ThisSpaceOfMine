@@ -4,4 +4,13 @@
 
 namespace tsom
 {
+	inline NetworkedComponent::NetworkedComponent(bool shouldSignalCreation) :
+	m_shouldSignalCreation(shouldSignalCreation)
+	{
+	}
+
+	inline bool NetworkedComponent::ShouldSignalCreation() const
+	{
+		return m_shouldSignalCreation;
+	}
 }

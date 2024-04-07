@@ -215,6 +215,10 @@ namespace tsom
 		{
 			entt::handle chunkEntity = it->second;
 
+			// FIXME: This signal may be triggered while entities are destroyed
+			if (!chunkEntity.all_of<Nz::NodeComponent, Nz::RigidBody3DComponent>())
+				continue;
+
 			auto& chunkNode = chunkEntity.get<Nz::NodeComponent>();
 			auto& rigidBody = chunkEntity.get<Nz::RigidBody3DComponent>();
 			rigidBody.TeleportTo(chunkNode.GetGlobalPosition(), chunkNode.GetGlobalRotation());

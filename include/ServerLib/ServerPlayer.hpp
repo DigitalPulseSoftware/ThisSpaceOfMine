@@ -36,12 +36,14 @@ namespace tsom
 			ServerPlayer(ServerPlayer&&) = delete;
 			~ServerPlayer();
 
+			void AddToEnvironment(ServerEnvironment* environment);
+
 			void Destroy();
 
 			inline const std::shared_ptr<CharacterController>& GetCharacterController();
 			inline entt::handle GetControlledEntity() const;
-			inline ServerEnvironment* GetEnvironment();
-			inline const ServerEnvironment* GetEnvironment() const;
+			inline ServerEnvironment* GetRootEnvironment();
+			inline const ServerEnvironment* GetRootEnvironment() const;
 			inline const std::string& GetNickname() const;
 			inline PlayerPermissionFlags GetPermissions() const;
 			inline PlayerIndex GetPlayerIndex() const;
@@ -53,30 +55,39 @@ namespace tsom
 			inline const SessionVisibilityHandler& GetVisibilityHandler() const;
 			inline const std::optional<Nz::Uuid>& GetUuid() const;
 
+			inline bool HasPermission(PlayerPermission permission);
+
 			inline bool IsAuthenticated() const;
 
-			inline bool HasPermission(PlayerPermission permission);
+			inline bool IsInEnvironment(const ServerEnvironment* environment);
+
+			void MoveEntityToEnvironment(ServerEnvironment* environment);
 
 			void PushInputs(const PlayerInputs& inputs);
 
-			void Respawn(const Nz::Vector3f& position, const Nz::Quaternionf& rotation);
+			void Respawn(ServerEnvironment* environment, const Nz::Vector3f& position, const Nz::Quaternionf& rotation);
 
 			void Tick();
 
-			void UpdateEnvironment(ServerEnvironment* environment);
 			void UpdateNickname(std::string nickname);
+			void UpdateRootEnvironment(ServerEnvironment* environment);
 
 			ServerPlayer& operator=(const ServerPlayer&) = delete;
 			ServerPlayer& operator=(ServerPlayer&&) = delete;
 
 		private:
+			void ClearEnvironments();
+			void HandleNewEnvironment(ServerEnvironment* environment, const EnvironmentTransform& transform);
+
 			std::optional<Nz::Uuid> m_uuid;
 			std::shared_ptr<CharacterController> m_controller;
 			std::string m_nickname;
 			std::vector<PlayerInputs> m_inputQueue;
+			std::vector<ServerEnvironment*> m_registeredEnvironments;
 			entt::handle m_controlledEntity;
 			NetworkSession* m_session;
-			ServerEnvironment* m_environment;
+			ServerEnvironment* m_controlledEntityEnvironment;
+			ServerEnvironment* m_rootEnvironment;
 			SessionVisibilityHandler m_visibilityHandler;
 			ServerInstance& m_instance;
 			PlayerIndex m_playerIndex;

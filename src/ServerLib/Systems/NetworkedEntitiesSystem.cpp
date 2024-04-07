@@ -29,7 +29,7 @@ namespace tsom
 	void NetworkedEntitiesSystem::CreateAllEntities(SessionVisibilityHandler& visibility) const
 	{
 		for (entt::entity entity : m_networkedEntities)
-			visibility.CreateEntity(entt::handle(m_registry, entity), BuildCreateEntityData(entity));
+			CreateEntity(visibility, entt::handle(m_registry, entity), BuildCreateEntityData(entity));
 	}
 
 	void NetworkedEntitiesSystem::ForEachVisibility(const Nz::FunctionRef<void(SessionVisibilityHandler& visibility)>& functor)
@@ -40,6 +40,12 @@ namespace tsom
 		});
 	}
 
+	void NetworkedEntitiesSystem::ForgetEntity(entt::entity entity)
+	{
+		m_networkedEntities.erase(entity);
+		m_movingEntities.erase(entity);
+	}
+
 	void NetworkedEntitiesSystem::Update(Nz::Time elapsedTime)
 	{
 		m_networkedConstructObserver.each([&](entt::entity entity)
@@ -47,20 +53,24 @@ namespace tsom
 			assert(!m_networkedEntities.contains(entity));
 			m_networkedEntities.insert(entity);
 
+			auto& entityNetwork = m_registry.get<NetworkedComponent>(entity);
+			if (!entityNetwork.ShouldSignalCreation())
+				return;
+
 			SessionVisibilityHandler::CreateEntityData createData = BuildCreateEntityData(entity);
 			if (createData.isMoving)
 				m_movingEntities.insert(entity);
 
 			ForEachVisibility([&](SessionVisibilityHandler& visibility)
 			{
-				visibility.CreateEntity(entt::handle(m_registry, entity), createData);
+				CreateEntity(visibility, entt::handle(m_registry, entity), createData);
 			});
 		});
 	}
 
 	SessionVisibilityHandler::CreateEntityData NetworkedEntitiesSystem::BuildCreateEntityData(entt::entity entity) const
 	{
-		bool isMoving = m_registry.try_get<Nz::PhysCharacter3DComponent>(entity) || m_registry.try_get<Nz::RigidBody3DComponent>(entity);
+		bool isMoving = m_registry.any_of<Nz::PhysCharacter3DComponent, Nz::RigidBody3DComponent>(entity);
 
 		auto& entityNode = m_registry.get<Nz::NodeComponent>(entity);
 
@@ -94,6 +104,28 @@ namespace tsom
 		}
 
 		return createData;
+	}
+
+	void NetworkedEntitiesSystem::CreateEntity(SessionVisibilityHandler& visibility, entt::handle entity, const SessionVisibilityHandler::CreateEntityData& createData) const
+	{
+		entt::handle handle(m_registry, entity);
+		visibility.CreateEntity(handle, createData);
+
+		if (PlanetComponent* planet = handle.try_get<PlanetComponent>())
+		{
+			planet->ForEachChunk([&](const ChunkIndices& /*chunkIndices*/, Chunk& chunk)
+			{
+				visibility.CreateChunk(handle, chunk);
+			});
+		}
+
+		if (ShipComponent* ship = handle.try_get<ShipComponent>())
+		{
+			ship->ForEachChunk([&](const ChunkIndices& /*chunkIndices*/, Chunk& chunk)
+			{
+				visibility.CreateChunk(handle, chunk);
+			});
+		}
 	}
 
 	void NetworkedEntitiesSystem::OnNetworkedDestroy([[maybe_unused]] entt::registry& registry, entt::entity entity)

@@ -79,16 +79,9 @@ namespace tsom
 		ServerPlayer* player = m_players.Allocate(m_players.DeferConstruct, playerIndex);
 		std::construct_at(player, *this, Nz::SafeCast<PlayerIndex>(playerIndex), session, std::nullopt, std::move(nickname), 0);
 
-		player->UpdateEnvironment(m_planetEnvironment.get());
+		player->UpdateRootEnvironment(m_planetEnvironment.get());
 
 		m_newPlayers.UnboundedSet(playerIndex);
-
-		// Send all chunks (waiting for chunk streaming based on visibility)
-		auto& playerVisibility = player->GetVisibilityHandler();
-		m_planetEnv->GetPlanet().ForEachChunk([&](const ChunkIndices& chunkIndices, Chunk& chunk)
-		{
-			playerVisibility.CreateChunk(chunk);
-		});
 
 		return player;
 	}
@@ -122,14 +115,9 @@ namespace tsom
 		ServerPlayer* player = m_players.Allocate(m_players.DeferConstruct, playerIndex);
 		std::construct_at(player, *this, Nz::SafeCast<PlayerIndex>(playerIndex), session, uuid, std::move(nickname), permissions);
 
-		m_newPlayers.UnboundedSet(playerIndex);
+		player->UpdateRootEnvironment(m_planetEnvironment.get());
 
-		// Send all chunks (waiting for chunk streaming based on visibility)
-		auto& playerVisibility = player->GetVisibilityHandler();
-		m_planetEnvironment->GetPlanet().ForEachChunk([&](const ChunkIndices& chunkIndices, Chunk& chunk)
-		{
-			playerVisibility.CreateChunk(m_planetEnvironment->GetPlanetEntity(), chunk);
-		});
+		m_newPlayers.UnboundedSet(playerIndex);
 
 		return player;
 	}

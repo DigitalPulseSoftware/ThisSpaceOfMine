@@ -37,6 +37,12 @@ namespace tsom
 				serializer &= data.position;
 				serializer &= data.rotation;
 			}
+			
+			void Serialize(PacketSerializer& serializer, EnvironmentTransform& data)
+			{
+				serializer &= data.translation;
+				serializer &= data.rotation;
+			}
 
 			void Serialize(PacketSerializer& serializer, PlanetData& data)
 			{
@@ -270,7 +276,7 @@ namespace tsom
 		{
 			serializer &= data.tickIndex;
 			serializer &= data.id;
-			Helper::Serialize(serializer, data.states);
+			Helper::Serialize(serializer, data.transform);
 		}
 
 		void Serialize(PacketSerializer& serializer, EnvironmentDestroy& data)
@@ -282,7 +288,7 @@ namespace tsom
 		void Serialize(PacketSerializer& serializer, EnvironmentUpdate& data)
 		{
 			serializer &= data.id;
-			Helper::Serialize(serializer, data.states);
+			Helper::Serialize(serializer, data.transform);
 		}
 
 		void Serialize(PacketSerializer& serializer, GameData& data)
@@ -343,9 +349,9 @@ namespace tsom
 			serializer &= data.message;
 		}
 
-		void Serialize(PacketSerializer& serializer, UpdatePlayerEnvironment& data)
+		void Serialize(PacketSerializer& serializer, UpdateRootEnvironment& data)
 		{
-			serializer &= data.newEnvironment;
+			serializer &= data.newRootEnv;
 		}
 
 		void Serialize(PacketSerializer& serializer, UpdatePlayerInputs& data)

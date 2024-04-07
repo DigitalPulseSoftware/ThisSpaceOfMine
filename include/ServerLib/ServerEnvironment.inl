@@ -14,10 +14,17 @@ namespace tsom
 	}
 
 	template<typename F>
+	void ServerEnvironment::ForEachPlayer(F&& callback)
+	{
+		for (std::size_t playerIndex : m_registeredPlayers.IterBits())
+			callback(*m_serverInstance.GetPlayer(playerIndex));
+	}
+
+	template<typename F>
 	void ServerEnvironment::ForEachPlayer(F&& callback) const
 	{
-		for (ServerPlayer* player : m_players)
-			callback(*player);
+		for (std::size_t playerIndex : m_registeredPlayers.IterBits())
+			callback(*m_serverInstance.GetPlayer(playerIndex));
 	}
 
 	inline bool ServerEnvironment::GetEnvironmentTransformation(ServerEnvironment& targetEnv, EnvironmentTransform* transform) const
@@ -38,10 +45,5 @@ namespace tsom
 	inline const Nz::EnttWorld& ServerEnvironment::GetWorld() const
 	{
 		return m_world;
-	}
-
-	inline bool ServerEnvironment::IsPlayerRegistered(ServerPlayer* player) const
-	{
-		return std::find(m_players.begin(), m_players.end(), player) != m_players.end();
 	}
 }

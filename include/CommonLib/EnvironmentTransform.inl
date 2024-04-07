@@ -10,6 +10,24 @@ namespace tsom
 	{
 	}
 
+	inline Nz::Vector3f EnvironmentTransform::Apply(const Nz::Vector3f& localPosition) const
+	{
+		return translation + rotation * localPosition;
+	}
+	
+	inline Nz::Quaternionf EnvironmentTransform::Apply(const Nz::Quaternionf& localRotation) const
+	{
+		return Nz::Quaternionf::Normalize(rotation * localRotation);
+	}
+
+	inline EnvironmentTransform EnvironmentTransform::operator+(const EnvironmentTransform& transform) const
+	{
+		EnvironmentTransform copy(*this);
+		copy += transform;
+
+		return copy;
+	}
+
 	inline EnvironmentTransform& EnvironmentTransform::operator+=(const EnvironmentTransform& transform)
 	{
 		translation += rotation * transform.translation;
@@ -19,6 +37,19 @@ namespace tsom
 		return *this;
 	}
 
+	inline EnvironmentTransform EnvironmentTransform::operator-(const EnvironmentTransform& transform) const
+	{
+		EnvironmentTransform copy(*this);
+		copy -= transform;
+
+		return copy;
+	}
+
+	inline EnvironmentTransform& EnvironmentTransform::operator-=(const EnvironmentTransform& transform)
+	{
+		return operator+=(-transform);
+	}
+
 	inline EnvironmentTransform EnvironmentTransform::operator-() const
 	{
 		EnvironmentTransform reverseTransform;
@@ -26,5 +57,10 @@ namespace tsom
 		reverseTransform.translation = -(reverseTransform.rotation * translation);
 
 		return reverseTransform;
+	}
+
+	inline EnvironmentTransform EnvironmentTransform::Identity()
+	{
+		return EnvironmentTransform(Nz::Vector3f::Zero(), Nz::Quaternionf::Identity());
 	}
 }

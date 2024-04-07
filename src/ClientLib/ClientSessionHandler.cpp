@@ -259,13 +259,13 @@ namespace tsom
 
 	void ClientSessionHandler::HandlePacket(Packets::EnvironmentCreate&& envCreate)
 	{
-		fmt::print("Created environment #{}\n", envCreate.id);
+		fmt::print("Created environment #{} at {};{};{}\n", envCreate.id, envCreate.transform.translation.x, envCreate.transform.translation.y, envCreate.transform.translation.z);
 		if (envCreate.id >= m_environments.size())
 			m_environments.resize(envCreate.id + 1);
 
 		auto& environment = m_environments[envCreate.id].emplace();
-		environment.transform = EnvironmentTransform(envCreate.states.position, envCreate.states.rotation);
-		environment.rootNode.SetTransform(envCreate.states.position, envCreate.states.rotation);
+		environment.transform = envCreate.transform;
+		environment.rootNode.SetTransform(envCreate.transform.translation, envCreate.transform.rotation);
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::EnvironmentDestroy&& envDestroy)
@@ -342,12 +342,12 @@ namespace tsom
 			playerInfo.textSprite->Update(Nz::SimpleTextDrawer::Draw(playerInfo.nickname, 48, Nz::TextStyle_Regular, (playerInfo.isAuthenticated) ? Nz::Color::White() : Nz::Color::Gray()), 0.01f);
 	}
 
-	void ClientSessionHandler::HandlePacket(Packets::UpdatePlayerEnvironment&& playerEnv)
+	void ClientSessionHandler::HandlePacket(Packets::UpdateRootEnvironment&& playerEnv)
 	{
 		if (m_currentEnvironmentIndex != std::numeric_limits<Packets::Helper::EnvironmentId>::max())
 		{
-			assert(m_environments[playerEnv.newEnvironment]);
-			EnvironmentTransform inverseTransform = -m_environments[playerEnv.newEnvironment]->transform;
+			assert(m_environments[playerEnv.newRootEnv]);
+			EnvironmentTransform inverseTransform = -m_environments[playerEnv.newRootEnv]->transform;
 
 			for (auto& envOpt : m_environments)
 			{
@@ -355,9 +355,9 @@ namespace tsom
 					continue;
 
 				auto& env = *envOpt;
-				env.rootNode.Move(inverseTransform.translation, Nz::Node::Invalidation::DontInvalidate);
-				env.rootNode.Rotate(inverseTransform.rotation);
 				env.transform += inverseTransform;
+
+				env.rootNode.SetTransform(env.transform.translation, env.transform.rotation);
 
 				// Teleport physical entities
 				for (std::size_t entityIndex : env.entities.IterBits())
@@ -373,7 +373,7 @@ namespace tsom
 			}
 		}
 
-		m_currentEnvironmentIndex = playerEnv.newEnvironment;
+		m_currentEnvironmentIndex = playerEnv.newRootEnv;
 	}
 
 	void ClientSessionHandler::SetupEntity(entt::handle entity, Packets::Helper::PlanetData&& entityData)

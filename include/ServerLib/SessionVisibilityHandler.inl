@@ -7,6 +7,7 @@
 namespace tsom
 {
 	inline SessionVisibilityHandler::SessionVisibilityHandler(NetworkSession* networkSession) :
+	m_currentEnvironmentId(std::numeric_limits<EnvironmentId>::max()),
 	m_lastInputIndex(0),
 	m_controlledCharacter(nullptr),
 	m_networkSession(networkSession)
@@ -49,14 +50,14 @@ namespace tsom
 		m_movingEntities.erase(m_controlledEntity);
 	}
 
-	inline void SessionVisibilityHandler::UpdateCurrentEnvironment(ServerEnvironment& environment)
-	{
-		m_nextEnvironment = &environment;
-	}
-
 	inline void SessionVisibilityHandler::UpdateLastInputIndex(InputIndex inputIndex)
 	{
 		m_lastInputIndex = inputIndex;
+	}
+
+	inline void SessionVisibilityHandler::UpdateRootEnvironment(ServerEnvironment& environment)
+	{
+		m_nextRootEnvironment = &environment;
 	}
 
 	inline std::size_t SessionVisibilityHandler::HandlerHasher::operator()(const entt::handle& handle) const

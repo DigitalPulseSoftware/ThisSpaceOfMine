@@ -12,14 +12,18 @@ namespace tsom
 	class NetworkedComponent
 	{
 		public:
-			NetworkedComponent() = default;
+			inline NetworkedComponent(bool shouldSignalCreation = true);
 			NetworkedComponent(const NetworkedComponent&) = delete;
 			NetworkedComponent(NetworkedComponent&&) = default;
 			~NetworkedComponent() = default;
 
+			inline bool ShouldSignalCreation() const;
+
 			NetworkedComponent& operator=(const NetworkedComponent&) = delete;
 			NetworkedComponent& operator=(NetworkedComponent&&) = default;
 
+		private:
+			bool m_shouldSignalCreation;
 	};
 }
 

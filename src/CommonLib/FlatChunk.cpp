@@ -115,7 +115,7 @@ namespace tsom
 
 	std::optional<Nz::Vector3ui> FlatChunk::ComputeCoordinates(const Nz::Vector3f& position) const
 	{
-		Nz::Vector3f indices = position - m_owner.GetChunkOffset(m_indices);
+		Nz::Vector3f indices = position;
 		indices += Nz::Vector3f(m_size) * m_blockSize * 0.5f;
 		indices /= m_blockSize;
 
