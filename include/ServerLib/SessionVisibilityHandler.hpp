@@ -45,7 +45,7 @@ namespace tsom
 
 			void Dispatch(Nz::UInt16 tickIndex);
 
-			inline Chunk* GetChunkByIndex(std::size_t chunkIndex) const;
+			inline bool GetChunkByNetworkId(std::size_t networkId, entt::handle* entityOwner, Chunk** chunk) const;
 
 			inline void MoveEnvironment(ServerEnvironment& environment, const EnvironmentTransform& transform);
 

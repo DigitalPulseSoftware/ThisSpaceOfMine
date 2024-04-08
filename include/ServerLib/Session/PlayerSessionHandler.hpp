@@ -31,7 +31,7 @@ namespace tsom
 
 		private:
 			bool CheckCanMineBlock(const Chunk* chunk, const Nz::Vector3ui& blockIndices) const;
-			bool CheckCanPlaceBlock(const Chunk* chunk, const Nz::Vector3ui& blockIndices) const;
+			bool CheckCanPlaceBlock(ServerEnvironment* environment, const Chunk* chunk, const Nz::Vector3ui& blockIndices) const;
 
 			ServerPlayer* m_player;
 	};

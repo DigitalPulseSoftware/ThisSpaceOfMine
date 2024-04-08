@@ -15,12 +15,20 @@ namespace tsom
 		m_activeChunkUpdates = std::make_shared<std::size_t>(0);
 	}
 
-	inline Chunk* SessionVisibilityHandler::GetChunkByIndex(std::size_t chunkIndex) const
+	inline bool SessionVisibilityHandler::GetChunkByNetworkId(std::size_t networkId, entt::handle* entityOwner, Chunk** chunk) const
 	{
-		if (chunkIndex >= m_visibleChunks.size())
-			return nullptr;
+		if (networkId >= m_visibleChunks.size())
+			return false;
 
-		return m_visibleChunks[chunkIndex].chunk;
+		auto& chunkData = m_visibleChunks[networkId];
+
+		if (entityOwner)
+			*entityOwner = chunkData.entityOwner;
+
+		if (chunk)
+			*chunk = chunkData.chunk;
+
+		return true;
 	}
 
 	inline void SessionVisibilityHandler::MoveEnvironment(ServerEnvironment& environment, const EnvironmentTransform& transform)
