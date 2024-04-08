@@ -637,9 +637,12 @@ namespace tsom
 
 			if (m_debugOverlay)
 			{
+				Nz::Vector3f localPos = characterNode.GetPosition();
+				Nz::Quaternionf localRot = characterNode.GetRotation();
+
 				m_debugOverlay->textDrawer.AppendText(fmt::format("{0:-^{1}}\n", "Player position", 20));
-				m_debugOverlay->textDrawer.AppendText(fmt::format("Position: {0:.3f};{1:.3f};{2:.3f}\n", characterPos.x, characterPos.y, characterPos.z));
-				m_debugOverlay->textDrawer.AppendText(fmt::format("Rotation: {0:.3f};{1:.3f};{2:.3f};{3:.3f}\n", characterRot.x, characterRot.y, characterRot.z, characterRot.w));
+				m_debugOverlay->textDrawer.AppendText(fmt::format("Position: {0:.3f};{1:.3f};{2:.3f} (local: {3:.3f};{4:.3f};{5:.3f})\n", characterPos.x, characterPos.y, characterPos.z, localPos.x, localPos.y, localPos.z));
+				m_debugOverlay->textDrawer.AppendText(fmt::format("Rotation: {0:.3f};{1:.3f};{2:.3f};{3:.3f} (local: {4:.3f};{5:.3f};{6:.3f};{7:.3f})\n", characterRot.x, characterRot.y, characterRot.z, characterRot.w, localRot.x, localRot.y, localRot.z, localRot.w));
 
 				/*Nz::Vector3f up = m_planet->ComputeUpDirection(characterPos);
 				float gravity = m_planet->GetGravityFactor(characterPos);
