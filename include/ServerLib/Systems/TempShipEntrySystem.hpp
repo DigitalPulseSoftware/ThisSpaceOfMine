@@ -25,7 +25,7 @@ namespace tsom
 	{
 		public:
 			static constexpr bool AllowConcurrent = false;
-			static constexpr Nz::Int64 ExecutionOrder = 0;
+			static constexpr Nz::Int64 ExecutionOrder = -1; //< execute before physics
 			using Components = Nz::TypeList<Nz::NodeComponent, class TempShipEntryComponent>;
 
 			inline TempShipEntrySystem(entt::registry& registry, ServerInstance& serverInstance);
