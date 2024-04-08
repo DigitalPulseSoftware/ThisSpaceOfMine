@@ -63,9 +63,11 @@ namespace tsom
 
 	void PlayerSessionHandler::HandlePacket(Packets::MineBlock&& mineBlock)
 	{
-		Chunk* chunk = m_player->GetVisibilityHandler().GetChunkByIndex(mineBlock.chunkId);
-		if (!chunk)
+		Chunk* chunk;
+		if (!m_player->GetVisibilityHandler().GetChunkByNetworkId(mineBlock.chunkId, nullptr, &chunk))
 			return; //< ignore
+
+		assert(chunk);
 
 		Nz::Vector3ui voxelLoc(mineBlock.voxelLoc.x, mineBlock.voxelLoc.y, mineBlock.voxelLoc.z);
 		if (!CheckCanMineBlock(chunk, voxelLoc))
@@ -78,12 +80,18 @@ namespace tsom
 
 	void PlayerSessionHandler::HandlePacket(Packets::PlaceBlock&& placeBlock)
 	{
-		Chunk* chunk = m_player->GetVisibilityHandler().GetChunkByIndex(placeBlock.chunkId);
-		if (!chunk)
+		Chunk* chunk;
+		entt::handle entityOwner;
+		if (!m_player->GetVisibilityHandler().GetChunkByNetworkId(placeBlock.chunkId, &entityOwner, &chunk))
 			return; //< ignore
 
+		assert(chunk);
+		assert(entityOwner);
+
+		ServerEnvironment* environment = entityOwner.registry()->ctx().get<ServerEnvironment*>();
+
 		Nz::Vector3ui voxelLoc(placeBlock.voxelLoc.x, placeBlock.voxelLoc.y, placeBlock.voxelLoc.z);
-		if (!CheckCanPlaceBlock(chunk, voxelLoc))
+		if (!CheckCanPlaceBlock(environment, chunk, voxelLoc))
 			return;
 
 		chunk->LockWrite();
@@ -267,7 +275,7 @@ namespace tsom
 		return true;
 	}
 
-	bool PlayerSessionHandler::CheckCanPlaceBlock(const Chunk* chunk, const Nz::Vector3ui& blockIndices) const
+	bool PlayerSessionHandler::CheckCanPlaceBlock(ServerEnvironment* environment, const Chunk* chunk, const Nz::Vector3ui& blockIndices) const
 	{
 		Nz::Vector3ui chunkSize = chunk->GetSize();
 		if (blockIndices.x >= chunkSize.x || blockIndices.y >= chunkSize.y || blockIndices.z >= chunkSize.z)
@@ -284,7 +292,6 @@ namespace tsom
 		Nz::Vector3f blockCenter = std::accumulate(corners.begin(), corners.end(), Nz::Vector3f::Zero()) / corners.size();
 		Nz::Vector3f offset = chunk->GetContainer().GetChunkOffset(chunk->GetIndices());
 
-		ServerEnvironment* environment = m_player->GetRootEnvironment();
 		auto& physicsSystem = environment->GetWorld().GetSystem<Nz::Physics3DSystem>();
 		bool doesCollide = physicsSystem.CollisionQuery(boxCollider, Nz::Matrix4f::Translate(offset + blockCenter), [](const Nz::Physics3DSystem::ShapeCollisionInfo& hitInfo) -> std::optional<float>
 		{

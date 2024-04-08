@@ -14,6 +14,9 @@ namespace tsom
 	ServerEnvironment::ServerEnvironment(ServerInstance& serverInstance) :
 	m_serverInstance(serverInstance)
 	{
+		auto& registry = m_world.GetRegistry();
+		registry.ctx().emplace<ServerEnvironment*>(this);
+
 		m_world.AddSystem<EnvironmentProxySystem>();
 		m_world.AddSystem<NetworkedEntitiesSystem>(*this);
 		auto& physicsSystem = m_world.AddSystem<Nz::Physics3DSystem>();
