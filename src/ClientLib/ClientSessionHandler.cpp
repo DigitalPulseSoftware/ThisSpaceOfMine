@@ -273,7 +273,7 @@ namespace tsom
 		newEnvironment.entities.UnboundedSet(environmentUpdate.entity);
 
 		auto& entityNode = entityData.entity.get<Nz::NodeComponent>();
-		entityNode.SetParent(newEnvironment.rootNode);
+		entityNode.SetParent(newEnvironment.rootNode, true);
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::EnvironmentCreate&& envCreate)
