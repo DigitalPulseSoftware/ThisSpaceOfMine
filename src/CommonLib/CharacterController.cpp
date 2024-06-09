@@ -169,4 +169,10 @@ namespace tsom
 
 		character.SetLinearVelocity(Lerp(velocity, desiredVelocity, desiredImpact));
 	}
+
+	void CharacterController::RotateInstantaneously(const Nz::Quaternionf& rotation)
+	{
+		m_referenceRotation = rotation * m_referenceRotation;
+		m_referenceRotation.Normalize();
+	}
 }
