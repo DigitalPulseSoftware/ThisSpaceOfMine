@@ -57,6 +57,7 @@ namespace tsom
 		Nz::NodeComponent& previousNode = previousEntity.get<Nz::NodeComponent>();
 		Nz::Vector3f position = previousNode.GetPosition();
 		Nz::Quaternionf rotation = previousNode.GetRotation();
+		Nz::Vector3f up = previousNode.GetUp();
 
 		auto& networkedSystem = m_controlledEntityEnvironment->GetWorld().GetSystem<NetworkedEntitiesSystem>();
 		networkedSystem.ForgetEntity(previousEntity);
@@ -64,6 +65,9 @@ namespace tsom
 		EnvironmentTransform prevToNewTransform;
 		if (!environment->GetEnvironmentTransformation(*m_controlledEntityEnvironment, &prevToNewTransform))
 			assert(false && "old environment is not linked to the new");
+
+		Nz::Vector3f prevEnvironmentUp = m_controlledEntityEnvironment->GetGravityController()->ComputeUpDirection(position);
+		Nz::Quaternionf environmentRotationCorrection = Nz::Quaternionf::RotationBetween(prevEnvironmentUp, Nz::Vector3f::Up());
 
 		position = prevToNewTransform.Apply(position);
 		rotation = prevToNewTransform.Apply(rotation);
@@ -73,6 +77,7 @@ namespace tsom
 		m_controlledEntity.emplace<NetworkedComponent>(false); //< Don't create entity
 
 		m_controller->SetGravityController(environment->GetGravityController());
+		m_controller->RotateInstantaneously(prevToNewTransform.rotation);
 
 		Nz::PhysCharacter3DComponent::Settings characterSettings;
 		characterSettings.collider = std::make_shared<Nz::CapsuleCollider3D>(Constants::PlayerCapsuleHeight, Constants::PlayerColliderRadius);
@@ -81,6 +86,7 @@ namespace tsom
 
 		auto& characterComponent = m_controlledEntity.emplace<Nz::PhysCharacter3DComponent>(std::move(characterSettings));
 		characterComponent.SetImpl(m_controller);
+		characterComponent.SetUp(rotation * environmentRotationCorrection * up);
 		characterComponent.DisableSleeping();
 
 		m_controlledEntity.emplace<ServerPlayerControlledComponent>(CreateHandle());

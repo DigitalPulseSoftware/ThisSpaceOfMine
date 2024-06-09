@@ -40,6 +40,8 @@ namespace tsom
 			void PostSimulate(Nz::PhysCharacter3D& character, float elapsedTime) override;
 			void PreSimulate(Nz::PhysCharacter3D& character, float elapsedTime) override;
 
+			void RotateInstantaneously(const Nz::Quaternionf& rotation);
+
 			inline void SetGravityController(const GravityController* planet);
 
 			void SetInputs(const PlayerInputs& inputs);
