@@ -835,5 +835,6 @@ namespace tsom
 	{
 		m_isMouseLocked = !m_chatBox->IsTyping() && !m_escapeMenu->IsVisible();
 		Nz::Mouse::SetRelativeMouseMode(m_isMouseLocked);
+		m_chatBox->EnableMouseInput(!m_isMouseLocked);
 	}
 }
