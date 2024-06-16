@@ -78,11 +78,11 @@ namespace tsom
 			skyboxImage.LoadFaceFromImage(Nz::CubemapFace::PositiveZ, *filesystem.Load<Nz::Image>("assets/DeepSpaceGreenSkybox/frontImage.png"));
 			skyboxImage.LoadFaceFromImage(Nz::CubemapFace::NegativeZ, *filesystem.Load<Nz::Image>("assets/DeepSpaceGreenSkybox/backImage.png"));
 
-			std::shared_ptr<Nz::Texture> skyboxTexture = Nz::Texture::CreateFromImage(skyboxImage, *filesystem.GetDefaultResourceParameters<Nz::Texture>());
+			//std::shared_ptr<Nz::Texture> skyboxTexture = Nz::Texture::CreateFromImage(skyboxImage, *filesystem.GetDefaultResourceParameters<Nz::Texture>());
 
 			// Instantiate the material to use it, and configure it (texture + cull front faces as the render is from the inside)
 			std::shared_ptr<Nz::MaterialInstance> skyboxMat = skyboxMaterial->Instantiate();
-			skyboxMat->SetTextureProperty("BaseColorMap", skyboxTexture);
+			//skyboxMat->SetTextureProperty("BaseColorMap", skyboxTexture);
 			skyboxMat->UpdatePassesStates([](Nz::RenderStates& states)
 			{
 				states.faceCulling = Nz::FaceCulling::Front;
