@@ -157,7 +157,7 @@ namespace tsom
 		Nz::Graphics* graphics = Nz::Graphics::Instance();
 		graphics->GetShaderModuleResolver()->RegisterModuleDirectory(Nz::Utf8Path("assets/shaders"), true);
 
-		m_blockLibrary.emplace(app, *graphics->GetRenderDevice());
+		m_blockLibrary.emplace(app);
 		m_blockLibrary->BuildTexture();
 
 		return true;

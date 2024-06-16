@@ -6,7 +6,7 @@
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <Nazara/Core/Image.hpp>
-#include <Nazara/Renderer/RenderDevice.hpp>
+#include <Nazara/Graphics/TextureAsset.hpp>
 
 namespace tsom
 {
@@ -45,29 +45,9 @@ namespace tsom
 				detailArray.Copy(*detailImage, Nz::Boxui(detailImage->GetSize()), Nz::Vector3ui(0, 0, texIndex));
 		}
 
-		m_baseColorTexture = m_renderDevice.InstantiateTexture(Nz::TextureInfo{
-			.pixelFormat = Nz::PixelFormat::RGBA8_SRGB,
-			.type = Nz::ImageType::E2D_Array,
-			.layerCount = Nz::SafeCast<unsigned int>(sliceCount),
-			.height = texSize,
-			.width = texSize,
-		}, baseColorArray.GetConstPixels(), true);
-
-		m_normalTexture = m_renderDevice.InstantiateTexture(Nz::TextureInfo{
-			.pixelFormat = Nz::PixelFormat::RGBA8,
-			.type = Nz::ImageType::E2D_Array,
-			.layerCount = Nz::SafeCast<unsigned int>(sliceCount),
-			.height = texSize,
-			.width = texSize,
-		}, normalArray.GetConstPixels(), true);
-
-		m_detailTexture = m_renderDevice.InstantiateTexture(Nz::TextureInfo{
-			.pixelFormat = Nz::PixelFormat::RGBA8,
-			.type = Nz::ImageType::E2D_Array,
-			.layerCount = Nz::SafeCast<unsigned int>(sliceCount),
-			.height = texSize,
-			.width = texSize,
-		}, detailArray.GetConstPixels(), true);
+		m_baseColorTexture = Nz::TextureAsset::CreateFromImage(std::move(baseColorArray), { .sRGB = true });
+		m_normalTexture = Nz::TextureAsset::CreateFromImage(std::move(normalArray));
+		m_detailTexture = Nz::TextureAsset::CreateFromImage(std::move(detailArray));
 
 		m_previewTextures.resize(m_blocks.size());
 		for (std::size_t blockIndex = 0; blockIndex < m_blocks.size(); ++blockIndex)
@@ -79,7 +59,7 @@ namespace tsom
 				.baseArrayLayer = blockData.texIndices[Direction::Up]
 			};
 
-			m_previewTextures[blockIndex] = m_baseColorTexture->CreateView(slotTexView);
+			m_previewTextures[blockIndex] = Nz::TextureAsset::CreateView(m_baseColorTexture, slotTexView);
 		}
 	}
 }

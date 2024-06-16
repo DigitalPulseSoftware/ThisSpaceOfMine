@@ -13,6 +13,7 @@
 #include <Nazara/Graphics/MaterialInstance.hpp>
 #include <Nazara/Graphics/Model.hpp>
 #include <Nazara/Graphics/PipelinePassList.hpp>
+#include <Nazara/Graphics/TextureAsset.hpp>
 #include <Nazara/Graphics/Components/CameraComponent.hpp>
 #include <Nazara/Graphics/PropertyHandler/TexturePropertyHandler.hpp>
 #include <Nazara/Graphics/PropertyHandler/UniformValuePropertyHandler.hpp>
@@ -60,15 +61,28 @@ namespace tsom
 			std::shared_ptr<Nz::Material> skyboxMaterial = std::make_shared<Nz::Material>(std::move(skyboxSettings), "SkyboxMaterial");
 
 			// Load skybox
-			Nz::Image skyboxImage(Nz::ImageType::Cubemap, Nz::PixelFormat::RGBA8, 2048, 2048);
-			skyboxImage.LoadFaceFromImage(Nz::CubemapFace::PositiveX, *filesystem.Load<Nz::Image>("assets/PurpleNebulaSkybox/purple_nebula_skybox_right1.png"));
-			skyboxImage.LoadFaceFromImage(Nz::CubemapFace::NegativeX, *filesystem.Load<Nz::Image>("assets/PurpleNebulaSkybox/purple_nebula_skybox_left2.png"));
-			skyboxImage.LoadFaceFromImage(Nz::CubemapFace::PositiveY, *filesystem.Load<Nz::Image>("assets/PurpleNebulaSkybox/purple_nebula_skybox_top3.png"));
-			skyboxImage.LoadFaceFromImage(Nz::CubemapFace::NegativeY, *filesystem.Load<Nz::Image>("assets/PurpleNebulaSkybox/purple_nebula_skybox_bottom4.png"));
-			skyboxImage.LoadFaceFromImage(Nz::CubemapFace::PositiveZ, *filesystem.Load<Nz::Image>("assets/PurpleNebulaSkybox/purple_nebula_skybox_front5.png"));
-			skyboxImage.LoadFaceFromImage(Nz::CubemapFace::NegativeZ, *filesystem.Load<Nz::Image>("assets/PurpleNebulaSkybox/purple_nebula_skybox_back6.png"));
+			Nz::TextureInfo textureInfo = {
+				.pixelFormat = Nz::PixelFormat::RGBA8,
+				.type = Nz::ImageType::Cubemap,
+				.layerCount = 6,
+				.height = 2048,
+				.width = 2048,
+			};
 
-			std::shared_ptr<Nz::Texture> skyboxTexture = Nz::Texture::CreateFromImage(skyboxImage, *filesystem.GetDefaultResourceParameters<Nz::Texture>());
+			std::shared_ptr<Nz::TextureAsset> skyboxTexture = Nz::TextureAsset::CreateWithBuilder(textureInfo, [stateData](Nz::RenderDevice&, const Nz::TextureAssetParams& /*params*/)
+			{
+				auto& filesystem = stateData->app->GetComponent<Nz::FilesystemAppComponent>();
+
+				Nz::Image skyboxImage(Nz::ImageType::Cubemap, Nz::PixelFormat::RGBA8_SRGB, 2048, 2048);
+				skyboxImage.LoadFaceFromImage(Nz::CubemapFace::PositiveX, *filesystem.Load<Nz::Image>("assets/PurpleNebulaSkybox/purple_nebula_skybox_right1.png"));
+				skyboxImage.LoadFaceFromImage(Nz::CubemapFace::NegativeX, *filesystem.Load<Nz::Image>("assets/PurpleNebulaSkybox/purple_nebula_skybox_left2.png"));
+				skyboxImage.LoadFaceFromImage(Nz::CubemapFace::PositiveY, *filesystem.Load<Nz::Image>("assets/PurpleNebulaSkybox/purple_nebula_skybox_top3.png"));
+				skyboxImage.LoadFaceFromImage(Nz::CubemapFace::NegativeY, *filesystem.Load<Nz::Image>("assets/PurpleNebulaSkybox/purple_nebula_skybox_bottom4.png"));
+				skyboxImage.LoadFaceFromImage(Nz::CubemapFace::PositiveZ, *filesystem.Load<Nz::Image>("assets/PurpleNebulaSkybox/purple_nebula_skybox_front5.png"));
+				skyboxImage.LoadFaceFromImage(Nz::CubemapFace::NegativeZ, *filesystem.Load<Nz::Image>("assets/PurpleNebulaSkybox/purple_nebula_skybox_back6.png"));
+
+				return skyboxImage;
+			});
 
 			// Instantiate the material to use it, and configure it (texture + cull front faces as the render is from the inside)
 			std::shared_ptr<Nz::MaterialInstance> skyboxMat = skyboxMaterial->Instantiate();

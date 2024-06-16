@@ -18,6 +18,7 @@
 #include <Nazara/Graphics/MaterialInstance.hpp>
 #include <Nazara/Graphics/Model.hpp>
 #include <Nazara/Graphics/TextSprite.hpp>
+#include <Nazara/Graphics/TextureAsset.hpp>
 #include <Nazara/Graphics/Components/GraphicsComponent.hpp>
 #include <Nazara/Physics3D/Collider3D.hpp>
 #include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
@@ -229,8 +230,8 @@ namespace tsom
 				animParams.jointScale = params.mesh.vertexScale;
 
 				std::shared_ptr<Nz::MaterialInstance> playerMat = Nz::MaterialInstance::Instantiate(Nz::MaterialType::PhysicallyBased);
-				playerMat->SetTextureProperty("BaseColorMap", fs.Load<Nz::Texture>("assets/Player/Textures/Soldier_AlbedoTransparency.png"));
-				playerMat->SetTextureProperty("NormalMap", fs.Load<Nz::Texture>("assets/Player/Textures/Soldier_Normal.png.png"));
+				playerMat->SetTextureProperty("BaseColorMap", fs.Open<Nz::TextureAsset>("assets/Player/Textures/Soldier_AlbedoTransparency.png", { .sRGB = true }));
+				playerMat->SetTextureProperty("NormalMap", fs.Open<Nz::TextureAsset>("assets/Player/Textures/Soldier_Normal.png.png"));
 
 				m_playerModel->model->SetMaterial(0, std::move(playerMat));
 

@@ -28,6 +28,7 @@
 #include <Nazara/Graphics/PipelinePassList.hpp>
 #include <Nazara/Graphics/PointLight.hpp>
 #include <Nazara/Graphics/SpotLight.hpp>
+#include <Nazara/Graphics/TextureAsset.hpp>
 #include <Nazara/Graphics/Components/CameraComponent.hpp>
 #include <Nazara/Graphics/Components/LightComponent.hpp>
 #include <Nazara/Graphics/PropertyHandler/TexturePropertyHandler.hpp>
@@ -103,11 +104,8 @@ namespace tsom
 			std::shared_ptr<Nz::Material> skyboxMaterial = std::make_shared<Nz::Material>(std::move(skyboxSettings), "SkyboxMaterial");
 
 			// Instantiate the material to use it, and configure it (texture + cull front faces as the render is from the inside)
-			Nz::TextureParams skyboxTexParams;
-			skyboxTexParams.loadFormat = Nz::PixelFormat::RGBA8_SRGB;
-
 			std::shared_ptr<Nz::MaterialInstance> skyboxMat = skyboxMaterial->Instantiate();
-			skyboxMat->SetTextureProperty("BaseColorMap", filesystem.Load<Nz::Texture>("assets/skybox-space.png", skyboxTexParams, Nz::CubemapParams{}));
+			skyboxMat->SetTextureProperty("BaseColorMap", filesystem.Open<Nz::TextureAsset>("assets/skybox-space.png", { .sRGB = true }, Nz::CubemapParams{}));
 			skyboxMat->UpdatePassesStates([](Nz::RenderStates& states)
 			{
 				states.faceCulling = Nz::FaceCulling::Front;

@@ -14,7 +14,7 @@ namespace Nz
 {
 	class ApplicationBase;
 	class RenderDevice;
-	class Texture;
+	class TextureAsset;
 }
 
 namespace tsom
@@ -22,23 +22,22 @@ namespace tsom
 	class TSOM_CLIENTLIB_API ClientBlockLibrary : public BlockLibrary
 	{
 		public:
-			inline ClientBlockLibrary(Nz::ApplicationBase& applicationBase, Nz::RenderDevice& renderDevice);
+			inline ClientBlockLibrary(Nz::ApplicationBase& applicationBase);
 			~ClientBlockLibrary() = default;
 
 			void BuildTexture();
 
-			inline const std::shared_ptr<Nz::Texture>& GetBaseColorTexture() const;
-			inline const std::shared_ptr<Nz::Texture>& GetDetailTexture() const;
-			inline const std::shared_ptr<Nz::Texture>& GetNormalTexture() const;
-			inline const std::shared_ptr<Nz::Texture>& GetPreviewTexture(BlockIndex blockIndex) const;
+			inline const std::shared_ptr<Nz::TextureAsset>& GetBaseColorTexture() const;
+			inline const std::shared_ptr<Nz::TextureAsset>& GetDetailTexture() const;
+			inline const std::shared_ptr<Nz::TextureAsset>& GetNormalTexture() const;
+			inline const std::shared_ptr<Nz::TextureAsset>& GetPreviewTexture(BlockIndex blockIndex) const;
 
 		private:
-			std::shared_ptr<Nz::Texture> m_baseColorTexture;
-			std::shared_ptr<Nz::Texture> m_detailTexture;
-			std::shared_ptr<Nz::Texture> m_normalTexture;
-			std::vector<std::shared_ptr<Nz::Texture>> m_previewTextures;
+			std::shared_ptr<Nz::TextureAsset> m_baseColorTexture;
+			std::shared_ptr<Nz::TextureAsset> m_detailTexture;
+			std::shared_ptr<Nz::TextureAsset> m_normalTexture;
+			std::vector<std::shared_ptr<Nz::TextureAsset>> m_previewTextures;
 			Nz::ApplicationBase& m_applicationBase;
-			Nz::RenderDevice& m_renderDevice;
 	};
 }
 
