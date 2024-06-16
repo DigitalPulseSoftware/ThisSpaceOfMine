@@ -52,6 +52,7 @@ namespace tsom
 			Nz::Quaternionf m_referenceRotation;
 			Nz::Quaternionf m_characterRotation;
 			Nz::Vector3f m_characterPosition;
+			Nz::Vector3f m_gravityUp;
 			PlayerInputs m_lastInputs;
 			const Planet* m_planet;
 			bool m_allowInputRotation;

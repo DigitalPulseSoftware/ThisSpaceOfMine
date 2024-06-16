@@ -27,18 +27,15 @@ namespace tsom
 
 	void CharacterController::PostSimulate(Nz::PhysCharacter3D& character, float elapsedTime)
 	{
-		std::tie(m_characterPosition, m_characterRotation) = character.GetPositionAndRotation();
-		Nz::Vector3f characterBasePosition = m_characterPosition + m_referenceRotation * Nz::Vector3f::Down() * 0.9f;
 		Nz::Vector3f charUp = character.GetUp();
 
 		Nz::Quaternionf newRotation = m_referenceRotation;
 		Nz::Vector3f newUp = charUp;
 
 		// Update up vector if player is around a gravity well
-		if (m_planet && m_planet->GetGravityFactor(m_characterPosition) > 0.3f)
+		if (m_gravityUp.GetSquaredLength() > 0.0001f)
 		{
-			Nz::Vector3f targetUp = m_planet->ComputeUpDirection(characterBasePosition);
-			newUp = Nz::Vector3f::RotateTowards(charUp, targetUp, Constants::GravityMaxRotationSpeed * elapsedTime);
+			newUp = Nz::Vector3f::RotateTowards(charUp, m_gravityUp, Constants::GravityMaxRotationSpeed * elapsedTime);
 
 			if (Nz::Vector3f previousUp = newRotation * Nz::Vector3f::Up(); !previousUp.ApproxEqual(newUp, 0.00001f))
 			{
@@ -83,8 +80,14 @@ namespace tsom
 
 	void CharacterController::PreSimulate(Nz::PhysCharacter3D& character, float elapsedTime)
 	{
+		std::tie(m_characterPosition, m_characterRotation) = character.GetPositionAndRotation();
+
 		Nz::Vector3f velocity = character.GetLinearVelocity();
 		Nz::Vector3f up = character.GetUp();
+		if (m_planet && m_planet->GetGravityFactor(m_characterPosition) > 0.3f)
+			m_gravityUp = m_planet->ComputeUpDirection(m_characterPosition);
+		else
+			m_gravityUp = Nz::Vector3f::Zero();
 
 		Nz::Quaternionf movementRotation;
 		if (m_planet)
@@ -153,10 +156,15 @@ namespace tsom
 		float desiredImpact;
 		if (m_isFlying)
 			desiredImpact = 0.2f;
+		else if (m_gravityUp.GetSquaredLength() > 0.0001f)
+		{
+			desiredVelocity += velocity.Project(m_gravityUp);
+			desiredImpact = (character.IsOnGround()) ? 0.25f : 0.1f;
+		}
 		else
 		{
-			desiredVelocity += velocity.Project(up);
-			desiredImpact = (character.IsOnGround()) ? 0.25f : 0.1f;
+			desiredVelocity += velocity;
+			desiredImpact = 0.1f;
 		}
 
 		character.SetLinearVelocity(Lerp(velocity, desiredVelocity, desiredImpact));
