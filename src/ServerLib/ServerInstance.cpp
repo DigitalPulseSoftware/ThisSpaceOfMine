@@ -28,7 +28,9 @@ namespace tsom
 	m_players(256),
 	m_tickAccumulator(Nz::Time::Zero()),
 	m_tickDuration(Constants::TickDuration),
-	m_application(application)
+	m_saveInterval(config.saveInterval),
+	m_application(application),
+	m_pauseWhenEmpty(config.pauseWhenEmpty)
 	{
 		m_world.AddSystem<NetworkedEntitiesSystem>(*this);
 		auto& physicsSystem = m_world.AddSystem<Nz::Physics3DSystem>();
