@@ -49,7 +49,7 @@ namespace tsom
 		planetComponent.GeneratePlatform(blockLibrary, tsom::Direction::Front, { 22, -35, -59 });
 		planetComponent.GeneratePlatform(blockLibrary, tsom::Direction::Down, { 23, -62, 26 });
 
-		planetComponent.OnChunkUpdated.Connect([this](ChunkContainer* /*planet*/, Chunk* chunk)
+		planetComponent.OnChunkUpdated.Connect([this](ChunkContainer* /*planet*/, Chunk* chunk, DirectionMask /*neighborMask*/)
 		{
 			m_dirtyChunks.insert(chunk->GetIndices());
 		});
@@ -116,7 +116,7 @@ namespace tsom
 				}
 			}
 			else
-				fmt::print(stderr, fg(fmt::color::red), "failed to load planet: failed to load version file {}\n");
+				fmt::print(stderr, fg(fmt::color::red), "failed to load planet: failed to load version file\n");
 		}
 
 		bool didConvert = false;
@@ -169,7 +169,7 @@ namespace tsom
 			try
 			{
 				Nz::ByteStream fileStream(&chunkFile);
-				chunk.Unserialize(m_serverInstance.GetBlockLibrary(), fileStream);
+				chunk.Deserialize(m_serverInstance.GetBlockLibrary(), fileStream);
 			}
 			catch (const std::exception& e)
 			{

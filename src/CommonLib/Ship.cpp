@@ -28,12 +28,28 @@ namespace tsom
 
 		chunkData.onReset.Connect(chunkData.chunk->OnReset, [this](Chunk* chunk)
 		{
-			OnChunkUpdated(this, chunk);
+			OnChunkUpdated(this, chunk, DirectionMask_All);
 		});
 
-		chunkData.onUpdated.Connect(chunkData.chunk->OnBlockUpdated, [this](Chunk* chunk, const Nz::Vector3ui& /*indices*/, BlockIndex /*newBlock*/)
+		chunkData.onUpdated.Connect(chunkData.chunk->OnBlockUpdated, [this](Chunk* chunk, const Nz::Vector3ui& indices, BlockIndex /*newBlock*/)
 		{
-			OnChunkUpdated(this, chunk);
+			DirectionMask neighborMask;
+			if (indices.x == 0)
+				neighborMask |= Direction::Left;
+			else if (indices.x == chunk->GetSize().x - 1)
+				neighborMask |= Direction::Right;
+
+			if (indices.y == 0)
+				neighborMask |= Direction::Front;
+			else if (indices.y == chunk->GetSize().y - 1)
+				neighborMask |= Direction::Back;
+
+			if (indices.z == 0)
+				neighborMask |= Direction::Up;
+			else if (indices.z == chunk->GetSize().z - 1)
+				neighborMask |= Direction::Down;
+
+			OnChunkUpdated(this, chunk, neighborMask);
 		});
 
 		auto it = m_chunks.insert_or_assign(indices, std::move(chunkData)).first;
@@ -79,6 +95,8 @@ namespace tsom
 		constexpr unsigned int heightSize = 5;
 		Nz::Vector3ui startPos = chunk.GetSize() / 2 - Nz::Vector3ui(boxSize / 2, boxSize / 2, heightSize / 2);
 
+		chunk.Reset();
+
 		for (unsigned int z = 0; z < heightSize; ++z)
 		{
 			for (unsigned int y = 0; y < boxSize; ++y)
@@ -86,11 +104,9 @@ namespace tsom
 				for (unsigned int x = 0; x < boxSize; ++x)
 				{
 					if (x != 0 && x != boxSize - 1 &&
-					    y != 0 && y != boxSize - 1 &&
-					    z != 0 && z != heightSize - 1)
-					{
+						y != 0 && y != boxSize - 1 &&
+						z != 0 && z != heightSize - 1)
 						continue;
-					}
 
 					if (x == 0 && y == boxSize / 2 && z > 0 && z < heightSize - 1)
 						continue;

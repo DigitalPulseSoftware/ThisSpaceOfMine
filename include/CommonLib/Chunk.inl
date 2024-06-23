@@ -93,6 +93,18 @@ namespace tsom
 		return !m_blocks.empty();
 	}
 
+	inline void Chunk::Reset()
+	{
+		m_blocks.clear();
+		m_blocks.resize(m_size.x * m_size.y * m_size.z, EmptyBlockIndex);
+
+		m_collisionCellMask.Clear();
+		m_collisionCellMask.Resize(m_blocks.size(), false);
+
+		m_blockTypeCount.resize(EmptyBlockIndex + 1);
+		m_blockTypeCount[EmptyBlockIndex] = m_blocks.size();
+	}
+
 	template<typename F>
 	void Chunk::Reset(F&& func)
 	{

@@ -596,9 +596,12 @@ namespace tsom
 			{
 				case 0:
 				{
+					const Nz::Node* environmentNode = characterNode.GetParent();
+					assert(environmentNode);
+
 					cameraNode.SetPosition(characterPos + characterRot * (Nz::Vector3f::Up() * Constants::PlayerCameraHeight));
 
-					Nz::Quaternionf cameraRotation = m_referenceRotation * Nz::Quaternionf(predictedCameraRotation);
+					Nz::Quaternionf cameraRotation = environmentNode->GetRotation() * m_referenceRotation * Nz::Quaternionf(predictedCameraRotation);
 					cameraRotation.Normalize();
 
 					cameraNode.SetRotation(cameraRotation);
@@ -607,10 +610,7 @@ namespace tsom
 
 				case 1:
 				{
-					const Nz::Node* environmentNode = characterNode.GetParent();
-					assert(environmentNode);
-
-					Nz::Quaternionf cameraRotation = environmentNode->GetRotation() * characterRot * Nz::EulerAnglesf(predictedCameraRotation.pitch, 0.f, 0.f);
+					Nz::Quaternionf cameraRotation = characterRot * Nz::EulerAnglesf(predictedCameraRotation.pitch, 0.f, 0.f);
 					cameraRotation.Normalize();
 
 					cameraNode.SetPosition(characterPos + characterRot * (Nz::Vector3f::Up() * 1.f) + cameraRotation * Nz::Vector3f::Backward() * 1.f);
@@ -620,13 +620,10 @@ namespace tsom
 
 				case 2:
 				{
-					const Nz::Node* environmentNode = characterNode.GetParent();
-					assert(environmentNode);
-
-					Nz::Quaternionf cameraRotation = environmentNode->GetRotation() * characterRot * Nz::EulerAnglesf(predictedCameraRotation.pitch, 180.f, 0.f);
+					Nz::Quaternionf cameraRotation = characterRot * Nz::EulerAnglesf(predictedCameraRotation.pitch, 180.f, 0.f);
 					cameraRotation.Normalize();
 
-					cameraNode.SetPosition(characterPos + characterRot * (Nz::Vector3f::Up() * Constants::PlayerCameraHeight));
+					cameraNode.SetPosition(characterPos + characterRot * (Nz::Vector3f::Up() * 0.5f) + cameraRotation * Nz::Vector3f::Backward() * 1.f);
 					cameraNode.SetRotation(cameraRotation);
 					break;
 				}

@@ -27,7 +27,6 @@ namespace tsom
 	m_saveInterval(config.saveInterval),
 	m_tickAccumulator(Nz::Time::Zero()),
 	m_tickDuration(Constants::TickDuration),
-	m_saveInterval(config.saveInterval),
 	m_tickIndex(0),
 	m_application(application),
 	m_pauseWhenEmpty(config.pauseWhenEmpty)

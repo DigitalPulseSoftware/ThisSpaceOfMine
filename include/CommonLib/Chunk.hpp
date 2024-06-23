@@ -71,6 +71,7 @@ namespace tsom
 			inline void LockRead() const;
 			inline void LockWrite();
 
+			inline void Reset();
 			template<typename F> void Reset(F&& func);
 
 			virtual void Serialize(const BlockLibrary& blockLibrary, Nz::ByteStream& byteStream);
