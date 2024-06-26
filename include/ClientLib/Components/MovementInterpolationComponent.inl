@@ -2,6 +2,7 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
+#include <Nazara/Core/Node.hpp>
 #include <cassert>
 
 namespace tsom
@@ -76,6 +77,15 @@ namespace tsom
 		}
 
 		PushMovement(position, rotation);
+	}
+
+	inline void MovementInterpolationComponent::UpdateRoot(const Nz::Node& previousRoot, const Nz::Node& newRoot)
+	{
+		for (MovementData& movementData : m_movementPoints)
+		{
+			movementData.position = newRoot.ToLocalPosition(previousRoot.ToGlobalPosition(movementData.position));
+			movementData.rotation = newRoot.ToLocalRotation(previousRoot.ToGlobalRotation(movementData.rotation));
+		}
 	}
 
 	inline void MovementInterpolationComponent::PushMovement(const Nz::Vector3f& position, const Nz::Quaternionf& rotation)

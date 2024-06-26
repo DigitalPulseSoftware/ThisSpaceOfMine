@@ -262,7 +262,6 @@ namespace tsom
 		assert(m_entities[environmentUpdate.entity]);
 		EntityData& entityData = *m_entities[environmentUpdate.entity];
 		fmt::print("Entity {} moved to environment #{} to environment #{}\n", environmentUpdate.entity, entityData.environmentIndex, environmentUpdate.newEnvironmentId);
-		entityData.environmentIndex = environmentUpdate.newEnvironmentId;
 
 		assert(m_environments[entityData.environmentIndex]);
 		auto& oldEnvironment = *m_environments[entityData.environmentIndex];
@@ -274,6 +273,10 @@ namespace tsom
 
 		auto& entityNode = entityData.entity.get<Nz::NodeComponent>();
 		entityNode.SetParent(newEnvironment.rootNode, true);
+
+		entityData.environmentIndex = environmentUpdate.newEnvironmentId;
+		if (MovementInterpolationComponent* movementInterpolation = entityData.entity.try_get<MovementInterpolationComponent>())
+			movementInterpolation->UpdateRoot(oldEnvironment.rootNode, newEnvironment.rootNode);
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::EnvironmentCreate&& envCreate)
