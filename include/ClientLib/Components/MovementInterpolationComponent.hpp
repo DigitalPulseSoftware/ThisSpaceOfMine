@@ -12,6 +12,11 @@
 #include <Nazara/Math/Vector3.hpp>
 #include <NazaraUtils/FixedVector.hpp>
 
+namespace Nz
+{
+	class Node;
+}
+
 namespace tsom
 {
 	class MovementInterpolationComponent
@@ -29,6 +34,8 @@ namespace tsom
 			inline std::size_t GetMovementPointCount() const;
 
 			inline void PushMovement(Nz::UInt16 tickIndex, const Nz::Vector3f& position, const Nz::Quaternionf& rotation);
+
+			inline void UpdateRoot(const Nz::Node& previousRoot, const Nz::Node& newRoot);
 
 			MovementInterpolationComponent& operator=(const MovementInterpolationComponent&) = delete;
 			MovementInterpolationComponent& operator=(MovementInterpolationComponent&&) = default;
