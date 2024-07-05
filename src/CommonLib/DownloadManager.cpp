@@ -14,7 +14,7 @@
 
 namespace tsom
 {
-	auto DownloadManager::QueueDownload(std::filesystem::path filepath, const std::string& downloadUrl, Nz::UInt64 expectedSize, std::string expectedHash, bool force) -> std::shared_ptr<const Download>
+	auto DownloadManager::QueueDownload(std::filesystem::path filepath, const std::string& downloadUrl, Nz::UInt64 expectedSize, std::string expectedHash, bool force, bool executable) -> std::shared_ptr<const Download>
 	{
 		auto* webService = m_application.TryGetComponent<Nz::WebServiceAppComponent>();
 		if (!webService)
@@ -29,6 +29,7 @@ namespace tsom
 		std::shared_ptr<Download> download = std::make_shared<Download>();
 		download->filepath = std::move(filepath);
 		download->totalSize = expectedSize;
+		download->isExecutable = executable;
 
 		if (!force && !expectedHash.empty())
 		{
@@ -79,6 +80,14 @@ namespace tsom
 
 				download->file.Close();
 				fmt::print(fg(fmt::color::green), "{} download succeeded!\n", download->filepath);
+				if (download->isExecutable)
+				{
+					std::error_code ec;
+					std::filesystem::permissions(download->filepath, std::filesystem::perms::owner_exec, std::filesystem::perm_options::add, ec);
+					if (ec)
+						fmt::print(fg(fmt::color::yellow), "download of {0} succeeded but executable permission could not be given ({1}), if update fails, give it permission (chmod +x) and try again\n", download->filepath, ec);
+				}
+
 				download->OnDownloadFinished(*download);
 			});
 

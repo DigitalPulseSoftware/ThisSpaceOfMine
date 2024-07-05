@@ -37,7 +37,7 @@ namespace tsom
 
 			inline bool HasDownloadInProgress() const;
 
-			std::shared_ptr<const Download> QueueDownload(std::filesystem::path filepath, const std::string& downloadUrl, Nz::UInt64 expectedSize = 0, std::string expectedHash = {}, bool force = false);
+			std::shared_ptr<const Download> QueueDownload(std::filesystem::path filepath, const std::string& downloadUrl, Nz::UInt64 expectedSize = 0, std::string expectedHash = {}, bool force = false, bool executable = false);
 
 			DownloadManager& operator=(const DownloadManager&) = delete;
 			DownloadManager& operator=(DownloadManager&&) = delete;
@@ -50,6 +50,7 @@ namespace tsom
 				Nz::UInt64 downloadedSize = 0;
 				Nz::UInt64 totalSize;
 				bool isCancelled = false;
+				bool isExecutable = false;
 				bool isFinished = false;
 
 				NazaraSignal(OnDownloadFailed,   const Download& /*download*/);

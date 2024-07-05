@@ -67,9 +67,9 @@ namespace tsom
 		assert(downloadAssets || downloadBinaries);
 
 		m_activeDownloads.clear(); //< just in case
-		auto QueueDownload = [&](std::string_view filename, const UpdateInfo::DownloadInfo& info)
+		auto QueueDownload = [&](std::string_view filename, const UpdateInfo::DownloadInfo& info, bool isExecutable = false)
 		{
-			auto download = m_downloadManager.QueueDownload(Nz::Utf8Path(filename), info.downloadUrl, info.size, info.sha256);
+			auto download = m_downloadManager.QueueDownload(Nz::Utf8Path(filename), info.downloadUrl, info.size, info.sha256, false, isExecutable);
 			m_activeDownloads.push_back(download);
 
 			return download;
@@ -81,7 +81,7 @@ namespace tsom
 		if (downloadBinaries)
 			m_updateArchives.push_back(QueueDownload("autoupdate_binaries", updateInfo.binaries));
 
-		m_updaterDownload = QueueDownload("this_updater_of_mine", updateInfo.updater);
+		m_updaterDownload = QueueDownload("this_updater_of_mine", updateInfo.updater, true);
 
 		for (auto& downloadPtr : m_activeDownloads)
 		{
