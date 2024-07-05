@@ -164,7 +164,7 @@ namespace tsom
 				}
 			}
 			else
-				fmt::print(stderr, fg(fmt::color::red), "failed to load planet: failed to load version file {}\n");
+				fmt::print(stderr, fg(fmt::color::red), "failed to load planet: failed to load version file\n");
 		}
 
 		bool didConvert = false;
