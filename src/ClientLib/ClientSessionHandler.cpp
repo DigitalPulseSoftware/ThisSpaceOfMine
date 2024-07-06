@@ -17,9 +17,11 @@
 #include <Nazara/Graphics/Graphics.hpp>
 #include <Nazara/Graphics/MaterialInstance.hpp>
 #include <Nazara/Graphics/Model.hpp>
+#include <Nazara/Graphics/PredefinedMaterials.hpp>
 #include <Nazara/Graphics/TextSprite.hpp>
 #include <Nazara/Graphics/TextureAsset.hpp>
 #include <Nazara/Graphics/Components/GraphicsComponent.hpp>
+#include <Nazara/Graphics/PropertyHandler/TexturePropertyHandler.hpp>
 #include <Nazara/Physics3D/Collider3D.hpp>
 #include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
 #include <Nazara/TextRenderer/SimpleTextDrawer.hpp>
@@ -229,9 +231,40 @@ namespace tsom
 				animParams.jointRotation = params.mesh.vertexRotation;
 				animParams.jointScale = params.mesh.vertexScale;
 
-				std::shared_ptr<Nz::MaterialInstance> playerMat = Nz::MaterialInstance::Instantiate(Nz::MaterialType::PhysicallyBased);
+				Nz::MaterialSettings settings;
+				Nz::PredefinedMaterials::AddBasicSettings(settings);
+				Nz::PredefinedMaterials::AddPbrSettings(settings);
+				settings.AddTextureProperty("AmbientOcclusionMap", Nz::ImageType::E2D);
+				settings.AddTextureProperty("MetalnessSmoothnessMap", Nz::ImageType::E2D);
+				settings.AddPropertyHandler(std::make_unique<Nz::TexturePropertyHandler>("AmbientOcclusionMap", "HasAmbientOcclusionTexture"));
+				settings.AddPropertyHandler(std::make_unique<Nz::TexturePropertyHandler>("MetalnessSmoothnessMap", "HasMetalnessSmoothnessTexture"));
+
+				Nz::MaterialPass forwardPass;
+				forwardPass.states.depthBuffer = true;
+				forwardPass.shaders.push_back(std::make_shared<Nz::UberShader>(nzsl::ShaderStageType::Fragment | nzsl::ShaderStageType::Vertex, "TSOM.PlayerPBR"));
+				settings.AddPass("ForwardPass", forwardPass);
+
+				Nz::MaterialPass depthPass = forwardPass;
+				depthPass.options[nzsl::Ast::HashOption("DepthPass")] = true;
+				settings.AddPass("DepthPass", depthPass);
+
+				Nz::MaterialPass shadowPass = depthPass;
+				shadowPass.options[nzsl::Ast::HashOption("ShadowPass")] = true;
+				shadowPass.states.frontFace = Nz::FrontFace::Clockwise;
+				shadowPass.states.depthClamp = Nz::Graphics::Instance()->GetRenderDevice()->GetEnabledFeatures().depthClamping;
+				settings.AddPass("ShadowPass", shadowPass);
+
+				Nz::MaterialPass distanceShadowPass = shadowPass;
+				distanceShadowPass.options[nzsl::Ast::HashOption("DistanceDepth")] = true;
+				settings.AddPass("DistanceShadowPass", distanceShadowPass);
+
+				auto playerMaterial = std::make_shared<Nz::Material>(std::move(settings), "TSOM.PlayerPBR");
+
+				std::shared_ptr<Nz::MaterialInstance> playerMat = playerMaterial->Instantiate();
 				playerMat->SetTextureProperty("BaseColorMap", fs.Open<Nz::TextureAsset>("assets/Player/Textures/Soldier_AlbedoTransparency.png", { .sRGB = true }));
-				playerMat->SetTextureProperty("NormalMap", fs.Open<Nz::TextureAsset>("assets/Player/Textures/Soldier_Normal.png.png"));
+				playerMat->SetTextureProperty("AmbientOcclusionMap", fs.Open<Nz::TextureAsset>("assets/Player/Textures/Soldier_AO.png"));
+				playerMat->SetTextureProperty("MetalnessSmoothnessMap", fs.Open<Nz::TextureAsset>("assets/Player/Textures/Soldier_Normal.png"));
+				playerMat->SetTextureProperty("NormalMap", fs.Open<Nz::TextureAsset>("assets/Player/Textures/Soldier_Normal.png"));
 
 				m_playerModel->model->SetMaterial(0, std::move(playerMat));
 
