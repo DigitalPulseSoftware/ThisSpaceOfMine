@@ -237,6 +237,7 @@ namespace tsom
 		});
 
 		m_blockSelectionBar = CreateWidget<BlockSelectionBar>(*stateData.blockLibrary);
+
 		m_mouseWheelMovedSlot.Connect(stateData.window->GetEventHandler().OnMouseWheelMoved, [&](const Nz::WindowEventHandler* /*eventHandler*/, const Nz::WindowEvent::MouseWheelEvent& event)
 		{
 			if (!m_isMouseLocked)
@@ -262,6 +263,7 @@ namespace tsom
 
 			stateData.networkSession->SendPacket(messagePacket);
 		});
+		m_chatBox->SetRenderLayerOffset(1);
 
 		LayoutWidgets(Nz::Vector2f(stateData.renderTarget->GetSize()));
 

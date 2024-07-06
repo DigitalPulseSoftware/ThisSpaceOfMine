@@ -24,10 +24,9 @@ namespace tsom
 		m_chatBox = Add<Nz::RichTextAreaWidget>();
 		m_chatBox->EnableBackground(false);
 		m_chatBox->EnableLineWrap(true);
-		m_chatBox->SetBackgroundColor(Nz::Color(0.f, 0.f, 0.f, 0.2f));
+		m_chatBox->SetBackgroundColor(Nz::Color(0.f, 0.f, 0.f, 0.5f));
 		m_chatBox->SetCharacterSize(22);
 		m_chatBox->SetTextColor(Nz::Color::White());
-		//m_chatBox->SetTextFont(chatboxFont);
 		m_chatBox->SetTextOutlineColor(Nz::Color::Black());
 		m_chatBox->SetTextOutlineThickness(1.f);
 		m_chatBox->SetReadOnly(true);
@@ -38,7 +37,7 @@ namespace tsom
 
 		m_chatEnteringBox = Add<Nz::TextAreaWidget>();
 		m_chatEnteringBox->EnableBackground(true);
-		m_chatEnteringBox->SetBackgroundColor(Nz::Color(1.f, 1.f, 1.f, 0.6f));
+		m_chatEnteringBox->SetBackgroundColor(Nz::Color(1.f, 1.f, 1.f, 0.9f));
 		m_chatEnteringBox->SetTextColor(Nz::Color::Black());
 		//m_chatEnteringBox->SetTextFont(chatboxFont);
 		m_chatEnteringBox->Hide();
