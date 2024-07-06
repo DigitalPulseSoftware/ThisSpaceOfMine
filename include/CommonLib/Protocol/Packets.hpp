@@ -13,6 +13,7 @@
 #include <CommonLib/PlayerIndex.hpp>
 #include <CommonLib/PlayerInputs.hpp>
 #include <CommonLib/Protocol/CompressedInteger.hpp>
+#include <CommonLib/Protocol/ConnectionToken.hpp>
 #include <CommonLib/Protocol/PacketSerializer.hpp>
 #include <CommonLib/Protocol/SecuredString.hpp>
 #include <Nazara/Math/Quaternion.hpp>
@@ -83,7 +84,18 @@ namespace tsom
 		struct AuthRequest
 		{
 			Nz::UInt32 gameVersion;
-			SecuredString<Constants::PlayerMaxNicknameLength> nickname;
+
+			struct AuthenticatedPlayerData
+			{
+				ConnectionToken connectionToken;
+			};
+
+			struct AnonymousPlayerData
+			{
+				SecuredString<Constants::PlayerMaxNicknameLength> nickname;
+			};
+
+			std::variant<AuthenticatedPlayerData, AnonymousPlayerData> token;
 		};
 
 		struct AuthResponse

@@ -119,7 +119,7 @@ namespace tsom
 
 			Packets::AuthRequest request;
 			request.gameVersion = GameVersion;
-			request.nickname = m_nickname;
+			request.token.emplace<Packets::AuthRequest::AnonymousPlayerData>().nickname = m_nickname;
 
 			m_serverSession->SendPacket(request);
 		};
