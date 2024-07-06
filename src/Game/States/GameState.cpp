@@ -83,6 +83,7 @@ namespace tsom
 			dirLight.UpdateAmbientFactor(0.05f);
 			dirLight.EnableShadowCasting(true);
 			dirLight.UpdateShadowMapSize(4096);
+			dirLight.UpdateEnergy(5.f);
 		}
 
 		m_skyboxEntity = CreateEntity();

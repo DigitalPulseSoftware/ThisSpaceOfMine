@@ -48,6 +48,7 @@ namespace tsom
 		settings.AddValueProperty<float>("ShadowPosScale", 1.f - 0.0025f);
 		settings.AddTextureProperty("BaseColorMap", Nz::ImageType::E2D_Array);
 		settings.AddTextureProperty("AlphaMap", Nz::ImageType::E2D_Array);
+		settings.AddTextureProperty("DetailMap", Nz::ImageType::E2D_Array);
 		settings.AddPropertyHandler(std::make_unique<Nz::OptionValuePropertyHandler>("AlphaTest", "AlphaTest"));
 		settings.AddPropertyHandler(std::make_unique<Nz::TexturePropertyHandler>("BaseColorMap", "HasBaseColorTexture"));
 		settings.AddPropertyHandler(std::make_unique<Nz::TexturePropertyHandler>("AlphaMap", "HasAlphaTexture"));
@@ -61,6 +62,7 @@ namespace tsom
 		settings.AddTextureProperty("NormalMap", Nz::ImageType::E2D_Array);
 		settings.AddTextureProperty("RoughnessMap", Nz::ImageType::E2D_Array);
 		settings.AddTextureProperty("SpecularMap", Nz::ImageType::E2D_Array);
+		settings.AddPropertyHandler(std::make_unique<Nz::TexturePropertyHandler>("DetailMap", "HasDetailTexture"));
 		settings.AddPropertyHandler(std::make_unique<Nz::TexturePropertyHandler>("EmissiveMap", "HasEmissiveTexture"));
 		settings.AddPropertyHandler(std::make_unique<Nz::TexturePropertyHandler>("HeightMap", "HasHeightTexture"));
 		settings.AddPropertyHandler(std::make_unique<Nz::TexturePropertyHandler>("MetallicMap", "HasMetallicTexture"));
@@ -92,6 +94,7 @@ namespace tsom
 		m_chunkMaterial = chunkMaterial->Instantiate();
 		m_chunkMaterial->SetTextureProperty("BaseColorMap", blockLibrary.GetBaseColorTexture(), blockSampler);
 		m_chunkMaterial->SetTextureProperty("NormalMap", blockLibrary.GetNormalTexture(), blockSampler);
+		m_chunkMaterial->SetTextureProperty("DetailMap", blockLibrary.GetDetailTexture(), blockSampler);
 		m_chunkMaterial->SetValueProperty("ShadowPosScale", 1.f);
 		m_chunkMaterial->UpdatePassesStates({ "ShadowPass", "DistanceShadowPass" }, [](Nz::RenderStates& states)
 		{
