@@ -4,6 +4,7 @@
 
 #include <CommonLib/Protocol/Packets.hpp>
 #include <CommonLib/Version.hpp>
+#include <NazaraUtils/TypeTraits.hpp>
 #include <lz4.h>
 #include <fmt/format.h>
 
@@ -68,7 +69,33 @@ namespace tsom
 		void Serialize(PacketSerializer& serializer, AuthRequest& data)
 		{
 			serializer &= data.gameVersion;
-			serializer &= data.nickname;
+			if (data.gameVersion < BuildVersion(0, 4, 0)) //< can't use serializer.GetProtocolVersion() as its initialized after this packet
+			{
+				if (serializer.IsWriting())
+				{
+					auto& playerData = std::get<AuthRequest::AnonymousPlayerData>(data.token);
+					serializer &= playerData.nickname;
+				}
+				else
+				{
+					auto& playerData = data.token.emplace<AuthRequest::AnonymousPlayerData>();
+					serializer &= playerData.nickname;
+				}
+			}
+			else
+			{
+				serializer.Serialize(data.token, Nz::Overloaded
+				{
+					[&](AuthRequest::AuthenticatedPlayerData& playerData)
+					{
+						Serialize(serializer, playerData.connectionToken);
+					},
+					[&](AuthRequest::AnonymousPlayerData& playerData)
+					{
+						serializer &= playerData.nickname;
+					}
+				});
+			}
 		}
 
 		void Serialize(PacketSerializer& serializer, AuthResponse& data)
