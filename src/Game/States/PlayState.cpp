@@ -152,8 +152,8 @@ namespace tsom
 
 				nlohmann::json responseDoc = nlohmann::json::parse(result.GetBody());
 
-				std::string_view playerGuid = responseDoc["guid"];
-				std::string_view playerNickname = responseDoc["nickname"];
+				std::string playerGuid = responseDoc["guid"];
+				std::string playerNickname = responseDoc["nickname"];
 
 				m_directConnect->UpdateText(Nz::SimpleTextDrawer::Draw(fmt::format("Play as {}", playerNickname), 36, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
 				m_directConnect->Enable();

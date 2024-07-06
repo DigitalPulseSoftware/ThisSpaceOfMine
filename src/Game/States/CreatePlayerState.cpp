@@ -120,7 +120,7 @@ namespace tsom
 					{
 						nlohmann::json error = nlohmann::json::parse(result.GetBody());
 
-						std::string_view errorMessage = error["err_desc"];
+						std::string errorMessage = error["err_desc"];
 						UpdateStatus(Nz::SimpleTextDrawer::Draw(fmt::format("Failed to create player: {}", errorMessage), 36, Nz::TextStyle_Regular, Nz::Color::Red()));
 					}
 					catch (const std::exception& e)
@@ -134,8 +134,8 @@ namespace tsom
 
 				nlohmann::json responseDoc = nlohmann::json::parse(result.GetBody());
 
-				std::string_view playerGuid = responseDoc["guid"];
-				std::string_view connectToken = responseDoc["token"];
+				std::string playerGuid = responseDoc["guid"];
+				std::string connectToken = responseDoc["token"];
 
 				gameConfig.SetStringValue("Player.Token", std::string(connectToken));
 
