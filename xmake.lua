@@ -42,6 +42,7 @@ add_rules("dbgdll", "natvis")
 set_project("ThisSpaceOfMine")
 set_version("0.4.0")
 
+set_encodings("utf-8")
 set_exceptions("cxx")
 set_languages("cxx20")
 set_rundir(".")
