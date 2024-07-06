@@ -53,7 +53,7 @@ namespace tsom
 			if (auto result = lua.safe_script_file(path, configEnv, sol::load_mode::text); !result.valid())
 			{
 				sol::error err = result;
-				fmt::print(fg(fmt::color::red), "failed to load config {0}: {1}", path, err.what());
+				fmt::print(fg(fmt::color::red), "failed to load config {0}: {1}\n", path, err.what());
 				return false;
 			}
 
@@ -74,14 +74,14 @@ namespace tsom
 
 				if (!hasDefaultDefault)
 				{
-					fmt::print(fg(fmt::color::red), "missing config option \"{0}\"", option.name);
+					fmt::print(fg(fmt::color::red), "missing config option \"{0}\"\n", option.name);
 					hasError = true;
 				}
 				else
 				{
 					std::visit([&](auto&& arg)
 					{
-						fmt::print(fg(fmt::color::green), "option \"{0}\" has no value, setting it to default value ({1})...", option.name, arg.defaultValue.value());
+						fmt::print(fg(fmt::color::green), "option \"{0}\" has no value, setting it to default value ({1})...\n", option.name, arg.defaultValue.value());
 					}, option.data);
 				}
 			}
@@ -91,7 +91,7 @@ namespace tsom
 		}
 		catch (const sol::error& e)
 		{
-			fmt::print(fg(fmt::color::red), "failed to parse config \"{0}\": {1}", path, e.what());
+			fmt::print(fg(fmt::color::red), "failed to parse config \"{0}\": {1}\n", path, e.what());
 			return false;
 		}
 
@@ -103,7 +103,7 @@ namespace tsom
 		std::fstream file(filePath, std::ios::out | std::ios::trunc);
 		if (!file.is_open())
 		{
-			fmt::print(fg(fmt::color::red), "failed to open config file {0}", filePath);
+			fmt::print(fg(fmt::color::red), "failed to open config file {0}\n", filePath);
 			return false;
 		}
 
@@ -124,7 +124,7 @@ namespace tsom
 			{
 				if (!value.is<sol::table>())
 				{
-					fmt::print(fg(fmt::color::red), "\"{0}{1}\" is a subsection and was expected to be a table (got {2})", prefix, keyName, sol::type_name(table.lua_state(), value.get_type()));
+					fmt::print(fg(fmt::color::red), "\"{0}{1}\" is a subsection and was expected to be a table (got {2})\n", prefix, keyName, sol::type_name(table.lua_state(), value.get_type()));
 					return;
 				}
 
@@ -210,7 +210,7 @@ namespace tsom
 				}
 				catch (const std::exception& e)
 				{
-					fmt::print(fg(fmt::color::red), "failed to load \"{0}{1}\": {2}", prefix, option.name, e.what());
+					fmt::print(fg(fmt::color::red), "failed to load \"{0}{1}\": {2}\n", prefix, option.name, e.what());
 
 					if (!hasDefaultDefault)
 					{
@@ -221,7 +221,7 @@ namespace tsom
 			}
 			else
 			{
-				fmt::print(fg(fmt::color::yellow), "unknown config section \"{0}{1}\"", prefix, keyName);
+				fmt::print(fg(fmt::color::yellow), "unknown config section \"{0}{1}\"\n", prefix, keyName);
 				return;
 			}
 		});
@@ -330,13 +330,13 @@ namespace tsom
 		FloatOption& option = std::get<FloatOption>(m_options[optionIndex].data);
 		if (value > option.maxBounds)
 		{
-			fmt::print(fg(fmt::color::red), "option {0} value ({1}) is too big (max: {2})", m_options[optionIndex].name, value, option.maxBounds);
+			fmt::print(fg(fmt::color::red), "option {0} value ({1}) is too big (max: {2})\n", m_options[optionIndex].name, value, option.maxBounds);
 			return false;
 		}
 
 		if (value < option.minBounds)
 		{
-			fmt::print(fg(fmt::color::red), "option {0} value ({1}) is too small (min: {2})", m_options[optionIndex].name, value, option.minBounds);
+			fmt::print(fg(fmt::color::red), "option {0} value ({1}) is too small (min: {2})\n", m_options[optionIndex].name, value, option.minBounds);
 			return false;
 		}
 
@@ -345,7 +345,7 @@ namespace tsom
 			auto valueOrErr = option.validation(value);
 			if (!valueOrErr)
 			{
-				fmt::print(fg(fmt::color::red), "option {0} value ({1}) failed validation: {2}", m_options[optionIndex].name, value, valueOrErr.GetError());
+				fmt::print(fg(fmt::color::red), "option {0} value ({1}) failed validation: {2}\n", m_options[optionIndex].name, value, valueOrErr.GetError());
 				return false;
 			}
 
@@ -368,13 +368,13 @@ namespace tsom
 		IntegerOption& option = std::get<IntegerOption>(m_options[optionIndex].data);
 		if (value > option.maxBounds)
 		{
-			fmt::print(fg(fmt::color::red), "option {0} value ({1}) is too big (max: {2})", m_options[optionIndex].name, value, option.maxBounds);
+			fmt::print(fg(fmt::color::red), "option {0} value ({1}) is too big (max: {2})\n", m_options[optionIndex].name, value, option.maxBounds);
 			return false;
 		}
 
 		if (value < option.minBounds)
 		{
-			fmt::print(fg(fmt::color::red), "option {0} value ({1}) is too small (min: {2})", m_options[optionIndex].name, value, option.minBounds);
+			fmt::print(fg(fmt::color::red), "option {0} value ({1}) is too small (min: {2})\n", m_options[optionIndex].name, value, option.minBounds);
 			return false;
 		}
 
@@ -383,7 +383,7 @@ namespace tsom
 			auto valueOrErr = option.validation(value);
 			if (!valueOrErr)
 			{
-				fmt::print(fg(fmt::color::red), "option {0} value ({1}) failed validation: {2}", m_options[optionIndex].name, value, valueOrErr.GetError());
+				fmt::print(fg(fmt::color::red), "option {0} value ({1}) failed validation: {2}\n", m_options[optionIndex].name, value, valueOrErr.GetError());
 				return false;
 			}
 
@@ -410,7 +410,7 @@ namespace tsom
 			auto valueOrErr = option.validation(value);
 			if (!valueOrErr)
 			{
-				fmt::print(fg(fmt::color::red), "option {0} value ({1}) failed validation: {2}", m_options[optionIndex].name, value, valueOrErr.GetError());
+				fmt::print(fg(fmt::color::red), "option {0} value ({1}) failed validation: {2}\n", m_options[optionIndex].name, value, valueOrErr.GetError());
 				return false;
 			}
 
