@@ -10,15 +10,17 @@
 #include <Game/GameConfigAppComponent.hpp>
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/GameState.hpp>
+#include <Game/States/PlayState.hpp>
 #include <Game/States/UpdateState.hpp>
 #include <Nazara/Widgets.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
+#include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <Nazara/Core/StateMachine.hpp>
 #include <Nazara/Core/StringExt.hpp>
+#include <Nazara/Graphics/PredefinedMaterials.hpp>
 #include <Nazara/Network/Algorithm.hpp>
 #include <Nazara/Network/IpAddress.hpp>
 #include <Nazara/Network/Network.hpp>
-#include <Nazara/Network/WebServiceAppComponent.hpp>
 #include <Nazara/TextRenderer/SimpleTextDrawer.hpp>
 #include <fmt/color.h>
 #include <fmt/format.h>
@@ -28,69 +30,55 @@
 namespace tsom
 {
 	MenuState::MenuState(std::shared_ptr<StateData> stateData) :
-	WidgetState(stateData)
+	WidgetState(stateData),
+	m_accumulator(Nz::Time::Zero())
 	{
-		auto& gameConfig = GetStateData().app->GetComponent<GameConfigAppComponent>().GetConfig();
+		m_logo = CreateWidget<Nz::SimpleLabelWidget>();
 
-		std::string_view address = gameConfig.GetStringValue("Menu.ServerAddress");
-		std::string_view nickname = gameConfig.GetStringValue("Menu.Login");
+		m_logo->UpdateDrawer([&](Nz::SimpleTextDrawer& textDrawer)
+		{
+			auto& filesystem = GetStateData().app->GetComponent<Nz::FilesystemAppComponent>();
 
-		const Nz::CommandLineParameters& cmdParams = GetStateData().app->GetCommandLineParameters();
-		cmdParams.GetParameter("server-address", &address);
-		cmdParams.GetParameter("nickname", &nickname);
+			textDrawer.SetTextOutlineColor(Nz::Color::White());
+			textDrawer.SetText("This Space Of Mine");
+			textDrawer.SetTextFont(filesystem.Open<Nz::Font>("assets/fonts/axaxax bd.otf"));
+			textDrawer.SetTextStyle(Nz::TextStyle::OutlineOnly);
+		});
+		m_logo->Resize(m_logo->GetPreferredSize());
+
+		m_logoBackground = m_logo->Add<Nz::SimpleLabelWidget>();
+		m_logoBackground->UpdateDrawer([&](Nz::SimpleTextDrawer& textDrawer)
+		{
+			auto& filesystem = GetStateData().app->GetComponent<Nz::FilesystemAppComponent>();
+
+			textDrawer.SetTextOutlineColor(Nz::Color(1.f, 1.f, 1.f, 0.3f));
+			textDrawer.SetText("This Space Of Mine");
+			textDrawer.SetTextFont(filesystem.Open<Nz::Font>("assets/fonts/axaxax bd.otf"));
+			textDrawer.SetTextStyle(Nz::TextStyle::OutlineOnly);
+		});
+		m_logoBackground->Resize(m_logoBackground->GetPreferredSize());
+		m_logoBackground->SetPosition({ 7.f, -7.f });
 
 		m_layout = CreateWidget<Nz::BoxLayout>(Nz::BoxLayoutOrientation::TopToBottom);
 
-		Nz::BoxLayout* addressLayout = m_layout->Add<Nz::BoxLayout>(Nz::BoxLayoutOrientation::LeftToRight);
-
-		Nz::LabelWidget* serverLabel = addressLayout->Add<Nz::LabelWidget>();
-		serverLabel->UpdateText(Nz::SimpleTextDrawer::Draw("Server: ", 24));
-
-		m_serverAddressArea = addressLayout->Add<Nz::TextAreaWidget>();
-		m_serverAddressArea->SetCharacterSize(24);
-		m_serverAddressArea->SetText(std::string(address));
-		m_serverAddressArea->SetTextColor(Nz::Color::Black());
-
-		Nz::BoxLayout* loginLayout = m_layout->Add<Nz::BoxLayout>(Nz::BoxLayoutOrientation::LeftToRight);
-
-		Nz::LabelWidget* loginLabel = loginLayout->Add<Nz::LabelWidget>();
-		loginLabel->UpdateText(Nz::SimpleTextDrawer::Draw("Login: ", 24));
-
-		m_loginArea = loginLayout->Add<Nz::TextAreaWidget>();
-		m_loginArea->SetCharacterSize(24);
-		m_loginArea->SetText(std::string(nickname));
-		m_loginArea->SetTextColor(Nz::Color::Black());
-		m_loginArea->SetMaximumTextLength(Constants::PlayerMaxNicknameLength);
-
-		m_connectButton = m_layout->Add<Nz::ButtonWidget>();
-		m_connectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Connect", 36, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
-		m_connectButton->SetMaximumWidth(m_connectButton->GetPreferredWidth() * 1.5f);
-		m_connectButton->OnButtonTrigger.Connect([this](const Nz::ButtonWidget*)
+		m_playButton = m_layout->Add<Nz::ButtonWidget>();
+		m_playButton->UpdateText(Nz::SimpleTextDrawer::Draw("Play", 36, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
+		m_playButton->SetMaximumWidth(m_playButton->GetPreferredWidth() * 1.5f);
+		ConnectSignal(m_playButton->OnButtonTrigger, [this](const Nz::ButtonWidget*)
 		{
-			OnConnectPressed();
+			m_nextState = std::make_shared<PlayState>(GetStateDataPtr(), shared_from_this());
 		});
 
-		m_updateLayout = CreateWidget<Nz::BoxLayout>(Nz::BoxLayoutOrientation::TopToBottom);
-
-		m_updateLabel = m_updateLayout->Add<Nz::LabelWidget>();
-		m_updateLabel->UpdateText(Nz::SimpleTextDrawer::Draw("A new version is available!", 18));
-
-		m_updateButton = m_updateLayout->Add<Nz::ButtonWidget>();
-		m_updateButton->UpdateText(Nz::SimpleTextDrawer::Draw("Update game", 18, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
-		m_updateButton->SetMaximumWidth(m_updateButton->GetPreferredWidth());
-		m_updateButton->OnButtonTrigger.Connect([this](const Nz::ButtonWidget*)
+		m_quitGameButton = m_layout->Add<Nz::ButtonWidget>();
+		m_quitGameButton->UpdateText(Nz::SimpleTextDrawer::Draw("Quit", 36, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
+		m_quitGameButton->SetMaximumWidth(m_quitGameButton->GetPreferredWidth() * 1.5f);
+		ConnectSignal(m_quitGameButton->OnButtonTrigger, [this](const Nz::ButtonWidget*)
 		{
-			OnUpdatePressed();
+			GetStateData().app->Quit();
 		});
 
+		const Nz::CommandLineParameters& cmdParams = GetStateData().app->GetCommandLineParameters();
 		m_autoConnect = cmdParams.HasFlag("auto-connect");
-	}
-
-	void MenuState::Enter(Nz::StateMachine& fsm)
-	{
-		WidgetState::Enter(fsm);
-
-		CheckVersion();
 	}
 
 	bool MenuState::Update(Nz::StateMachine& fsm, Nz::Time elapsedTime)
@@ -103,112 +91,44 @@ namespace tsom
 
 		if (m_autoConnect)
 		{
-			OnConnectPressed();
 			m_autoConnect = false;
 		}
+
+		m_accumulator += elapsedTime;
+		m_logo->UpdateDrawer([&](Nz::SimpleTextDrawer& textDrawer)
+		{
+			textDrawer.SetCharacterSpacingOffset(std::sin(m_accumulator.AsSeconds() * 0.2f) * 5.f);
+		});
+		m_logo->Resize(m_logo->GetPreferredSize());
+		m_logo->CenterHorizontal();
+
+		m_logoBackground->UpdateDrawer([&](Nz::SimpleTextDrawer& textDrawer)
+		{
+			textDrawer.SetCharacterSpacingOffset(std::sin(m_accumulator.AsSeconds() * 0.2f) * 5.f);
+		});
+		m_logoBackground->Resize(m_logoBackground->GetPreferredSize());
 
 		return true;
 	}
 
-	void MenuState::CheckVersion()
-	{
-		m_updateLayout->Hide();
-		m_newVersionInfo.reset();
-
-		auto* updater = GetStateData().app->TryGetComponent<UpdaterAppComponent>();
-		if (!updater)
-			return;
-
-		updater->FetchLastVersion([state = std::static_pointer_cast<MenuState>(shared_from_this())](Nz::Result<UpdateInfo, std::string>&& result)
-		{
-			if (!result)
-			{
-				fmt::print(fg(fmt::color::red), "failed to get version update: {}\n", result.GetError());
-				return;
-			}
-
-			state->OnUpdateInfoReceived(std::move(result).GetValue());
-		});
-	}
-
 	void MenuState::LayoutWidgets(const Nz::Vector2f& newSize)
 	{
+		m_logo->UpdateDrawer([&](Nz::SimpleTextDrawer& textDrawer)
+		{
+			textDrawer.SetCharacterSize(static_cast<unsigned int>(newSize.y / 7.5f));
+			textDrawer.SetTextOutlineThickness(std::floor(newSize.y / 360.f));
+		});
+
+		m_logoBackground->UpdateDrawer([&](Nz::SimpleTextDrawer& textDrawer)
+		{
+			textDrawer.SetCharacterSize(static_cast<unsigned int>(newSize.y / 7.5f));
+			textDrawer.SetTextOutlineThickness(std::floor(newSize.y / 300.f));
+		});
+
+		m_logo->SetPosition({ 0.f, newSize.y * 0.66f });
+		m_logo->CenterHorizontal();
+
 		m_layout->Resize({ newSize.x * 0.2f, m_layout->GetPreferredHeight() });
-		m_layout->CenterHorizontal();
-		m_layout->SetPosition({ m_layout->GetPosition().x, newSize.y * 0.2f - m_layout->GetSize().y / 2.f });
-
-		m_updateLayout->Resize({ std::max(m_updateLabel->GetPreferredWidth(), m_updateButton->GetPreferredWidth()), m_updateLabel->GetPreferredHeight() * 2.f + m_updateButton->GetPreferredHeight() });
-		m_updateLayout->SetPosition(newSize * Nz::Vector2f(0.9f, 0.1f) - m_updateButton->GetSize() * 0.5f);
-	}
-
-	void MenuState::OnConnectPressed()
-	{
-		if (m_serverAddressArea->GetText().empty())
-		{
-			fmt::print(fg(fmt::color::red), "missing server address\n");
-			return;
-		}
-
-		std::string login = std::string(Nz::Trim(m_loginArea->GetText(), Nz::UnicodeAware{}));
-		if (login.empty())
-		{
-			fmt::print(fg(fmt::color::red), "login cannot be blank\n");
-			return;
-		}
-
-		auto& gameConfig = GetStateData().app->GetComponent<GameConfigAppComponent>();
-		Nz::UInt16 serverPort = gameConfig.GetConfig().GetIntegerValue<Nz::UInt16>("Server.Port");
-
-		Nz::ResolveError resolveError;
-		auto hostVec = Nz::IpAddress::ResolveHostname(Nz::NetProtocol::Any, m_serverAddressArea->GetText(), std::to_string(serverPort), &resolveError);
-
-		if (hostVec.empty())
-		{
-			fmt::print(fg(fmt::color::red), "failed to resolve {}: {}\n", m_serverAddressArea->GetText(), Nz::ErrorToString(resolveError));
-			return;
-		}
-
-		gameConfig.GetConfig().SetStringValue("Menu.Login", login);
-		gameConfig.GetConfig().SetStringValue("Menu.ServerAddress", m_serverAddressArea->GetText());
-
-		gameConfig.Save();
-
-		Nz::IpAddress serverAddress = hostVec[0].address;
-
-		fmt::print("connecting to {}...\n", serverAddress.ToString());
-
-		auto& stateData = GetStateData();
-		if (stateData.connectionState)
-			stateData.connectionState->Connect(serverAddress, login, shared_from_this());
-	}
-
-	void MenuState::OnUpdateInfoReceived(UpdateInfo&& updateInfo)
-	{
-		semver::version currentGameVersion(GameMajorVersion, GameMinorVersion, GamePatchVersion);
-
-		if (updateInfo.assetVersion > currentGameVersion || updateInfo.binaryVersion > currentGameVersion)
-		{
-			fmt::print(fg(fmt::color::yellow), "new version available: {}\n", m_newVersionInfo->binaryVersion.to_string());
-			m_newVersionInfo = std::move(updateInfo);
-
-			// We're not supposed to be able to have asset-only version but let's prepare for this
-			semver::version biggestVer = std::max(updateInfo.assetVersion, updateInfo.binaryVersion);
-
-			m_updateButton->UpdateText(Nz::SimpleTextDrawer::Draw("Update game to " + biggestVer.to_string(), 18, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
-			m_updateButton->SetMaximumWidth(m_updateButton->GetPreferredWidth());
-
-			m_updateLayout->Show();
-		}
-		else
-			fmt::print("no new version available\n");
-	}
-
-	void MenuState::OnUpdatePressed()
-	{
-		if (!m_newVersionInfo)
-			return;
-
-		m_nextState = std::make_shared<UpdateState>(GetStateDataPtr(), shared_from_this(), std::move(*m_newVersionInfo));
-		m_newVersionInfo.reset();
+		m_layout->Center();
 	}
 }

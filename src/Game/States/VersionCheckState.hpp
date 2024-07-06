@@ -4,8 +4,8 @@
 
 #pragma once
 
-#ifndef TSOM_GAME_STATES_MENUSTATE_HPP
-#define TSOM_GAME_STATES_MENUSTATE_HPP
+#ifndef TSOM_GAME_STATES_VERSIONCHECKSTATE_HPP
+#define TSOM_GAME_STATES_VERSIONCHECKSTATE_HPP
 
 #include <CommonLib/UpdateInfo.hpp>
 #include <Game/States/WidgetState.hpp>
@@ -16,36 +16,35 @@ namespace Nz
 	class BoxLayout;
 	class ButtonWidget;
 	class LabelWidget;
-	class SimpleLabelWidget;
 }
 
 namespace tsom
 {
 	class ConnectionState;
 
-	class MenuState : public WidgetState
+	class VersionCheckState : public WidgetState
 	{
 		public:
-			MenuState(std::shared_ptr<StateData> stateData);
-			~MenuState() = default;
+			VersionCheckState(std::shared_ptr<StateData> stateData);
+			~VersionCheckState() = default;
 
+			void Enter(Nz::StateMachine& fsm) override;
 			bool Update(Nz::StateMachine& fsm, Nz::Time elapsedTime) override;
 
 		private:
+			void CheckVersion();
 			void LayoutWidgets(const Nz::Vector2f& newSize) override;
+			void OnUpdateInfoReceived(UpdateInfo&& updateInfo);
+			void OnUpdatePressed();
 
 			std::optional<UpdateInfo> m_newVersionInfo;
 			std::shared_ptr<Nz::State> m_nextState;
-			Nz::Time m_accumulator;
-			Nz::BoxLayout* m_layout;
-			Nz::SimpleLabelWidget* m_logo;
-			Nz::SimpleLabelWidget* m_logoBackground;
-			Nz::ButtonWidget* m_playButton;
-			Nz::ButtonWidget* m_quitGameButton;
-			bool m_autoConnect;
+			Nz::BoxLayout* m_updateLayout;
+			Nz::ButtonWidget* m_updateButton;
+			Nz::LabelWidget* m_updateLabel;
 	};
 }
 
-#include <Game/States/MenuState.inl>
+#include <Game/States/VersionCheckState.inl>
 
-#endif // TSOM_GAME_STATES_MENUSTATE_HPP
+#endif // TSOM_GAME_STATES_VERSIONCHECKSTATE_HPP

@@ -4,10 +4,9 @@
 
 #pragma once
 
-#ifndef TSOM_GAME_STATES_MENUSTATE_HPP
-#define TSOM_GAME_STATES_MENUSTATE_HPP
+#ifndef TSOM_GAME_STATES_DIRECTCONNECTSTATE_HPP
+#define TSOM_GAME_STATES_DIRECTCONNECTSTATE_HPP
 
-#include <CommonLib/UpdateInfo.hpp>
 #include <Game/States/WidgetState.hpp>
 #include <string>
 
@@ -16,36 +15,33 @@ namespace Nz
 	class BoxLayout;
 	class ButtonWidget;
 	class LabelWidget;
-	class SimpleLabelWidget;
+	class TextAreaWidget;
 }
 
 namespace tsom
 {
-	class ConnectionState;
-
-	class MenuState : public WidgetState
+	class DirectConnectionState : public WidgetState
 	{
 		public:
-			MenuState(std::shared_ptr<StateData> stateData);
-			~MenuState() = default;
+			DirectConnectionState(std::shared_ptr<StateData> stateData, std::shared_ptr<Nz::State> previousState);
+			~DirectConnectionState() = default;
 
 			bool Update(Nz::StateMachine& fsm, Nz::Time elapsedTime) override;
 
 		private:
 			void LayoutWidgets(const Nz::Vector2f& newSize) override;
+			void OnConnectPressed();
 
-			std::optional<UpdateInfo> m_newVersionInfo;
 			std::shared_ptr<Nz::State> m_nextState;
-			Nz::Time m_accumulator;
+			std::shared_ptr<Nz::State> m_previousState;
 			Nz::BoxLayout* m_layout;
-			Nz::SimpleLabelWidget* m_logo;
-			Nz::SimpleLabelWidget* m_logoBackground;
-			Nz::ButtonWidget* m_playButton;
-			Nz::ButtonWidget* m_quitGameButton;
+			Nz::ButtonWidget* m_connectButton;
+			Nz::TextAreaWidget* m_serverAddressArea;
+			Nz::TextAreaWidget* m_loginArea;
 			bool m_autoConnect;
 	};
 }
 
-#include <Game/States/MenuState.inl>
+#include <Game/States/DirectConnectionState.inl>
 
-#endif // TSOM_GAME_STATES_MENUSTATE_HPP
+#endif // TSOM_GAME_STATES_DIRECTCONNECTSTATE_HPP

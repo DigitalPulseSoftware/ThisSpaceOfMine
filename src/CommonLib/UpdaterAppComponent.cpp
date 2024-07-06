@@ -3,6 +3,7 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/UpdaterAppComponent.hpp>
+#include <CommonLib/ConfigFile.hpp>
 #include <CommonLib/Version.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/Process.hpp>
@@ -46,14 +47,14 @@ namespace nlohmann
 			updateInfo.updater = json.at("updater");
 		}
 	};
-
 }
 
 namespace tsom
 {
-	UpdaterAppComponent::UpdaterAppComponent(Nz::ApplicationBase& app) :
+	UpdaterAppComponent::UpdaterAppComponent(Nz::ApplicationBase& app, ConfigFile& configFile) :
 	ApplicationComponent(app),
-	m_downloadManager(app)
+	m_downloadManager(app),
+	m_configFile(configFile)
 	{
 	}
 
@@ -119,7 +120,7 @@ namespace tsom
 		webService->QueueRequest([&](Nz::WebRequest& request)
 		{
 			request.SetupGet();
-			request.SetURL(fmt::format("http://tsom-api.digitalpulse.software/game_version?platform={}", BuildConfig));
+			request.SetURL(fmt::format("{}/game_version?platform={}", m_configFile.GetStringValue("Api.Url"), BuildConfig));
 			request.SetServiceName("TSOM Version Check");
 			request.SetResultCallback([cb = std::move(callback)](Nz::WebRequestResult&& result)
 			{
@@ -131,7 +132,7 @@ namespace tsom
 
 				if (result.GetStatusCode() != 200)
 				{
-					cb(Nz::Err(fmt::format("request failed with code {0}: {1}", result.GetStatusCode(), result.GetErrorMessage())));
+					cb(Nz::Err(fmt::format("request failed with code {0}: {1}", result.GetStatusCode(), result.GetBody())));
 					return;
 				}
 

@@ -45,7 +45,7 @@ namespace tsom
 		m_cancelButton->UpdateText(Nz::SimpleTextDrawer::Draw("Cancel update", 24));
 		m_cancelButton->SetMaximumSize(m_cancelButton->GetPreferredSize());
 
-		m_cancelButton->OnButtonTrigger.Connect([this](const Nz::ButtonWidget*)
+		ConnectSignal(m_cancelButton->OnButtonTrigger, [this](const Nz::ButtonWidget*)
 		{
 			GetStateData().app->GetComponent<UpdaterAppComponent>().CancelUpdate();
 			m_isCancelled = true;

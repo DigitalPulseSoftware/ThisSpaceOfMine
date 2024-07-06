@@ -18,10 +18,12 @@
 
 namespace tsom
 {
+	class ConfigFile;
+
 	class TSOM_COMMONLIB_API UpdaterAppComponent final : public Nz::ApplicationComponent
 	{
 		public:
-			UpdaterAppComponent(Nz::ApplicationBase& app);
+			UpdaterAppComponent(Nz::ApplicationBase& app, ConfigFile& configFile);
 			UpdaterAppComponent(const UpdaterAppComponent&) = delete;
 			UpdaterAppComponent(UpdaterAppComponent&&) = delete;
 			~UpdaterAppComponent() = default;
@@ -48,6 +50,7 @@ namespace tsom
 			Nz::FixedVector<std::shared_ptr<const DownloadManager::Download>, 3> m_updateArchives;
 			std::shared_ptr<const DownloadManager::Download> m_updaterDownload;
 			DownloadManager m_downloadManager;
+			ConfigFile& m_configFile;
 	};
 }
 
