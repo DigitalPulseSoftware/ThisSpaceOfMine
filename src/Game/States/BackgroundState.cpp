@@ -115,7 +115,7 @@ namespace tsom
 	bool BackgroundState::Update(Nz::StateMachine& fsm, Nz::Time elapsedTime)
 	{
 		float dt = elapsedTime.AsSeconds();
-		m_camera.get<Nz::NodeComponent>().Rotate(Nz::EulerAnglesf(dt, dt * 1.5f, 0.f));
+		m_camera.get<Nz::NodeComponent>().Rotate(Nz::EulerAnglesf(dt, dt * 1.5f, dt * -0.5f));
 
 		return true;
 	}
