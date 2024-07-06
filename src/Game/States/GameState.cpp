@@ -54,8 +54,8 @@ namespace tsom
 	m_tickAccumulator(Nz::Time::Zero()),
 	m_tickDuration(Constants::TickDuration),
 	m_nextInputIndex(1),
-	m_isCameraThirdPerson(false),
-	m_isMouseLocked(true)
+	m_isMouseLocked(true),
+	m_cameraMode(0)
 	{
 		auto& stateData = GetStateData();
 		auto& filesystem = stateData.app->GetComponent<Nz::FilesystemAppComponent>();
@@ -370,10 +370,12 @@ namespace tsom
 
 				case Nz::Keyboard::VKey::F5:
 				{
-					m_isCameraThirdPerson = !m_isCameraThirdPerson;
+					m_cameraMode++;
+					if (m_cameraMode > 2)
+						m_cameraMode = 0;
 
 					auto& cameraComponent = m_cameraEntity.get<Nz::CameraComponent>();
-					if (m_isCameraThirdPerson)
+					if (m_cameraMode > 0)
 						cameraComponent.UpdateRenderMask(tsom::Constants::RenderMask3D);
 					else
 						cameraComponent.UpdateRenderMask(tsom::Constants::RenderMask3D & ~tsom::Constants::RenderMaskLocalPlayer);
@@ -607,22 +609,41 @@ namespace tsom
 			Nz::Vector3f characterPos = characterNode.GetPosition();
 			Nz::Quaternionf characterRot = characterNode.GetRotation();
 
-			if (m_isCameraThirdPerson)
+			switch (m_cameraMode)
 			{
-				Nz::Quaternionf cameraRot = characterRot * Nz::EulerAnglesf(m_predictedCameraRotation.pitch, 0.f, 0.f);
-				cameraRot.Normalize();
+				case 0:
+				{
+					cameraNode.SetPosition(characterPos + characterRot * (Nz::Vector3f::Up() * Constants::PlayerCameraHeight));
 
-				cameraNode.SetPosition(characterPos + characterRot * (Nz::Vector3f::Up() * 1.f) + cameraRot * (Nz::Vector3f::Backward() * 1.f));
-				cameraNode.SetRotation(cameraRot);
-			}
-			else
-			{
-				cameraNode.SetPosition(characterPos + characterRot * (Nz::Vector3f::Up() * Constants::PlayerCameraHeight));
+					Nz::Quaternionf cameraRotation = m_referenceRotation * Nz::Quaternionf(m_predictedCameraRotation);
+					cameraRotation.Normalize();
 
-				Nz::Quaternionf cameraRotation = m_referenceRotation * Nz::Quaternionf(m_predictedCameraRotation);
-				cameraRotation.Normalize();
+					cameraNode.SetRotation(cameraRotation);
+					break;
+				}
 
-				cameraNode.SetRotation(cameraRotation);
+				case 1:
+				{
+					Nz::Quaternionf cameraRot = characterRot * Nz::EulerAnglesf(m_predictedCameraRotation.pitch, 0.f, 0.f);
+					cameraRot.Normalize();
+
+					cameraNode.SetPosition(characterPos + characterRot * (Nz::Vector3f::Up() * 1.f) + cameraRot * Nz::Vector3f::Backward() * 1.f);
+					cameraNode.SetRotation(cameraRot);
+					break;
+				}
+
+				case 2:
+				{
+					Nz::Quaternionf cameraRot = characterRot * Nz::EulerAnglesf(m_predictedCameraRotation.pitch, 180.f, 0.f);
+					cameraRot.Normalize();
+
+					cameraNode.SetPosition(characterPos + characterRot * (Nz::Vector3f::Up() * 0.5f) + cameraRot * Nz::Vector3f::Backward() * 1.f);
+					cameraNode.SetRotation(cameraRot);
+					break;
+				}
+
+				default:
+					break;
 			}
 
 			if (m_debugOverlay)
@@ -672,6 +693,7 @@ namespace tsom
 		}
 
 		// Raycast
+		if (m_cameraMode != 2)
 		{
 			auto& physSystem = stateData.world->GetSystem<Nz::Physics3DSystem>();
 			Nz::Vector3f hitPos, hitNormal;
