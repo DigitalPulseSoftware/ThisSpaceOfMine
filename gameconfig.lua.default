@@ -1,3 +1,6 @@
+Api = {
+	Url = "https://tsom-api.digitalpulse.software"
+}
 Server = {
 	Port = 29536,
 }

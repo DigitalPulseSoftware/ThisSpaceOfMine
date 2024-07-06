@@ -1,0 +1,152 @@
+[nzsl_version("1.0")]
+module TSOM.Logo;
+
+import InstanceData from Engine.InstanceData;
+import ViewerData from Engine.ViewerData;
+
+// Material options
+option HasBaseColorTexture: bool = false;
+option HasAlphaTexture: bool = false;
+option AlphaTest: bool = false;
+
+// Vertex declaration related options
+option VertexColorLoc: i32 = -1;
+option VertexNormalLoc: i32 = -1;
+option VertexPositionLoc: i32 = -1;
+option VertexSizeRotLocation: i32 = -1;
+option VertexUvLoc: i32 = -1;
+
+option VertexJointIndicesLoc: i32 = -1;
+option VertexJointWeightsLoc: i32 = -1;
+
+const HasNormal = (VertexNormalLoc >= 0);
+const HasVertexColor = (VertexColorLoc >= 0);
+const HasColor = (HasVertexColor);
+const HasVertexUV = (VertexUvLoc >= 0);
+const HasUV = (HasVertexUV);
+const HasSkinning = (VertexJointIndicesLoc >= 0 && VertexJointWeightsLoc >= 0);
+
+[layout(std140)]
+struct MaterialSettings
+{
+	[tag("AlphaTestThreshold")]
+	AlphaThreshold: f32,
+
+	[tag("ShadowMapNormalOffset")]
+	ShadowMapNormalOffset: f32,
+
+	[tag("ShadowPosScale")]
+	ShadowPosScale: f32,
+
+	[tag("BaseColor")]
+	BaseColor: vec4[f32]
+}
+
+[tag("Material")]
+[auto_binding]
+external
+{
+	[tag("Settings")] settings: uniform[MaterialSettings],
+	[tag("BaseColorMap")] MaterialBaseColorMap: sampler2D[f32],
+	[tag("AlphaMap")] MaterialAlphaMap: sampler2D[f32],
+}
+
+[tag("Engine")]
+[auto_binding]
+external
+{
+	[tag("TextureOverlay")] TextureOverlay: sampler2D[f32],
+	[tag("InstanceData")] instanceData: uniform[InstanceData],
+	[tag("ViewerData")] viewerData: uniform[ViewerData],
+}
+
+struct VertOut
+{
+	[location(0)] worldPos: vec3[f32],
+	[location(1), cond(HasUV)] uv: vec2[f32],
+	[location(2), cond(HasColor)] color: vec4[f32],
+	[builtin(position)] position: vec4[f32]
+}
+
+// Fragment stage
+struct FragOut
+{
+	[location(0)] RenderTarget0: vec4[f32],
+}
+
+fn ComputeColor(input: VertOut) -> vec4[f32]
+{
+	let color = settings.BaseColor;
+
+	const if (HasUV)
+		color.a *= TextureOverlay.Sample(input.uv).r;
+
+	const if (HasColor)
+		color *= input.color;
+
+	const if (HasBaseColorTexture)
+		color *= MaterialBaseColorMap.Sample(input.uv);
+
+	const if (HasAlphaTexture)
+		color.w *= MaterialAlphaMap.Sample(input.uv).x;
+
+	const if (AlphaTest)
+	{
+		if (color.w < settings.AlphaThreshold)
+			discard;
+	}
+
+	return color;
+}
+
+[entry(frag)]
+fn FragMain(input: VertOut) -> FragOut
+{
+	let color = ComputeColor(input);
+
+	let output: FragOut;
+	output.RenderTarget0 = color;
+	return output;
+}
+
+// Vertex stage
+struct VertIn
+{
+	[location(VertexPositionLoc)]
+	pos: vec3[f32],
+
+	[cond(HasVertexColor), location(VertexColorLoc)]
+	color: vec4[f32],
+
+	[cond(HasNormal), location(VertexNormalLoc)]
+	normal: vec3[f32],
+
+	[cond(HasVertexUV), location(VertexUvLoc)]
+	uv: vec2[f32],
+
+	[cond(HasSkinning), location(VertexJointIndicesLoc)]
+	jointIndices: vec4[i32],
+
+	[cond(HasSkinning), location(VertexJointWeightsLoc)]
+	jointWeights: vec4[f32]
+}
+
+[entry(vert)]
+fn VertMain(input: VertIn) -> VertOut
+{
+	let pos = input.pos;
+
+	let worldPosition = instanceData.worldMatrix * vec4[f32](pos, 1.0);
+
+	let output: VertOut;
+	output.worldPos = worldPosition.xyz;
+	output.position = viewerData.viewProjMatrix * worldPosition;
+
+	const if (HasColor)
+		output.color = input.color;
+
+	const if (HasVertexUV)
+		output.uv = input.uv;
+
+	return output;
+}

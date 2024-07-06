@@ -4,48 +4,46 @@
 
 #pragma once
 
-#ifndef TSOM_GAME_STATES_MENUSTATE_HPP
-#define TSOM_GAME_STATES_MENUSTATE_HPP
+#ifndef TSOM_GAME_STATES_CREATEPLAYERSTATE_HPP
+#define TSOM_GAME_STATES_CREATEPLAYERSTATE_HPP
 
 #include <CommonLib/UpdateInfo.hpp>
 #include <Game/States/WidgetState.hpp>
+#include <Nazara/Core/Time.hpp>
 #include <string>
 
 namespace Nz
 {
+	class AbstractTextDrawer;
 	class BoxLayout;
-	class ButtonWidget;
 	class LabelWidget;
-	class SimpleLabelWidget;
 }
 
 namespace tsom
 {
 	class ConnectionState;
 
-	class MenuState : public WidgetState
+	class CreatePlayerState : public WidgetState
 	{
 		public:
-			MenuState(std::shared_ptr<StateData> stateData);
-			~MenuState() = default;
+			CreatePlayerState(std::shared_ptr<StateData> stateData, std::shared_ptr<Nz::State> previousState);
+			~CreatePlayerState() = default;
 
 			bool Update(Nz::StateMachine& fsm, Nz::Time elapsedTime) override;
 
 		private:
 			void LayoutWidgets(const Nz::Vector2f& newSize) override;
+			void OnCreatePressed(const std::string& nickname);
+			void UpdateStatus(const Nz::AbstractTextDrawer& textDrawer);
 
-			std::optional<UpdateInfo> m_newVersionInfo;
+			std::shared_ptr<Nz::State> m_previousState;
 			std::shared_ptr<Nz::State> m_nextState;
-			Nz::Time m_accumulator;
 			Nz::BoxLayout* m_layout;
-			Nz::SimpleLabelWidget* m_logo;
-			Nz::SimpleLabelWidget* m_logoBackground;
-			Nz::ButtonWidget* m_playButton;
-			Nz::ButtonWidget* m_quitGameButton;
-			bool m_autoConnect;
+			Nz::LabelWidget* m_status;
+			Nz::Time m_nextStateTimer;
 	};
 }
 
-#include <Game/States/MenuState.inl>
+#include <Game/States/CreatePlayerState.inl>
 
-#endif // TSOM_GAME_STATES_MENUSTATE_HPP
+#endif // TSOM_GAME_STATES_CREATEPLAYERSTATE_HPP

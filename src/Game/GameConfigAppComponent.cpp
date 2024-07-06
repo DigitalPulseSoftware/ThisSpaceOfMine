@@ -11,6 +11,7 @@ namespace tsom
 {
 	GameConfigFile::GameConfigFile()
 	{
+		RegisterStringOption("Api.Url");
 		RegisterStringOption("Menu.Login", "Mingebag", [](std::string value) -> Nz::Result<std::string, std::string>
 		{
 			if (value.empty())
@@ -23,6 +24,14 @@ namespace tsom
 		});
 
 		RegisterStringOption("Menu.ServerAddress", "tsom.digitalpulse.software");
+		RegisterStringOption("Player.Token", "", [](std::string value) -> Nz::Result<std::string, std::string>
+		{
+			if (value.size() > 64)
+				return Nz::Err("Invalid token");
+
+			return Nz::Ok(std::move(value));
+		});
+
 		RegisterIntegerOption("Server.Port", 1, 0xFFFF, 29536);
 	}
 

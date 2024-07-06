@@ -10,7 +10,10 @@ namespace tsom
 	template<typename T, typename ...Args>
 	void WidgetState::ConnectSignal(T& signal, Args&&... args)
 	{
-		m_cleanupFunctions.emplace_back([connection = signal.Connect(std::forward<Args>(args)...)]() mutable { connection.Disconnect(); });
+		m_cleanupFunctions.emplace_back([connection = signal.Connect(std::forward<Args>(args)...)]() mutable
+		{
+			connection.Disconnect();
+		});
 	}
 
 	template<typename T, typename... Args>

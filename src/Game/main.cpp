@@ -38,19 +38,19 @@ int GameMain(int argc, char* argv[])
 	app.AddComponent<Nz::TaskSchedulerAppComponent>();
 	app.AddComponent<Nz::WindowingAppComponent>();
 
+	// Game setup
+	auto& gameConfig = app.AddComponent<tsom::GameConfigAppComponent>();
+	app.AddComponent<tsom::GameAppComponent>();
+
 	try
 	{
 		app.AddComponent<Nz::WebServiceAppComponent>();
-		app.AddComponent<tsom::UpdaterAppComponent>();
+		app.AddComponent<tsom::UpdaterAppComponent>(gameConfig.GetConfig());
 	}
 	catch (const std::exception& e)
 	{
 		fmt::print(fg(fmt::color::red), "failed to enable web services (automatic updating will be disabled): {0}!\n", e.what());
 	}
-
-	// Game setup
-	app.AddComponent<tsom::GameConfigAppComponent>();
-	app.AddComponent<tsom::GameAppComponent>();
 
 	return app.Run();
 }

@@ -16,6 +16,7 @@
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/DebugInfoState.hpp>
 #include <Game/States/MenuState.hpp>
+#include <Game/States/VersionCheckState.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/Clock.hpp>
 #include <Nazara/Core/EntitySystemAppComponent.hpp>
@@ -25,7 +26,6 @@
 #include <Nazara/Graphics/RenderWindow.hpp>
 #include <Nazara/Graphics/Components/CameraComponent.hpp>
 #include <Nazara/Graphics/Systems/RenderSystem.hpp>
-#include <Nazara/Network/WebServiceAppComponent.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <Nazara/Platform/MessageBox.hpp>
 #include <Nazara/Platform/WindowingAppComponent.hpp>
@@ -62,6 +62,7 @@ namespace tsom
 			m_stateMachine.PushState(std::make_shared<tsom::DebugInfoState>(stateData));
 			m_stateMachine.PushState(std::move(connectionState));
 			m_stateMachine.PushState(std::make_shared<tsom::BackgroundState>(stateData));
+			m_stateMachine.PushState(std::make_shared<tsom::VersionCheckState>(stateData));
 			m_stateMachine.PushState(std::make_shared<tsom::MenuState>(stateData));
 		}
 	}

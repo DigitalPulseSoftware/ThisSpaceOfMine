@@ -11,6 +11,7 @@ namespace tsom
 {
 	ServerConfigFile::ServerConfigFile()
 	{
+		RegisterStringOption("Api.Url");
 		RegisterIntegerOption("Server.Port", 1, 0xFFFF, 29536);
 		RegisterBoolOption("Server.SleepWhenEmpty", true);
 		RegisterStringOption("Save.Directory", "saves/chunks");
