@@ -179,7 +179,7 @@ namespace tsom
 		}
 	}
 
-	void Chunk::Unserialize(const BlockLibrary& blockLibrary, Nz::ByteStream& byteStream)
+	void Chunk::Deserialize(const BlockLibrary& blockLibrary, Nz::ByteStream& byteStream)
 	{
 		Nz::UInt32 chunkBinaryVersion;
 		byteStream >> chunkBinaryVersion;

@@ -217,7 +217,7 @@ namespace tsom
 			try
 			{
 				Nz::ByteStream fileStream(&chunkFile);
-				chunk.Unserialize(m_blockLibrary, fileStream);
+				chunk.Deserialize(m_blockLibrary, fileStream);
 			}
 			catch (const std::exception& e)
 			{

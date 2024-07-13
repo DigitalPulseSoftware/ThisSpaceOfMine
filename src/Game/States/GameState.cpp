@@ -779,7 +779,6 @@ namespace tsom
 		if (m_debugOverlay)
 		{
 			m_debugOverlay->label->UpdateText(m_debugOverlay->textDrawer);
-			m_debugOverlay->label->Resize(m_debugOverlay->label->GetPreferredSize());
 			m_debugOverlay->label->SetPosition({ 0.f, stateData.canvas->GetHeight() - m_debugOverlay->label->GetHeight() });
 		}
 
@@ -793,7 +792,6 @@ namespace tsom
 
 		m_chatBox->Resize(newSize);
 
-		m_escapeMenu->Resize(m_escapeMenu->GetPreferredSize());
 		m_escapeMenu->Center();
 	}
 

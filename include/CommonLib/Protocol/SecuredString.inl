@@ -65,12 +65,12 @@ namespace Nz
 	}
 
 	template<std::size_t N, bool CodepointLimit>
-	bool Unserialize(SerializationContext& context, tsom::SecuredString<N, CodepointLimit>* value, TypeTag<tsom::SecuredString<N>>)
+	bool Deserialize(SerializationContext& context, tsom::SecuredString<N, CodepointLimit>* value, TypeTag<tsom::SecuredString<N>>)
 	{
 		using SizeType = typename tsom::SecuredString<N>::SizeType;
 
 		SizeType size;
-		if (!Unserialize(context, &size, TypeTag<SizeType>()))
+		if (!Deserialize(context, &size, TypeTag<SizeType>()))
 			return false;
 
 		if constexpr (CodepointLimit)

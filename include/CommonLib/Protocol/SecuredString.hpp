@@ -48,7 +48,7 @@ namespace tsom
 namespace Nz
 {
 	template<std::size_t N, bool CodepointLimit> bool Serialize(SerializationContext& context, const tsom::SecuredString<N, CodepointLimit>& value, TypeTag<tsom::SecuredString<N>>);
-	template<std::size_t N, bool CodepointLimit> bool Unserialize(SerializationContext& context, tsom::SecuredString<N, CodepointLimit>* value, TypeTag<tsom::SecuredString<N>>);
+	template<std::size_t N, bool CodepointLimit> bool Deserialize(SerializationContext& context, tsom::SecuredString<N, CodepointLimit>* value, TypeTag<tsom::SecuredString<N>>);
 }
 
 #include <CommonLib/Protocol/SecuredString.inl>

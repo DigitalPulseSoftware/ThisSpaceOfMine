@@ -79,7 +79,7 @@ namespace tsom
 
 			inline void UpdateBlock(const Nz::Vector3ui& indices, BlockIndex cellType);
 
-			virtual void Unserialize(const BlockLibrary& blockLibrary, Nz::ByteStream& byteStream);
+			virtual void Deserialize(const BlockLibrary& blockLibrary, Nz::ByteStream& byteStream);
 
 			Chunk& operator=(const Chunk&) = delete;
 			Chunk& operator=(Chunk&&) = delete;

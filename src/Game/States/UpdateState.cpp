@@ -32,7 +32,6 @@ namespace tsom
 		m_downloadLabel = m_layout->Add<Nz::SimpleLabelWidget>();
 		m_downloadLabel->SetCharacterSize(24);
 		m_downloadLabel->SetText("Downloading assets...");
-		m_downloadLabel->Resize(m_downloadLabel->GetPreferredSize());
 		m_downloadLabel->SetMaximumWidth(m_downloadLabel->GetWidth());
 
 		m_progressBar = m_layout->Add<Nz::ProgressBarWidget>();
@@ -41,7 +40,6 @@ namespace tsom
 		m_progressionLabel = m_progressBar->Add<Nz::SimpleLabelWidget>();
 		m_progressionLabel->SetCharacterSize(24);
 		m_progressionLabel->SetText("Starting download...");
-		m_progressionLabel->Resize(m_progressionLabel->GetPreferredSize());
 
 		m_cancelButton = m_layout->Add<Nz::ButtonWidget>();
 		m_cancelButton->UpdateText(Nz::SimpleTextDrawer::Draw("Cancel update", 24));
@@ -92,7 +90,6 @@ namespace tsom
 		m_progressBar->SetFraction(float(downloaded) / float(total));
 
 		m_progressionLabel->SetText(fmt::format("Downloading {0} file(s) - {1} / {2}", activeDownloadCount, ByteToString(downloaded), ByteToString(total)));
-		m_progressionLabel->Resize(m_progressionLabel->GetPreferredSize());
 		m_progressionLabel->Center();
 	}
 }

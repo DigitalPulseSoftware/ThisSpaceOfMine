@@ -145,12 +145,12 @@ namespace Nz
 	}
 
 	template<typename T>
-	bool Unserialize(SerializationContext& context, tsom::CompressedSigned<T>* value, TypeTag<tsom::CompressedSigned<T>>)
+	bool Deserialize(SerializationContext& context, tsom::CompressedSigned<T>* value, TypeTag<tsom::CompressedSigned<T>>)
 	{
 		using UnsignedT = std::make_unsigned_t<T>;
 
 		tsom::CompressedUnsigned<UnsignedT> compressedValue;
-		if (!Unserialize(context, &compressedValue))
+		if (!Deserialize(context, &compressedValue))
 			return false;
 
 		// ZigZag decoding:
@@ -163,7 +163,7 @@ namespace Nz
 	}
 
 	template<typename T>
-	bool Unserialize(SerializationContext& context, tsom::CompressedUnsigned<T>* value, TypeTag<tsom::CompressedUnsigned<T>>)
+	bool Deserialize(SerializationContext& context, tsom::CompressedUnsigned<T>* value, TypeTag<tsom::CompressedUnsigned<T>>)
 	{
 		T integerValue = 0;
 		bool remaining;
@@ -172,7 +172,7 @@ namespace Nz
 		do
 		{
 			Nz::UInt8 byteValue;
-			if (!Unserialize(context, &byteValue))
+			if (!Deserialize(context, &byteValue))
 				return false;
 
 			remaining = (byteValue & 0x80);

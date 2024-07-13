@@ -17,7 +17,6 @@ namespace tsom
 
 		m_versionEntity = stateData->canvas->Add<Nz::LabelWidget>();
 		m_versionEntity->UpdateText(Nz::SimpleTextDrawer::Draw(GetVersionInfo(), 18));
-		m_versionEntity->Resize(m_versionEntity->GetPreferredSize());
 	}
 
 	void DebugInfoState::Enter(Nz::StateMachine& fsm)
@@ -52,7 +51,6 @@ namespace tsom
 			textBuilder << std::to_string(m_fpsCounter);
 
 			m_fpsEntity->UpdateText(m_textDrawer);
-			m_fpsEntity->Resize(m_fpsEntity->GetPreferredSize());
 
 			LayoutWidgets(GetStateData().canvas->GetSize());
 

@@ -27,13 +27,13 @@ namespace tsom
 				{
 					return [](SessionHandler& sessionHandler, Nz::ByteStream&& packet)
 					{
-						PacketType unserializedPacket;
+						PacketType deserializedPacket;
 
 						PacketSerializer serializer(packet, false, sessionHandler.GetProtocolVersion());
 						try
 						{
 							Nz::ErrorFlags errFlags(Nz::ErrorMode::Silent | Nz::ErrorMode::ThrowException);
-							Packets::Serialize(serializer, unserializedPacket);
+							Packets::Serialize(serializer, deserializedPacket);
 						}
 						catch (const std::exception&)
 						{
@@ -42,7 +42,7 @@ namespace tsom
 							return;
 						}
 
-						static_cast<Handler&>(sessionHandler).HandlePacket(std::move(unserializedPacket));
+						static_cast<Handler&>(sessionHandler).HandlePacket(std::move(deserializedPacket));
 					};
 				}
 				else
