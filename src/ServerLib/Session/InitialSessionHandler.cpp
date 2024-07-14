@@ -48,7 +48,7 @@ namespace tsom
 			{
 				login = std::move(anonymousData.nickname).Str();
 
-				fmt::print("{0} authenticated\n", login);
+				fmt::print("{0} authenticated (anonymous)\n", login);
 				return true;
 			},
 			[&](Packets::AuthRequest::AuthenticatedPlayerData& authenticatedData) -> bool
@@ -59,12 +59,13 @@ namespace tsom
 				ConnectionTokenAuth errorCode = ConnectionTokenPrivate::AuthAndDecrypt(authenticatedData.connectionToken, key, &tokenPrivate);
 				if (errorCode != ConnectionTokenAuth::Success)
 				{
-					fmt::print(fg(fmt::color::red), "{0} token is invalid\n", login);
-					FailAuth(AuthError::ProtocolError);
+					fmt::print(fg(fmt::color::red), "connection token is invalid\n", login);
+					FailAuth(AuthError::InvalidToken);
 					return false;
 				}
 
 				login = std::move(tokenPrivate.player.nickname);
+				fmt::print("{0} authenticated\n", login);
 				return true;
 			}
 		}, authRequest.token);
