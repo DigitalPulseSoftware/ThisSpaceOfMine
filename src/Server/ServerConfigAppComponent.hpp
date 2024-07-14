@@ -9,14 +9,23 @@
 
 #include <CommonLib/ConfigFile.hpp>
 #include <Nazara/Core/ApplicationComponent.hpp>
-#include <NazaraUtils/Prerequisites.hpp>
+#include <array>
 
 namespace tsom
 {
 	class ServerConfigFile : public ConfigFile
 	{
+		friend class ServerConfigAppComponent;
+
 		public:
 			ServerConfigFile();
+
+			inline const std::array<Nz::UInt8, 32>& GetConnectionTokenEncryptionKey() const;
+
+		private:
+			void PostLoad();
+
+			std::array<Nz::UInt8, 32> m_connectionTokenEncryptionKey;
 	};
 
 	class ServerConfigAppComponent final : public Nz::ApplicationComponent

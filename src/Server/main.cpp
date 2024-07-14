@@ -33,6 +33,7 @@ int ServerMain(int argc, char* argv[])
 	instanceConfig.pauseWhenEmpty = config.GetBoolValue("Server.SleepWhenEmpty");
 	instanceConfig.saveDirectory = Nz::Utf8Path(config.GetStringValue("Save.Directory"));
 	instanceConfig.saveInterval = Nz::Time::Seconds(config.GetIntegerValue<long long>("Save.Interval"));
+	instanceConfig.connectionTokenEncryptionKey = config.GetConnectionTokenEncryptionKey();
 
 	auto& instance = worldAppComponent.AddInstance(std::move(instanceConfig));
 	auto& sessionManager = instance.AddSessionManager(serverPort);

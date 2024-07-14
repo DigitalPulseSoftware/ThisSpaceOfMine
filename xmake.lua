@@ -12,6 +12,7 @@ add_requires("fmt", { configs = { header_only = false }})
 add_requires("libcurl", { configs = { shared = true }, system = false })
 add_requires(
 	"concurrentqueue",
+	"cppcodec",
 	"libsodium",
 	"lz4",
 	"hopscotch-map",
@@ -76,7 +77,7 @@ target("CommonLib", function ()
 	add_options("commonlib_static")
 
 	add_packages("nazaraengine", { components = { "physics3d", "network" }, public = true })
-	add_packages("concurrentqueue", "semver", "fmt", "hopscotch-map", "nlohmann_json", "sol2", { public = true })
+	add_packages("concurrentqueue", "cppcodec", "semver", "fmt", "hopscotch-map", "nlohmann_json", "sol2", { public = true })
 	add_packages("libsodium", "lz4", "perlinnoise")
 
 	if is_plat("windows") then

@@ -22,9 +22,19 @@ namespace tsom
 			functor(serverPlayer);
 	}
 
+	inline Nz::ApplicationBase& ServerInstance::GetApp()
+	{
+		return m_application;
+	}
+
 	inline const BlockLibrary& ServerInstance::GetBlockLibrary() const
 	{
 		return m_blockLibrary;
+	}
+
+	inline const std::array<std::uint8_t, 32>& ServerInstance::GetConnectionTokenEncryptionKey() const
+	{
+		return m_connectionTokenEncryptionKey;
 	}
 
 	inline Planet& ServerInstance::GetPlanet()
