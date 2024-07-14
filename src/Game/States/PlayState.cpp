@@ -81,6 +81,8 @@ namespace tsom
 			m_createOrConnectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Loading player info...", 36, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
 			m_createOrConnectButton->SetMaximumWidth(m_createOrConnectButton->GetPreferredWidth() * 1.5f);
 			m_createOrConnectButton->Disable();
+
+			FetchPlayerInfo();
 		}
 		else
 		{
@@ -95,8 +97,6 @@ namespace tsom
 
 		// First layout happens in WidgetState::Enter and doesn't take m_createPlayerButton state into account
 		LayoutWidgets(GetStateData().canvas->GetSize());
-
-		FetchPlayerInfo();
 	}
 
 	bool PlayState::Update(Nz::StateMachine& fsm, Nz::Time elapsedTime)
