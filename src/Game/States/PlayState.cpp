@@ -101,16 +101,16 @@ namespace tsom
 
 	bool PlayState::Update(Nz::StateMachine& fsm, Nz::Time elapsedTime)
 	{
+		if (m_autoConnect)
+		{
+			m_nextState = std::make_shared<DirectConnectionState>(GetStateDataPtr(), shared_from_this());
+			m_autoConnect = false;
+		}
+
 		if (m_nextState)
 		{
 			fsm.ChangeState(std::move(m_nextState));
 			return true;
-		}
-
-		if (m_autoConnect)
-		{
-			OnCreateOrConnectPressed();
-			m_autoConnect = false;
 		}
 
 		return true;

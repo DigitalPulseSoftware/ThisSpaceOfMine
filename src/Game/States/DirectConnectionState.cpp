@@ -85,16 +85,16 @@ namespace tsom
 
 	bool DirectConnectionState::Update(Nz::StateMachine& fsm, Nz::Time elapsedTime)
 	{
-		if (m_nextState)
-		{
-			fsm.ChangeState(std::move(m_nextState));
-			return true;
-		}
-
 		if (m_autoConnect)
 		{
 			OnConnectPressed();
 			m_autoConnect = false;
+		}
+
+		if (m_nextState)
+		{
+			fsm.ChangeState(std::move(m_nextState));
+			return true;
 		}
 
 		return true;
