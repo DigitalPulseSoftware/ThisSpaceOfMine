@@ -5,10 +5,31 @@
 #include <CommonLib/Protocol/ConnectionToken.hpp>
 #include <NazaraUtils/Endianness.hpp>
 #include <sodium.h>
+#include <cppcodec/base64_rfc4648.hpp>
+#include <fmt/format.h>
+#include <nlohmann/json.hpp>
 #include <cassert>
 
 namespace tsom
 {
+	namespace
+	{
+		template<std::size_t N, std::integral T>
+		void SerializeBinary(std::array<Nz::UInt8, N>& buffer, std::size_t& offset, T data)
+		{
+			data = Nz::HostToLittleEndian(data);
+			std::memcpy(&buffer[offset], &data, sizeof(data));
+			offset += sizeof(data);
+		}
+
+		template<std::size_t N, size_t BufSize>
+		void SerializeBinary(std::array<Nz::UInt8, N>& buffer, std::size_t& offset, const std::array<Nz::UInt8, BufSize>& data)
+		{
+			std::memcpy(&buffer[offset], &data, sizeof(data));
+			offset += sizeof(data);
+		}
+	}
+
 	namespace Packets
 	{
 		void Serialize(PacketSerializer& serializer, ConnectionToken& token)
@@ -24,69 +45,114 @@ namespace tsom
 
 			if (serializer.IsWriting())
 			{
-				serializer.Write(token.encryption.keyClientToServer.data(), token.encryption.keyClientToServer.size());
-				serializer.Write(token.encryption.keyServerToClient.data(), token.encryption.keyServerToClient.size());
+				serializer.Write(token.encryption.clientToServerKey.data(), token.encryption.clientToServerKey.size());
+				serializer.Write(token.encryption.serverToClientKey.data(), token.encryption.serverToClientKey.size());
 			}
 			else
 			{
-				serializer.Read(token.encryption.keyClientToServer.data(), token.encryption.keyClientToServer.size());
-				serializer.Read(token.encryption.keyServerToClient.data(), token.encryption.keyServerToClient.size());
+				serializer.Read(token.encryption.clientToServerKey.data(), token.encryption.clientToServerKey.size());
+				serializer.Read(token.encryption.serverToClientKey.data(), token.encryption.serverToClientKey.size());
 			}
 
 			serializer &= token.gameServer.address;
 			serializer &= token.gameServer.port;
 
 			if (serializer.IsWriting())
+			{
+				Nz::UInt16 privateTokenSize = Nz::SafeCaster(token.privateToken.size());
+				serializer &= privateTokenSize;
 				serializer.Write(token.privateToken.data(), token.privateToken.size());
+			}
 			else
+			{
+				Nz::UInt16 privateTokenSize;
+				serializer &= privateTokenSize;
+
+				token.privateToken.resize(privateTokenSize);
 				serializer.Read(token.privateToken.data(), token.privateToken.size());
+			}
 		}
 
 		void Serialize(PacketSerializer& serializer, ConnectionTokenPrivate& token)
 		{
-			if (serializer.IsWriting())
-			{
-				serializer.Write(token.encryption.keyClientToServer.data(), token.encryption.keyClientToServer.size());
-				serializer.Write(token.encryption.keyServerToClient.data(), token.encryption.keyServerToClient.size());
-			}
-			else
-			{
-				serializer.Read(token.encryption.keyClientToServer.data(), token.encryption.keyClientToServer.size());
-				serializer.Read(token.encryption.keyServerToClient.data(), token.encryption.keyServerToClient.size());
-			}
-
-			serializer &= token.api.url;
 			serializer &= token.api.token;
+			serializer &= token.api.url;
 
-			serializer &= token.player.guid;
+			serializer &= token.player.uuid;
 			serializer &= token.player.nickname;
 		}
 	}
 
-	ConnectionTokenAuth ConnectionTokenPrivate::AuthAndDecrypt(std::span<const Nz::UInt8> tokenData, Nz::UInt32 tokenVersion, Nz::UInt64 expireTimestamp, std::span<const Nz::UInt8, 12> nonce, std::span<const Nz::UInt8, 32> key, ConnectionTokenPrivate* token)
+	Nz::Result<ConnectionToken, std::string> ConnectionToken::Deserialize(const nlohmann::json& doc)
+	{
+		using base64 = cppcodec::base64_rfc4648;
+
+		auto DecodeBase64Field = []<std::size_t N>(const nlohmann::json& doc, const char* field, std::array<std::uint8_t, N>& bin) -> Nz::Result<void, std::string>
+		{
+			const std::string& b64 = doc[field];
+			std::vector<std::uint8_t> decodedField = base64::decode(b64);
+			if (decodedField.size() != bin.size())
+				return Nz::Err(fmt::format("{} has wrong size", field));
+
+			std::memcpy(bin.data(), decodedField.data(), decodedField.size());
+			return Nz::Ok();
+		};
+
+		try
+		{
+			ConnectionToken connectionToken;
+			connectionToken.tokenVersion = doc["token_version"];
+			NAZARA_TRY(DecodeBase64Field(doc, "token_nonce", connectionToken.tokenNonce));
+
+			connectionToken.creationTimestamp = doc["creation_timestamp"];
+			connectionToken.expireTimestamp = doc["expire_timestamp"];
+
+			const nlohmann::json& encryptionKeys = doc["encryption_keys"];
+			NAZARA_TRY(DecodeBase64Field(encryptionKeys, "client_to_server", connectionToken.encryption.clientToServerKey));
+			NAZARA_TRY(DecodeBase64Field(encryptionKeys, "server_to_client", connectionToken.encryption.serverToClientKey));
+
+			const nlohmann::json& gameServerAddress = doc["game_server"];
+			connectionToken.gameServer.address = gameServerAddress["address"];
+			connectionToken.gameServer.port = gameServerAddress["port"];
+
+			const std::string& privateTokenStr = doc["private_token_data"];
+			connectionToken.privateToken = base64::decode(privateTokenStr);
+
+			return connectionToken;
+		}
+		catch (const std::exception& e)
+		{
+			return Nz::Err(e.what());
+		}
+	}
+
+	ConnectionTokenAuth ConnectionTokenPrivate::AuthAndDecrypt(const ConnectionToken& connectionToken, std::span<const Nz::UInt8, 32> key, ConnectionTokenPrivate* token)
 	{
 		assert(token);
 
 		std::vector<Nz::UInt8> tokenBinary(ConnectionToken::TokenPrivateMaxSize);
 		unsigned long long tokenBinarySize = ConnectionToken::TokenPrivateMaxSize;
 
-		// Serialize additional data
-		std::array<Nz::UInt8, sizeof(tokenVersion) + sizeof(expireTimestamp)> additionalData;
+		// Validate additional data
+		constexpr std::size_t AdditionalSize = sizeof(connectionToken.tokenVersion) + sizeof(connectionToken.expireTimestamp) + sizeof(connectionToken.encryption.clientToServerKey) + sizeof(connectionToken.encryption.serverToClientKey);
+		std::array<Nz::UInt8, AdditionalSize> additionalData;
 		{
-			Nz::UInt32 tokenVersionLE = Nz::HostToLittleEndian(tokenVersion);
-			Nz::UInt64 expireTimestampLE = Nz::HostToLittleEndian(expireTimestamp);
-
-			std::memcpy(&additionalData[0], &tokenVersionLE, sizeof(tokenVersionLE));
-			std::memcpy(&additionalData[sizeof(tokenVersionLE)], &expireTimestampLE, sizeof(expireTimestampLE));
+			std::size_t offset = 0;
+			SerializeBinary(additionalData, offset, connectionToken.tokenVersion);
+			SerializeBinary(additionalData, offset, connectionToken.expireTimestamp);
+			SerializeBinary(additionalData, offset, connectionToken.encryption.clientToServerKey);
+			SerializeBinary(additionalData, offset, connectionToken.encryption.serverToClientKey);
 		}
 
-		if (crypto_aead_xchacha20poly1305_ietf_decrypt(tokenBinary.data(), &tokenBinarySize, nullptr, tokenData.data(), tokenData.size(), additionalData.data(), additionalData.size(), nonce.data(), key.data()) != 0)
+		if (crypto_aead_xchacha20poly1305_ietf_decrypt(tokenBinary.data(), &tokenBinarySize, nullptr, connectionToken.privateToken.data(), connectionToken.privateToken.size(), additionalData.data(), additionalData.size(), connectionToken.tokenNonce.data(), key.data()) != 0)
 			return ConnectionTokenAuth::ForgedToken;
 
 		try
 		{
 			Nz::ByteStream byteStream(tokenBinary.data(), tokenBinarySize);
-			PacketSerializer serializer(byteStream, false, tokenVersion);
+			byteStream.SetDataEndianness(Nz::Endianness::LittleEndian);
+
+			PacketSerializer serializer(byteStream, false, connectionToken.tokenVersion);
 			Packets::Serialize(serializer, *token);
 		}
 		catch (const std::exception& e)

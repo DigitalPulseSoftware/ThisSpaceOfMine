@@ -24,12 +24,12 @@ namespace tsom
 		m_connectingLabel = CreateWidget<Nz::LabelWidget>();
 	}
 
-	void ConnectionState::Connect(const Nz::IpAddress& serverAddress, std::string nickname, std::shared_ptr<Nz::State> previousState)
+	void ConnectionState::Connect(const Nz::IpAddress& serverAddress, std::variant<Packets::AuthRequest::AuthenticatedPlayerData, Packets::AuthRequest::AnonymousPlayerData> playerData, std::shared_ptr<Nz::State> previousState)
 	{
 		Disconnect();
 
 		m_previousState = std::move(previousState);
-		m_nickname = std::move(nickname);
+		m_playerData = std::move(playerData);
 
 		// Find a compatible reactor
 		NetworkReactor* reactor = nullptr;
@@ -119,7 +119,7 @@ namespace tsom
 
 			Packets::AuthRequest request;
 			request.gameVersion = GameVersion;
-			request.token.emplace<Packets::AuthRequest::AnonymousPlayerData>().nickname = m_nickname;
+			request.token = m_playerData;
 
 			m_serverSession->SendPacket(request);
 		};

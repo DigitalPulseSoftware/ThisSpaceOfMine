@@ -134,29 +134,45 @@ namespace tsom
 
 			request.SetJSonContent(connectBody.dump());
 
-			request.SetResultCallback([&](Nz::WebRequestResult&& result)
+			request.SetResultCallback([widgetWeak = weak_from_this()](Nz::WebRequestResult&& result)
 			{
+				std::shared_ptr<PlayState> playState = std::static_pointer_cast<PlayState>(widgetWeak.lock());
+				if (!playState)
+					return;
+
 				if (!result.HasSucceeded())
 				{
 					fmt::print(fg(fmt::color::red), "failed to retrieve player info: {}\n", result.GetErrorMessage());
-					m_createOrConnectButton->UpdateText(Nz::SimpleTextDrawer::Draw("failed to connect to server", 24, Nz::TextStyle::Bold, Nz::Color::Red()));
+					playState->m_createOrConnectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Failed to connect to server", 30, Nz::TextStyle_Regular, Nz::Color::Red()));
+					playState->m_createOrConnectButton->Disable();
 					return;
 				}
 
 				if (result.GetStatusCode() != 200)
 				{
 					fmt::print(fg(fmt::color::red), "failed to retrieve player info (error {}): {}\n", result.GetStatusCode(), result.GetBody());
-					m_createOrConnectButton->UpdateText(Nz::SimpleTextDrawer::Draw("failed to retrieve player", 24, Nz::TextStyle::Bold, Nz::Color::Red()));
+					playState->m_createOrConnectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Failed to retrieve player", 30, Nz::TextStyle_Regular, Nz::Color::Red()));
+					playState->m_createOrConnectButton->Disable();
 					return;
 				}
 
-				nlohmann::json responseDoc = nlohmann::json::parse(result.GetBody());
+				try
+				{
+					nlohmann::json responseDoc = nlohmann::json::parse(result.GetBody());
 
-				std::string playerGuid = responseDoc["guid"];
-				std::string playerNickname = responseDoc["nickname"];
+					std::string playerUuid = responseDoc["uuid"];
+					std::string playerNickname = responseDoc["nickname"];
 
-				m_directConnect->UpdateText(Nz::SimpleTextDrawer::Draw(fmt::format("Play as {}", playerNickname), 36, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
-				m_directConnect->Enable();
+					playState->m_createOrConnectButton->UpdateText(Nz::SimpleTextDrawer::Draw(fmt::format("Play as {}", playerNickname), 36, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
+					playState->m_createOrConnectButton->Enable();
+				}
+				catch (const std::exception& e)
+				{
+					fmt::print(fg(fmt::color::red), "failed to retrieve player info (failed to decode response: {})\n", e.what());
+					playState->m_createOrConnectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Failed to retrieve player", 30, Nz::TextStyle_Regular, Nz::Color::Red()));
+					playState->m_createOrConnectButton->Disable();
+					return;
+				}
 			});
 
 			return true;
@@ -176,7 +192,82 @@ namespace tsom
 
 		if (!playerToken.empty())
 		{
-			// TODO
+			auto& gameConfig = GetStateData().app->GetComponent<GameConfigAppComponent>().GetConfig();
+			auto& webService = GetStateData().app->GetComponent<Nz::WebServiceAppComponent>();
+
+			std::string_view playerToken = gameConfig.GetStringValue("Player.Token");
+
+			webService.QueueRequest([&](Nz::WebRequest& request)
+			{
+				request.SetupPost();
+				request.SetURL(fmt::format("{}/v1/player/test", gameConfig.GetStringValue("Api.Url"), BuildConfig));
+				request.SetServiceName("TSOM Player Info");
+
+				nlohmann::json connectBody;
+				connectBody["token"] = playerToken;
+
+				request.SetJSonContent(connectBody.dump());
+
+				request.SetResultCallback([widgetWeak = weak_from_this()](Nz::WebRequestResult&& result)
+				{
+					std::shared_ptr<PlayState> playState = std::static_pointer_cast<PlayState>(widgetWeak.lock());
+					if (!playState)
+						return;
+
+					if (!result.HasSucceeded())
+					{
+						fmt::print(fg(fmt::color::red), "failed to retrieve player info: {}\n", result.GetErrorMessage());
+						playState->m_createOrConnectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Failed to connect to server", 30, Nz::TextStyle_Regular, Nz::Color::Red()));
+						return;
+					}
+
+					if (result.GetStatusCode() != 200)
+					{
+						fmt::print(fg(fmt::color::red), "failed to retrieve player info (error {}): {}\n", result.GetStatusCode(), result.GetBody());
+						playState->m_createOrConnectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Failed to retrieve connection token", 30, Nz::TextStyle_Regular, Nz::Color::Red()));
+						return;
+					}
+
+					try
+					{
+						nlohmann::json responseDoc = nlohmann::json::parse(result.GetBody());
+
+						auto tokenResult = ConnectionToken::Deserialize(responseDoc);
+						if (!tokenResult)
+							throw std::runtime_error(tokenResult.GetError());
+
+						ConnectionToken token = std::move(tokenResult).GetValue();
+
+						Nz::ResolveError resolveError;
+						auto hostVec = Nz::IpAddress::ResolveHostname(Nz::NetProtocol::Any, token.gameServer.address, std::to_string(token.gameServer.port), &resolveError);
+						if (hostVec.empty())
+						{
+							fmt::print(fg(fmt::color::red), "failed to resolve {}:{}: {}\n", token.gameServer.address, token.gameServer.port, Nz::ErrorToString(resolveError));
+							playState->m_createOrConnectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Failed to resolve server address", 30, Nz::TextStyle_Regular, Nz::Color::Red()));
+							return;
+						}
+
+						Nz::IpAddress serverAddress = hostVec[0].address;
+
+						auto& stateData = playState->GetStateData();
+						if (stateData.connectionState)
+						{
+							Packets::AuthRequest::AuthenticatedPlayerData playerData;
+							playerData.connectionToken = std::move(token);
+
+							stateData.connectionState->Connect(serverAddress, std::move(playerData), std::move(playState));
+						}
+					}
+					catch (const std::exception& e)
+					{
+						fmt::print(fg(fmt::color::red), "failed to retrieve player token (failed to decode response: {})\n", e.what());
+						playState->m_createOrConnectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Failed to retrieve connection token", 30, Nz::TextStyle_Regular, Nz::Color::Red()));
+						return;
+					}
+				});
+
+				return true;
+			});
 		}
 		else
 		{

@@ -35,7 +35,7 @@ namespace tsom
 			ConnectionState(std::shared_ptr<StateData> stateData);
 			~ConnectionState() = default;
 
-			void Connect(const Nz::IpAddress& serverAddress, std::string nickname, std::shared_ptr<Nz::State> previousState);
+			void Connect(const Nz::IpAddress& serverAddress, std::variant<Packets::AuthRequest::AuthenticatedPlayerData, Packets::AuthRequest::AnonymousPlayerData> playerData, std::shared_ptr<Nz::State> previousState);
 			void Disconnect();
 
 			inline const ConnectionInfo* GetConnectionInfo() const;
@@ -66,9 +66,9 @@ namespace tsom
 			std::optional<ConnectionInfo> m_connectionInfo;
 			std::optional<NetworkSession> m_serverSession;
 			std::shared_ptr<Nz::State> m_connectedState;
-			std::shared_ptr<Nz::State> m_previousState;
 			std::shared_ptr<Nz::State> m_nextState;
-			std::string m_nickname;
+			std::shared_ptr<Nz::State> m_previousState;
+			std::variant<Packets::AuthRequest::AuthenticatedPlayerData, Packets::AuthRequest::AnonymousPlayerData> m_playerData;
 			Nz::HighPrecisionClock m_sessionInfoClock;
 			Nz::FixedVector<NetworkReactor, 2> m_reactors;
 			Nz::LabelWidget* m_connectingLabel;
