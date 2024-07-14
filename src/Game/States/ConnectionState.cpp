@@ -70,12 +70,11 @@ namespace tsom
 			}
 			else
 			{
+				Disconnect();
 				UpdateStatus(Nz::SimpleTextDrawer::Draw(fmt::format("Authentication failed: {0}", ToString(authResponse.authResult.GetError())), 36, Nz::TextStyle_Regular, Nz::Color::Red()));
 
 				m_nextState = m_previousState;
 				m_nextStateTimer = Nz::Time::Seconds(3);
-
-				Disconnect();
 			}
 		});
 
