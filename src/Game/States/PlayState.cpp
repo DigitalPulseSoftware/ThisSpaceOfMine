@@ -126,7 +126,7 @@ namespace tsom
 		webService.QueueRequest([&](Nz::WebRequest& request)
 		{
 			request.SetupPost();
-			request.SetURL(fmt::format("{}/v1/player/authenticate", gameConfig.GetStringValue("Api.Url"), BuildConfig));
+			request.SetURL(fmt::format("{}/v1/player/auth", gameConfig.GetStringValue("Api.Url"), BuildConfig));
 			request.SetServiceName("TSOM Player Info");
 
 			nlohmann::json connectBody;
@@ -200,7 +200,7 @@ namespace tsom
 			webService.QueueRequest([&](Nz::WebRequest& request)
 			{
 				request.SetupPost();
-				request.SetURL(fmt::format("{}/v1/player/test", gameConfig.GetStringValue("Api.Url"), BuildConfig));
+				request.SetURL(fmt::format("{}/v1/game/connect", gameConfig.GetStringValue("Api.Url"), BuildConfig));
 				request.SetServiceName("TSOM Player Info");
 
 				nlohmann::json connectBody;
@@ -255,7 +255,7 @@ namespace tsom
 							Packets::AuthRequest::AuthenticatedPlayerData playerData;
 							playerData.connectionToken = std::move(token);
 
-							stateData.connectionState->Connect(serverAddress, std::move(playerData), std::move(playState));
+							stateData.connectionState->Connect(serverAddress, std::move(playerData), playState);
 						}
 					}
 					catch (const std::exception& e)

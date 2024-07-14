@@ -19,6 +19,7 @@ namespace tsom
 	{
 		switch (authError)
 		{
+			case AuthError::InvalidToken: return "Invalid connection token";
 			case AuthError::ProtocolError: return "A protocol error occurred";
 			case AuthError::ServerIsOutdated: return "Server is outdated";
 			case AuthError::UpgradeRequired: return "Game version upgrade required";
