@@ -23,12 +23,13 @@ namespace tsom
 	constexpr unsigned int chunkSaveVersion = 1;
 
 	ServerInstance::ServerInstance(Nz::ApplicationBase& application, Config config) :
-	m_tickIndex(0),
+	m_connectionTokenEncryptionKey(config.connectionTokenEncryptionKey),
 	m_saveDirectory(std::move(config.saveDirectory)),
 	m_players(256),
 	m_tickAccumulator(Nz::Time::Zero()),
 	m_tickDuration(Constants::TickDuration),
 	m_saveInterval(config.saveInterval),
+	m_tickIndex(0),
 	m_application(application),
 	m_pauseWhenEmpty(config.pauseWhenEmpty)
 	{

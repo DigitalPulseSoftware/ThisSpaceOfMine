@@ -1,6 +1,9 @@
 Api = {
 	Url = "https://tsom-api.digitalpulse.software"
 }
+ConnectionToken = {
+	EncryptionKey = ""
+}
 Server = {
 	Port = 29536,
 	SleepWhenEmpty = true

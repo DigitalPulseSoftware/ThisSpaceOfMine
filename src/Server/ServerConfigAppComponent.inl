@@ -4,6 +4,11 @@
 
 namespace tsom
 {
+	inline const std::array<Nz::UInt8, 32>& ServerConfigFile::GetConnectionTokenEncryptionKey() const
+	{
+		return m_connectionTokenEncryptionKey;
+	}
+
 	inline ServerConfigFile& ServerConfigAppComponent::GetConfig()
 	{
 		return m_configFile;

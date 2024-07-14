@@ -17,6 +17,7 @@
 #include <NazaraUtils/Bitset.hpp>
 #include <NazaraUtils/MemoryPool.hpp>
 #include <NazaraUtils/PathUtils.hpp>
+#include <array>
 #include <memory>
 #include <unordered_set>
 #include <vector>
@@ -48,7 +49,9 @@ namespace tsom
 			template<typename F> void ForEachPlayer(F&& functor);
 			template<typename F> void ForEachPlayer(F&& functor) const;
 
+			inline Nz::ApplicationBase& GetApp();
 			inline const BlockLibrary& GetBlockLibrary() const;
+			inline const std::array<std::uint8_t, 32>& GetConnectionTokenEncryptionKey() const;
 			inline Planet& GetPlanet();
 			inline const Planet& GetPlanet() const;
 			inline Nz::EnttWorld& GetWorld();
@@ -61,6 +64,7 @@ namespace tsom
 			struct Config
 			{
 				std::filesystem::path saveDirectory = Nz::Utf8Path("save/chunks");
+				std::array<std::uint8_t, 32> connectionTokenEncryptionKey;
 				Nz::Time saveInterval = Nz::Time::Seconds(30);
 				Nz::UInt32 planetSeed = 42;
 				Nz::Vector3ui planetChunkCount = Nz::Vector3ui(5);
@@ -73,7 +77,7 @@ namespace tsom
 			void OnTick(Nz::Time elapsedTime);
 			void OnSave();
 
-			Nz::UInt16 m_tickIndex;
+			std::array<std::uint8_t, 32> m_connectionTokenEncryptionKey;
 			std::filesystem::path m_saveDirectory;
 			std::unique_ptr<Planet> m_planet;
 			std::unique_ptr<ChunkEntities> m_planetEntities;
@@ -87,6 +91,7 @@ namespace tsom
 			Nz::Time m_saveInterval;
 			Nz::Time m_tickAccumulator;
 			Nz::Time m_tickDuration;
+			Nz::UInt16 m_tickIndex;
 			BlockLibrary m_blockLibrary;
 			Nz::ApplicationBase& m_application;
 			bool m_pauseWhenEmpty;
