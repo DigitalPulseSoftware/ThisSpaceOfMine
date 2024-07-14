@@ -46,7 +46,7 @@ namespace tsom
 		{
 			[&](Packets::AuthRequest::AnonymousPlayerData& anonymousData) -> bool
 			{
-				login = std::move(anonymousData.nickname);
+				login = std::move(anonymousData.nickname).Str();
 
 				fmt::print("{0} authenticated\n", login);
 				return true;

@@ -32,6 +32,10 @@ namespace tsom
 			SecuredString(const SecuredString&) = default;
 			SecuredString(SecuredString&&) noexcept = default;
 
+			std::string& Str() &;
+			const std::string& Str() const&;
+			std::string&& Str() &&;
+
 			SecuredString& operator=(std::string_view str);
 			SecuredString& operator=(const SecuredString&) = default;
 			SecuredString& operator=(SecuredString&&) noexcept = default;

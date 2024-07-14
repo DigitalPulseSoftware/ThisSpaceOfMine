@@ -27,6 +27,24 @@ namespace tsom
 	}
 
 	template<std::size_t N, bool CodepointLimit>
+	std::string& SecuredString<N, CodepointLimit>::Str() &
+	{
+		return m_str;
+	}
+
+	template<std::size_t N, bool CodepointLimit>
+	const std::string& SecuredString<N, CodepointLimit>::Str() const&
+	{
+		return m_str;
+	}
+
+	template<std::size_t N, bool CodepointLimit>
+	std::string&& SecuredString<N, CodepointLimit>::Str() &&
+	{
+		return std::move(m_str);
+	}
+
+	template<std::size_t N, bool CodepointLimit>
 	SecuredString<N, CodepointLimit>::operator std::string& () &
 	{
 		return m_str;
