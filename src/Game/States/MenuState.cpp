@@ -44,7 +44,6 @@ namespace tsom
 			textDrawer.SetTextFont(filesystem.Open<Nz::Font>("assets/fonts/axaxax bd.otf"));
 			textDrawer.SetTextStyle(Nz::TextStyle::OutlineOnly);
 		});
-		m_logo->Resize(m_logo->GetPreferredSize());
 
 		m_logoBackground = m_logo->Add<Nz::SimpleLabelWidget>();
 		m_logoBackground->UpdateDrawer([&](Nz::SimpleTextDrawer& textDrawer)
@@ -56,7 +55,6 @@ namespace tsom
 			textDrawer.SetTextFont(filesystem.Open<Nz::Font>("assets/fonts/axaxax bd.otf"));
 			textDrawer.SetTextStyle(Nz::TextStyle::OutlineOnly);
 		});
-		m_logoBackground->Resize(m_logoBackground->GetPreferredSize());
 		m_logoBackground->SetPosition({ 7.f, -7.f });
 
 		m_layout = CreateWidget<Nz::BoxLayout>(Nz::BoxLayoutOrientation::TopToBottom);
@@ -99,14 +97,12 @@ namespace tsom
 		{
 			textDrawer.SetCharacterSpacingOffset(std::sin(m_accumulator.AsSeconds() * 0.2f) * 5.f);
 		});
-		m_logo->Resize(m_logo->GetPreferredSize());
 		m_logo->CenterHorizontal();
 
 		m_logoBackground->UpdateDrawer([&](Nz::SimpleTextDrawer& textDrawer)
 		{
 			textDrawer.SetCharacterSpacingOffset(std::sin(m_accumulator.AsSeconds() * 0.2f) * 5.f);
 		});
-		m_logoBackground->Resize(m_logoBackground->GetPreferredSize());
 
 		return true;
 	}
