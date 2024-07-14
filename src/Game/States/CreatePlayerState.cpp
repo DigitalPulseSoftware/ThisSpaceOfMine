@@ -155,7 +155,6 @@ namespace tsom
 	void CreatePlayerState::UpdateStatus(const Nz::AbstractTextDrawer& textDrawer)
 	{
 		m_status->UpdateText(textDrawer);
-		m_status->Resize(m_status->GetPreferredSize());
 		m_status->Center();
 		m_status->Show();
 
