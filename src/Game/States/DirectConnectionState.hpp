@@ -4,8 +4,8 @@
 
 #pragma once
 
-#ifndef TSOM_GAME_STATES_DIRECTCONNECTSTATE_HPP
-#define TSOM_GAME_STATES_DIRECTCONNECTSTATE_HPP
+#ifndef TSOM_GAME_STATES_DIRECTCONNECTIONSTATE_HPP
+#define TSOM_GAME_STATES_DIRECTCONNECTIONSTATE_HPP
 
 #include <Game/States/WidgetState.hpp>
 #include <string>
@@ -44,4 +44,4 @@ namespace tsom
 
 #include <Game/States/DirectConnectionState.inl>
 
-#endif // TSOM_GAME_STATES_DIRECTCONNECTSTATE_HPP
+#endif // TSOM_GAME_STATES_DIRECTCONNECTIONSTATE_HPP

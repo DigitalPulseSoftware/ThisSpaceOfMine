@@ -40,41 +40,63 @@ namespace tsom
 
 			GetSession()->Disconnect(DisconnectionType::Later);
 		};
-
-		if (!std::holds_alternative<Packets::AuthRequest::AnonymousPlayerData>(authRequest.token))
+	
+		std::string login;
+		bool success = std::visit(Nz::Overloaded
 		{
-			fmt::print(fg(fmt::color::red), "not implemented\n");
-			return FailAuth(AuthError::ServerIsOutdated);
+			[&](Packets::AuthRequest::AnonymousPlayerData& anonymousData) -> bool
+			{
+				login = std::move(anonymousData.nickname);
+
+				fmt::print("{0} authenticated\n", login);
+				return true;
+			},
+			[&](Packets::AuthRequest::AuthenticatedPlayerData& authenticatedData) -> bool
+			{
+				const std::array<Nz::UInt8, 32>& key = m_instance.GetConnectionTokenEncryptionKey();
+
+				ConnectionTokenPrivate tokenPrivate;
+				ConnectionTokenAuth errorCode = ConnectionTokenPrivate::AuthAndDecrypt(authenticatedData.connectionToken, key, &tokenPrivate);
+				if (errorCode != ConnectionTokenAuth::Success)
+				{
+					fmt::print(fg(fmt::color::red), "{0} token is invalid\n", login);
+					FailAuth(AuthError::ProtocolError);
+					return false;
+				}
+
+				login = std::move(tokenPrivate.player.nickname);
+				return true;
+			}
+		}, authRequest.token);
+
+		if (!success)
+			return;
+
+		if (login.empty() || login != Nz::Trim(login, Nz::UnicodeAware{}))
+		{
+			fmt::print(fg(fmt::color::red), "{0} nickname hasn't been trimmed\n", login);
+			return FailAuth(AuthError::ProtocolError);
 		}
 
-		auto& playerData = std::get<Packets::AuthRequest::AnonymousPlayerData>(authRequest.token);
-
-		fmt::print("Auth request from {0} (version {1}.{2}.{3})\n", static_cast<std::string_view>(playerData.nickname), majorVersion, minorVersion, patchVersion);
+		fmt::print("Auth request from {0} (version {1}.{2}.{3})\n", login, majorVersion, minorVersion, patchVersion);
 
 		if (authRequest.gameVersion < Constants::ProtocolRequiredClientVersion)
 		{
-			fmt::print(fg(fmt::color::red), "{0} authentication failed (version is too old)\n", static_cast<std::string_view>(playerData.nickname));
+			fmt::print(fg(fmt::color::red), "{0} authentication failed (version is too old)\n", login);
 			return FailAuth(AuthError::UpgradeRequired);
 		}
 
 		if (authRequest.gameVersion > GameVersion)
 		{
-			fmt::print(fg(fmt::color::red), "{0} authentication failed (version is more recent than server's)\n", static_cast<std::string_view>(playerData.nickname));
+			fmt::print(fg(fmt::color::red), "{0} authentication failed (version is more recent than server's)\n", login);
 			return FailAuth(AuthError::ServerIsOutdated);
 		}
 
 		GetSession()->SetProtocolVersion(authRequest.gameVersion);
 
-		std::string_view login = Nz::Trim(playerData.nickname, Nz::UnicodeAware{});
-		if (login.empty() || login != playerData.nickname)
-		{
-			fmt::print(fg(fmt::color::red), "{0} nickname hasn't been trimmed\n", static_cast<std::string_view>(playerData.nickname));
-			return FailAuth(AuthError::ProtocolError);
-		}
+		fmt::print("{0} authenticated\n", login);
 
-		fmt::print("{0} authenticated\n", static_cast<std::string_view>(playerData.nickname));
-
-		ServerPlayer* player = m_instance.CreatePlayer(GetSession(), std::move(playerData.nickname));
+		ServerPlayer* player = m_instance.CreatePlayer(GetSession(), std::move(login));
 
 		Packets::AuthResponse response;
 		response.authResult = Nz::Ok();

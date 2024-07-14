@@ -7,9 +7,12 @@
 #ifndef TSOM_COMMONLIB_PROTOCOL_CONNECTIONTOKEN_HPP
 #define TSOM_COMMONLIB_PROTOCOL_CONNECTIONTOKEN_HPP
 
-#include <Nazara/Network/IpAddress.hpp>
-#include <NazaraUtils/Prerequisites.hpp>
+#include <CommonLib/Export.hpp>
 #include <CommonLib/Protocol/PacketSerializer.hpp>
+#include <Nazara/Core/Uuid.hpp>
+#include <Nazara/Network/IpAddress.hpp>
+#include <NazaraUtils/Result.hpp>
+#include <nlohmann/json_fwd.hpp>
 #include <array>
 #include <span>
 #include <string>
@@ -24,18 +27,18 @@ namespace tsom
 		// TODO: Add timestamp check
 	};
 
-	struct ConnectionToken
+	struct TSOM_COMMONLIB_API ConnectionToken
 	{
 		Nz::UInt32 tokenVersion;
-		std::array<Nz::UInt8, 12> tokenNonce;
+		std::array<Nz::UInt8, 24> tokenNonce;
 
 		Nz::UInt64 creationTimestamp;
 		Nz::UInt64 expireTimestamp;
 
 		struct
 		{
-			std::array<Nz::UInt8, 32> keyClientToServer;
-			std::array<Nz::UInt8, 32> keyServerToClient;
+			std::array<Nz::UInt8, 32> clientToServerKey;
+			std::array<Nz::UInt8, 32> serverToClientKey;
 		} encryption;
 
 		struct
@@ -48,17 +51,12 @@ namespace tsom
 
 		static constexpr Nz::UInt8 CurrentTokenVersion = 1;
 		static constexpr std::size_t TokenPrivateMaxSize = 2048;
+
+		static Nz::Result<ConnectionToken, std::string> Deserialize(const nlohmann::json& doc);
 	};
 
-	struct ConnectionTokenPrivate
+	struct TSOM_COMMONLIB_API ConnectionTokenPrivate
 	{
-		// Encryption confirmation
-		struct
-		{
-			std::array<Nz::UInt8, 32> keyClientToServer;
-			std::array<Nz::UInt8, 32> keyServerToClient;
-		} encryption;
-
 		// API part
 		struct
 		{
@@ -69,11 +67,11 @@ namespace tsom
 		// Player info
 		struct
 		{
-			std::string guid;
+			Nz::Uuid uuid;
 			std::string nickname;
 		} player;
 
-		static ConnectionTokenAuth AuthAndDecrypt(std::span<const Nz::UInt8> tokenData, Nz::UInt32 tokenVersion, Nz::UInt64 expireTimestamp, std::span<const Nz::UInt8, 12> nonce, std::span<const Nz::UInt8, 32> key, ConnectionTokenPrivate* token);
+		static ConnectionTokenAuth AuthAndDecrypt(const ConnectionToken& connectionToken, std::span<const Nz::UInt8, 32> key, ConnectionTokenPrivate* token);
 	};
 
 	namespace Packets

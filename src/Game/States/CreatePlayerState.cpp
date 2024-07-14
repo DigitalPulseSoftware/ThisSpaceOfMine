@@ -134,7 +134,7 @@ namespace tsom
 
 				nlohmann::json responseDoc = nlohmann::json::parse(result.GetBody());
 
-				std::string playerGuid = responseDoc["guid"];
+				std::string playerUuid = responseDoc["uuid"];
 				std::string connectToken = responseDoc["token"];
 
 				gameConfig.SetStringValue("Player.Token", std::string(connectToken));
