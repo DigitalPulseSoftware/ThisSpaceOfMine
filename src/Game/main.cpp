@@ -40,7 +40,6 @@ int GameMain(int argc, char* argv[])
 
 	// Game setup
 	auto& gameConfig = app.AddComponent<tsom::GameConfigAppComponent>();
-	app.AddComponent<tsom::GameAppComponent>();
 
 	try
 	{
@@ -51,6 +50,8 @@ int GameMain(int argc, char* argv[])
 	{
 		fmt::print(fg(fmt::color::red), "failed to enable web services (automatic updating will be disabled): {0}!\n", e.what());
 	}
+
+	app.AddComponent<tsom::GameAppComponent>();
 
 	return app.Run();
 }
