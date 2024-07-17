@@ -60,7 +60,7 @@ namespace tsom
 		m_layout = CreateWidget<Nz::BoxLayout>(Nz::BoxLayoutOrientation::TopToBottom);
 
 		m_playButton = m_layout->Add<Nz::ButtonWidget>();
-		m_playButton->UpdateText(Nz::SimpleTextDrawer::Draw("Play", 36, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
+		m_playButton->UpdateText(Nz::SimpleTextDrawer::Draw("Play", 30, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
 		m_playButton->SetMaximumWidth(m_playButton->GetPreferredWidth() * 1.5f);
 		ConnectSignal(m_playButton->OnButtonTrigger, [this](const Nz::ButtonWidget*)
 		{
@@ -68,7 +68,7 @@ namespace tsom
 		});
 
 		m_quitGameButton = m_layout->Add<Nz::ButtonWidget>();
-		m_quitGameButton->UpdateText(Nz::SimpleTextDrawer::Draw("Quit", 36, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
+		m_quitGameButton->UpdateText(Nz::SimpleTextDrawer::Draw("Quit", 30, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
 		m_quitGameButton->SetMaximumWidth(m_quitGameButton->GetPreferredWidth() * 1.5f);
 		ConnectSignal(m_quitGameButton->OnButtonTrigger, [this](const Nz::ButtonWidget*)
 		{

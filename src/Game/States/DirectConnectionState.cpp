@@ -65,7 +65,7 @@ namespace tsom
 		m_loginArea->SetTextColor(Nz::Color::Black());
 
 		m_connectButton = m_layout->Add<Nz::ButtonWidget>();
-		m_connectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Connect", 36, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
+		m_connectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Connect", 30, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
 		m_connectButton->SetMaximumWidth(m_connectButton->GetPreferredWidth() * 1.5f);
 		ConnectSignal(m_connectButton->OnButtonTrigger, [this](const Nz::ButtonWidget*)
 		{
@@ -73,7 +73,7 @@ namespace tsom
 		});
 
 		Nz::ButtonWidget* backButton = m_layout->Add<Nz::ButtonWidget>();
-		backButton->UpdateText(Nz::SimpleTextDrawer::Draw("Back", 24, Nz::TextStyle_Regular, Nz::Color::Black()));
+		backButton->UpdateText(Nz::SimpleTextDrawer::Draw("Back", 30, Nz::TextStyle_Regular, Nz::Color::Black()));
 		backButton->SetMaximumWidth(backButton->GetPreferredWidth() * 1.5f);
 		ConnectSignal(backButton->OnButtonTrigger, [&](const Nz::ButtonWidget*)
 		{
@@ -102,7 +102,7 @@ namespace tsom
 
 	void DirectConnectionState::LayoutWidgets(const Nz::Vector2f& newSize)
 	{
-		m_layout->Resize({ newSize.x * 0.2f, m_layout->GetPreferredHeight() });
+		m_layout->Resize({ newSize.x * 0.33f, m_layout->GetPreferredHeight() });
 		m_layout->Center();
 	}
 

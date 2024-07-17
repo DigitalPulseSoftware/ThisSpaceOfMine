@@ -48,7 +48,7 @@ namespace tsom
 		nicknameText->SetTextColor(Nz::Color::Black());
 
 		Nz::ButtonWidget* createButton = m_layout->Add<Nz::ButtonWidget>();
-		createButton->UpdateText(Nz::SimpleTextDrawer::Draw("Create player", 24, Nz::TextStyle_Regular, Nz::Color::Black()));
+		createButton->UpdateText(Nz::SimpleTextDrawer::Draw("Create player", 30, Nz::TextStyle_Regular, Nz::Color::Black()));
 		createButton->SetMaximumWidth(createButton->GetPreferredWidth() * 1.5f);
 		ConnectSignal(createButton->OnButtonTrigger, [this, nicknameText](const Nz::ButtonWidget* /*button*/)
 		{
@@ -56,7 +56,7 @@ namespace tsom
 		});
 
 		Nz::ButtonWidget* backButton = m_layout->Add<Nz::ButtonWidget>();
-		backButton->UpdateText(Nz::SimpleTextDrawer::Draw("Back", 24, Nz::TextStyle_Regular, Nz::Color::Black()));
+		backButton->UpdateText(Nz::SimpleTextDrawer::Draw("Back", 30, Nz::TextStyle_Regular, Nz::Color::Black()));
 		backButton->SetMaximumWidth(backButton->GetPreferredWidth() * 1.5f);
 		ConnectSignal(backButton->OnButtonTrigger, [&](const Nz::ButtonWidget* /*button*/)
 		{

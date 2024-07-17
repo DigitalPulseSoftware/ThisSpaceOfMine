@@ -41,7 +41,7 @@ namespace tsom
 		m_layout = CreateWidget<Nz::BoxLayout>(Nz::BoxLayoutOrientation::TopToBottom);
 
 		m_createOrConnectButton = m_layout->Add<Nz::ButtonWidget>();
-		m_createOrConnectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Loading player info...", 36, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
+		m_createOrConnectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Loading player info...", 30, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
 		m_createOrConnectButton->SetMaximumWidth(m_createOrConnectButton->GetPreferredWidth() * 1.5f);
 		ConnectSignal(m_createOrConnectButton->OnButtonTrigger, [this](const Nz::ButtonWidget*)
 		{
@@ -49,7 +49,7 @@ namespace tsom
 		});
 
 		m_directConnect = m_layout->Add<Nz::ButtonWidget>();
-		m_directConnect->UpdateText(Nz::SimpleTextDrawer::Draw("Direct connection", 36, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
+		m_directConnect->UpdateText(Nz::SimpleTextDrawer::Draw("Direct connection", 30, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
 		m_directConnect->SetMaximumWidth(m_directConnect->GetPreferredWidth() * 1.5f);
 		ConnectSignal(m_directConnect->OnButtonTrigger, [this](const Nz::ButtonWidget*)
 		{
@@ -57,7 +57,7 @@ namespace tsom
 		});
 
 		Nz::ButtonWidget* backButton = m_layout->Add<Nz::ButtonWidget>();
-		backButton->UpdateText(Nz::SimpleTextDrawer::Draw("Back", 36, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
+		backButton->UpdateText(Nz::SimpleTextDrawer::Draw("Back", 30, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
 		backButton->SetMaximumWidth(backButton->GetPreferredWidth() * 1.5f);
 		backButton->OnButtonTrigger.Connect([this](const Nz::ButtonWidget*)
 		{
@@ -78,7 +78,7 @@ namespace tsom
 
 		if (!playerToken.empty())
 		{
-			m_createOrConnectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Loading player info...", 36, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
+			m_createOrConnectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Loading player info...", 30, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
 			m_createOrConnectButton->SetMaximumWidth(m_createOrConnectButton->GetPreferredWidth() * 1.5f);
 			m_createOrConnectButton->Disable();
 
@@ -86,11 +86,11 @@ namespace tsom
 		}
 		else
 		{
-			m_createOrConnectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Create new player", 36, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
+			m_createOrConnectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Create new player", 30, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
 			m_createOrConnectButton->SetMaximumWidth(m_createOrConnectButton->GetPreferredWidth() * 1.5f);
 			m_createOrConnectButton->Enable();
 
-			m_directConnect->UpdateText(Nz::SimpleTextDrawer::Draw("Play as guest", 36, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
+			m_directConnect->UpdateText(Nz::SimpleTextDrawer::Draw("Play as guest", 30, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
 			m_directConnect->SetMaximumWidth(m_directConnect->GetPreferredWidth() * 1.5f);
 			m_directConnect->Enable();
 		}
@@ -181,7 +181,7 @@ namespace tsom
 
 	void PlayState::LayoutWidgets(const Nz::Vector2f& newSize)
 	{
-		m_layout->Resize({ newSize.x * 0.2f, m_layout->GetPreferredHeight() });
+		m_layout->Resize({ std::max(newSize.x * 0.2f, m_layout->GetPreferredWidth()), m_layout->GetPreferredHeight()});
 		m_layout->Center();
 	}
 
