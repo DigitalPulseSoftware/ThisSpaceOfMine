@@ -4,6 +4,7 @@
 
 #include <CommonLib/NetworkSessionManager.hpp>
 #include <CommonLib/SessionHandler.hpp>
+#include <NazaraUtils/Hash.hpp>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 #include <cassert>
@@ -18,7 +19,9 @@ namespace tsom
 			assert(!m_sessions[peerIndex].has_value());
 			assert(data == 0);
 
-			fmt::print("Peer connected (outgoing: {}, peerIndex: {}, address: {}, data: {})\n", outgoingConnection, peerIndex, fmt::streamed(remoteAddress), data);
+			std::string addressStr = remoteAddress.ToString(false);
+
+			fmt::print("Peer connected (outgoing: {}, peerIndex: {}, hashed address: {:x}, data: {})\n", outgoingConnection, peerIndex, Nz::FNV1a64(addressStr), data);
 			m_sessions[peerIndex].emplace(m_reactor, peerIndex, remoteAddress);
 			m_sessions[peerIndex]->SetHandler(m_handlerFactory(&m_sessions[peerIndex].value()));
 		};
