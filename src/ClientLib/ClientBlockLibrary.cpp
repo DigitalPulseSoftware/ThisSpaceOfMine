@@ -16,7 +16,7 @@ namespace tsom
 
 		std::size_t sliceCount = m_textureIndices.size() + 1;
 
-		constexpr std::size_t texSize = 128; // TODO: use texture size?
+		constexpr std::size_t texSize = 256; // TODO: use texture size?
 
 		Nz::Image baseColorArray(Nz::ImageType::E2D_Array, Nz::PixelFormat::RGBA8, texSize, texSize, sliceCount);
 		baseColorArray.Fill(Nz::Color::White());

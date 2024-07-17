@@ -169,7 +169,6 @@ fn ComputeLighting(color: vec3[f32], input: VertOut) -> vec3[f32]
 		let tbnMatrix = mat3[f32](T, B, N);
 
 		normal = (MaterialNormalMap.Sample(input.uv).xyz * 2.0 - (1.0).rrr);
-		normal.y *= -1.0;
 		normal = normalize(tbnMatrix * normal);
 	}
 	else
