@@ -72,4 +72,9 @@ namespace tsom
 			m_inputQueue.erase(m_inputQueue.begin());
 		}
 	}
+
+	void ServerPlayer::UpdateNickname(std::string nickname)
+	{
+		m_nickname = std::move(nickname);
+	}
 }

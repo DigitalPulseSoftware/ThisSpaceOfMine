@@ -77,10 +77,10 @@ namespace tsom
 				return;
 			}
 
-			OnChatMessage(chatMessage.message, m_players[*chatMessage.playerIndex]->nickname);
+			OnPlayerChatMessage(chatMessage.message, *m_players[*chatMessage.playerIndex]);
 		}
 		else
-			OnChatMessage(chatMessage.message, {});
+			OnChatMessage(chatMessage.message);
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::ChunkCreate&& chunkCreate)
@@ -161,21 +161,9 @@ namespace tsom
 				m_players.resize(playerData.index + 1);
 
 			auto& playerInfo = m_players[playerData.index].emplace();
-			playerInfo.nickname = std::move(playerData.nickname);
+			playerInfo.nickname = std::move(playerData.nickname).Str();
+			playerInfo.isAuthenticated = playerData.isAuthenticated;
 		}
-	}
-
-	void ClientSessionHandler::HandlePacket(Packets::PlayerLeave&& playerLeave)
-	{
-		if (playerLeave.index >= m_players.size())
-		{
-			fmt::print(fg(fmt::color::red), "PlayerLeave with unknown player index {}\n", playerLeave.index);
-			return;
-		}
-
-		OnPlayerLeave(m_players[playerLeave.index]->nickname);
-
-		m_players[playerLeave.index].reset();
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::PlayerJoin&& playerJoin)
@@ -184,9 +172,39 @@ namespace tsom
 			m_players.resize(playerJoin.index + 1);
 
 		auto& playerInfo = m_players[playerJoin.index].emplace();
-		playerInfo.nickname = std::move(playerJoin.nickname);
+		playerInfo.nickname = std::move(playerJoin.nickname).Str();
+		playerInfo.isAuthenticated = playerJoin.isAuthenticated;
 
-		OnPlayerJoined(playerInfo.nickname);
+		OnPlayerJoined(playerInfo);
+	}
+
+	void ClientSessionHandler::HandlePacket(Packets::PlayerLeave&& playerLeave)
+	{
+		if (playerLeave.index >= m_players.size() || !m_players[playerLeave.index])
+		{
+			fmt::print(fg(fmt::color::red), "PlayerLeave with unknown player index {}\n", playerLeave.index);
+			return;
+		}
+
+		OnPlayerLeave(*m_players[playerLeave.index]);
+
+		m_players[playerLeave.index].reset();
+	}
+
+	void ClientSessionHandler::HandlePacket(Packets::PlayerNameUpdate&& playerNameUpdate)
+	{
+		if (playerNameUpdate.index >= m_players.size() || !m_players[playerNameUpdate.index])
+		{
+			fmt::print(fg(fmt::color::red), "PlayerNameUpdate with unknown player index {}\n", playerNameUpdate.index);
+			return;
+		}
+
+		auto& playerInfo = *m_players[playerNameUpdate.index];
+
+		OnPlayerNameUpdate(playerInfo, playerNameUpdate.newNickname);
+		playerInfo.nickname = std::move(playerNameUpdate.newNickname).Str();
+		if (playerInfo.textSprite)
+			playerInfo.textSprite->Update(Nz::SimpleTextDrawer::Draw(playerInfo.nickname, 48, Nz::TextStyle_Regular, (playerInfo.isAuthenticated) ? Nz::Color::White() : Nz::Color::Gray()), 0.01f);
 	}
 
 	void ClientSessionHandler::SetupEntity(entt::handle entity, Packets::Helper::PlayerControlledData&& entityData)
@@ -306,10 +324,11 @@ namespace tsom
 		// Floating name
 		std::shared_ptr<Nz::TextSprite> textSprite = std::make_shared<Nz::TextSprite>();
 
-		if (const PlayerInfo* playerInfo = FetchPlayerInfo(entityData.controllingPlayerId))
-			textSprite->Update(Nz::SimpleTextDrawer::Draw(playerInfo->nickname, 48), 0.01f);
+		PlayerInfo* playerInfo = FetchPlayerInfo(entityData.controllingPlayerId);
+		if (playerInfo)
+			textSprite->Update(Nz::SimpleTextDrawer::Draw(playerInfo->nickname, 48, Nz::TextStyle_Regular, (playerInfo->isAuthenticated) ? Nz::Color::White() : Nz::Color::Gray()), 0.01f);
 		else
-			textSprite->Update(Nz::SimpleTextDrawer::Draw("<disconnected>", 48), 0.01f);
+			textSprite->Update(Nz::SimpleTextDrawer::Draw("<disconnected>", 48, Nz::TextStyle_Regular, Nz::Color::Gray()), 0.01f);
 
 		entt::handle frontTextEntity = m_world.CreateEntity();
 		{
@@ -328,7 +347,7 @@ namespace tsom
 			textNode.SetPosition({ textSprite->GetAABB().width * 0.5f, 1.5f, 0.f });
 			textNode.SetRotation(Nz::EulerAnglesf(0.f, Nz::TurnAnglef(0.5f), 0.f));
 
-			backTextEntity.emplace<Nz::GraphicsComponent>(std::move(textSprite));
+			backTextEntity.emplace<Nz::GraphicsComponent>(textSprite);
 		}
 
 		entity.get_or_emplace<EntityOwnerComponent>().Register(backTextEntity);
@@ -340,5 +359,8 @@ namespace tsom
 		}
 		else
 			entity.emplace<MovementInterpolationComponent>(m_lastTickIndex);
+
+		if (playerInfo)
+			playerInfo->textSprite = std::move(textSprite);
 	}
 }

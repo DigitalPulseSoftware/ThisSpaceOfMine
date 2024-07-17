@@ -82,17 +82,70 @@ namespace tsom
 		});
 	}
 
-	ServerPlayer* ServerInstance::CreatePlayer(NetworkSession* session, std::string nickname)
+	ServerPlayer* ServerInstance::CreateAnonymousPlayer(NetworkSession* session, std::string nickname)
 	{
+		// Check if a player already has this nickname and rename it if it's the case
+		if (FindPlayerByNickname(nickname) != nullptr)
+		{
+			std::string newNickname;
+			unsigned int counter = 2;
+			do
+			{
+				newNickname = fmt::format("{}_{}", nickname, counter++);
+			}
+			while (FindPlayerByNickname(newNickname) != nullptr);
+
+			nickname = std::move(newNickname);
+		}
+
 		std::size_t playerIndex;
 
 		// defer construct so player can be constructed with their index
 		ServerPlayer* player = m_players.Allocate(m_players.DeferConstruct, playerIndex);
-		std::construct_at(player, *this, Nz::SafeCast<PlayerIndex>(playerIndex), session, std::move(nickname));
+		std::construct_at(player, *this, Nz::SafeCast<PlayerIndex>(playerIndex), session, std::nullopt, std::move(nickname));
 
 		m_newPlayers.UnboundedSet(playerIndex);
 
-		// Send all chunks
+		// Send all chunks (waiting for chunk streaming based on visibility)
+		auto& playerVisibility = player->GetVisibilityHandler();
+		m_planet->ForEachChunk([&](const ChunkIndices& chunkIndices, const Chunk& chunk)
+		{
+			playerVisibility.CreateChunk(chunk);
+		});
+
+		return player;
+	}
+
+	ServerPlayer* ServerInstance::CreateAuthenticatedPlayer(NetworkSession* session, const Nz::Uuid& uuid, std::string nickname)
+	{
+		// Disconnect an existing player if it exists with this uuid
+		// TODO: Override the player session with this one
+		if (ServerPlayer* player = FindPlayerByUuid(uuid))
+			player->GetSession()->Disconnect(DisconnectionType::Kick);
+
+		// Check if a player already has this nickname and rename it if it's the case
+		if (ServerPlayer* player = FindPlayerByNickname(nickname))
+		{
+			std::string newNickname;
+			unsigned int counter = 2;
+			do
+			{
+				newNickname = fmt::format("{}_{}", nickname, counter++);
+			} while (FindPlayerByNickname(newNickname) != nullptr);
+
+			player->UpdateNickname(newNickname);
+			m_pendingPlayerRename.push_back({ player->GetPlayerIndex(), std::move(newNickname) });
+		}
+
+		std::size_t playerIndex;
+
+		// defer construct so player can be constructed with their index
+		ServerPlayer* player = m_players.Allocate(m_players.DeferConstruct, playerIndex);
+		std::construct_at(player, *this, Nz::SafeCast<PlayerIndex>(playerIndex), session, uuid, std::move(nickname));
+
+		m_newPlayers.UnboundedSet(playerIndex);
+
+		// Send all chunks (waiting for chunk streaming based on visibility)
 		auto& playerVisibility = player->GetVisibilityHandler();
 		m_planet->ForEachChunk([&](const ChunkIndices& chunkIndices, const Chunk& chunk)
 		{
@@ -240,8 +293,31 @@ namespace tsom
 				if (NetworkSession* session = serverPlayer.GetSession())
 					session->SendPacket(playerLeave);
 			});
+
+			for (auto it = m_pendingPlayerRename.begin(); it != m_pendingPlayerRename.end();)
+			{
+				if (it->playerIndex == playerLeave.index)
+					it = m_pendingPlayerRename.erase(it);
+				else
+					++it;
+			}
 		}
 		m_disconnectedPlayers.Clear();
+
+		// Handle renaming
+		for (auto&& [playerIndex, newNickname] : m_pendingPlayerRename)
+		{
+			Packets::PlayerNameUpdate playerNameUpdate;
+			playerNameUpdate.index = Nz::SafeCast<PlayerIndex>(playerIndex);
+			playerNameUpdate.newNickname = std::move(newNickname);
+
+			ForEachPlayer([&](ServerPlayer& serverPlayer)
+			{
+				if (NetworkSession* session = serverPlayer.GetSession())
+					session->SendPacket(playerNameUpdate);
+			});
+		}
+		m_pendingPlayerRename.clear();
 
 		// Handle newly connected players
 		for (std::size_t playerIndex = m_newPlayers.FindFirst(); playerIndex != m_newPlayers.npos; playerIndex = m_newPlayers.FindNext(playerIndex))
@@ -252,6 +328,7 @@ namespace tsom
 			Packets::PlayerJoin playerJoined;
 			playerJoined.index = Nz::SafeCast<PlayerIndex>(playerIndex);
 			playerJoined.nickname = player->GetNickname();
+			playerJoined.isAuthenticated = player->IsAuthenticated();
 
 			ForEachPlayer([&](ServerPlayer& serverPlayer)
 			{
@@ -274,6 +351,7 @@ namespace tsom
 					auto& playerData = gameData.players.emplace_back();
 					playerData.index = Nz::SafeCast<PlayerIndex>(serverPlayer.GetPlayerIndex());
 					playerData.nickname = serverPlayer.GetNickname();
+					playerData.isAuthenticated = serverPlayer.IsAuthenticated();
 				});
 
 				session->SendPacket(gameData);

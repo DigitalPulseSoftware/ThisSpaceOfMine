@@ -65,8 +65,10 @@ namespace tsom
 			NazaraSlot(ClientSessionHandler, OnChunkUpdate, m_onChunkUpdate);
 			NazaraSlot(ClientSessionHandler, OnControlledEntityChanged, m_onControlledEntityChanged);
 			NazaraSlot(ClientSessionHandler, OnControlledEntityStateUpdate, m_onControlledEntityStateUpdate);
-			NazaraSlot(ClientSessionHandler, OnPlayerLeave, m_onPlayerLeave);
+			NazaraSlot(ClientSessionHandler, OnPlayerChatMessage, m_onPlayerChatMessage);
 			NazaraSlot(ClientSessionHandler, OnPlayerJoined, m_onPlayerJoined);
+			NazaraSlot(ClientSessionHandler, OnPlayerLeave, m_onPlayerLeave);
+			NazaraSlot(ClientSessionHandler, OnPlayerNameUpdate, m_onPlayerNameUpdate);
 			NazaraSlot(Nz::Canvas, OnUnhandledKeyPressed, m_onUnhandledKeyPressed);
 			NazaraSlot(Nz::Canvas, OnUnhandledKeyReleased, m_onUnhandledKeyReleased);
 			NazaraSlot(Nz::Canvas, OnUnhandledMouseButtonPressed, m_mouseButtonReleasedSlot);

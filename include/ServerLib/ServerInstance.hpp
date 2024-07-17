@@ -43,8 +43,14 @@ namespace tsom
 
 			void BroadcastChatMessage(std::string message, std::optional<PlayerIndex> senderIndex);
 
-			ServerPlayer* CreatePlayer(NetworkSession* session, std::string nickname);
+			ServerPlayer* CreateAnonymousPlayer(NetworkSession* session, std::string nickname);
+			ServerPlayer* CreateAuthenticatedPlayer(NetworkSession* session, const Nz::Uuid& uuid, std::string nickname);
 			void DestroyPlayer(PlayerIndex playerIndex);
+
+			inline ServerPlayer* FindPlayerByNickname(std::string_view nickname);
+			inline const ServerPlayer* FindPlayerByNickname(std::string_view nickname) const;
+			inline ServerPlayer* FindPlayerByUuid(const Nz::Uuid& uuid);
+			inline const ServerPlayer* FindPlayerByUuid(const Nz::Uuid& uuid) const;
 
 			template<typename F> void ForEachPlayer(F&& functor);
 			template<typename F> void ForEachPlayer(F&& functor) const;
@@ -77,12 +83,19 @@ namespace tsom
 			void OnTick(Nz::Time elapsedTime);
 			void OnSave();
 
+			struct PlayerRename
+			{
+				PlayerIndex playerIndex;
+				std::string newNickname;
+			};
+
 			std::array<std::uint8_t, 32> m_connectionTokenEncryptionKey;
 			std::filesystem::path m_saveDirectory;
 			std::unique_ptr<Planet> m_planet;
 			std::unique_ptr<ChunkEntities> m_planetEntities;
 			std::unordered_set<ChunkIndices /*chunkIndex*/> m_dirtyChunks;
 			std::vector<std::unique_ptr<NetworkSessionManager>> m_sessionManagers;
+			std::vector<PlayerRename> m_pendingPlayerRename;
 			Nz::Bitset<> m_disconnectedPlayers;
 			Nz::Bitset<> m_newPlayers;
 			Nz::EnttWorld m_world;

@@ -10,6 +10,50 @@ namespace tsom
 		return *m_sessionManagers.emplace_back(std::make_unique<NetworkSessionManager>(std::forward<Args>(args)...));
 	}
 
+	inline ServerPlayer* ServerInstance::FindPlayerByNickname(std::string_view nickname)
+	{
+		for (ServerPlayer& serverPlayer : m_players)
+		{
+			if (serverPlayer.GetNickname() == nickname)
+				return &serverPlayer;
+		}
+
+		return nullptr;
+	}
+
+	inline const ServerPlayer* ServerInstance::FindPlayerByNickname(std::string_view nickname) const
+	{
+		for (const ServerPlayer& serverPlayer : m_players)
+		{
+			if (serverPlayer.GetNickname() == nickname)
+				return &serverPlayer;
+		}
+
+		return nullptr;
+	}
+
+	inline ServerPlayer* ServerInstance::FindPlayerByUuid(const Nz::Uuid& uuid)
+	{
+		for (ServerPlayer& serverPlayer : m_players)
+		{
+			if (serverPlayer.GetUuid() == uuid)
+				return &serverPlayer;
+		}
+
+		return nullptr;
+	}
+
+	inline const ServerPlayer* ServerInstance::FindPlayerByUuid(const Nz::Uuid& uuid) const
+	{
+		for (const ServerPlayer& serverPlayer : m_players)
+		{
+			if (serverPlayer.GetUuid() == uuid)
+				return &serverPlayer;
+		}
+
+		return nullptr;
+	}
+
 	template<typename F> void ServerInstance::ForEachPlayer(F&& functor)
 	{
 		for (ServerPlayer& serverPlayer : m_players)

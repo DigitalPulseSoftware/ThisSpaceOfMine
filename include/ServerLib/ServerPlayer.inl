@@ -4,7 +4,8 @@
 
 namespace tsom
 {
-	inline ServerPlayer::ServerPlayer(ServerInstance& instance, PlayerIndex playerIndex, NetworkSession* session, std::string nickname) :
+	inline ServerPlayer::ServerPlayer(ServerInstance& instance, PlayerIndex playerIndex, NetworkSession* session, const std::optional<Nz::Uuid>& uuid, std::string nickname) :
+	m_uuid(uuid),
 	m_playerIndex(playerIndex),
 	m_nickname(std::move(nickname)),
 	m_session(session),
@@ -61,5 +62,15 @@ namespace tsom
 	inline const SessionVisibilityHandler& ServerPlayer::GetVisibilityHandler() const
 	{
 		return m_visibilityHandler;
+	}
+
+	inline const std::optional<Nz::Uuid>& ServerPlayer::GetUuid() const
+	{
+		return m_uuid;
+	}
+
+	inline bool ServerPlayer::IsAuthenticated() const
+	{
+		return m_uuid.has_value();
 	}
 }

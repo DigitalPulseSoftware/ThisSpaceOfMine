@@ -40,7 +40,8 @@ namespace tsom
 
 			GetSession()->Disconnect(DisconnectionType::Later);
 		};
-	
+
+		std::optional<Nz::Uuid> uuid;
 		std::string login;
 		bool success = std::visit(Nz::Overloaded
 		{
@@ -64,6 +65,7 @@ namespace tsom
 					return false;
 				}
 
+				uuid = tokenPrivate.player.uuid;
 				login = std::move(tokenPrivate.player.nickname);
 				fmt::print("{0} authenticated\n", login);
 				return true;
@@ -95,9 +97,11 @@ namespace tsom
 
 		GetSession()->SetProtocolVersion(authRequest.gameVersion);
 
-		fmt::print("{0} authenticated\n", login);
-
-		ServerPlayer* player = m_instance.CreatePlayer(GetSession(), std::move(login));
+		ServerPlayer* player;
+		if (uuid.has_value())
+			player = m_instance.CreateAuthenticatedPlayer(GetSession(), *uuid, std::move(login));
+		else
+			player = m_instance.CreateAnonymousPlayer(GetSession(), std::move(login));
 
 		Packets::AuthResponse response;
 		response.authResult = Nz::Ok();

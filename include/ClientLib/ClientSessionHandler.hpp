@@ -10,7 +10,6 @@
 #include <ClientLib/Export.hpp>
 #include <CommonLib/SessionHandler.hpp>
 #include <CommonLib/Protocol/Packets.hpp>
-#include <Nazara/Core/Skeleton.hpp>
 #include <NazaraUtils/Signal.hpp>
 #include <entt/entt.hpp>
 #include <tsl/hopscotch_map.h>
@@ -21,6 +20,7 @@ namespace Nz
 	class ApplicationBase;
 	class EnttWorld;
 	class Model;
+	class TextSprite;
 }
 
 namespace tsom
@@ -30,6 +30,8 @@ namespace tsom
 	class TSOM_CLIENTLIB_API ClientSessionHandler : public SessionHandler
 	{
 		public:
+			struct PlayerInfo;
+
 			ClientSessionHandler(NetworkSession* session, Nz::ApplicationBase& app, Nz::EnttWorld& world);
 			~ClientSessionHandler();
 
@@ -45,32 +47,36 @@ namespace tsom
 			void HandlePacket(Packets::EntitiesDelete&& entitiesDelete);
 			void HandlePacket(Packets::EntitiesStateUpdate&& stateUpdate);
 			void HandlePacket(Packets::GameData&& gameData);
-			void HandlePacket(Packets::PlayerLeave&& playerLeave);
 			void HandlePacket(Packets::PlayerJoin&& playerJoin);
+			void HandlePacket(Packets::PlayerLeave&& playerLeave);
+			void HandlePacket(Packets::PlayerNameUpdate&& playerNameUpdate);
 
 			NazaraSignal(OnAuthResponse, const Packets::AuthResponse& /*authResponse*/);
-			NazaraSignal(OnChatMessage, const std::string& /*message*/, const std::string& /*senderNickname*/);
+			NazaraSignal(OnChatMessage, const std::string& /*message*/);
 			NazaraSignal(OnChunkCreate, const Packets::ChunkCreate& /*chunkCreate*/);
 			NazaraSignal(OnChunkDestroy, const Packets::ChunkDestroy& /*chunkDestroy*/);
 			NazaraSignal(OnChunkReset, const Packets::ChunkReset& /*chunkReset*/);
 			NazaraSignal(OnChunkUpdate, const Packets::ChunkUpdate& /*chunkUpdate*/);
 			NazaraSignal(OnControlledEntityChanged, entt::handle /*newEntity*/);
 			NazaraSignal(OnControlledEntityStateUpdate, InputIndex /*lastInputIndex*/, const Packets::EntitiesStateUpdate::ControlledCharacter& /*characterData*/);
-			NazaraSignal(OnPlayerLeave, const std::string& /*playerName*/);
-			NazaraSignal(OnPlayerJoined, const std::string& /*playerName*/);
+			NazaraSignal(OnPlayerChatMessage, const std::string& /*message*/, const PlayerInfo& /*playerInfo*/);
+			NazaraSignal(OnPlayerJoined, const PlayerInfo& /*playerInfo*/);
+			NazaraSignal(OnPlayerLeave, const PlayerInfo& /*playerInfo*/);
+			NazaraSignal(OnPlayerNameUpdate, const PlayerInfo& /*playerInfo*/, const std::string& /*newNickname*/);
 
 			static constexpr Nz::UInt32 InvalidEntity = 0xFFFFFFFF;
-
-		private:
-			struct PlayerInfo;
-
-			inline const PlayerInfo* FetchPlayerInfo(PlayerIndex playerIndex) const;
-			void SetupEntity(entt::handle entity, Packets::Helper::PlayerControlledData&& entityData);
 
 			struct PlayerInfo
 			{
 				std::string nickname;
+				bool isAuthenticated;
+				std::shared_ptr<Nz::TextSprite> textSprite;
 			};
+
+		private:
+			inline PlayerInfo* FetchPlayerInfo(PlayerIndex playerIndex);
+			inline const PlayerInfo* FetchPlayerInfo(PlayerIndex playerIndex) const;
+			void SetupEntity(entt::handle entity, Packets::Helper::PlayerControlledData&& entityData);
 
 			struct PlayerModel
 			{

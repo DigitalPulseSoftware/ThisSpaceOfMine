@@ -387,56 +387,74 @@ namespace tsom
 			}
 		});
 
-		m_onChatMessage.Connect(stateData.sessionHandler->OnChatMessage, [this](const std::string& message, const std::string& senderName)
-		{
-			if (!senderName.empty())
-			{
-				m_chatBox->PrintMessage({
-					{
-						{ Chatbox::ColorItem{ Nz::Color::Yellow() } },
-						{ Chatbox::TextItem{ senderName } },
-						{ Chatbox::TextItem{ ": " }},
-						{ Chatbox::ColorItem{ Nz::Color::White() } },
-						{ Chatbox::TextItem{ message } }
-					}
-				});
-
-				fmt::print("{0}: {1}\n", senderName, message);
-			}
-			else
-			{
-				m_chatBox->PrintMessage({
-					{
-						{ Chatbox::TextItem{ message } }
-					}
-				});
-
-				fmt::print("{0}\n", message);
-			}
-		});
-
-		m_onPlayerLeave.Connect(stateData.sessionHandler->OnPlayerLeave, [this](const std::string& playerName)
+		m_onChatMessage.Connect(stateData.sessionHandler->OnChatMessage, [this](const std::string& message)
 		{
 			m_chatBox->PrintMessage({
 				{
-					{ Chatbox::TextItem{ playerName } },
+					{ Chatbox::TextItem{ message } }
+				}
+			});
+
+			fmt::print("{0}\n", message);
+		});
+
+		m_onPlayerChatMessage.Connect(stateData.sessionHandler->OnPlayerChatMessage, [this](const std::string& message, const ClientSessionHandler::PlayerInfo& playerInfo)
+		{
+			m_chatBox->PrintMessage({
+				{
+					{ Chatbox::ColorItem{ (playerInfo.isAuthenticated) ? Nz::Color::Yellow() : Nz::Color::Gray() }},
+					{ Chatbox::TextItem{ playerInfo.nickname } },
+					{ Chatbox::TextItem{ ": " }},
+					{ Chatbox::ColorItem{ Nz::Color::White() } },
+					{ Chatbox::TextItem{ message } }
+				}
+				});
+
+			fmt::print("{0}: {1}\n", playerInfo.nickname, message);
+		});
+
+		m_onPlayerJoined.Connect(stateData.sessionHandler->OnPlayerJoined, [this](const ClientSessionHandler::PlayerInfo& playerInfo)
+		{
+			m_chatBox->PrintMessage({
+				{
+					{ Chatbox::ColorItem{ (playerInfo.isAuthenticated) ? Nz::Color::Yellow() : Nz::Color::Gray() }},
+					{ Chatbox::TextItem{ playerInfo.nickname } },
+					{ Chatbox::ColorItem{ Nz::Color::White() } },
+					{ Chatbox::TextItem{ " joined the server" } }
+				}
+				});
+
+			fmt::print("{0} joined the server\n", playerInfo.nickname);
+		});
+
+		m_onPlayerLeave.Connect(stateData.sessionHandler->OnPlayerLeave, [this](const ClientSessionHandler::PlayerInfo& playerInfo)
+		{
+			m_chatBox->PrintMessage({
+				{
+					{ Chatbox::ColorItem{ (playerInfo.isAuthenticated) ? Nz::Color::Yellow() : Nz::Color::Gray() }},
+					{ Chatbox::TextItem{ playerInfo.nickname } },
+					{ Chatbox::ColorItem{ Nz::Color::White() } },
 					{ Chatbox::TextItem{ " left the server" } }
 				}
 			});
 
-			fmt::print("{0} left the server\n", playerName);
+			fmt::print("{0} left the server\n", playerInfo.nickname);
 		});
 
-		m_onPlayerJoined.Connect(stateData.sessionHandler->OnPlayerJoined, [this](const std::string& playerName)
+		m_onPlayerNameUpdate.Connect(stateData.sessionHandler->OnPlayerNameUpdate, [this](const ClientSessionHandler::PlayerInfo& playerInfo, const std::string& newNickname)
 		{
 			m_chatBox->PrintMessage({
 				{
-					{ Chatbox::TextItem{ playerName } },
-					{ Chatbox::TextItem{ " joined the server" } }
+					{ Chatbox::ColorItem{ (playerInfo.isAuthenticated) ? Nz::Color::Yellow() : Nz::Color::Gray() }},
+					{ Chatbox::TextItem{ playerInfo.nickname } },
+					{ Chatbox::ColorItem{ Nz::Color::White() } },
+					{ Chatbox::TextItem{ " changed their nickname to " } },
+					{ Chatbox::ColorItem{ (playerInfo.isAuthenticated) ? Nz::Color::Yellow() : Nz::Color::Gray() } },
+					{ Chatbox::TextItem{ newNickname } }
 				}
 			});
 
-			fmt::print("{0} joined the server\n", playerName);
+			fmt::print("{0} renamed to {1}\n", playerInfo.nickname, newNickname);
 		});
 
 		m_escapeMenu->OnDisconnect.Connect([this](EscapeMenu* /*menu*/)

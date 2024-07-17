@@ -194,7 +194,8 @@ namespace tsom
 			struct PlayerData
 			{
 				PlayerIndex index;
-				SecuredString<Constants::PlayerMaxNicknameLength> nickname;
+				SecuredString<Constants::PlayerMaxNicknameLength * 2> nickname;
+				bool isAuthenticated;
 			};
 
 			std::vector<PlayerData> players;
@@ -220,15 +221,22 @@ namespace tsom
 			Nz::UInt8 newContent;
 		};
 
-		struct PlayerJoin
-		{
-			PlayerIndex index;
-			SecuredString<Constants::PlayerMaxNicknameLength> nickname;
-		};
-
 		struct PlayerLeave
 		{
 			PlayerIndex index;
+		};
+
+		struct PlayerJoin
+		{
+			PlayerIndex index;
+			SecuredString<Constants::PlayerMaxNicknameLength * 2> nickname;
+			bool isAuthenticated;
+		};
+
+		struct PlayerNameUpdate
+		{
+			PlayerIndex index;
+			SecuredString<Constants::PlayerMaxNicknameLength * 2> newNickname;
 		};
 
 		struct SendChatMessage
@@ -255,8 +263,9 @@ namespace tsom
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, MineBlock& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, NetworkStrings& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, PlaceBlock& data);
-		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, PlayerJoin& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, PlayerLeave& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, PlayerJoin& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, PlayerNameUpdate& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, SendChatMessage& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, UpdatePlayerInputs& data);
 	}

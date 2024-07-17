@@ -12,6 +12,7 @@
 #include <ServerLib/SessionVisibilityHandler.hpp>
 #include <Nazara/Core/HandledObject.hpp>
 #include <Nazara/Core/ObjectHandle.hpp>
+#include <Nazara/Core/Uuid.hpp>
 #include <entt/entt.hpp>
 #include <string>
 #include <vector>
@@ -28,7 +29,7 @@ namespace tsom
 	class TSOM_SERVERLIB_API ServerPlayer : public Nz::HandledObject<ServerPlayer>
 	{
 		public:
-			inline ServerPlayer(ServerInstance& instance, PlayerIndex playerIndex, NetworkSession* session, std::string nickname);
+			inline ServerPlayer(ServerInstance& instance, PlayerIndex playerIndex, NetworkSession* session, const std::optional<Nz::Uuid>& uuid, std::string nickname);
 			ServerPlayer(const ServerPlayer&) = delete;
 			ServerPlayer(ServerPlayer&&) = delete;
 			~ServerPlayer() = default;
@@ -45,6 +46,9 @@ namespace tsom
 			inline const NetworkSession* GetSession() const;
 			inline SessionVisibilityHandler& GetVisibilityHandler();
 			inline const SessionVisibilityHandler& GetVisibilityHandler() const;
+			inline const std::optional<Nz::Uuid>& GetUuid() const;
+
+			inline bool IsAuthenticated() const;
 
 			void PushInputs(const PlayerInputs& inputs);
 
@@ -52,10 +56,13 @@ namespace tsom
 
 			void Tick();
 
+			void UpdateNickname(std::string nickname);
+
 			ServerPlayer& operator=(const ServerPlayer&) = delete;
 			ServerPlayer& operator=(ServerPlayer&&) = delete;
 
 		private:
+			std::optional<Nz::Uuid> m_uuid;
 			std::shared_ptr<CharacterController> m_controller;
 			std::string m_nickname;
 			std::vector<PlayerInputs> m_inputQueue;

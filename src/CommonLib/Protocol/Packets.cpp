@@ -246,6 +246,7 @@ namespace tsom
 			{
 				serializer &= player.index;
 				serializer &= player.nickname;
+				serializer &= player.isAuthenticated;
 			}
 		}
 
@@ -271,15 +272,22 @@ namespace tsom
 			serializer &= data.newContent;
 		}
 
+		void Serialize(PacketSerializer& serializer, PlayerLeave& data)
+		{
+			serializer &= data.index;
+		}
+
 		void Serialize(PacketSerializer& serializer, PlayerJoin& data)
 		{
 			serializer &= data.index;
 			serializer &= data.nickname;
+			serializer &= data.isAuthenticated;
 		}
 
-		void Serialize(PacketSerializer& serializer, PlayerLeave& data)
+		void Serialize(PacketSerializer& serializer, PlayerNameUpdate& data)
 		{
 			serializer &= data.index;
+			serializer &= data.newNickname;
 		}
 
 		void Serialize(PacketSerializer& serializer, SendChatMessage& data)
