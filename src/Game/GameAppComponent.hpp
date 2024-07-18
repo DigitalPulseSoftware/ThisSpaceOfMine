@@ -33,6 +33,8 @@ namespace tsom
 			GameAppComponent(GameAppComponent&&) = delete;
 			~GameAppComponent() = default;
 
+			void Start();
+
 			void Update(Nz::Time elapsedTime) override;
 
 			GameAppComponent& operator=(const GameAppComponent&) = delete;

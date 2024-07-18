@@ -41,6 +41,9 @@ int GameMain(int argc, char* argv[])
 	// Game setup
 	auto& gameConfig = app.AddComponent<tsom::GameConfigAppComponent>();
 
+	// Create GameAppComponent before WebService for destruction order
+	auto& game = app.AddComponent<tsom::GameAppComponent>();
+
 	try
 	{
 		app.AddComponent<Nz::WebServiceAppComponent>();
@@ -51,7 +54,7 @@ int GameMain(int argc, char* argv[])
 		fmt::print(fg(fmt::color::red), "failed to enable web services (automatic updating will be disabled): {0}!\n", e.what());
 	}
 
-	app.AddComponent<tsom::GameAppComponent>();
+	game.Start();
 
 	return app.Run();
 }

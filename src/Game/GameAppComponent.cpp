@@ -38,6 +38,10 @@ namespace tsom
 	GameAppComponent::GameAppComponent(Nz::ApplicationBase& app) :
 	ApplicationComponent(app)
 	{
+	}
+
+	void GameAppComponent::Start()
+	{
 		if (CheckAssets())
 		{
 			auto& window = SetupWindow();
