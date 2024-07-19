@@ -120,14 +120,14 @@ namespace tsom
 
 		Nz::Boxf box(fX, fZ, fY, m_blockSize, m_blockSize, m_blockSize);
 		Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> corners {
-			box.GetCorner(Nz::BoxCorner::FarLeftBottom),
-			box.GetCorner(Nz::BoxCorner::FarLeftTop),
-			box.GetCorner(Nz::BoxCorner::FarRightBottom),
-			box.GetCorner(Nz::BoxCorner::FarRightTop),
-			box.GetCorner(Nz::BoxCorner::NearLeftBottom),
-			box.GetCorner(Nz::BoxCorner::NearLeftTop),
-			box.GetCorner(Nz::BoxCorner::NearRightBottom),
-			box.GetCorner(Nz::BoxCorner::NearRightTop)
+			box.GetCorner(Nz::BoxCorner::LeftBottomFar),
+			box.GetCorner(Nz::BoxCorner::LeftTopFar),
+			box.GetCorner(Nz::BoxCorner::RightBottomFar),
+			box.GetCorner(Nz::BoxCorner::RightTopFar),
+			box.GetCorner(Nz::BoxCorner::LeftBottomNear),
+			box.GetCorner(Nz::BoxCorner::LeftTopNear),
+			box.GetCorner(Nz::BoxCorner::RightBottomNear),
+			box.GetCorner(Nz::BoxCorner::RightTopNear)
 		};
 
 		for (auto& position : corners)
