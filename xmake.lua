@@ -42,7 +42,7 @@ add_rules("dbgdll", "natvis")
 --set_policy("package.requires_lock", true)
 
 set_project("ThisSpaceOfMine")
-set_version("0.4.0")
+set_version("0.4.1")
 
 set_encodings("utf-8")
 set_exceptions("cxx")
