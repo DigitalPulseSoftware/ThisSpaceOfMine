@@ -122,19 +122,21 @@ namespace tsom
 		// TODO: Override the player session with this one
 		if (ServerPlayer* player = FindPlayerByUuid(uuid))
 			player->GetSession()->Disconnect(DisconnectionType::Kick);
-
-		// Check if a player already has this nickname and rename it if it's the case
-		if (ServerPlayer* player = FindPlayerByNickname(nickname))
+		else
 		{
-			std::string newNickname;
-			unsigned int counter = 2;
-			do
+			// Check if a player already has this nickname and rename it if it's the case
+			if (ServerPlayer* player = FindPlayerByNickname(nickname))
 			{
-				newNickname = fmt::format("{}_{}", nickname, counter++);
-			} while (FindPlayerByNickname(newNickname) != nullptr);
+				std::string newNickname;
+				unsigned int counter = 2;
+				do
+				{
+					newNickname = fmt::format("{}_{}", nickname, counter++);
+				} while (FindPlayerByNickname(newNickname) != nullptr);
 
-			player->UpdateNickname(newNickname);
-			m_pendingPlayerRename.push_back({ player->GetPlayerIndex(), std::move(newNickname) });
+				player->UpdateNickname(newNickname);
+				m_pendingPlayerRename.push_back({ player->GetPlayerIndex(), std::move(newNickname) });
+			}
 		}
 
 		std::size_t playerIndex;
