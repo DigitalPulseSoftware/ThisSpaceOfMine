@@ -8,19 +8,16 @@
 namespace tsom
 {
 	inline Chunk::Chunk(ChunkContainer& owner, const ChunkIndices& indices, const Nz::Vector3ui& size, float cellSize) :
-	m_blocks(size.x * size.y * size.z, EmptyBlockIndex),
-	m_collisionCellMask(m_blocks.size(), false),
 	m_indices(indices),
 	m_size(size),
 	m_owner(owner),
 	m_blockSize(cellSize)
 	{
-		m_blockTypeCount.resize(EmptyBlockIndex + 1);
-		m_blockTypeCount[EmptyBlockIndex] = m_blocks.size();
 	}
 
 	inline const Nz::Bitset<Nz::UInt64>& Chunk::GetCollisionCellMask() const
 	{
+		NazaraAssert(!m_blocks.empty(), "chunk has not been reset");
 		return m_collisionCellMask;
 	}
 
@@ -45,6 +42,7 @@ namespace tsom
 
 	inline BlockIndex Chunk::GetBlockContent(unsigned int blockIndex) const
 	{
+		NazaraAssert(!m_blocks.empty(), "chunk has not been reset");
 		return m_blocks[blockIndex];
 	}
 
@@ -55,6 +53,7 @@ namespace tsom
 
 	inline std::size_t Chunk::GetBlockCount() const
 	{
+		NazaraAssert(!m_blocks.empty(), "chunk has not been reset");
 		return m_blocks.size();
 	}
 
@@ -75,6 +74,7 @@ namespace tsom
 
 	inline const BlockIndex* Chunk::GetContent() const
 	{
+		NazaraAssert(!m_blocks.empty(), "chunk has not been reset");
 		return m_blocks.data();
 	}
 
@@ -169,9 +169,23 @@ namespace tsom
 		return m_size;
 	}
 
+	inline bool Chunk::HasContent() const
+	{
+		return !m_blocks.empty();
+	}
+
 	template<typename F>
 	void Chunk::Reset(F&& func)
 	{
+		// Chunks don't have any block until they are reset
+		if (!HasContent())
+		{
+			m_blocks.resize(m_size.x * m_size.y * m_size.z, EmptyBlockIndex);
+			m_collisionCellMask.Resize(m_blocks.size(), false),
+			m_blockTypeCount.resize(EmptyBlockIndex + 1);
+			m_blockTypeCount[EmptyBlockIndex] = m_blocks.size();
+		}
+
 		func(m_blocks.data());
 		OnChunkReset();
 	}
@@ -188,6 +202,8 @@ namespace tsom
 
 	inline void Chunk::UpdateBlock(const Nz::Vector3ui& indices, BlockIndex newBlock)
 	{
+		NazaraAssert(!m_blocks.empty(), "chunk has not been reset");
+
 		unsigned int blockIndex = GetBlockLocalIndex(indices);
 		BlockIndex oldContent = m_blocks[blockIndex];
 		m_blocks[blockIndex] = newBlock;

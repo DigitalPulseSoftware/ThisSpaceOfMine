@@ -31,9 +31,6 @@ namespace tsom
 		ChunkData chunkData;
 		chunkData.chunk = std::make_unique<FlatChunk>(*this, indices, Nz::Vector3ui{ ChunkSize }, m_tileSize);
 
-		if (initCallback)
-			chunkData.chunk->Reset(initCallback);
-
 		chunkData.onReset.Connect(chunkData.chunk->OnReset, [this](Chunk* chunk)
 		{
 			OnChunkUpdated(this, chunk);
@@ -47,6 +44,9 @@ namespace tsom
 		auto it = m_chunks.insert_or_assign(indices, std::move(chunkData)).first;
 
 		OnChunkAdded(this, it->second.chunk.get());
+
+		if (initCallback)
+			it->second.chunk->Reset(initCallback);
 
 		return *it->second.chunk;
 	}

@@ -81,7 +81,8 @@ namespace tsom
 		assert(!m_chunkEntities.contains(chunkIndices));
 		m_chunkEntities.insert_or_assign(chunkIndices, chunkEntity);
 
-		HandleChunkUpdate(chunkIndices, chunk);
+		if (chunk->HasContent())
+			HandleChunkUpdate(chunkIndices, chunk);
 	}
 
 	void ChunkEntities::DestroyChunkEntity(const ChunkIndices& chunkIndices)

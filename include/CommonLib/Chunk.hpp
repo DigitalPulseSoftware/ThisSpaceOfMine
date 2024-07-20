@@ -64,8 +64,10 @@ namespace tsom
 			inline const ChunkContainer& GetContainer() const;
 			inline const BlockIndex* GetContent() const;
 			inline const ChunkIndices& GetIndices() const;
-			inline std::optional<BlockIndex> GetNeighborBlock(Nz::Vector3ui indices, const Nz::Vector3i& offsets) const;
+			std::optional<BlockIndex> GetNeighborBlock(Nz::Vector3ui indices, const Nz::Vector3i& offsets) const;
 			inline const Nz::Vector3ui& GetSize() const;
+
+			inline bool HasContent() const;
 
 			inline void LockRead() const;
 			inline void LockWrite();
