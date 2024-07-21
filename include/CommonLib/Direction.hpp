@@ -31,7 +31,7 @@ namespace tsom
 
 	using DirectionMask = Nz::Flags<Direction>;
 
-	constexpr DirectionMask DirectionMask_All = DirectionMask(Nz::MaxValue<DirectionMask::BitField>());
+	constexpr DirectionMask DirectionMask_All = DirectionMask(DirectionMask::ValueMask);
 
 	constexpr Nz::EnumArray<Direction, Nz::Vector3f> s_dirNormals = {
 		Nz::Vector3f::Backward(),
