@@ -9,7 +9,9 @@
 
 #include <Nazara/Core/Color.hpp>
 #include <Nazara/Math/Vector3.hpp>
+#include <NazaraUtils/Constants.hpp>
 #include <NazaraUtils/EnumArray.hpp>
+#include <NazaraUtils/Flags.hpp>
 
 namespace tsom
 {
@@ -24,6 +26,12 @@ namespace tsom
 
 		Max = Up
 	};
+
+	constexpr bool EnableEnumAsNzFlags(Direction) { return true; }
+
+	using DirectionMask = Nz::Flags<Direction>;
+
+	constexpr DirectionMask DirectionMask_All = DirectionMask(Nz::MaxValue<DirectionMask::BitField>());
 
 	constexpr Nz::EnumArray<Direction, Nz::Vector3f> s_dirNormals = {
 		Nz::Vector3f::Backward(),
@@ -61,6 +69,15 @@ namespace tsom
 		DirectionAxis { 2, 1, 0, -1,  1, -1 }, //< Left
 		DirectionAxis { 2, 1, 0, -1, -1,  1 }, //< Right
 		DirectionAxis { 2, 0, 1, -1,  1,  1 }, //< Up
+	};
+
+	constexpr Nz::EnumArray<Direction, Nz::Vector3i> s_dirOffset = {
+		Nz::Vector3i {  0,  0,  1  }, //< Back
+		Nz::Vector3i {  0, -1,  0  }, //< Down
+		Nz::Vector3i {  0,  0,  -1 }, //< Front
+		Nz::Vector3i { -1,  0,  0  }, //< Left
+		Nz::Vector3i {  1,  0,  0  }, //< Right
+		Nz::Vector3i {  0,  1,  0  }, //< Up
 	};
 
 	constexpr Direction DirectionFromNormal(const Nz::Vector3f& outsideNormal);

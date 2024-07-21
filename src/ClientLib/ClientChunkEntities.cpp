@@ -174,10 +174,10 @@ namespace tsom
 		return chunkMesh;
 	}
 
-	void ClientChunkEntities::HandleChunkUpdate(const ChunkIndices& chunkIndices, const Chunk* chunk)
+	auto ClientChunkEntities::ProcessChunkUpdate(const Chunk* chunk, DirectionMask neighborMask) -> ColliderModelUpdateJob*
 	{
 		// Try to cancel current update job to void useless work
-		if (auto it = m_updateJobs.find(chunkIndices); it != m_updateJobs.end())
+		if (auto it = m_updateJobs.find(chunk->GetIndices()); it != m_updateJobs.end())
 		{
 			UpdateJob& job = *it->second;
 			job.cancelled = true;
@@ -222,7 +222,7 @@ namespace tsom
 			updateJob->collider = chunk->BuildCollider(m_blockLibrary);
 			chunk->UnlockRead();
 
-			updateJob->executionCounter++;
+			updateJob->jobDone++;
 		});
 
 		taskScheduler.AddTask([this, chunk, updateJob]
@@ -234,10 +234,28 @@ namespace tsom
 			updateJob->mesh = BuildMesh(chunk);
 			chunk->UnlockRead();
 
-			updateJob->executionCounter++;
+			updateJob->jobDone++;
 		});
 
-		m_updateJobs.insert_or_assign(chunkIndices, std::move(updateJob));
+		// Add neighbor chunks
+		for (Direction neighborDir : neighborMask)
+		{
+			ChunkIndices neighborIndices = chunk->GetIndices() + s_dirOffset[neighborDir];
+			const Chunk* neighborChunk = m_chunkContainer.GetChunk(neighborIndices);
+			if (!neighborChunk)
+				continue;
+
+			updateJob->chunkDependencies.push_back(neighborIndices);
+
+			// Trigger our neighbor update
+			if (!m_updateJobs.contains(neighborIndices))
+				ProcessChunkUpdate(neighborChunk, 0);
+		}
+
+		ColliderModelUpdateJob* jobPtr = updateJob.get();
+		m_updateJobs.insert_or_assign(chunk->GetIndices(), std::move(updateJob));
+
+		return jobPtr;
 	}
 
 	void ClientChunkEntities::UpdateChunkDebugCollider(const ChunkIndices& chunkIndices)

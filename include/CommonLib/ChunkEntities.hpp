@@ -7,6 +7,7 @@
 #ifndef TSOM_COMMONLIB_CHUNKENTITIES_HPP
 #define TSOM_COMMONLIB_CHUNKENTITIES_HPP
 
+#include <NazaraUtils/FixedVector.hpp>
 #include <CommonLib/ChunkContainer.hpp>
 #include <entt/entt.hpp>
 #include <tsl/hopscotch_map.h>
@@ -39,20 +40,28 @@ namespace tsom
 
 		protected:
 			struct NoInit {};
+			struct UpdateJob;
+
 			ChunkEntities(Nz::ApplicationBase& app, Nz::EnttWorld& world, const ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary, NoInit);
 
 			void CreateChunkEntity(const ChunkIndices& chunkIndices, const Chunk* chunk);
 			void DestroyChunkEntity(const ChunkIndices& chunkIndices);
 			void FillChunks();
-			virtual void HandleChunkUpdate(const ChunkIndices& chunkIndices, const Chunk* chunk);
-			void UpdateChunkEntity(const ChunkIndices& chunkIndices);
+			virtual UpdateJob* ProcessChunkUpdate(const Chunk* chunk, DirectionMask neighborMask);
+			inline void UpdateChunkEntity(const ChunkIndices& chunkIndices, DirectionMask neighborMask);
 
 			struct UpdateJob
 			{
 				std::function<void(const ChunkIndices& chunkIndices, UpdateJob&& job)> applyFunc;
 				std::atomic_bool cancelled = false;
-				std::atomic_uint executionCounter = 0;
+				std::atomic_uint jobDone = 0;
+				Nz::FixedVector<ChunkIndices, 3 * 3 * 3> chunkDependencies; //< 27 to be able to have all neighbor
 				unsigned int taskCount;
+
+				inline bool HasFinished() const
+				{
+					return jobDone == taskCount;
+				}
 			};
 
 			struct ColliderUpdateJob : UpdateJob
@@ -64,9 +73,10 @@ namespace tsom
 			NazaraSlot(ChunkContainer, OnChunkRemove, m_onChunkRemove);
 			NazaraSlot(ChunkContainer, OnChunkUpdated, m_onChunkUpdated);
 
-			tsl::hopscotch_set<ChunkIndices> m_invalidatedChunks;
+			tsl::hopscotch_map<ChunkIndices, DirectionMask> m_invalidatedChunks;
 			tsl::hopscotch_map<ChunkIndices, std::shared_ptr<UpdateJob>> m_updateJobs;
 			tsl::hopscotch_map<ChunkIndices, entt::handle> m_chunkEntities;
+			std::vector<ChunkIndices> m_finishedJobs;
 			Nz::ApplicationBase& m_application;
 			Nz::EnttWorld& m_world;
 			const BlockLibrary& m_blockLibrary;

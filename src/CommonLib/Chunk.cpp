@@ -4,9 +4,11 @@
 
 #include <CommonLib/Chunk.hpp>
 #include <CommonLib/BlockLibrary.hpp>
+#include <CommonLib/ChunkContainer.hpp>
 #include <CommonLib/InternalConstants.hpp>
 #include <Nazara/Core/ByteStream.hpp>
 #include <Nazara/Core/VertexStruct.hpp>
+#include <NazaraUtils/CallOnExit.hpp>
 #include <NazaraUtils/EnumArray.hpp>
 #include <cassert>
 #include <numeric>
@@ -97,6 +99,87 @@ namespace tsom
 			indices.push_back(vertexAttributes.firstIndex + 1);
 			indices.push_back(vertexAttributes.firstIndex + 2);
 			indices.push_back(vertexAttributes.firstIndex + 3);
+		};
+
+		// Find and lock all neighbor chunks to avoid discrepancies between chunks
+		Nz::EnumArray<Direction, const Chunk*> neighborChunks;
+		for (auto&& [dir, chunk] : neighborChunks.iter_kv())
+		{
+			chunk = m_owner.GetChunk(m_indices + s_dirOffset[dir]);
+			if (!chunk)
+				continue;
+
+			chunk->LockRead();
+		}
+
+		NAZARA_DEFER(
+		{
+			for (const Chunk* chunk : neighborChunks)
+			{
+				if (chunk)
+					chunk->UnlockRead();
+			}
+		});
+
+		auto GetNeighborBlock = [&](Nz::Vector3ui indices, const Nz::Vector3i& offsets) -> std::optional<BlockIndex>
+		{
+			ChunkIndices chunkIndices = m_indices;
+			std::swap(chunkIndices.y, chunkIndices.z);
+
+			for (unsigned int axis : { 0, 1, 2 })
+			{
+				unsigned int& index = indices[axis];
+				int offset = offsets[axis];
+				assert(offset >= -1 && offset <= 1);
+
+				if (offset > 0)
+				{
+					index += offset;
+					if (index >= m_size[axis])
+					{
+						index -= m_size[axis];
+						chunkIndices[axis]++;
+					}
+				}
+				else if (offset < 0)
+				{
+					unsigned int posOffset = std::abs(offset);
+					if (posOffset > index)
+					{
+						index += m_size[axis];
+						chunkIndices[axis]--;
+					}
+
+					index -= posOffset;
+				}
+			}
+
+			std::swap(chunkIndices.y, chunkIndices.z);
+
+			if (chunkIndices != m_indices)
+			{
+				ChunkIndices neighborIndices = chunkIndices - m_indices;
+
+				// FIXME
+				for (auto&& [dir, dirIndices] : s_dirOffset.iter_kv())
+				{
+					if (neighborIndices == dirIndices)
+					{
+						const Chunk* chunk = neighborChunks[dir];
+						if (!chunk)
+							return {};
+
+						if (!chunk->HasContent())
+							return {};
+
+						return chunk->GetBlockContent(indices);
+					}
+				}
+
+				NazaraErrorFmt("unexpected neighbor indices {};{};{}", neighborIndices.x, neighborIndices.y, neighborIndices.z);
+			}
+			else
+				return GetBlockContent(indices);
 		};
 
 		for (unsigned int z = 0; z < m_size.z; ++z)

@@ -33,12 +33,28 @@ namespace tsom
 
 		chunkData.onReset.Connect(chunkData.chunk->OnReset, [this](Chunk* chunk)
 		{
-			OnChunkUpdated(this, chunk);
+			OnChunkUpdated(this, chunk, DirectionMask_All);
 		});
 
-		chunkData.onUpdated.Connect(chunkData.chunk->OnBlockUpdated, [this](Chunk* chunk, const Nz::Vector3ui& /*indices*/, BlockIndex /*newBlock*/)
+		chunkData.onUpdated.Connect(chunkData.chunk->OnBlockUpdated, [this](Chunk* chunk, const Nz::Vector3ui& indices, BlockIndex /*newBlock*/)
 		{
-			OnChunkUpdated(this, chunk);
+			DirectionMask neighborMask;
+			if (indices.x == 0)
+				neighborMask |= Direction::Left;
+			else if (indices.x == chunk->GetSize().x - 1)
+				neighborMask |= Direction::Right;
+
+			if (indices.y == 0)
+				neighborMask |= Direction::Front;
+			else if (indices.y == chunk->GetSize().y - 1)
+				neighborMask |= Direction::Back;
+
+			if (indices.z == 0)
+				neighborMask |= Direction::Up;
+			else if (indices.z == chunk->GetSize().z - 1)
+				neighborMask |= Direction::Down;
+
+			OnChunkUpdated(this, chunk, neighborMask);
 		});
 
 		auto it = m_chunks.insert_or_assign(indices, std::move(chunkData)).first;

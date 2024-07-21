@@ -48,7 +48,7 @@ namespace tsom
 
 			NazaraSignal(OnChunkAdded, ChunkContainer* /*planet*/, Chunk* /*chunk*/);
 			NazaraSignal(OnChunkRemove, ChunkContainer* /*planet*/, Chunk* /*chunk*/);
-			NazaraSignal(OnChunkUpdated, ChunkContainer* /*planet*/, Chunk* /*chunk*/);
+			NazaraSignal(OnChunkUpdated, ChunkContainer* /*planet*/, Chunk* /*chunk*/, DirectionMask /*neighborUpdate*/);
 
 		protected:
 			float m_tileSize;

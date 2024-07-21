@@ -9,6 +9,8 @@
 #include <Nazara/Core/TaskSchedulerAppComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
+#include <fmt/color.h>
+#include <fmt/printf.h>
 #include <cassert>
 
 namespace tsom
@@ -35,9 +37,9 @@ namespace tsom
 			DestroyChunkEntity(chunk->GetIndices());
 		});
 
-		m_onChunkUpdated.Connect(chunkContainer.OnChunkUpdated, [this](ChunkContainer* /*emitter*/, Chunk* chunk)
+		m_onChunkUpdated.Connect(chunkContainer.OnChunkUpdated, [this](ChunkContainer* /*emitter*/, Chunk* chunk, DirectionMask neighborMask)
 		{
-			m_invalidatedChunks.insert(chunk->GetIndices());
+			m_invalidatedChunks[chunk->GetIndices()] |= neighborMask;
 		});
 	}
 
@@ -53,21 +55,48 @@ namespace tsom
 
 	void ChunkEntities::Update()
 	{
-		for (auto it = m_updateJobs.begin(); it != m_updateJobs.end(); )
+		for (auto it = m_updateJobs.begin(); it != m_updateJobs.end(); ++it)
 		{
 			UpdateJob& job = *it->second;
-			if (job.executionCounter != job.taskCount)
-			{
-				++it;
+			if (!job.HasFinished())
 				continue;
+
+			bool canExecute = true;
+			for (auto depIt = job.chunkDependencies.begin(); depIt != job.chunkDependencies.end();)
+			{
+				auto depJobIt = m_updateJobs.find(*depIt);
+				if (depJobIt == m_updateJobs.end())
+				{
+					fmt::print(fg(fmt::color::red), "update job for chunk {};{};{} depends on chunk {};{};{} which has not been added\n", it->first.x, it->first.y, it->first.z, depIt->x, depIt->y, depIt->z);
+					depIt = job.chunkDependencies.erase(depIt);
+					continue;
+				}
+
+				if (depJobIt->second->HasFinished())
+				{
+					depIt = job.chunkDependencies.erase(depIt);
+					continue;
+				}
+
+				canExecute = false;
+				++depIt;
 			}
 
-			job.applyFunc(it->first, std::move(job));
-			it = m_updateJobs.erase(it);
+			if (canExecute)
+			{
+				job.applyFunc(it->first, std::move(job));
+
+				// Don't remove jobs immediatly to be able to detect dependencies errors
+				m_finishedJobs.push_back(it->first);
+			}
 		}
 
-		for (const ChunkIndices& chunkIndices : m_invalidatedChunks)
-			UpdateChunkEntity(chunkIndices);
+		for (const ChunkIndices& indices : m_finishedJobs)
+			m_updateJobs.erase(indices);
+		m_finishedJobs.clear();
+
+		for (auto&& [chunkIndices, neighborMask] : m_invalidatedChunks)
+			UpdateChunkEntity(chunkIndices, neighborMask);
 
 		m_invalidatedChunks.clear();
 	}
@@ -76,13 +105,13 @@ namespace tsom
 	{
 		entt::handle chunkEntity = m_world.CreateEntity();
 		chunkEntity.emplace<Nz::NodeComponent>(m_chunkContainer.GetChunkOffset(chunkIndices));
-		chunkEntity.emplace<Nz::RigidBody3DComponent>(Nz::RigidBody3D::StaticSettings(std::make_shared<Nz::SphereCollider3D>(1.f))); //< FIXME: null collider couldn't be changed back (sensor issue), set to null when Nazara is updated
+		chunkEntity.emplace<Nz::RigidBody3DComponent>(Nz::RigidBody3D::StaticSettings(nullptr));
 
 		assert(!m_chunkEntities.contains(chunkIndices));
 		m_chunkEntities.insert_or_assign(chunkIndices, chunkEntity);
 
 		if (chunk->HasContent())
-			HandleChunkUpdate(chunkIndices, chunk);
+			ProcessChunkUpdate(chunk, 0);
 	}
 
 	void ChunkEntities::DestroyChunkEntity(const ChunkIndices& chunkIndices)
@@ -112,10 +141,10 @@ namespace tsom
 		});
 	}
 
-	void ChunkEntities::HandleChunkUpdate(const ChunkIndices& chunkIndices, const Chunk* chunk)
+	auto ChunkEntities::ProcessChunkUpdate(const Chunk* chunk, DirectionMask /*neighborMask*/) -> UpdateJob*
 	{
 		// Try to cancel current update job to void useless work
-		if (auto it = m_updateJobs.find(chunkIndices); it != m_updateJobs.end())
+		if (auto it = m_updateJobs.find(chunk->GetIndices()); it != m_updateJobs.end())
 		{
 			UpdateJob& job = *it->second;
 			job.cancelled = true;
@@ -143,18 +172,12 @@ namespace tsom
 			updateJob->collider = chunk->BuildCollider(m_blockLibrary);
 			chunk->UnlockRead();
 
-			updateJob->executionCounter++;
+			updateJob->jobDone++;
 		});
 
-		m_updateJobs.insert_or_assign(chunkIndices, std::move(updateJob));
-	}
+		UpdateJob* updateJobPtr = updateJob.get();
+		m_updateJobs.insert_or_assign(chunk->GetIndices(), std::move(updateJob));
 
-	void ChunkEntities::UpdateChunkEntity(const ChunkIndices& chunkIndices)
-	{
-		assert(m_chunkEntities.contains(chunkIndices));
-		const Chunk* chunk = m_chunkContainer.GetChunk(chunkIndices);
-		assert(chunk);
-
-		HandleChunkUpdate(chunkIndices, chunk);
+		return updateJobPtr;
 	}
 }

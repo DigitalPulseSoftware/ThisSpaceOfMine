@@ -4,4 +4,12 @@
 
 namespace tsom
 {
+	inline void ChunkEntities::UpdateChunkEntity(const ChunkIndices& chunkIndices, DirectionMask neighborMask)
+	{
+		assert(m_chunkEntities.contains(chunkIndices));
+		const Chunk* chunk = m_chunkContainer.GetChunk(chunkIndices);
+		assert(chunk);
+
+		ProcessChunkUpdate(chunk, neighborMask);
+	}
 }
