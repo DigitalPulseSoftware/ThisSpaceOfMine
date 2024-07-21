@@ -177,6 +177,7 @@ namespace tsom
 				}
 
 				NazaraErrorFmt("unexpected neighbor indices {};{};{}", neighborIndices.x, neighborIndices.y, neighborIndices.z);
+				NAZARA_UNREACHABLE();
 			}
 			else
 				return GetBlockContent(indices);
