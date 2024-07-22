@@ -627,13 +627,18 @@ namespace tsom
 			Nz::Vector3f characterPos = characterNode.GetPosition();
 			Nz::Quaternionf characterRot = characterNode.GetRotation();
 
+			Nz::EulerAnglesf predictedCameraRotation = m_predictedCameraRotation;
+			predictedCameraRotation.pitch = Nz::Clamp(predictedCameraRotation.pitch + m_incomingCameraRotation.pitch, -89.f, 89.f);
+			predictedCameraRotation.yaw += m_incomingCameraRotation.yaw;
+			predictedCameraRotation.Normalize();
+
 			switch (m_cameraMode)
 			{
 				case 0:
 				{
 					cameraNode.SetPosition(characterPos + characterRot * (Nz::Vector3f::Up() * Constants::PlayerCameraHeight));
 
-					Nz::Quaternionf cameraRotation = m_referenceRotation * Nz::Quaternionf(m_predictedCameraRotation);
+					Nz::Quaternionf cameraRotation = m_referenceRotation * Nz::Quaternionf(predictedCameraRotation);
 					cameraRotation.Normalize();
 
 					cameraNode.SetRotation(cameraRotation);
@@ -642,7 +647,7 @@ namespace tsom
 
 				case 1:
 				{
-					Nz::Quaternionf cameraRot = characterRot * Nz::EulerAnglesf(m_predictedCameraRotation.pitch, 0.f, 0.f);
+					Nz::Quaternionf cameraRot = characterRot * Nz::EulerAnglesf(predictedCameraRotation.pitch, 0.f, 0.f);
 					cameraRot.Normalize();
 
 					cameraNode.SetPosition(characterPos + characterRot * (Nz::Vector3f::Up() * 1.f) + cameraRot * Nz::Vector3f::Backward() * 1.f);
@@ -652,7 +657,7 @@ namespace tsom
 
 				case 2:
 				{
-					Nz::Quaternionf cameraRot = characterRot * Nz::EulerAnglesf(m_predictedCameraRotation.pitch, 180.f, 0.f);
+					Nz::Quaternionf cameraRot = characterRot * Nz::EulerAnglesf(predictedCameraRotation.pitch, 180.f, 0.f);
 					cameraRot.Normalize();
 
 					cameraNode.SetPosition(characterPos + characterRot * (Nz::Vector3f::Up() * 0.5f) + cameraRot * Nz::Vector3f::Backward() * 1.f);
