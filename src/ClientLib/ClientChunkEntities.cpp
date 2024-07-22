@@ -176,6 +176,8 @@ namespace tsom
 
 	auto ClientChunkEntities::ProcessChunkUpdate(const Chunk* chunk, DirectionMask neighborMask) -> ColliderModelUpdateJob*
 	{
+		assert(chunk->HasContent());
+
 		// Try to cancel current update job to void useless work
 		if (auto it = m_updateJobs.find(chunk->GetIndices()); it != m_updateJobs.end())
 		{
@@ -242,7 +244,7 @@ namespace tsom
 		{
 			ChunkIndices neighborIndices = chunk->GetIndices() + s_dirOffset[neighborDir];
 			const Chunk* neighborChunk = m_chunkContainer.GetChunk(neighborIndices);
-			if (!neighborChunk)
+			if (!neighborChunk || !neighborChunk->HasContent())
 				continue;
 
 			updateJob->chunkDependencies.push_back(neighborIndices);

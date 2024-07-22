@@ -143,6 +143,8 @@ namespace tsom
 
 	auto ChunkEntities::ProcessChunkUpdate(const Chunk* chunk, DirectionMask /*neighborMask*/) -> UpdateJob*
 	{
+		assert(chunk->HasContent());
+
 		// Try to cancel current update job to void useless work
 		if (auto it = m_updateJobs.find(chunk->GetIndices()); it != m_updateJobs.end())
 		{
