@@ -5,6 +5,7 @@
 #include <Game/States/GameState.hpp>
 #include <ClientLib/BlockSelectionBar.hpp>
 #include <ClientLib/Chatbox.hpp>
+#include <ClientLib/Console.hpp>
 #include <ClientLib/EscapeMenu.hpp>
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Components/ChunkNetworkMapComponent.hpp>
@@ -230,18 +231,27 @@ namespace tsom
 		});
 		m_chatBox->SetRenderLayerOffset(1);
 
+		m_console = CreateWidget<Console>();
+
 		LayoutWidgets(Nz::Vector2f(stateData.renderTarget->GetSize()));
 
 		m_onUnhandledKeyPressed.Connect(stateData.canvas->OnUnhandledKeyPressed, [this](const Nz::WindowEventHandler*, const Nz::WindowEvent::KeyEvent& event)
 		{
 			auto& stateData = GetStateData();
 
-			switch (event.virtualKey)
+			switch (event.scancode)
 			{
-				case Nz::Keyboard::VKey::Escape:
+				case Nz::Keyboard::Scancode::Tilde:
+					m_console->Show(!m_console->IsVisible());
+					UpdateMouseLock();
+					break;
+
+				case Nz::Keyboard::Scancode::Escape:
 				{
 					if (m_escapeMenu->IsVisible())
 						m_escapeMenu->Hide();
+					else if (m_console->IsVisible())
+						m_console->Hide();
 					else if (m_chatBox->IsOpen())
 						m_chatBox->Close();
 					else
@@ -251,7 +261,7 @@ namespace tsom
 					break;
 				}
 
-				case Nz::Keyboard::VKey::Return:
+				case Nz::Keyboard::Scancode::Return:
 				{
 					if (m_chatBox->IsOpen())
 					{
@@ -265,7 +275,7 @@ namespace tsom
 					break;
 				}
 
-				case Nz::Keyboard::VKey::F2:
+				case Nz::Keyboard::Scancode::F2:
 				{
 					auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
 
@@ -295,7 +305,7 @@ namespace tsom
 					break;
 				}
 
-				case Nz::Keyboard::VKey::F3:
+				case Nz::Keyboard::Scancode::F3:
 				{
 					if (!m_debugOverlay)
 					{
@@ -318,7 +328,7 @@ namespace tsom
 					break;
 				}
 
-				case Nz::Keyboard::VKey::F4:
+				case Nz::Keyboard::Scancode::F4:
 				{
 					auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
 
@@ -332,7 +342,7 @@ namespace tsom
 					break;
 				}
 
-				case Nz::Keyboard::VKey::F5:
+				case Nz::Keyboard::Scancode::F5:
 				{
 					m_cameraMode++;
 					if (m_cameraMode > 2)
@@ -816,6 +826,9 @@ namespace tsom
 
 		m_chatBox->Resize(newSize);
 
+		m_console->Resize({ newSize.x, newSize.y / 3.f });
+		m_console->SetPosition({ 0.f, newSize.y - m_console->GetHeight() });
+
 		m_escapeMenu->Center();
 	}
 
@@ -880,8 +893,10 @@ namespace tsom
 
 	void GameState::UpdateMouseLock()
 	{
-		m_isMouseLocked = !m_chatBox->IsTyping() && !m_escapeMenu->IsVisible();
-		Nz::Mouse::SetRelativeMouseMode(m_isMouseLocked);
+		m_isMouseLocked = !m_chatBox->IsTyping() && !m_escapeMenu->IsVisible() && !m_console->IsVisible();
 		m_chatBox->EnableMouseInput(!m_isMouseLocked);
+		m_console->EnableMouseInput(!m_isMouseLocked);
+
+		Nz::Mouse::SetRelativeMouseMode(m_isMouseLocked);
 	}
 }

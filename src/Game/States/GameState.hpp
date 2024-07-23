@@ -33,6 +33,7 @@ namespace tsom
 {
 	class BlockSelectionBar;
 	class Chatbox;
+	class Console;
 	class EscapeMenu;
 	struct StateData;
 
@@ -101,6 +102,7 @@ namespace tsom
 			Nz::UInt8 m_nextInputIndex;
 			BlockSelectionBar* m_blockSelectionBar;
 			Chatbox* m_chatBox;
+			Console* m_console;
 			EscapeMenu* m_escapeMenu;
 			bool m_isMouseLocked;
 			unsigned int m_cameraMode;
