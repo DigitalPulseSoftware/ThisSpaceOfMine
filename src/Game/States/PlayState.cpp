@@ -118,6 +118,14 @@ namespace tsom
 
 	void PlayState::FetchPlayerInfo()
 	{
+		if (!GetStateData().app->HasComponent<Nz::WebServiceAppComponent>())
+		{
+			fmt::print(fg(fmt::color::red), "failed to retrieve player info: web services are unavailable\n");
+			m_createOrConnectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Web services are unavailable", 30, Nz::TextStyle_Regular, Nz::Color::Red()));
+			m_createOrConnectButton->Disable();
+			return;
+		}
+
 		auto& gameConfig = GetStateData().app->GetComponent<GameConfigAppComponent>().GetConfig();
 		auto& webService = GetStateData().app->GetComponent<Nz::WebServiceAppComponent>();
 

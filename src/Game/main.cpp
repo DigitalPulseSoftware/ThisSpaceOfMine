@@ -51,7 +51,7 @@ int GameMain(int argc, char* argv[])
 	}
 	catch (const std::exception& e)
 	{
-		fmt::print(fg(fmt::color::red), "failed to enable web services (automatic updating will be disabled): {0}!\n", e.what());
+		fmt::print(fg(fmt::color::red), "failed to enable web services (login and update will be disabled): {0}!\n", e.what());
 	}
 
 	game.Start();
