@@ -8,3 +8,6 @@ Menu = {
 	ServerAddress = "tsom.digitalpulse.software",
 	Login = "Pilot" .. (os.time() % 1000),
 }
+Player = {
+	Token = ""
+}
