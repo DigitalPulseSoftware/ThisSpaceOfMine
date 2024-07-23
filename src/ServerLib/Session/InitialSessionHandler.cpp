@@ -43,6 +43,7 @@ namespace tsom
 
 		std::optional<Nz::Uuid> uuid;
 		std::string login;
+		PlayerPermissionFlags permissions;
 		bool success = std::visit(Nz::Overloaded
 		{
 			[&](Packets::AuthRequest::AnonymousPlayerData& anonymousData) -> bool
@@ -67,6 +68,15 @@ namespace tsom
 
 				uuid = tokenPrivate.player.uuid;
 				login = std::move(tokenPrivate.player.nickname);
+
+				for (const std::string& permissionStr : tokenPrivate.player.permissions)
+				{
+					if (std::optional<PlayerPermission> permissionOpt = PlayerPermissionFromString(permissionStr))
+						permissions |= *permissionOpt;
+					else
+						fmt::print(fg(fmt::color::yellow), "unknown permission \"{}\"\n", permissionStr);
+				}
+
 				fmt::print("{0} authenticated\n", login);
 				return true;
 			}
@@ -99,7 +109,7 @@ namespace tsom
 
 		ServerPlayer* player;
 		if (uuid.has_value())
-			player = m_instance.CreateAuthenticatedPlayer(GetSession(), *uuid, std::move(login));
+			player = m_instance.CreateAuthenticatedPlayer(GetSession(), *uuid, std::move(login), permissions);
 		else
 			player = m_instance.CreateAnonymousPlayer(GetSession(), std::move(login));
 

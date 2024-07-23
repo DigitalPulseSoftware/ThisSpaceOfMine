@@ -102,7 +102,7 @@ namespace tsom
 
 		// defer construct so player can be constructed with their index
 		ServerPlayer* player = m_players.Allocate(m_players.DeferConstruct, playerIndex);
-		std::construct_at(player, *this, Nz::SafeCast<PlayerIndex>(playerIndex), session, std::nullopt, std::move(nickname));
+		std::construct_at(player, *this, Nz::SafeCast<PlayerIndex>(playerIndex), session, std::nullopt, std::move(nickname), 0);
 
 		m_newPlayers.UnboundedSet(playerIndex);
 
@@ -116,7 +116,7 @@ namespace tsom
 		return player;
 	}
 
-	ServerPlayer* ServerInstance::CreateAuthenticatedPlayer(NetworkSession* session, const Nz::Uuid& uuid, std::string nickname)
+	ServerPlayer* ServerInstance::CreateAuthenticatedPlayer(NetworkSession* session, const Nz::Uuid& uuid, std::string nickname, PlayerPermissionFlags permissions)
 	{
 		// Disconnect an existing player if it exists with this uuid
 		// TODO: Override the player session with this one
@@ -143,7 +143,7 @@ namespace tsom
 
 		// defer construct so player can be constructed with their index
 		ServerPlayer* player = m_players.Allocate(m_players.DeferConstruct, playerIndex);
-		std::construct_at(player, *this, Nz::SafeCast<PlayerIndex>(playerIndex), session, uuid, std::move(nickname));
+		std::construct_at(player, *this, Nz::SafeCast<PlayerIndex>(playerIndex), session, uuid, std::move(nickname), permissions);
 
 		m_newPlayers.UnboundedSet(playerIndex);
 

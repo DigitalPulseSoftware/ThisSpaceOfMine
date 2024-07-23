@@ -9,6 +9,7 @@
 
 #include <ServerLib/Export.hpp>
 #include <CommonLib/PlayerIndex.hpp>
+#include <CommonLib/PlayerPermission.hpp>
 #include <ServerLib/SessionVisibilityHandler.hpp>
 #include <Nazara/Core/HandledObject.hpp>
 #include <Nazara/Core/ObjectHandle.hpp>
@@ -29,7 +30,7 @@ namespace tsom
 	class TSOM_SERVERLIB_API ServerPlayer : public Nz::HandledObject<ServerPlayer>
 	{
 		public:
-			inline ServerPlayer(ServerInstance& instance, PlayerIndex playerIndex, NetworkSession* session, const std::optional<Nz::Uuid>& uuid, std::string nickname);
+			inline ServerPlayer(ServerInstance& instance, PlayerIndex playerIndex, NetworkSession* session, const std::optional<Nz::Uuid>& uuid, std::string nickname, PlayerPermissionFlags permissions);
 			ServerPlayer(const ServerPlayer&) = delete;
 			ServerPlayer(ServerPlayer&&) = delete;
 			~ServerPlayer() = default;
@@ -39,6 +40,7 @@ namespace tsom
 			inline const std::shared_ptr<CharacterController>& GetCharacterController();
 			inline entt::handle GetControlledEntity() const;
 			inline const std::string& GetNickname() const;
+			inline PlayerPermissionFlags GetPermissions() const;
 			inline PlayerIndex GetPlayerIndex() const;
 			inline ServerInstance& GetServerInstance();
 			inline const ServerInstance& GetServerInstance() const;
@@ -49,6 +51,8 @@ namespace tsom
 			inline const std::optional<Nz::Uuid>& GetUuid() const;
 
 			inline bool IsAuthenticated() const;
+
+			inline bool HasPermission(PlayerPermission permission);
 
 			void PushInputs(const PlayerInputs& inputs);
 
@@ -71,6 +75,7 @@ namespace tsom
 			SessionVisibilityHandler m_visibilityHandler;
 			ServerInstance& m_instance;
 			PlayerIndex m_playerIndex;
+			PlayerPermissionFlags m_permissions;
 	};
 }
 

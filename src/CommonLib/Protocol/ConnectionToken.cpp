@@ -80,6 +80,21 @@ namespace tsom
 
 			serializer &= token.player.uuid;
 			serializer &= token.player.nickname;
+
+			if (serializer.GetProtocolVersion() >= 2)
+			{
+				Nz::UInt32 permissionCount;
+				if (serializer.IsWriting())
+					permissionCount = Nz::SafeCaster(token.player.permissions.size());
+				else
+				{
+					serializer &= permissionCount;
+					token.player.permissions.resize(permissionCount);
+				}
+
+				for (std::string& permission : token.player.permissions)
+					serializer &= permission;
+			}
 		}
 	}
 

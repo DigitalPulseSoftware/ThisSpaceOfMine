@@ -44,7 +44,7 @@ namespace tsom
 			void BroadcastChatMessage(std::string message, std::optional<PlayerIndex> senderIndex);
 
 			ServerPlayer* CreateAnonymousPlayer(NetworkSession* session, std::string nickname);
-			ServerPlayer* CreateAuthenticatedPlayer(NetworkSession* session, const Nz::Uuid& uuid, std::string nickname);
+			ServerPlayer* CreateAuthenticatedPlayer(NetworkSession* session, const Nz::Uuid& uuid, std::string nickname, PlayerPermissionFlags permissions);
 			void DestroyPlayer(PlayerIndex playerIndex);
 
 			inline ServerPlayer* FindPlayerByNickname(std::string_view nickname);

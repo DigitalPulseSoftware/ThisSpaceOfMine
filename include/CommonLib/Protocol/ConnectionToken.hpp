@@ -49,7 +49,7 @@ namespace tsom
 
 		std::vector<Nz::UInt8> privateToken;
 
-		static constexpr Nz::UInt8 CurrentTokenVersion = 1;
+		static constexpr Nz::UInt8 CurrentTokenVersion = 2;
 		static constexpr std::size_t TokenPrivateMaxSize = 2048;
 
 		static Nz::Result<ConnectionToken, std::string> Deserialize(const nlohmann::json& doc);
@@ -69,6 +69,7 @@ namespace tsom
 		{
 			Nz::Uuid uuid;
 			std::string nickname;
+			std::vector<std::string> permissions;
 		} player;
 
 		static ConnectionTokenAuth AuthAndDecrypt(const ConnectionToken& connectionToken, std::span<const Nz::UInt8, 32> key, ConnectionTokenPrivate* token);
