@@ -18,7 +18,6 @@
 #include <Nazara/Network/Algorithm.hpp>
 #include <Nazara/Network/IpAddress.hpp>
 #include <Nazara/Network/Network.hpp>
-#include <Nazara/Network/WebServiceAppComponent.hpp>
 #include <Nazara/TextRenderer/SimpleTextDrawer.hpp>
 #include <fmt/color.h>
 #include <fmt/format.h>

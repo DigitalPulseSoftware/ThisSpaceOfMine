@@ -7,8 +7,8 @@
 #ifndef TSOM_COMMONLIB_CHUNKENTITIES_HPP
 #define TSOM_COMMONLIB_CHUNKENTITIES_HPP
 
-#include <NazaraUtils/FixedVector.hpp>
 #include <CommonLib/ChunkContainer.hpp>
+#include <NazaraUtils/FixedVector.hpp>
 #include <entt/entt.hpp>
 #include <tsl/hopscotch_map.h>
 #include <tsl/hopscotch_set.h>
