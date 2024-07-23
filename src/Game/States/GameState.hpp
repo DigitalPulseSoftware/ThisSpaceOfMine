@@ -95,10 +95,10 @@ namespace tsom
 			std::vector<InputRotation> m_predictedInputRotations;
 			entt::handle m_cameraEntity;
 			entt::handle m_controlledEntity;
-			entt::handle m_sunLightEntity;
 			entt::handle m_skyboxEntity;
+			entt::handle m_sunLightEntity;
 			Nz::EulerAnglesf m_incomingCameraRotation;  //< Accumulated rotation from inputs (will be applied on inputs)
-			Nz::EulerAnglesf m_predictedCameraRotation; //< Rotation sent to the server
+			Nz::EulerAnglesf m_predictedCameraRotation; //< Rotation sent to the server but not yet acknowledged
 			Nz::EulerAnglesf m_remainingCameraRotation; //< Remaining rotation to send to the server (in case we rotate too fast)
 			Nz::Quaternionf m_referenceRotation;
 			Nz::Quaternionf m_upCorrection;

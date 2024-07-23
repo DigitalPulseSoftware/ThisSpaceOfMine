@@ -65,7 +65,7 @@ namespace tsom
 			NazaraSlot(Nz::RenderTarget, OnRenderTargetSizeChange, m_onTargetChangeSizeSlot);
 
 			std::vector<std::vector<Item>> m_chatLines;
-			Nz::RichTextAreaWidget* m_chatBox;
+			Nz::RichTextAreaWidget* m_chatboxHistory;
 			Nz::ScrollAreaWidget* m_chatboxScrollArea;
 			Nz::TextAreaWidget* m_chatEnteringBox;
 	};

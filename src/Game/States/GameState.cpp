@@ -483,9 +483,9 @@ namespace tsom
 
 		m_planetEntities = std::make_unique<ClientChunkEntities>(*stateData.app, *stateData.world, *m_planet, *stateData.blockLibrary);
 
-		m_remainingCameraRotation = Nz::EulerAnglesf(0.f, 0.f, 0.f);
-		m_predictedCameraRotation = m_remainingCameraRotation;
 		m_incomingCameraRotation = Nz::EulerAnglesf::Zero();
+		m_remainingCameraRotation = Nz::EulerAnglesf::Zero();
+		m_predictedCameraRotation = Nz::EulerAnglesf::Zero();
 
 		m_mouseMovedSlot.Connect(stateData.canvas->OnUnhandledMouseMoved, [&](const Nz::WindowEventHandler*, const Nz::WindowEvent::MouseMoveEvent& event)
 		{

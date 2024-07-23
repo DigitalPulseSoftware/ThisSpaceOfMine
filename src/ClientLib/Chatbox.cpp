@@ -21,17 +21,17 @@ namespace tsom
 		//Nz::FontRef chatboxFont = Nz::FontLibrary::Get("BW_Chatbox");
 		//assert(chatboxFont);
 
-		m_chatBox = Add<Nz::RichTextAreaWidget>();
-		m_chatBox->EnableBackground(false);
-		m_chatBox->EnableLineWrap(true);
-		m_chatBox->SetBackgroundColor(Nz::Color(0.f, 0.f, 0.f, 0.5f));
-		m_chatBox->SetCharacterSize(22);
-		m_chatBox->SetTextColor(Nz::Color::White());
-		m_chatBox->SetTextOutlineColor(Nz::Color::Black());
-		m_chatBox->SetTextOutlineThickness(1.f);
-		m_chatBox->SetReadOnly(true);
+		m_chatboxHistory = Add<Nz::RichTextAreaWidget>();
+		m_chatboxHistory->EnableBackground(false);
+		m_chatboxHistory->EnableLineWrap(true);
+		m_chatboxHistory->SetBackgroundColor(Nz::Color(0.f, 0.f, 0.f, 0.5f));
+		m_chatboxHistory->SetCharacterSize(22);
+		m_chatboxHistory->SetTextColor(Nz::Color::White());
+		m_chatboxHistory->SetTextOutlineColor(Nz::Color::Black());
+		m_chatboxHistory->SetTextOutlineThickness(1.f);
+		m_chatboxHistory->SetReadOnly(true);
 
-		m_chatboxScrollArea = Add<Nz::ScrollAreaWidget>(m_chatBox);
+		m_chatboxScrollArea = Add<Nz::ScrollAreaWidget>(m_chatboxHistory);
 		m_chatboxScrollArea->Resize({ 480.f, 0.f });
 		m_chatboxScrollArea->EnableScrollbar(false);
 
@@ -47,7 +47,7 @@ namespace tsom
 	void Chatbox::Clear()
 	{
 		m_chatLines.clear();
-		m_chatBox->Clear();
+		m_chatboxHistory->Clear();
 	}
 
 	bool Chatbox::IsOpen() const
@@ -66,14 +66,14 @@ namespace tsom
 		{
 			if (shouldOpen)
 			{
-				m_chatBox->EnableBackground(true);
+				m_chatboxHistory->EnableBackground(true);
 				m_chatboxScrollArea->EnableScrollbar(true);
-				m_chatEnteringBox->Show(true);
+				m_chatEnteringBox->Show();
 				m_chatEnteringBox->SetFocus();
 			}
 			else
 			{
-				m_chatBox->EnableBackground(false);
+				m_chatboxHistory->EnableBackground(false);
 				m_chatboxScrollArea->EnableScrollbar(false);
 				m_chatEnteringBox->Clear();
 				m_chatEnteringBox->Hide();
@@ -111,7 +111,7 @@ namespace tsom
 
 	void Chatbox::Refresh()
 	{
-		m_chatBox->Clear();
+		m_chatboxHistory->Clear();
 		for (const auto& lineItems : m_chatLines)
 		{
 			for (const Item& lineItem : lineItems)
@@ -122,12 +122,12 @@ namespace tsom
 
 					if constexpr (std::is_same_v<T, ColorItem>)
 					{
-						m_chatBox->SetTextColor(item.color);
+						m_chatboxHistory->SetTextColor(item.color);
 					}
 					else if constexpr (std::is_same_v<T, TextItem>)
 					{
 						if (!item.text.empty())
-							m_chatBox->AppendText(item.text);
+							m_chatboxHistory->AppendText(item.text);
 					}
 					else
 						static_assert(Nz::AlwaysFalse<T>(), "non-exhaustive visitor");
@@ -135,11 +135,11 @@ namespace tsom
 				}, lineItem);
 			}
 
-			m_chatBox->SetTextColor(Nz::Color::White());
-			m_chatBox->AppendText("\n");
+			m_chatboxHistory->SetTextColor(Nz::Color::White());
+			m_chatboxHistory->AppendText("\n");
 		}
 
-		m_chatBox->Resize({ m_chatBox->GetWidth(), m_chatBox->GetPreferredHeight() });
+		m_chatboxHistory->Resize({ m_chatboxHistory->GetWidth(), m_chatboxHistory->GetPreferredHeight() });
 		m_chatboxScrollArea->Resize(m_chatboxScrollArea->GetSize()); // force layout update
 		m_chatboxScrollArea->SetPosition({ 5.f, m_chatEnteringBox->GetPosition().y + m_chatEnteringBox->GetHeight() + 5.f, 0.f});
 
