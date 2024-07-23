@@ -8,7 +8,6 @@
 #define TSOM_CLIENTLIB_CHATBOX_HPP
 
 #include <ClientLib/Export.hpp>
-#include <Nazara/Graphics/RenderTarget.hpp>
 #include <Nazara/Widgets/BaseWidget.hpp>
 #include <variant>
 
@@ -61,8 +60,6 @@ namespace tsom
 		private:
 			void Layout() override;
 			void Refresh();
-
-			NazaraSlot(Nz::RenderTarget, OnRenderTargetSizeChange, m_onTargetChangeSizeSlot);
 
 			std::vector<std::vector<Item>> m_chatLines;
 			Nz::RichTextAreaWidget* m_chatboxHistory;

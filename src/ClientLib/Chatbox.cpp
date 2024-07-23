@@ -103,7 +103,7 @@ namespace tsom
 
 		Nz::Vector2f size = GetSize();
 
-		m_chatEnteringBox->Resize({ size.x, 40.f });
+		m_chatEnteringBox->Resize({ size.x, m_chatEnteringBox->GetPreferredHeight() });
 		m_chatEnteringBox->SetPosition({ 0.f, 0.f, 0.f });
 		m_chatboxScrollArea->Resize({ size.x / 3.f, size.y / 3.f });
 		m_chatboxScrollArea->SetPosition({ 5.f, m_chatEnteringBox->GetPosition().y + m_chatEnteringBox->GetHeight() + 5.f, 0.f });
