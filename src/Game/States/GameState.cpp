@@ -232,6 +232,8 @@ namespace tsom
 		m_chatBox->SetRenderLayerOffset(1);
 
 		m_console = CreateWidget<Console>();
+		m_console->SetBackgroundColor(Nz::Color(0.f, 0.f, 0.33f, 0.5f));
+		m_console->SetRenderLayerOffset(1);
 
 		LayoutWidgets(Nz::Vector2f(stateData.renderTarget->GetSize()));
 
@@ -244,6 +246,9 @@ namespace tsom
 				case Nz::Keyboard::Scancode::Tilde:
 					m_console->Show(!m_console->IsVisible());
 					UpdateMouseLock();
+
+					// FIXME: Shouldn't have to do this (Nazara bug)
+					LayoutWidgets(Nz::Vector2f(stateData.renderTarget->GetSize()));
 					break;
 
 				case Nz::Keyboard::Scancode::Escape:
@@ -452,8 +457,10 @@ namespace tsom
 
 		m_chatBox->Close();
 		m_escapeMenu->Hide();
+		m_console->Hide();
 
 		auto& stateData = GetStateData();
+		LayoutWidgets(Nz::Vector2f(stateData.renderTarget->GetSize()));
 
 		auto& config = stateData.app->GetComponent<GameConfigAppComponent>().GetConfig();
 
