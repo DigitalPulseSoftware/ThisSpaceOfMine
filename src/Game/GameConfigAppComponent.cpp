@@ -24,6 +24,9 @@ namespace tsom
 		});
 
 		RegisterStringOption("Menu.ServerAddress", "tsom.digitalpulse.software");
+
+		RegisterFloatOption("Input.MouseSensitivity", 0.0, 1.0, 0.3);
+
 		RegisterStringOption("Player.Token", "", [](std::string value) -> Nz::Result<std::string, std::string>
 		{
 			if (value.size() > 64)

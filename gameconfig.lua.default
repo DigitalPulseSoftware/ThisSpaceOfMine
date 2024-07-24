@@ -1,8 +1,8 @@
 Api = {
 	Url = "https://tsom-api.digitalpulse.software"
 }
-Server = {
-	Port = 29536,
+Input = {
+	MouseSensitivity = 0.1
 }
 Menu = {
 	ServerAddress = "tsom.digitalpulse.software",
@@ -10,4 +10,7 @@ Menu = {
 }
 Player = {
 	Token = ""
+}
+Server = {
+	Port = 29536,
 }

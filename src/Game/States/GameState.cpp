@@ -14,6 +14,7 @@
 #include <CommonLib/PlayerInputs.hpp>
 #include <CommonLib/Utils.hpp>
 #include <CommonLib/Components/PlanetGravityComponent.hpp>
+#include <Game/GameConfigAppComponent.hpp>
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/StateData.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
@@ -481,23 +482,24 @@ namespace tsom
 
 		auto& stateData = GetStateData();
 
+		auto& config = stateData.app->GetComponent<GameConfigAppComponent>().GetConfig();
+
 		m_planetEntities = std::make_unique<ClientChunkEntities>(*stateData.app, *stateData.world, *m_planet, *stateData.blockLibrary);
 
 		m_incomingCameraRotation = Nz::EulerAnglesf::Zero();
 		m_remainingCameraRotation = Nz::EulerAnglesf::Zero();
 		m_predictedCameraRotation = Nz::EulerAnglesf::Zero();
 
-		m_mouseMovedSlot.Connect(stateData.canvas->OnUnhandledMouseMoved, [&](const Nz::WindowEventHandler*, const Nz::WindowEvent::MouseMoveEvent& event)
+		float mouseSensitivity = config.GetFloatValue<float>("Input.MouseSensitivity");
+		m_mouseMovedSlot.Connect(stateData.canvas->OnUnhandledMouseMoved, [&, mouseSensitivity](const Nz::WindowEventHandler*, const Nz::WindowEvent::MouseMoveEvent& event)
 		{
 			if (!m_isMouseLocked)
 				return;
 
 			auto& stateData = GetStateData();
 
-			constexpr float sensitivity = 0.3f; // Mouse sensitivity
-
-			float pitchMod = -event.deltaY * sensitivity;
-			float yawMod = -event.deltaX * sensitivity;
+			float pitchMod = -event.deltaY * mouseSensitivity;
+			float yawMod = -event.deltaX * mouseSensitivity;
 
 			m_incomingCameraRotation.pitch += pitchMod;
 			m_incomingCameraRotation.yaw += yawMod;
