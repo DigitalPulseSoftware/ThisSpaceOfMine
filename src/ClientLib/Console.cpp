@@ -16,10 +16,10 @@ namespace tsom
 	m_maxHistoryLines(200)
 	{
 		m_contentText = Add<Nz::RichTextAreaWidget>();
-		m_contentText->EnableBackground(false);
+		m_contentText->EnableBackground(true);
 		m_contentText->EnableLineWrap(true);
 		m_contentText->SetBackgroundColor(Nz::Color(0.f, 0.f, 0.f, 0.5f));
-		m_contentText->SetCharacterSize(12);
+		m_contentText->SetCharacterSize(18);
 		m_contentText->SetTextColor(Nz::Color::White());
 		m_contentText->SetTextOutlineColor(Nz::Color::Black());
 		m_contentText->SetTextOutlineThickness(1.f);
@@ -33,7 +33,7 @@ namespace tsom
 		m_inputArea->EnableBackground(true);
 		m_inputArea->SetBackgroundColor(Nz::Color(1.f, 1.f, 1.f, 0.9f));
 		m_inputArea->SetTextColor(Nz::Color::Black());
-		m_inputArea->SetCharacterSize(14);
+		m_inputArea->SetCharacterSize(20);
 		m_inputArea->SetText(std::string(CommandPrefix));
 
 		m_inputArea->OnTextAreaKeyReturn.Connect([this](const Nz::AbstractTextAreaWidget* textArea, bool* ignoreDefaultAction)
@@ -43,7 +43,10 @@ namespace tsom
 			*ignoreDefaultAction = true;
 
 			std::string input = m_inputArea->GetText();
-			std::string_view inputCmd = input.substr(CommandPrefix.size());
+			std::string_view inputCmd = std::string_view(input).substr(CommandPrefix.size());
+			if (inputCmd.empty())
+				return;
+
 			m_inputArea->SetText(std::string(CommandPrefix));
 
 			m_historyPosition = m_commandHistory.size();

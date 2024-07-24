@@ -9,6 +9,7 @@
 
 #include <ClientLib/ClientChunkEntities.hpp>
 #include <ClientLib/ClientSessionHandler.hpp>
+#include <CommonLib/ConsoleExecutor.hpp>
 #include <CommonLib/NetworkReactor.hpp>
 #include <Game/States/WidgetState.hpp>
 #include <Nazara/Core/State.hpp>
@@ -100,6 +101,7 @@ namespace tsom
 			Nz::Time m_tickAccumulator;
 			Nz::Time m_tickDuration;
 			Nz::UInt8 m_nextInputIndex;
+			ConsoleExecutor m_consoleExecutor;
 			BlockSelectionBar* m_blockSelectionBar;
 			Chatbox* m_chatBox;
 			Console* m_console;
