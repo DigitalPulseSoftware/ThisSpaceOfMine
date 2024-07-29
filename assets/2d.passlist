@@ -7,7 +7,7 @@ passlist "2D"
 
     attachment "ForwardOutput"
     {
-        format "RGBA8_SRGB"
+        format "RGBA8"
     }
 
     pass "UI Pass"
