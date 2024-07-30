@@ -242,7 +242,7 @@ namespace tsom
 		// Add neighbor chunks
 		for (Direction neighborDir : neighborMask)
 		{
-			ChunkIndices neighborIndices = chunk->GetIndices() + s_dirOffset[neighborDir];
+			ChunkIndices neighborIndices = chunk->GetIndices() + s_chunkDirOffset[neighborDir];
 			const Chunk* neighborChunk = m_chunkContainer.GetChunk(neighborIndices);
 			if (!neighborChunk || !neighborChunk->HasContent())
 				continue;

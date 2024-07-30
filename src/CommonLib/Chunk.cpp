@@ -105,7 +105,7 @@ namespace tsom
 		Nz::EnumArray<Direction, const Chunk*> neighborChunks;
 		for (auto&& [dir, chunk] : neighborChunks.iter_kv())
 		{
-			chunk = m_owner.GetChunk(m_indices + s_dirOffset[dir]);
+			chunk = m_owner.GetChunk(m_indices + s_chunkDirOffset[dir]);
 			if (!chunk)
 				continue;
 
@@ -121,7 +121,7 @@ namespace tsom
 			}
 		});
 
-		auto GetNeighborBlock = [&](Nz::Vector3ui indices, const Nz::Vector3i& offsets) -> std::optional<BlockIndex>
+		auto GetNeighborBlock = [&](Nz::Vector3ui indices, Direction direction) -> std::optional<BlockIndex>
 		{
 			ChunkIndices chunkIndices = m_indices;
 			std::swap(chunkIndices.y, chunkIndices.z);
@@ -129,7 +129,7 @@ namespace tsom
 			for (unsigned int axis : { 0, 1, 2 })
 			{
 				unsigned int& index = indices[axis];
-				int offset = offsets[axis];
+				int offset = s_blockDirOffset[direction][axis];
 				assert(offset >= -1 && offset <= 1);
 
 				if (offset > 0)
@@ -158,26 +158,14 @@ namespace tsom
 
 			if (chunkIndices != m_indices)
 			{
-				ChunkIndices neighborIndices = chunkIndices - m_indices;
+				const Chunk* chunk = neighborChunks[direction];
+				if (!chunk)
+					return {};
 
-				// FIXME
-				for (auto&& [dir, dirIndices] : s_dirOffset.iter_kv())
-				{
-					if (neighborIndices == dirIndices)
-					{
-						const Chunk* chunk = neighborChunks[dir];
-						if (!chunk)
-							return {};
+				if (!chunk->HasContent())
+					return {};
 
-						if (!chunk->HasContent())
-							return {};
-
-						return chunk->GetBlockContent(indices);
-					}
-				}
-
-				NazaraErrorFmt("unexpected neighbor indices {};{};{}", neighborIndices.x, neighborIndices.y, neighborIndices.z);
-				NAZARA_UNREACHABLE();
+				return chunk->GetBlockContent(indices);
 			}
 			else
 				return GetBlockContent(indices);
@@ -198,27 +186,27 @@ namespace tsom
 					Nz::Vector3f blockCenter = std::accumulate(corners.begin(), corners.end(), Nz::Vector3f::Zero()) / corners.size();
 
 					// Up
-					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, { 0, 0, 1 }); !neighborOpt || neighborOpt == EmptyBlockIndex)
+					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, Direction::Up); !neighborOpt || neighborOpt == EmptyBlockIndex)
 						DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::RightTopNear], corners[Nz::BoxCorner::LeftTopNear], corners[Nz::BoxCorner::RightBottomNear], corners[Nz::BoxCorner::LeftBottomNear] });
 
 					// Down
-					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, { 0, 0, -1 }); !neighborOpt || neighborOpt == EmptyBlockIndex)
+					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, Direction::Down); !neighborOpt || neighborOpt == EmptyBlockIndex)
 						DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::LeftTopFar], corners[Nz::BoxCorner::RightTopFar], corners[Nz::BoxCorner::LeftBottomFar], corners[Nz::BoxCorner::RightBottomFar] });
 
 					// Front
-					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, { 0, -1, 0 }); !neighborOpt || neighborOpt == EmptyBlockIndex)
+					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, Direction::Front); !neighborOpt || neighborOpt == EmptyBlockIndex)
 						DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::RightTopFar], corners[Nz::BoxCorner::RightTopNear], corners[Nz::BoxCorner::RightBottomFar], corners[Nz::BoxCorner::RightBottomNear] });
 
 					// Back
-					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, { 0, 1, 0 }); !neighborOpt || neighborOpt == EmptyBlockIndex)
+					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, Direction::Back); !neighborOpt || neighborOpt == EmptyBlockIndex)
 						DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::LeftTopNear], corners[Nz::BoxCorner::LeftTopFar], corners[Nz::BoxCorner::LeftBottomNear], corners[Nz::BoxCorner::LeftBottomFar] });
 
 					// Left
-					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, { -1, 0, 0 }); !neighborOpt || neighborOpt == EmptyBlockIndex)
+					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, Direction::Left); !neighborOpt || neighborOpt == EmptyBlockIndex)
 						DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::RightBottomNear], corners[Nz::BoxCorner::LeftBottomNear], corners[Nz::BoxCorner::RightBottomFar], corners[Nz::BoxCorner::LeftBottomFar] });
 
 					// Right
-					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, { 1, 0, 0 }); !neighborOpt || neighborOpt == EmptyBlockIndex)
+					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, Direction::Right); !neighborOpt || neighborOpt == EmptyBlockIndex)
 						DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::LeftTopNear], corners[Nz::BoxCorner::RightTopNear], corners[Nz::BoxCorner::LeftTopFar], corners[Nz::BoxCorner::RightTopFar] });
 				}
 			}

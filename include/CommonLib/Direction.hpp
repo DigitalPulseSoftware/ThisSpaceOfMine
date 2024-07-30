@@ -71,15 +71,24 @@ namespace tsom
 		DirectionAxis { 2, 0, 1, -1,  1,  1 }, //< Up
 	};
 
-	constexpr Nz::EnumArray<Direction, Nz::Vector3i> s_dirOffset = {
-		Nz::Vector3i {  0,  0,  1  }, //< Back
-		Nz::Vector3i {  0, -1,  0  }, //< Down
-		Nz::Vector3i {  0,  0,  -1 }, //< Front
-		Nz::Vector3i { -1,  0,  0  }, //< Left
-		Nz::Vector3i {  1,  0,  0  }, //< Right
-		Nz::Vector3i {  0,  1,  0  }, //< Up
+	constexpr Nz::EnumArray<Direction, Nz::Vector3i> s_blockDirOffset = {
+		Nz::Vector3i {  0,  1,  0 }, //< Back
+		Nz::Vector3i {  0,  0, -1 }, //< Down
+		Nz::Vector3i {  0, -1,  0 }, //< Front
+		Nz::Vector3i { -1,  0,  0 }, //< Left
+		Nz::Vector3i {  1,  0,  0 }, //< Right
+		Nz::Vector3i {  0,  0,  1 }, //< Up
 	};
 
+	constexpr Nz::EnumArray<Direction, Nz::Vector3i> s_chunkDirOffset = {
+		Nz::Vector3i {  0,  0,  1 }, //< Back
+		Nz::Vector3i {  0, -1,  0 }, //< Down
+		Nz::Vector3i {  0,  0, -1 }, //< Front
+		Nz::Vector3i { -1,  0,  0 }, //< Left
+		Nz::Vector3i {  1,  0,  0 }, //< Right
+		Nz::Vector3i {  0,  1,  0 }, //< Up
+	};
+	
 	constexpr Direction DirectionFromNormal(const Nz::Vector3f& outsideNormal);
 }
 
