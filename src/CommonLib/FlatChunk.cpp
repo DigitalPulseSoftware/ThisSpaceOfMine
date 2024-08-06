@@ -10,7 +10,7 @@
 
 namespace tsom
 {
-	std::shared_ptr<Nz::Collider3D> FlatChunk::BuildCollider(const BlockLibrary& /*blockManager*/) const
+	std::shared_ptr<Nz::Collider3D> FlatChunk::BuildCollider() const
 	{
 		std::vector<Nz::CompoundCollider3D::ChildCollider> childColliders;
 

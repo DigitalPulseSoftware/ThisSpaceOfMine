@@ -42,16 +42,18 @@ namespace tsom
 		public:
 			struct VertexAttributes;
 
-			inline Chunk(ChunkContainer& owner, const ChunkIndices& indices, const Nz::Vector3ui& size, float blockSize);
+			inline Chunk(const BlockLibrary& blockLibrary, ChunkContainer& owner, const ChunkIndices& indices, const Nz::Vector3ui& size, float blockSize);
 			Chunk(const Chunk&) = delete;
 			Chunk(Chunk&&) = delete;
 			virtual ~Chunk();
 
-			virtual std::shared_ptr<Nz::Collider3D> BuildCollider(const BlockLibrary& blockManager) const = 0;
-			virtual void BuildMesh(const BlockLibrary& blockManager, std::vector<Nz::UInt32>& indices, const Nz::Vector3f& center, const Nz::FunctionRef<VertexAttributes(Nz::UInt32 count)>& addVertices) const;
+			virtual std::shared_ptr<Nz::Collider3D> BuildCollider() const = 0;
+			virtual void BuildMesh(std::vector<Nz::UInt32>& indices, const Nz::Vector3f& center, const Nz::FunctionRef<VertexAttributes(Nz::UInt32 count)>& addVertices) const;
 
 			virtual std::optional<Nz::Vector3ui> ComputeCoordinates(const Nz::Vector3f& position) const = 0;
 			virtual Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> ComputeVoxelCorners(const Nz::Vector3ui& indices) const = 0;
+
+			virtual void Deserialize(const BlockLibrary& blockLibrary, Nz::ByteStream& byteStream);
 
 			inline const Nz::Bitset<Nz::UInt64>& GetCollisionCellMask() const;
 			inline unsigned int GetBlockLocalIndex(const Nz::Vector3ui& indices) const;
@@ -79,9 +81,7 @@ namespace tsom
 			inline void UnlockRead() const;
 			inline void UnlockWrite();
 
-			inline void UpdateBlock(const Nz::Vector3ui& indices, BlockIndex cellType);
-
-			virtual void Deserialize(const BlockLibrary& blockLibrary, Nz::ByteStream& byteStream);
+			void UpdateBlock(const Nz::Vector3ui& indices, BlockIndex cellType);
 
 			Chunk& operator=(const Chunk&) = delete;
 			Chunk& operator=(Chunk&&) = delete;
@@ -108,6 +108,7 @@ namespace tsom
 			Nz::Bitset<Nz::UInt64> m_collisionCellMask;
 			Nz::Vector3ui m_size;
 			ChunkIndices m_indices;
+			const BlockLibrary& m_blockLibrary;
 			ChunkContainer& m_owner;
 			float m_blockSize;
 	};

@@ -17,7 +17,7 @@ namespace tsom
 {
 	Chunk::~Chunk() = default;
 
-	void Chunk::BuildMesh(const BlockLibrary& blockManager, std::vector<Nz::UInt32>& indices, const Nz::Vector3f& gravityCenter, const Nz::FunctionRef<VertexAttributes(Nz::UInt32)>& addVertices) const
+	void Chunk::BuildMesh(std::vector<Nz::UInt32>& indices, const Nz::Vector3f& gravityCenter, const Nz::FunctionRef<VertexAttributes(Nz::UInt32)>& addVertices) const
 	{
 		auto DrawFace = [&](BlockIndex blockIndex, const Nz::Vector3f& blockCenter, const std::array<Nz::Vector3f, 4>& pos)
 		{
@@ -47,7 +47,7 @@ namespace tsom
 				// Compute texture direction based on face direction in regular orientation
 				Direction texDirection = DirectionFromNormal(upRotation * faceDirection);
 
-				const auto& blockData = blockManager.GetBlockData(blockIndex);
+				const auto& blockData = m_blockLibrary.GetBlockData(blockIndex);
 				std::size_t textureIndex = blockData.texIndices[texDirection];
 
 				// Compute UV
@@ -213,44 +213,6 @@ namespace tsom
 		}
 	}
 
-	void Chunk::Serialize(const BlockLibrary& blockLibrary, Nz::ByteStream& byteStream)
-	{
-		byteStream << Constants::ChunkBinaryVersion;
-		byteStream << m_size;
-
-		std::vector<BlockIndex> serializationIndices(m_blockTypeCount.size());
-		Nz::UInt16 nextUniqueIndex = 0;
-
-		for (BlockIndex i = 0; i < m_blockTypeCount.size(); ++i)
-		{
-			if (m_blockTypeCount[i] == 0)
-				continue;
-
-			serializationIndices[i] = nextUniqueIndex++;
-		}
-
-		byteStream << Nz::SafeCast<Nz::UInt16>(nextUniqueIndex);
-		for (BlockIndex i = 0; i < m_blockTypeCount.size(); ++i)
-		{
-			if (m_blockTypeCount[i] == 0)
-				continue;
-
-			byteStream << blockLibrary.GetBlockData(i).name;
-		}
-
-		// nextUniqueIndex is the number of bits required to store all the different block types used
-		if (nextUniqueIndex > 8)
-		{
-			for (BlockIndex blockIndex : m_blocks)
-				byteStream << static_cast<Nz::UInt16>(serializationIndices[blockIndex]);
-		}
-		else
-		{
-			for (BlockIndex blockIndex : m_blocks)
-				byteStream << static_cast<Nz::UInt8>(serializationIndices[blockIndex]);
-		}
-	}
-
 	void Chunk::Deserialize(const BlockLibrary& blockLibrary, Nz::ByteStream& byteStream)
 	{
 		Nz::UInt32 chunkBinaryVersion;
@@ -308,6 +270,64 @@ namespace tsom
 
 		m_blocks = std::move(blocks);
 		OnChunkReset();
+	}
+
+	void Chunk::Serialize(const BlockLibrary& blockLibrary, Nz::ByteStream& byteStream)
+	{
+		byteStream << Constants::ChunkBinaryVersion;
+		byteStream << m_size;
+
+		std::vector<BlockIndex> serializationIndices(m_blockTypeCount.size());
+		Nz::UInt16 nextUniqueIndex = 0;
+
+		for (BlockIndex i = 0; i < m_blockTypeCount.size(); ++i)
+		{
+			if (m_blockTypeCount[i] == 0)
+				continue;
+
+			serializationIndices[i] = nextUniqueIndex++;
+		}
+
+		byteStream << Nz::SafeCast<Nz::UInt16>(nextUniqueIndex);
+		for (BlockIndex i = 0; i < m_blockTypeCount.size(); ++i)
+		{
+			if (m_blockTypeCount[i] == 0)
+				continue;
+
+			byteStream << blockLibrary.GetBlockData(i).name;
+		}
+
+		// nextUniqueIndex is the number of bits required to store all the different block types used
+		if (nextUniqueIndex > 8)
+		{
+			for (BlockIndex blockIndex : m_blocks)
+				byteStream << static_cast<Nz::UInt16>(serializationIndices[blockIndex]);
+		}
+		else
+		{
+			for (BlockIndex blockIndex : m_blocks)
+				byteStream << static_cast<Nz::UInt8>(serializationIndices[blockIndex]);
+		}
+	}
+
+	void Chunk::UpdateBlock(const Nz::Vector3ui& indices, BlockIndex newBlock)
+	{
+		NazaraAssert(!m_blocks.empty(), "chunk has not been reset");
+
+		const auto& blockData = m_blockLibrary.GetBlockData(newBlock);
+
+		unsigned int blockIndex = GetBlockLocalIndex(indices);
+		BlockIndex oldContent = m_blocks[blockIndex];
+		m_blocks[blockIndex] = newBlock;
+		m_collisionCellMask[blockIndex] = blockData.hasCollisions;
+
+		m_blockTypeCount[oldContent]--;
+		if (newBlock >= m_blockTypeCount.size())
+			m_blockTypeCount.resize(newBlock + 1);
+
+		m_blockTypeCount[newBlock]++;
+
+		OnBlockUpdated(this, indices, newBlock);
 	}
 
 	void Chunk::OnChunkReset()

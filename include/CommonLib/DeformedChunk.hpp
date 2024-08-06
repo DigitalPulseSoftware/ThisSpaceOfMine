@@ -14,12 +14,12 @@ namespace tsom
 	class DeformedChunk : public Chunk
 	{
 		public:
-			inline DeformedChunk(ChunkContainer& owner, const ChunkIndices& indices, const Nz::Vector3ui& size, float cellSize, const Nz::Vector3f& deformationCenter, float deformationRadius);
+			inline DeformedChunk(const BlockLibrary& blockLibrary, ChunkContainer& owner, const ChunkIndices& indices, const Nz::Vector3ui& size, float cellSize, const Nz::Vector3f& deformationCenter, float deformationRadius);
 			DeformedChunk(const DeformedChunk&) = delete;
 			DeformedChunk(DeformedChunk&&) = delete;
 			~DeformedChunk() = default;
 
-			std::shared_ptr<Nz::Collider3D> BuildCollider(const BlockLibrary& blockManager) const override;
+			std::shared_ptr<Nz::Collider3D> BuildCollider() const override;
 
 			std::optional<Nz::Vector3ui> ComputeCoordinates(const Nz::Vector3f& position) const override;
 			Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> ComputeVoxelCorners(const Nz::Vector3ui& indices) const override;

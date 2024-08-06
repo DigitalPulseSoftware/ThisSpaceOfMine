@@ -29,7 +29,7 @@ namespace tsom
 			Ship(Ship&&) noexcept = default;
 			~Ship() = default;
 
-			FlatChunk& AddChunk(const ChunkIndices& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback = nullptr);
+			FlatChunk& AddChunk(const BlockLibrary& blockLibrary, const ChunkIndices& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback = nullptr);
 
 			float ComputeGravityAcceleration(const Nz::Vector3f& position) const override;
 			Nz::Vector3f ComputeUpDirection(const Nz::Vector3f& position) const override;
