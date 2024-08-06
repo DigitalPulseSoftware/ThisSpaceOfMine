@@ -185,28 +185,38 @@ namespace tsom
 
 					Nz::Vector3f blockCenter = std::accumulate(corners.begin(), corners.end(), Nz::Vector3f::Zero()) / corners.size();
 
+					auto IsTransparent = [&](BlockIndex neighborBlockIndex)
+					{
+						// don't render faces between blocks of the same type even if transparent
+						if (blockIndex == neighborBlockIndex)
+							return false;
+
+						const auto& blockData = m_blockLibrary.GetBlockData(neighborBlockIndex);
+						return blockData.isTransparent;
+					};
+
 					// Up
-					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, Direction::Up); !neighborOpt || neighborOpt == EmptyBlockIndex)
+					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, Direction::Up); !neighborOpt || IsTransparent(*neighborOpt))
 						DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::RightTopNear], corners[Nz::BoxCorner::LeftTopNear], corners[Nz::BoxCorner::RightBottomNear], corners[Nz::BoxCorner::LeftBottomNear] });
 
 					// Down
-					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, Direction::Down); !neighborOpt || neighborOpt == EmptyBlockIndex)
+					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, Direction::Down); !neighborOpt || IsTransparent(*neighborOpt))
 						DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::LeftTopFar], corners[Nz::BoxCorner::RightTopFar], corners[Nz::BoxCorner::LeftBottomFar], corners[Nz::BoxCorner::RightBottomFar] });
 
 					// Front
-					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, Direction::Front); !neighborOpt || neighborOpt == EmptyBlockIndex)
+					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, Direction::Front); !neighborOpt || IsTransparent(*neighborOpt))
 						DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::RightTopFar], corners[Nz::BoxCorner::RightTopNear], corners[Nz::BoxCorner::RightBottomFar], corners[Nz::BoxCorner::RightBottomNear] });
 
 					// Back
-					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, Direction::Back); !neighborOpt || neighborOpt == EmptyBlockIndex)
+					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, Direction::Back); !neighborOpt || IsTransparent(*neighborOpt))
 						DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::LeftTopNear], corners[Nz::BoxCorner::LeftTopFar], corners[Nz::BoxCorner::LeftBottomNear], corners[Nz::BoxCorner::LeftBottomFar] });
 
 					// Left
-					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, Direction::Left); !neighborOpt || neighborOpt == EmptyBlockIndex)
+					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, Direction::Left); !neighborOpt || IsTransparent(*neighborOpt))
 						DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::RightBottomNear], corners[Nz::BoxCorner::LeftBottomNear], corners[Nz::BoxCorner::RightBottomFar], corners[Nz::BoxCorner::LeftBottomFar] });
 
 					// Right
-					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, Direction::Right); !neighborOpt || neighborOpt == EmptyBlockIndex)
+					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, Direction::Right); !neighborOpt || IsTransparent(*neighborOpt))
 						DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::LeftTopNear], corners[Nz::BoxCorner::RightTopNear], corners[Nz::BoxCorner::LeftTopFar], corners[Nz::BoxCorner::RightTopFar] });
 				}
 			}
@@ -336,7 +346,8 @@ namespace tsom
 		for (std::size_t blockIndex = 0; blockIndex < m_blocks.size(); ++blockIndex)
 		{
 			BlockIndex blockContent = m_blocks[blockIndex];
-			m_collisionCellMask[blockIndex] = (blockContent != EmptyBlockIndex);
+			const auto& blockData = m_blockLibrary.GetBlockData(blockContent);
+			m_collisionCellMask[blockIndex] = blockData.hasCollisions;
 
 			if (blockContent >= m_blockTypeCount.size())
 				m_blockTypeCount.resize(blockContent + 1);

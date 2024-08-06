@@ -44,6 +44,7 @@ namespace tsom
 				std::string baseSidePath;
 				std::string baseUpPath;
 				bool hasCollisions = true;
+				bool isTransparent = false;
 				float permeability = 0.f;
 			};
 
@@ -52,6 +53,7 @@ namespace tsom
 				std::string name;
 				Nz::EnumArray<Direction, unsigned int> texIndices;
 				bool hasCollisions;
+				bool isTransparent;
 				float permeability;
 			};
 
