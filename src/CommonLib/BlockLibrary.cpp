@@ -11,6 +11,7 @@ namespace tsom
 	{
 		RegisterBlock("empty", {
 			.hasCollisions = false,
+			.isTransparent = true,
 			.permeability = 1.f
 		});
 
@@ -57,7 +58,9 @@ namespace tsom
 		});
 
 		RegisterBlock("forcefield", {
-			.basePath = "blocks/frosted_ice_0",
+			.basePath = "blocks/forcefield",
+			.hasCollisions = false,
+			.isTransparent = true
 		});
 
 		RegisterBlock("planks", {
@@ -79,6 +82,7 @@ namespace tsom
 
 		auto& blockData = m_blocks.emplace_back();
 		blockData.hasCollisions = blockInfo.hasCollisions;
+		blockData.isTransparent = blockInfo.isTransparent;
 		blockData.permeability = blockInfo.permeability;
 		blockData.name = name;
 
@@ -94,7 +98,7 @@ namespace tsom
 		else
 			baseSideTexIndex = baseTexIndex;
 
-		const Nz::EnumArray<Direction, std::string*> dirToStr = {
+		Nz::EnumArray<Direction, std::string*> dirToStr = {
 			&blockInfo.baseBackPath,  //< Back
 			&blockInfo.baseDownPath,  //< Down
 			&blockInfo.baseFrontPath, //< Front
@@ -113,6 +117,7 @@ namespace tsom
 				blockData.texIndices[dir] = baseTexIndex;
 		}
 
+		assert(!m_blockIndices.contains(name));
 		m_blockIndices.emplace(std::move(name), blockIndex);
 
 		return blockIndex;

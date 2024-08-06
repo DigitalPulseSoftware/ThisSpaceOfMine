@@ -96,6 +96,7 @@ namespace tsom
 		m_chunkMaterial->SetTextureProperty("NormalMap", blockLibrary.GetNormalTexture(), blockSampler);
 		m_chunkMaterial->SetTextureProperty("DetailMap", blockLibrary.GetDetailTexture(), blockSampler);
 		m_chunkMaterial->SetValueProperty("ShadowPosScale", 1.f);
+		m_chunkMaterial->SetValueProperty("AlphaTest", true);
 		m_chunkMaterial->UpdatePassesStates({ "ShadowPass", "DistanceShadowPass" }, [](Nz::RenderStates& states)
 		{
 			states.frontFace = Nz::FrontFace::CounterClockwise;
