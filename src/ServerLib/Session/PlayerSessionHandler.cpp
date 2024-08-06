@@ -294,11 +294,21 @@ namespace tsom
 		Nz::Vector3f blockCenter = std::accumulate(corners.begin(), corners.end(), Nz::Vector3f::Zero()) / corners.size();
 		Nz::Vector3f offset = chunk->GetContainer().GetChunkOffset(chunk->GetIndices());
 
+		struct IgnoreTrigger : Nz::PhysObjectLayerFilter3D
+		{
+			bool ShouldCollide(Nz::PhysObjectLayer3D objectLayer) const override
+			{
+				return objectLayer != Constants::ObjectLayerStaticTrigger;
+			}
+		};
+
+		IgnoreTrigger physObjectLayerFilter;
+
 		auto& physicsSystem = environment->GetWorld().GetSystem<Nz::Physics3DSystem>();
 		bool doesCollide = physicsSystem.CollisionQuery(boxCollider, Nz::Matrix4f::Translate(offset + blockCenter), [](const Nz::Physics3DSystem::ShapeCollisionInfo& hitInfo) -> std::optional<float>
 		{
 			return hitInfo.penetrationDepth;
-		});
+		}, nullptr, &physObjectLayerFilter);
 
 		if (doesCollide)
 			return false;
