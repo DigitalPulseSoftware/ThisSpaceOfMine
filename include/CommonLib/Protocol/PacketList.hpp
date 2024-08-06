@@ -16,6 +16,9 @@
 TSOM_NETWORK_PACKET(AuthRequest)
 TSOM_NETWORK_PACKET(AuthResponse)
 
+// Debug opcode
+TSOM_NETWORK_PACKET(DebugDrawLineList)
+
 TSOM_NETWORK_PACKET(ChatMessage)
 TSOM_NETWORK_PACKET(ChunkCreate)
 TSOM_NETWORK_PACKET(ChunkDestroy)

@@ -171,6 +171,17 @@ namespace tsom
 			std::vector<BlockUpdate> updates;
 		};
 
+		struct DebugDrawLineList
+		{
+			Helper::EnvironmentId environmentId;
+			std::vector<Nz::UInt16> indices;
+			std::vector<Nz::Vector3f> vertices;
+			Nz::Color color;
+			Nz::Quaternionf rotation;
+			Nz::Vector3f position;
+			float duration;
+		};
+
 		struct EntitiesCreation
 		{
 			struct EntityData
@@ -314,6 +325,7 @@ namespace tsom
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, ChunkDestroy& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, ChunkReset& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, ChunkUpdate& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, DebugDrawLineList& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntitiesCreation& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntitiesDelete& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntitiesStateUpdate& data);

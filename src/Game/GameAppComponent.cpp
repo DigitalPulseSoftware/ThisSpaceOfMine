@@ -25,6 +25,7 @@
 #include <Nazara/Core/EntitySystemAppComponent.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
+#include <Nazara/Core/Systems/LifetimeSystem.hpp>
 #include <Nazara/Graphics/Graphics.hpp>
 #include <Nazara/Graphics/RenderWindow.hpp>
 #include <Nazara/Graphics/Components/CameraComponent.hpp>
@@ -253,6 +254,7 @@ namespace tsom
 		world.AddSystem<MovementInterpolationSystem>(Constants::TickDuration);
 		world.AddSystem<PlanetSystem>();
 		world.AddSystem<ShipSystem>();
+		world.AddSystem<Nz::LifetimeSystem>();
 		world.AddSystem<Nz::RenderSystem>();
 
 		auto& physicsSystem = world.AddSystem<Nz::Physics3DSystem>();

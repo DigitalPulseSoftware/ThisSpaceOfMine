@@ -18,6 +18,7 @@
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/EnttWorld.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
+#include <Nazara/Core/Components/LifetimeComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Core/Components/SkeletonComponent.hpp>
 #include <Nazara/Graphics/Graphics.hpp>
@@ -158,6 +159,45 @@ namespace tsom
 			chunk->UpdateBlock({ blockPos.x, blockPos.y, blockPos.z }, Nz::SafeCast<BlockIndex>(blockIndex));
 
 		chunk->UnlockWrite();
+	}
+
+	void ClientSessionHandler::HandlePacket(Packets::DebugDrawLineList&& debugDrawLineList)
+	{
+		std::shared_ptr<Nz::MaterialInstance> debugMat = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic);
+		debugMat->SetValueProperty("BaseColor", debugDrawLineList.color);
+		debugMat->UpdatePassesStates([](Nz::RenderStates& states)
+		{
+			states.depthBuffer = false;
+			states.primitiveMode = Nz::PrimitiveMode::LineList;
+			return true;
+		});
+
+		std::shared_ptr<Nz::VertexBuffer> debugVB = std::make_shared<Nz::VertexBuffer>(Nz::VertexDeclaration::Get(Nz::VertexLayout::XYZ), Nz::SafeCast<Nz::UInt32>(debugDrawLineList.vertices.size()), Nz::BufferUsage::Write, Nz::SoftwareBufferFactory, debugDrawLineList.vertices.data());
+		std::shared_ptr<Nz::IndexBuffer> debugIB = std::make_shared<Nz::IndexBuffer>(Nz::IndexType::U16, Nz::SafeCast<Nz::UInt32>(debugDrawLineList.indices.size()), Nz::BufferUsage::Write, Nz::SoftwareBufferFactory, debugDrawLineList.indices.data());
+
+		std::shared_ptr<Nz::StaticMesh> debugSubMesh = std::make_shared<Nz::StaticMesh>(std::move(debugVB), std::move(debugIB));
+		debugSubMesh->GenerateAABB();
+		debugSubMesh->SetPrimitiveMode(Nz::PrimitiveMode::LineList);
+
+		std::shared_ptr<Nz::Mesh> debugMesh = Nz::Mesh::Build(std::move(debugSubMesh));
+		std::shared_ptr<Nz::GraphicalMesh> debugGraphicalMesh = Nz::GraphicalMesh::BuildFromMesh(*debugMesh);
+
+		std::shared_ptr<Nz::Model> debugModel = std::make_shared<Nz::Model>(debugGraphicalMesh);
+		for (std::size_t i = 0; i < debugModel->GetSubMeshCount(); ++i)
+			debugModel->SetMaterial(i, debugMat);
+
+		entt::handle debugEntity = m_world.CreateEntity();
+
+		assert(m_environments[debugDrawLineList.environmentId]);
+		auto& environment = *m_environments[debugDrawLineList.environmentId];
+
+		auto& entityNode = debugEntity.emplace<Nz::NodeComponent>(debugDrawLineList.position, debugDrawLineList.rotation);
+		entityNode.SetParent(environment.rootNode);
+
+		auto& gfxComponent = debugEntity.emplace<Nz::GraphicsComponent>();
+		gfxComponent.AttachRenderable(std::move(debugModel), tsom::Constants::RenderMask3D);
+
+		debugEntity.emplace<Nz::LifetimeComponent>(Nz::Time::Seconds(debugDrawLineList.duration));
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::EntitiesCreation&& entitiesCreation)
