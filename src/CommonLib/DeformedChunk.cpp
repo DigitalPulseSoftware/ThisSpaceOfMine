@@ -12,7 +12,7 @@
 
 namespace tsom
 {
-	std::shared_ptr<Nz::Collider3D> DeformedChunk::BuildCollider(const BlockLibrary& blockManager) const
+	std::shared_ptr<Nz::Collider3D> DeformedChunk::BuildCollider() const
 	{
 		std::vector<Nz::UInt32> indices;
 		std::vector<Nz::Vector3f> positions;
@@ -28,7 +28,7 @@ namespace tsom
 			return vertexAttributes;
 		};
 
-		BuildMesh(blockManager, indices, m_deformationCenter, AddVertices);
+		BuildMesh(indices, m_deformationCenter, AddVertices);
 		if (indices.empty())
 			return nullptr;
 

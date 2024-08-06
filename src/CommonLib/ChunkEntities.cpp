@@ -196,7 +196,7 @@ namespace tsom
 				return;
 
 			chunk->LockRead();
-			updateJob->collider = chunk->BuildCollider(m_blockLibrary);
+			updateJob->collider = chunk->BuildCollider();
 			chunk->UnlockRead();
 
 			updateJob->jobDone++;

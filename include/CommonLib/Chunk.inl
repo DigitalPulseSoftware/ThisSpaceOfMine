@@ -7,9 +7,10 @@
 
 namespace tsom
 {
-	inline Chunk::Chunk(ChunkContainer& owner, const ChunkIndices& indices, const Nz::Vector3ui& size, float cellSize) :
+	inline Chunk::Chunk(const BlockLibrary& blockLibrary, ChunkContainer& owner, const ChunkIndices& indices, const Nz::Vector3ui& size, float cellSize) :
 	m_size(size),
 	m_indices(indices),
+	m_blockLibrary(blockLibrary),
 	m_owner(owner),
 	m_blockSize(cellSize)
 	{
@@ -129,24 +130,6 @@ namespace tsom
 	inline void Chunk::LockWrite()
 	{
 		m_mutex.lock();
-	}
-
-	inline void Chunk::UpdateBlock(const Nz::Vector3ui& indices, BlockIndex newBlock)
-	{
-		NazaraAssert(!m_blocks.empty(), "chunk has not been reset");
-
-		unsigned int blockIndex = GetBlockLocalIndex(indices);
-		BlockIndex oldContent = m_blocks[blockIndex];
-		m_blocks[blockIndex] = newBlock;
-		m_collisionCellMask[blockIndex] = (newBlock != EmptyBlockIndex);
-
-		m_blockTypeCount[oldContent]--;
-		if (newBlock >= m_blockTypeCount.size())
-			m_blockTypeCount.resize(newBlock + 1);
-
-		m_blockTypeCount[newBlock]++;
-
-		OnBlockUpdated(this, indices, newBlock);
 	}
 
 	inline void Chunk::UnlockRead() const

@@ -156,7 +156,7 @@ namespace tsom
 			return vertexAttributes;
 		};
 
-		chunk->BuildMesh(m_blockLibrary, indices, m_chunkContainer.GetCenter() - m_chunkContainer.GetChunkOffset(chunk->GetIndices()), AddVertices);
+		chunk->BuildMesh(indices, m_chunkContainer.GetCenter() - m_chunkContainer.GetChunkOffset(chunk->GetIndices()), AddVertices);
 		if (indices.empty())
 			return nullptr;
 
@@ -221,7 +221,7 @@ namespace tsom
 				return;
 
 			chunk->LockRead();
-			updateJob->collider = chunk->BuildCollider(m_blockLibrary);
+			updateJob->collider = chunk->BuildCollider();
 			chunk->UnlockRead();
 
 			updateJob->jobDone++;

@@ -31,7 +31,7 @@ namespace tsom
 			Planet(Planet&&) noexcept = default;
 			~Planet() = default;
 
-			Chunk& AddChunk(const ChunkIndices& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback = nullptr);
+			Chunk& AddChunk(const BlockLibrary& blockLibrary, const ChunkIndices& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback = nullptr);
 
 			float ComputeGravityAcceleration(const Nz::Vector3f& position) const override;
 			Nz::Vector3f ComputeUpDirection(const Nz::Vector3f& position) const override;

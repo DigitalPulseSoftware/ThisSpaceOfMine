@@ -25,11 +25,11 @@ namespace tsom
 	{
 	}
 
-	Chunk& Planet::AddChunk(const ChunkIndices& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback)
+	Chunk& Planet::AddChunk(const BlockLibrary& blockLibrary, const ChunkIndices& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback)
 	{
 		assert(!m_chunks.contains(indices));
 		ChunkData chunkData;
-		chunkData.chunk = std::make_unique<FlatChunk>(*this, indices, Nz::Vector3ui{ ChunkSize }, m_tileSize);
+		chunkData.chunk = std::make_unique<FlatChunk>(blockLibrary, *this, indices, Nz::Vector3ui{ ChunkSize }, m_tileSize);
 
 		chunkData.onReset.Connect(chunkData.chunk->OnReset, [this](Chunk* chunk)
 		{
@@ -338,7 +338,7 @@ namespace tsom
 			{
 				for (int chunkX = 0; chunkX < chunkCount.x; ++chunkX)
 				{
-					auto& chunk = AddChunk({ chunkX - int(chunkCount.x / 2), chunkY - int(chunkCount.y / 2), chunkZ - int(chunkCount.z / 2) });
+					auto& chunk = AddChunk(blockLibrary, { chunkX - int(chunkCount.x / 2), chunkY - int(chunkCount.y / 2), chunkZ - int(chunkCount.z / 2) });
 					taskScheduler.AddTask([&]
 					{
 						GenerateChunk(blockLibrary, chunk, seed, chunkCount);
