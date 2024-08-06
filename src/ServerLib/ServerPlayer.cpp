@@ -5,6 +5,7 @@
 #include <ServerLib/ServerPlayer.hpp>
 #include <CommonLib/CharacterController.hpp>
 #include <CommonLib/GameConstants.hpp>
+#include <CommonLib/PhysicsConstants.hpp>
 #include <CommonLib/Components/PlanetComponent.hpp>
 #include <ServerLib/ServerInstance.hpp>
 #include <ServerLib/ServerPlanetEnvironment.hpp>
@@ -88,6 +89,7 @@ namespace tsom
 		characterSettings.collider = previousCharacter.GetCollider();
 		characterSettings.position = position;
 		characterSettings.rotation = rotation;
+		characterSettings.objectLayer = previousCharacter.GetObjectLayer();
 
 		auto& characterComponent = m_controlledEntity.emplace<Nz::PhysCharacter3DComponent>(std::move(characterSettings));
 		characterComponent.SetImpl(m_controller);
@@ -139,6 +141,7 @@ namespace tsom
 		characterSettings.collider = std::make_shared<Nz::CapsuleCollider3D>(Constants::PlayerCapsuleHeight, Constants::PlayerColliderRadius);
 		characterSettings.position = position;
 		characterSettings.rotation = rotation;
+		characterSettings.objectLayer = Constants::ObjectLayerPlayer;
 
 		auto& characterComponent = m_controlledEntity.emplace<Nz::PhysCharacter3DComponent>(std::move(characterSettings));
 		characterComponent.SetImpl(m_controller);

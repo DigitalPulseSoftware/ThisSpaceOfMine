@@ -4,6 +4,7 @@
 
 #include <CommonLib/ChunkEntities.hpp>
 #include <CommonLib/BlockLibrary.hpp>
+#include <CommonLib/PhysicsConstants.hpp>
 #include <CommonLib/Components/ChunkComponent.hpp>
 #include <CommonLib/Components/EntityOwnerComponent.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
@@ -130,7 +131,10 @@ namespace tsom
 		chunkComponent.chunk = chunk;
 		chunkComponent.parentEntity = m_parentEntity;
 
-		chunkEntity.emplace<Nz::RigidBody3DComponent>(Nz::RigidBody3D::StaticSettings(nullptr));
+		Nz::RigidBody3D::StaticSettings physicsSettings(nullptr);
+		physicsSettings.objectLayer = Constants::ObjectLayerStatic;
+
+		chunkEntity.emplace<Nz::RigidBody3DComponent>(physicsSettings);
 
 		assert(!m_chunkEntities.contains(chunkIndices));
 		m_chunkEntities.insert_or_assign(chunkIndices, chunkEntity);
@@ -170,7 +174,7 @@ namespace tsom
 	{
 		assert(chunk->HasContent());
 
-		// Try to cancel current update job to void useless work
+		// Try to cancel current update job to avoid useless work
 		if (auto it = m_updateJobs.find(chunk->GetIndices()); it != m_updateJobs.end())
 		{
 			UpdateJob& job = *it->second;

@@ -3,11 +3,13 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ServerLib/ServerEnvironment.hpp>
+#include <CommonLib/Physics/PhysicsSettings.hpp>
 #include <ServerLib/SessionVisibilityHandler.hpp>
 #include <ServerLib/Systems/EnvironmentProxySystem.hpp>
 #include <ServerLib/Systems/NetworkedEntitiesSystem.hpp>
 #include <ServerLib/Systems/TempShipEntrySystem.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
+#include <cassert>
 
 namespace tsom
 {
@@ -19,12 +21,12 @@ namespace tsom
 
 		m_world.AddSystem<EnvironmentProxySystem>();
 		m_world.AddSystem<NetworkedEntitiesSystem>(*this);
-		auto& physicsSystem = m_world.AddSystem<Nz::Physics3DSystem>();
-		{
-			auto& physWorld = physicsSystem.GetPhysWorld();
-			physWorld.SetStepSize(m_serverInstance.GetTickDuration());
-			physWorld.SetGravity(Nz::Vector3f::Zero());
-		}
+
+		// Setup physics
+		Nz::Physics3DSystem::Settings physSettings = Physics::BuildSettings();
+		physSettings.stepSize = m_serverInstance.GetTickDuration();
+
+		m_world.AddSystem<Nz::Physics3DSystem>(std::move(physSettings));
 	}
 
 	ServerEnvironment::~ServerEnvironment() = default;

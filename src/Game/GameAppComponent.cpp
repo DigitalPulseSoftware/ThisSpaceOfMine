@@ -12,6 +12,7 @@
 #include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/UpdaterAppComponent.hpp>
 #include <CommonLib/Utils.hpp>
+#include <CommonLib/Physics/PhysicsSettings.hpp>
 #include <CommonLib/Systems/PlanetSystem.hpp>
 #include <CommonLib/Systems/ShipSystem.hpp>
 #include <Game/States/BackgroundState.hpp>
@@ -257,12 +258,10 @@ namespace tsom
 		world.AddSystem<Nz::LifetimeSystem>();
 		world.AddSystem<Nz::RenderSystem>();
 
-		auto& physicsSystem = world.AddSystem<Nz::Physics3DSystem>();
-		{
-			auto& physWorld = physicsSystem.GetPhysWorld();
-			physWorld.SetGravity(Nz::Vector3f::Zero());
-			physWorld.SetStepSize(Constants::TickDuration);
-		}
+		Nz::Physics3DSystem::Settings physSettings = Physics::BuildSettings();
+		physSettings.stepSize = Constants::TickDuration;
+
+		world.AddSystem<Nz::Physics3DSystem>(std::move(physSettings));
 
 		return world;
 	}

@@ -11,6 +11,7 @@
 #include <ClientLib/Components/ChunkNetworkMapComponent.hpp>
 #include <ClientLib/Components/MovementInterpolationComponent.hpp>
 #include <CommonLib/GameConstants.hpp>
+#include <CommonLib/PhysicsConstants.hpp>
 #include <CommonLib/Ship.hpp>
 #include <CommonLib/Components/EntityOwnerComponent.hpp>
 #include <CommonLib/Components/PlanetComponent.hpp>
@@ -453,7 +454,11 @@ namespace tsom
 	void ClientSessionHandler::SetupEntity(entt::handle entity, Packets::Helper::PlayerControlledData&& entityData)
 	{
 		auto collider = std::make_shared<Nz::CapsuleCollider3D>(Constants::PlayerCapsuleHeight, Constants::PlayerColliderRadius);
-		entity.emplace<Nz::RigidBody3DComponent>(Nz::RigidBody3D::DynamicSettings(collider, 0.f));
+
+		Nz::RigidBody3D::DynamicSettings physSettings(collider, 0.f);
+		physSettings.objectLayer = Constants::ObjectLayerPlayer;
+
+		entity.emplace<Nz::RigidBody3DComponent>(physSettings);
 
 		// Player model (collider for now)
 		if (!m_playerModel)

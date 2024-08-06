@@ -31,7 +31,7 @@ namespace tsom
 		auto view = m_registry.view<Nz::RigidBody3DComponent>(entt::exclude<Nz::DisabledComponent>);
 		for (auto&& [entity, rigidBody] : view.each())
 		{
-			if (rigidBody.IsSleeping())
+			if (rigidBody.IsSleeping() || !rigidBody.IsDynamic())
 				continue;
 
 			Nz::Vector3f pos = rigidBody.GetPosition();
