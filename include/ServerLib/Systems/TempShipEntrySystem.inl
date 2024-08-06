@@ -4,9 +4,9 @@
 
 namespace tsom
 {
-	inline TempShipEntrySystem::TempShipEntrySystem(entt::registry& registry, ServerInstance& serverInstance) :
+	inline TempShipEntrySystem::TempShipEntrySystem(entt::registry& registry, ServerEnvironment* ownerEnvironment) :
 	m_registry(registry),
-	m_serverInstance(serverInstance)
+	m_ownerEnvironment(ownerEnvironment)
 	{
 	}
 }

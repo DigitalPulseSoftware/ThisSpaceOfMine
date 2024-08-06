@@ -6,6 +6,7 @@
 #include <CommonLib/BlockLibrary.hpp>
 #include <CommonLib/FlatChunk.hpp>
 #include <CommonLib/GameConstants.hpp>
+#include <Nazara/Physics3D/Collider3D.hpp>
 #include <fmt/format.h>
 #include <random>
 
@@ -59,12 +60,35 @@ namespace tsom
 		return *it->second.chunk;
 	}
 
+	std::shared_ptr<Nz::Collider3D> Ship::BuildHullCollider() const
+	{
+		if (m_chunks.size() > 1)
+		{
+			std::vector<Nz::CompoundCollider3D::ChildCollider> childColliders;
+			for (auto&& [ChunkIndices, chunkData] : m_chunks)
+			{
+				auto& childCollider = childColliders.emplace_back();
+				childCollider.collider = chunkData.chunk->BuildCollider();
+				childCollider.offset = GetChunkOffset(chunkData.chunk->GetIndices());
+			}
+
+			return std::make_shared<Nz::CompoundCollider3D>(std::move(childColliders));
+		}
+		else
+		{
+			if (m_chunks.empty())
+				return nullptr;
+
+			return m_chunks.begin().value().chunk->BuildCollider();
+		}
+	}
+
 	float Ship::ComputeGravityAcceleration(const Nz::Vector3f& /*position*/) const
 	{
 		return Constants::ShipGravityAcceleration;
 	}
 
-	Nz::Vector3f Ship::ComputeUpDirection(const Nz::Vector3f& position) const
+	Nz::Vector3f Ship::ComputeUpDirection(const Nz::Vector3f& /*position*/) const
 	{
 		return m_upDirection;
 	}
@@ -83,22 +107,22 @@ namespace tsom
 
 	void Ship::Generate(const BlockLibrary& blockLibrary, bool small)
 	{
-		constexpr unsigned int freespace = 5;
-
 		FlatChunk& chunk = AddChunk(blockLibrary, { 0, 0, 0 });
 
 		BlockIndex hullIndex = blockLibrary.GetBlockIndex("hull");
 		if (hullIndex == InvalidBlockIndex)
 			return;
 
-		constexpr unsigned int boxSize = 12;
-		constexpr unsigned int heightSize = 5;
-		Nz::Vector3ui startPos = chunk.GetSize() / 2 - Nz::Vector3ui(boxSize / 2, boxSize / 2, heightSize / 2);
+		BlockIndex forcefieldIndex = blockLibrary.GetBlockIndex("forcefield");
+
+		unsigned int boxSize = (small) ? 6 : 12;
+		unsigned int height = (small) ? 4 : 6;
+		Nz::Vector3ui startPos = chunk.GetSize() / 2 - Nz::Vector3ui(boxSize / 2, boxSize / 2, height / 2);
 
 		chunk.LockWrite();
 		chunk.Reset();
 
-		for (unsigned int z = 0; z < heightSize; ++z)
+		for (unsigned int z = 0; z < height; ++z)
 		{
 			for (unsigned int y = 0; y < boxSize; ++y)
 			{
@@ -106,13 +130,13 @@ namespace tsom
 				{
 					if (x != 0 && x != boxSize - 1 &&
 						y != 0 && y != boxSize - 1 &&
-						z != 0 && z != heightSize - 1)
+						z != 0 && z != height - 1)
 						continue;
 
-					if (x == 0 && y == boxSize / 2 && z > 0 && z < heightSize - 1)
-						continue;
-
-					chunk.UpdateBlock(startPos + Nz::Vector3ui{ x, y, z }, hullIndex);
+					if (x == 0 && y == boxSize / 2 && z > 0 && z < height - 1)
+						chunk.UpdateBlock(startPos + Nz::Vector3ui{ x, y, z }, forcefieldIndex);
+					else
+						chunk.UpdateBlock(startPos + Nz::Vector3ui{ x, y, z }, hullIndex);
 				}
 			}
 		}

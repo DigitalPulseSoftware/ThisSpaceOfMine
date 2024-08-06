@@ -4,11 +4,12 @@
 
 #include <ServerLib/Systems/TempShipEntrySystem.hpp>
 #include <ServerLib/ServerInstance.hpp>
-#include <ServerLib/ServerPlanetEnvironment.hpp>
+#include <ServerLib/ServerEnvironment.hpp>
 #include <ServerLib/ServerPlayer.hpp>
 #include <ServerLib/ServerShipEnvironment.hpp>
 #include <ServerLib/Components/TempShipEntryComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
+#include <Nazara/Physics3D/Collider3D.hpp>
 
 namespace tsom
 {
@@ -16,41 +17,27 @@ namespace tsom
 	{
 		auto view = m_registry.view<Nz::NodeComponent, TempShipEntryComponent>();
 
-		ServerPlanetEnvironment& planetEnvironment = m_serverInstance.GetPlanetEnvironment();
-		m_serverInstance.ForEachPlayer([&](ServerPlayer& player)
+		for (auto&& [entity, node, shipEntry] : view.each())
 		{
-			entt::handle entity = player.GetControlledEntity();
-			if (!entity)
-				return;
+			if (!shipEntry.entryTrigger)
+				continue;
 
-			Nz::Vector3f playerPosition = entity.get<Nz::NodeComponent>().GetPosition();
-
-			if (player.GetControlledEntityEnvironment() == &planetEnvironment)
+			m_ownerEnvironment->ForEachPlayer([&](ServerPlayer& player)
 			{
-				for (auto&& [entity, node, shipEntry] : view.each())
+				entt::handle entity = player.GetControlledEntity();
+				if (!entity)
+					return;
+
+				Nz::Vector3f playerPosition = entity.get<Nz::NodeComponent>().GetPosition();
+
+				if (player.GetControlledEntityEnvironment() == m_ownerEnvironment)
 				{
 					Nz::Vector3f localPlayerPos = node.ToLocalPosition(playerPosition);
-					if (shipEntry.aabb.Contains(localPlayerPos))
-					{
+					// Use AABB as a cheap test
+					if (shipEntry.aabb.Contains(localPlayerPos) && shipEntry.entryTrigger->CollisionQuery(localPlayerPos))
 						player.MoveEntityToEnvironment(shipEntry.shipEnv);
-						break;
-					}
 				}
-			}
-			else
-			{
-				for (auto&& [entity, node, shipEntry] : view.each())
-				{
-					if (player.GetControlledEntityEnvironment() != shipEntry.shipEnv)
-						continue;
-
-					if (!shipEntry.aabb.Contains(playerPosition))
-					{
-						player.MoveEntityToEnvironment(&planetEnvironment);
-						break;
-					}
-				}
-			}
-		});
+			});
+		}
 	}
 }

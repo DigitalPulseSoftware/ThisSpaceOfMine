@@ -119,7 +119,7 @@ namespace tsom
 			GetSession()->SendPacket(std::move(chatMessage));
 			return;
 		}
-		else if (message == "/spawnship")
+		else if (message == "/spawnship" || message == "/spawnsmallship")
 		{
 			entt::handle playerEntity = m_player->GetControlledEntity();
 			if (!playerEntity)
@@ -135,30 +135,10 @@ namespace tsom
 			Nz::NodeComponent& playerNode = playerEntity.get<Nz::NodeComponent>();
 
 			ServerShipEnvironment* shipEnv = serverInstance.CreateShip();
+			shipEnv->GenerateShip(message == "/spawnsmallship");
 
 			EnvironmentTransform planetToShip(playerNode.GetPosition(), Nz::Quaternionf::Identity()); //< FIXME
-
-			currentEnvironment->Connect(*shipEnv, planetToShip);
-			shipEnv->Connect(*currentEnvironment, -planetToShip);
-
-			currentEnvironment->ForEachPlayer([&](ServerPlayer& player)
-			{
-				player.AddToEnvironment(shipEnv);
-			});
-
-			entt::handle environmentProxy = currentEnvironment->CreateEntity();
-			environmentProxy.emplace<Nz::NodeComponent>(planetToShip.translation, planetToShip.rotation);
-
-			std::shared_ptr<Nz::Collider3D> chunkCollider = shipEnv->GetShip().GetChunk({0, 0, 0})->BuildCollider(blockLibrary);
-			environmentProxy.emplace<Nz::RigidBody3DComponent>(Nz::RigidBody3DComponent::DynamicSettings(chunkCollider, 100.f));
-
-			auto& envProxy = environmentProxy.emplace<EnvironmentProxyComponent>();
-			envProxy.fromEnv = currentEnvironment;
-			envProxy.toEnv = shipEnv;
-
-			auto& shipEntry = environmentProxy.emplace<TempShipEntryComponent>();
-			shipEntry.aabb = Nz::Boxf(-6.f, -2.5f, -6.f, 12.f, 5.f, 12.f);
-			shipEntry.shipEnv = shipEnv;
+			shipEnv->LinkOutsideEnvironment(currentEnvironment, planetToShip);
 
 			m_player->MoveEntityToEnvironment(shipEnv);
 			return;

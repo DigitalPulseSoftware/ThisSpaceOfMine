@@ -8,10 +8,11 @@
 #define TSOM_COMMONLIB_FLATCHUNK_HPP
 
 #include <CommonLib/Chunk.hpp>
+#include <NazaraUtils/FunctionRef.hpp>
 
 namespace tsom
 {
-	class FlatChunk : public Chunk
+	class TSOM_COMMONLIB_API FlatChunk : public Chunk
 	{
 		public:
 			using Chunk::Chunk;
@@ -25,6 +26,8 @@ namespace tsom
 
 			FlatChunk& operator=(const FlatChunk&) = delete;
 			FlatChunk& operator=(FlatChunk&&) = delete;
+
+			static void BuildCollider(const Nz::Vector3ui& dims, Nz::Bitset<Nz::UInt64> collisionCellMask, Nz::FunctionRef<void(const Nz::Boxf& box)> callback);
 	};
 }
 

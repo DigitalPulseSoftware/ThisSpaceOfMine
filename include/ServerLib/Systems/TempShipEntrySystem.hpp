@@ -19,7 +19,7 @@ namespace Nz
 
 namespace tsom
 {
-	class ServerInstance;
+	class ServerEnvironment;
 
 	class TSOM_SERVERLIB_API TempShipEntrySystem
 	{
@@ -28,7 +28,7 @@ namespace tsom
 			static constexpr Nz::Int64 ExecutionOrder = -1; //< execute before physics
 			using Components = Nz::TypeList<Nz::NodeComponent, class TempShipEntryComponent>;
 
-			inline TempShipEntrySystem(entt::registry& registry, ServerInstance& serverInstance);
+			inline TempShipEntrySystem(entt::registry& registry, ServerEnvironment* ownerEnvironment);
 			TempShipEntrySystem(const TempShipEntrySystem&) = delete;
 			TempShipEntrySystem(TempShipEntrySystem&&) = delete;
 			~TempShipEntrySystem() = default;
@@ -40,7 +40,7 @@ namespace tsom
 
 		private:
 			entt::registry& m_registry;
-			ServerInstance& m_serverInstance;
+			ServerEnvironment* m_ownerEnvironment;
 	};
 }
 

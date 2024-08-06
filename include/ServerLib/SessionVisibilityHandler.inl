@@ -31,6 +31,11 @@ namespace tsom
 		return true;
 	}
 
+	inline Packets::Helper::EnvironmentId SessionVisibilityHandler::GetEnvironmentId(ServerEnvironment* environment) const
+	{
+		return Nz::Retrieve(m_environmentIndices, environment);
+	}
+
 	inline void SessionVisibilityHandler::MoveEnvironment(ServerEnvironment& environment, const EnvironmentTransform& transform)
 	{
 		auto it = std::find_if(m_environmentTransformations.begin(), m_environmentTransformations.end(), [&](const EnvironmentTransformation& transform) { return transform.environment == &environment; });
