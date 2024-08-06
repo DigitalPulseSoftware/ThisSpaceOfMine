@@ -20,8 +20,9 @@ namespace tsom
 		Nz::Quaternionf rotation;
 		Nz::Vector3f translation;
 
-		inline Nz::Vector3f Apply(const Nz::Vector3f& localPosition) const;
-		inline Nz::Quaternionf Apply(const Nz::Quaternionf& localRotation) const;
+		inline Nz::Quaternionf Rotate(const Nz::Quaternionf& localRotation) const;
+		inline Nz::Vector3f Rotate(const Nz::Vector3f& direction) const;
+		inline Nz::Vector3f Translate(const Nz::Vector3f& localPosition) const;
 
 		inline EnvironmentTransform operator+(const EnvironmentTransform& transform) const;
 		inline EnvironmentTransform& operator+=(const EnvironmentTransform& transform);
