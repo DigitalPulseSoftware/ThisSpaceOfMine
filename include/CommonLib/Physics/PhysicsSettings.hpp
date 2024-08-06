@@ -12,6 +12,7 @@
 
 namespace tsom::Physics
 {
+	TSOM_COMMONLIB_API std::unique_ptr<Nz::Physics3DSystem::ContactListener> BuildContactListener();
 	TSOM_COMMONLIB_API Nz::Physics3DSystem::Settings BuildSettings();
 }
 

@@ -4,6 +4,7 @@
 
 #include <CommonLib/Physics/PhysicsSettings.hpp>
 #include <CommonLib/PhysicsConstants.hpp>
+#include <CommonLib/Physics/ContactCallbackComponents.hpp>
 
 namespace tsom::Physics
 {
@@ -75,6 +76,41 @@ namespace tsom::Physics
 				return true;
 			}
 		};
+
+		class ContactListenerBridge : public Nz::Physics3DSystem::ContactListener
+		{
+			Nz::PhysContactValidateResult3D ValidateContact(entt::handle entity1, const Nz::PhysBody3D* body1, entt::handle entity2, const Nz::PhysBody3D* body2, const Nz::Vector3f& baseOffset, const Nz::Physics3DSystem::ShapeCollisionInfo& collisionResult) override
+			{
+				return Nz::PhysContactValidateResult3D::AcceptAllContactsForThisBodyPair;
+			}
+
+			void OnContactAdded(entt::handle entity1, const Nz::PhysBody3D* body1, entt::handle entity2, const Nz::PhysBody3D* body2) override
+			{
+				if (ContactAddedCallbackComponent* callbackComponent = entity1.try_get<ContactAddedCallbackComponent>())
+					callbackComponent->callback(entity1, body1, entity2, body2);
+
+				if (ContactAddedCallbackComponent* callbackComponent = entity2.try_get<ContactAddedCallbackComponent>())
+					callbackComponent->callback(entity2, body2, entity1, body1);
+			}
+
+			void OnContactPersisted(entt::handle entity1, const Nz::PhysBody3D* body1, entt::handle entity2, const Nz::PhysBody3D* body2) override
+			{
+			}
+
+			void OnContactRemoved(entt::handle entity1, const Nz::PhysBody3D* body1, entt::handle entity2, const Nz::PhysBody3D* body2) override
+			{
+				if (ContactRemovedCallbackComponent* callbackComponent = entity1.try_get<ContactRemovedCallbackComponent>())
+					callbackComponent->callback(entity1, body1, entity2, body2);
+
+				if (ContactRemovedCallbackComponent* callbackComponent = entity2.try_get<ContactRemovedCallbackComponent>())
+					callbackComponent->callback(entity2, body2, entity1, body1);
+			}
+		};
+	}
+
+	std::unique_ptr<Nz::Physics3DSystem::ContactListener> tsom::Physics::BuildContactListener()
+	{
+		return std::make_unique<ContactListenerBridge>();
 	}
 
 	Nz::Physics3DSystem::Settings tsom::Physics::BuildSettings()
