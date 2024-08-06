@@ -46,6 +46,7 @@ namespace tsom
 			void HandlePacket(Packets::ChunkDestroy&& chunkDestroy);
 			void HandlePacket(Packets::ChunkReset&& chunkReset);
 			void HandlePacket(Packets::ChunkUpdate&& chunkUpdate);
+			void HandlePacket(Packets::DebugDrawLineList&& debugDrawLineList);
 			void HandlePacket(Packets::EntitiesCreation&& entitiesCreation);
 			void HandlePacket(Packets::EntitiesDelete&& entitiesDelete);
 			void HandlePacket(Packets::EntitiesStateUpdate&& stateUpdate);

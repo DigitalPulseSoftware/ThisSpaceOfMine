@@ -214,6 +214,17 @@ namespace tsom
 			}
 		}
 
+		void Serialize(PacketSerializer& serializer, DebugDrawLineList& data)
+		{
+			serializer &= data.environmentId;
+			serializer &= data.color;
+			serializer &= data.duration;
+			serializer &= data.rotation;
+			serializer &= data.position;
+			serializer &= data.indices;
+			serializer &= data.vertices;
+		}
+
 		void Serialize(PacketSerializer& serializer, EntitiesCreation& data)
 		{
 			serializer &= data.tickIndex;
