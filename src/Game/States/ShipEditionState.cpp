@@ -120,7 +120,7 @@ namespace tsom
 		}
 
 		m_ship = std::make_unique<Ship>(2.f);
-		m_ship->Generate(*stateData.blockLibrary);
+		m_ship->Generate(*stateData.blockLibrary, false);
 
 		m_infoLabel = CreateWidget<Nz::LabelWidget>();
 

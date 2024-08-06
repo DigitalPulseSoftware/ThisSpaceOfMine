@@ -31,13 +31,15 @@ namespace tsom
 
 			FlatChunk& AddChunk(const BlockLibrary& blockLibrary, const ChunkIndices& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback = nullptr);
 
+			std::shared_ptr<Nz::Collider3D> BuildHullCollider() const;
+
 			float ComputeGravityAcceleration(const Nz::Vector3f& position) const override;
 			Nz::Vector3f ComputeUpDirection(const Nz::Vector3f& position) const override;
 
 			void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, Chunk& chunk)> callback) override;
 			void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, const Chunk& chunk)> callback) const override;
 
-			void Generate(const BlockLibrary& blockLibrary);
+			void Generate(const BlockLibrary& blockLibrary, bool small);
 
 			inline Nz::Vector3f GetCenter() const override;
 			inline FlatChunk* GetChunk(const ChunkIndices& chunkIndices) override;

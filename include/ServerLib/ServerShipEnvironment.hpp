@@ -9,10 +9,18 @@
 
 #include <ServerLib/Export.hpp>
 #include <ServerLib/ServerEnvironment.hpp>
+#include <tsl/hopscotch_map.h>
+#include <tsl/hopscotch_set.h>
+
+namespace Nz
+{
+	class Collider3D;
+}
 
 namespace tsom
 {
 	class ChunkEntities;
+	class ServerPlayer;
 	class Ship;
 
 	class TSOM_SERVERLIB_API ServerShipEnvironment : public ServerEnvironment
@@ -25,19 +33,80 @@ namespace tsom
 
 			entt::handle CreateEntity() override;
 
+			void GenerateShip(bool small);
+
 			const GravityController* GetGravityController() const override;
 			Ship& GetShip();
 			const Ship& GetShip() const;
 			inline entt::handle GetShipEntity() const;
 
+			entt::handle LinkOutsideEnvironment(ServerEnvironment* environment, const EnvironmentTransform& transform);
+
 			void OnLoad(const std::filesystem::path& loadPath) override;
 			void OnSave(const std::filesystem::path& savePath) override;
+			void OnTick(Nz::Time elapsedTime) override;
 
 			ServerShipEnvironment& operator=(const ServerShipEnvironment&) = delete;
 			ServerShipEnvironment& operator=(ServerShipEnvironment&&) = delete;
 
 		private:
+			struct Area;
+			struct AreaList;
+
+			void StartAreaUpdate(const Chunk* chunk);
+			void StartTriggerUpdate(const Chunk* chunk, std::shared_ptr<AreaList> areaList);
+
+			std::shared_ptr<Nz::Collider3D> BuildCombinedAreaCollider();
+			void UpdateProxyCollider();
+
+			static Area BuildArea(const Chunk* chunk, std::size_t firstBlockIndex, Nz::Bitset<Nz::UInt64>& remainingBlocks);
+			static std::shared_ptr<Nz::Collider3D> BuildTriggerCollider(const Chunk* chunk, const AreaList& areaList, std::atomic_bool& isCancelled);
+			static std::shared_ptr<AreaList> GenerateChunkAreas(const Chunk* chunk, std::atomic_bool& isCancelled);
+
+			struct Area
+			{
+				Nz::Bitset<Nz::UInt64> blocks;
+			};
+
+			struct AreaList
+			{
+				std::vector<Area> areas;
+			};
+
+			struct ChunkData
+			{
+				std::shared_ptr<Nz::Collider3D> areaCollider;
+				std::shared_ptr<AreaList> areas;
+				float blockSize;
+			};
+
+			struct UpdateJob
+			{
+				std::atomic_bool isCancelled = false;
+				std::atomic_bool isFinished = false;
+			};
+
+			struct AreaUpdateJob : UpdateJob
+			{
+				std::function<void(ChunkIndices chunkIndices, AreaUpdateJob&& updateJob)> applyFunc;
+				std::shared_ptr<AreaList> chunkArea;
+			};
+
+			struct TriggerUpdateJob : UpdateJob
+			{
+				std::function<void(ChunkIndices chunkIndices, TriggerUpdateJob&& updateJob)> applyFunc;
+				std::shared_ptr<Nz::Collider3D> collider;
+			};
+
+			entt::handle m_proxyEntity;
 			entt::handle m_shipEntity;
+			std::shared_ptr<Nz::Collider3D> m_combinedAreaColliders;
+			tsl::hopscotch_map<ChunkIndices, std::shared_ptr<AreaUpdateJob>> m_areaUpdateJobs;
+			tsl::hopscotch_map<ChunkIndices, std::shared_ptr<TriggerUpdateJob>> m_triggerUpdateJobs;
+			tsl::hopscotch_map<ChunkIndices, ChunkData> m_chunkData;
+			tsl::hopscotch_set<Chunk*> m_invalidatedChunks;
+			ServerEnvironment* m_outsideEnvironment;
+			bool m_isCombinedAreaColliderInvalidated;
 	};
 }
 

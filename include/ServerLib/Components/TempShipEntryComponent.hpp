@@ -9,6 +9,12 @@
 
 #include <ServerLib/Export.hpp>
 #include <Nazara/Math/Box.hpp>
+#include <memory>
+
+namespace Nz
+{
+	class Collider3D;
+}
 
 namespace tsom
 {
@@ -16,6 +22,7 @@ namespace tsom
 
 	struct TempShipEntryComponent
 	{
+		std::shared_ptr<Nz::Collider3D> entryTrigger;
 		Nz::Boxf aabb;
 		ServerShipEnvironment* shipEnv;
 	};

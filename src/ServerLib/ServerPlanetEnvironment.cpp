@@ -34,7 +34,7 @@ namespace tsom
 	{
 		auto& app = serverInstance.GetApplication();
 		auto& taskScheduler = app.GetComponent<Nz::TaskSchedulerAppComponent>();
-		m_world.AddSystem<TempShipEntrySystem>(serverInstance);
+		m_world.AddSystem<TempShipEntrySystem>(this);
 
 		auto& blockLibrary = serverInstance.GetBlockLibrary();
 
