@@ -10,14 +10,19 @@ namespace tsom
 	{
 	}
 
-	inline Nz::Vector3f EnvironmentTransform::Apply(const Nz::Vector3f& localPosition) const
-	{
-		return translation + rotation * localPosition;
-	}
-
-	inline Nz::Quaternionf EnvironmentTransform::Apply(const Nz::Quaternionf& localRotation) const
+	inline Nz::Quaternionf EnvironmentTransform::Rotate(const Nz::Quaternionf& localRotation) const
 	{
 		return Nz::Quaternionf::Normalize(rotation * localRotation);
+	}
+
+	inline Nz::Vector3f EnvironmentTransform::Rotate(const Nz::Vector3f& direction) const
+	{
+		return rotation * direction;
+	}
+
+	inline Nz::Vector3f EnvironmentTransform::Translate(const Nz::Vector3f& localPosition) const
+	{
+		return translation + rotation * localPosition;
 	}
 
 	inline EnvironmentTransform EnvironmentTransform::operator+(const EnvironmentTransform& transform) const

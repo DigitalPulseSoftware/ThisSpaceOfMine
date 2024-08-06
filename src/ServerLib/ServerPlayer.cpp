@@ -59,6 +59,9 @@ namespace tsom
 		Nz::Quaternionf rotation = previousNode.GetRotation();
 		Nz::Vector3f up = previousNode.GetUp();
 
+		auto& previousCharacter = previousEntity.get<Nz::PhysCharacter3DComponent>();
+		auto [linearVel, angularVel] = previousCharacter.GetLinearAndAngularVelocity();
+
 		auto& networkedSystem = m_controlledEntityEnvironment->GetWorld().GetSystem<NetworkedEntitiesSystem>();
 		networkedSystem.ForgetEntity(previousEntity);
 
@@ -69,8 +72,10 @@ namespace tsom
 		Nz::Vector3f prevEnvironmentUp = m_controlledEntityEnvironment->GetGravityController()->ComputeUpDirection(position);
 		Nz::Quaternionf environmentRotationCorrection = Nz::Quaternionf::RotationBetween(prevEnvironmentUp, Nz::Vector3f::Up());
 
-		position = prevToNewTransform.Apply(position);
-		rotation = prevToNewTransform.Apply(rotation);
+		position = prevToNewTransform.Translate(position);
+		rotation = prevToNewTransform.Rotate(rotation);
+		linearVel = prevToNewTransform.Rotate(linearVel);
+		angularVel = prevToNewTransform.Rotate(angularVel);
 
 		m_controlledEntity = environment->CreateEntity();
 		m_controlledEntity.emplace<Nz::NodeComponent>(position, rotation);
@@ -80,12 +85,13 @@ namespace tsom
 		m_controller->RotateInstantaneously(prevToNewTransform.rotation);
 
 		Nz::PhysCharacter3DComponent::Settings characterSettings;
-		characterSettings.collider = std::make_shared<Nz::CapsuleCollider3D>(Constants::PlayerCapsuleHeight, Constants::PlayerColliderRadius);
+		characterSettings.collider = previousCharacter.GetCollider();
 		characterSettings.position = position;
 		characterSettings.rotation = rotation;
 
 		auto& characterComponent = m_controlledEntity.emplace<Nz::PhysCharacter3DComponent>(std::move(characterSettings));
 		characterComponent.SetImpl(m_controller);
+		characterComponent.SetLinearAndAngularVelocity(linearVel, angularVel);
 		characterComponent.SetUp(rotation * environmentRotationCorrection * up);
 		characterComponent.DisableSleeping();
 
