@@ -125,7 +125,7 @@ namespace tsom
 			Nz::Vector3f size = endOffset - startOffset;
 
 			callback(Nz::Boxf(pos, size));
-			 
+
 			startPos.reset();
 		};
 

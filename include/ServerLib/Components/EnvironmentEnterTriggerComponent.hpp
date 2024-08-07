@@ -18,6 +18,8 @@ namespace Nz
 
 namespace tsom
 {
+	class ServerEnvironment;
+
 	struct EnvironmentEnterTriggerComponent
 	{
 		std::shared_ptr<Nz::Collider3D> entryTrigger;
