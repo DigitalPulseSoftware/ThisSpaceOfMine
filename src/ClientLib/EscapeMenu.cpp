@@ -17,7 +17,7 @@ namespace tsom
 		m_layout = Add<Nz::BoxLayout>(Nz::BoxLayoutOrientation::TopToBottom);
 
 		m_closeMenuButton = m_layout->Add<Nz::ButtonWidget>();
-		m_closeMenuButton->UpdateText(Nz::SimpleTextDrawer::Draw("Close", 30));
+		m_closeMenuButton->UpdateText(Nz::SimpleTextDrawer::Draw("Close", 30, Nz::TextStyle_Regular, Nz::Color::Black()));
 		m_closeMenuButton->SetMaximumSize(m_closeMenuButton->GetPreferredSize());
 		m_closeMenuButton->OnButtonTrigger.Connect([this](const Nz::ButtonWidget*)
 		{
@@ -25,7 +25,7 @@ namespace tsom
 		});
 
 		m_disconnectButton = m_layout->Add<Nz::ButtonWidget>();
-		m_disconnectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Disconnect", 30));
+		m_disconnectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Disconnect", 30, Nz::TextStyle_Regular, Nz::Color::Black()));
 		m_disconnectButton->SetMaximumSize(m_disconnectButton->GetPreferredSize());
 		m_disconnectButton->OnButtonTrigger.Connect([this](const Nz::ButtonWidget*)
 		{
@@ -33,7 +33,7 @@ namespace tsom
 		});
 
 		m_quitAppButton = m_layout->Add<Nz::ButtonWidget>();
-		m_quitAppButton->UpdateText(Nz::SimpleTextDrawer::Draw("Exit application", 30));
+		m_quitAppButton->UpdateText(Nz::SimpleTextDrawer::Draw("Exit application", 30, Nz::TextStyle_Regular, Nz::Color::Black()));
 		m_quitAppButton->SetMaximumSize(m_quitAppButton->GetPreferredSize());
 		m_quitAppButton->OnButtonTrigger.Connect([this](const Nz::ButtonWidget*)
 		{
