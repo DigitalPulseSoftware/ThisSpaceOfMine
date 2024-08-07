@@ -7,8 +7,8 @@
 #ifndef TSOM_COMMONLIB_PHYSICSCONSTANTS_HPP
 #define TSOM_COMMONLIB_PHYSICSCONSTANTS_HPP
 
-#include <NazaraUtils/Prerequisites.hpp>
 #include <Nazara/Physics3D/PhysObjectLayer3D.hpp>
+#include <NazaraUtils/Prerequisites.hpp>
 
 namespace tsom::Constants
 {

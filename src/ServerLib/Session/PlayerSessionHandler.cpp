@@ -18,6 +18,7 @@
 #include <ServerLib/Components/EnvironmentEnterTriggerComponent.hpp>
 #include <ServerLib/Components/EnvironmentProxyComponent.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
+#include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/TaskSchedulerAppComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Collider3D.hpp>
@@ -126,7 +127,7 @@ namespace tsom
 			const BlockLibrary& blockLibrary = serverInstance.GetBlockLibrary();
 
 			ServerEnvironment* currentEnvironment = m_player->GetControlledEntityEnvironment();
-			if (currentEnvironment != &serverInstance.GetPlanetEnvironment())
+			if (currentEnvironment != m_player->GetRootEnvironment())
 				return;
 
 			Nz::NodeComponent& playerNode = playerEntity.get<Nz::NodeComponent>();

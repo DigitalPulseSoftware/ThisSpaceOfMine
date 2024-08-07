@@ -8,17 +8,17 @@
 #include <CommonLib/Ship.hpp>
 #include <CommonLib/Components/ShipComponent.hpp>
 #include <CommonLib/Systems/ShipSystem.hpp>
-#include <ServerLib/ServerPlanetEnvironment.hpp>
 #include <ServerLib/ServerInstance.hpp>
+#include <ServerLib/ServerPlanetEnvironment.hpp>
 #include <ServerLib/Components/EnvironmentEnterTriggerComponent.hpp>
 #include <ServerLib/Components/EnvironmentProxyComponent.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
 #include <ServerLib/Components/ServerPlayerControlledComponent.hpp>
-#include <NazaraUtils/CallOnExit.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/TaskSchedulerAppComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
+#include <NazaraUtils/CallOnExit.hpp>
 #include <fmt/color.h>
 #include <fmt/std.h>
 
@@ -47,14 +47,14 @@ namespace tsom
 		shipComponent.shipEntities->SetParentEntity(m_shipEntity);
 
 		m_world.AddSystem<ShipSystem>();
-		
+
 		shipComponent.OnChunkAdded.Connect([this](ChunkContainer*, Chunk* chunk)
 		{
 			auto& chunkData = m_chunkData[chunk->GetIndices()];
 			chunkData.blockSize = chunk->GetBlockSize();
 			m_invalidatedChunks.emplace(chunk);
 		});
-		
+
 		shipComponent.OnChunkRemove.Connect([this](ChunkContainer*, Chunk* chunk)
 		{
 			const ChunkIndices& indices = chunk->GetIndices();
@@ -299,7 +299,7 @@ namespace tsom
 
 			if (!chunkData.areaCollider)
 				return;
-			
+
 			Packets::DebugDrawLineList debugDrawLineList;
 			debugDrawLineList.color = Nz::Color::Blue();
 			debugDrawLineList.duration = 5.f;
