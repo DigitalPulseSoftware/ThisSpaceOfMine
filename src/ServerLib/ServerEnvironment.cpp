@@ -6,8 +6,8 @@
 #include <CommonLib/Physics/PhysicsSettings.hpp>
 #include <ServerLib/SessionVisibilityHandler.hpp>
 #include <ServerLib/Systems/EnvironmentProxySystem.hpp>
+#include <ServerLib/Systems/EnvironmentSwitchSystem.hpp>
 #include <ServerLib/Systems/NetworkedEntitiesSystem.hpp>
-#include <ServerLib/Systems/TempShipEntrySystem.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <cassert>
 

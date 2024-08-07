@@ -10,7 +10,7 @@
 #include <CommonLib/Systems/PlanetSystem.hpp>
 #include <ServerLib/ServerInstance.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
-#include <ServerLib/Systems/TempShipEntrySystem.hpp>
+#include <ServerLib/Systems/EnvironmentSwitchSystem.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/ByteArray.hpp>
 #include <Nazara/Core/ByteStream.hpp>
@@ -34,7 +34,7 @@ namespace tsom
 	{
 		auto& app = serverInstance.GetApplication();
 		auto& taskScheduler = app.GetComponent<Nz::TaskSchedulerAppComponent>();
-		m_world.AddSystem<TempShipEntrySystem>(this);
+		m_world.AddSystem<EnvironmentSwitchSystem>(this);
 
 		auto& blockLibrary = serverInstance.GetBlockLibrary();
 
