@@ -2,7 +2,7 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
-#include <ServerLib/Components/TempShipEntryComponent.hpp>
+#include <ServerLib/Components/EnvironmentEnterTriggerComponent.hpp>
 
 namespace tsom
 {

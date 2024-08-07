@@ -7,25 +7,22 @@
 #include <CommonLib/CharacterController.hpp>
 #include <CommonLib/ChunkEntities.hpp>
 #include <CommonLib/GameConstants.hpp>
-#include <CommonLib/Planet.hpp>
 #include <CommonLib/PhysicsConstants.hpp>
+#include <CommonLib/Planet.hpp>
 #include <CommonLib/Ship.hpp>
 #include <CommonLib/Components/PlanetComponent.hpp>
 #include <CommonLib/Components/ShipComponent.hpp>
 #include <ServerLib/ServerEnvironment.hpp>
 #include <ServerLib/ServerInstance.hpp>
 #include <ServerLib/ServerShipEnvironment.hpp>
+#include <ServerLib/Components/EnvironmentEnterTriggerComponent.hpp>
 #include <ServerLib/Components/EnvironmentProxyComponent.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
+#include <Nazara/Core/TaskSchedulerAppComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Collider3D.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <numeric>
-
-#include <Nazara/Core/ApplicationBase.hpp>
-#include <ServerLib/ServerPlanetEnvironment.hpp>
-#include <Nazara/Core/TaskSchedulerAppComponent.hpp>
-#include <ServerLib/Components/TempShipEntryComponent.hpp>
 
 namespace tsom
 {

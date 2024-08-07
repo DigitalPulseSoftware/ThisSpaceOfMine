@@ -10,10 +10,10 @@
 #include <CommonLib/Systems/ShipSystem.hpp>
 #include <ServerLib/ServerPlanetEnvironment.hpp>
 #include <ServerLib/ServerInstance.hpp>
+#include <ServerLib/Components/EnvironmentEnterTriggerComponent.hpp>
 #include <ServerLib/Components/EnvironmentProxyComponent.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
 #include <ServerLib/Components/ServerPlayerControlledComponent.hpp>
-#include <ServerLib/Components/TempShipEntryComponent.hpp>
 #include <NazaraUtils/CallOnExit.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/TaskSchedulerAppComponent.hpp>
@@ -136,12 +136,12 @@ namespace tsom
 		envProxy.fromEnv = outsideEnvironment;
 		envProxy.toEnv = this;
 
-		auto& shipEntry = m_proxyEntity.emplace<TempShipEntryComponent>();
+		auto& shipEntry = m_proxyEntity.emplace<EnvironmentEnterTriggerComponent>();
 		shipEntry.entryTrigger = m_combinedAreaColliders;
 		if (m_combinedAreaColliders)
 			shipEntry.aabb = m_combinedAreaColliders->GetBoundingBox();
 
-		shipEntry.shipEnv = this;
+		shipEntry.targetEnvironment = this;
 
 		return m_proxyEntity;
 	}
@@ -199,7 +199,7 @@ namespace tsom
 
 			if (m_proxyEntity)
 			{
-				auto& shipEntry = m_proxyEntity.get<TempShipEntryComponent>();
+				auto& shipEntry = m_proxyEntity.get<EnvironmentEnterTriggerComponent>();
 				shipEntry.entryTrigger = m_combinedAreaColliders;
 				if (shipEntry.entryTrigger)
 					shipEntry.aabb = m_combinedAreaColliders->GetBoundingBox();
