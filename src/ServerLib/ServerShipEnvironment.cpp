@@ -206,8 +206,6 @@ namespace tsom
 			}
 		}
 
-		ServerEnvironment::OnTick(elapsedTime);
-
 		if (m_outsideEnvironment)
 		{
 			ForEachPlayer([this](ServerPlayer& player)
@@ -236,6 +234,8 @@ namespace tsom
 				}
 			});
 		}
+
+		ServerEnvironment::OnTick(elapsedTime);
 	}
 
 	void ServerShipEnvironment::StartAreaUpdate(const Chunk* chunk)

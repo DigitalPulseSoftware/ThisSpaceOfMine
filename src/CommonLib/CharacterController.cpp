@@ -80,7 +80,7 @@ namespace tsom
 
 	void CharacterController::PreSimulate(Nz::PhysCharacter3D& character, float elapsedTime)
 	{
-		std::tie(m_characterPosition, m_characterRotation) = character.GetPositionAndRotation();
+		UpdatePosition(character);
 
 		Nz::Vector3f velocity = character.GetLinearVelocity();
 		Nz::Vector3f up = character.GetUp();
@@ -174,5 +174,10 @@ namespace tsom
 	{
 		m_referenceRotation = rotation * m_referenceRotation;
 		m_referenceRotation.Normalize();
+	}
+
+	void CharacterController::UpdatePosition(Nz::PhysCharacter3D& character)
+	{
+		std::tie(m_characterPosition, m_characterRotation) = character.GetPositionAndRotation();
 	}
 }

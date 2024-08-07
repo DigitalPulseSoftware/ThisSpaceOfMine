@@ -97,6 +97,9 @@ namespace tsom
 		characterComponent.SetUp(rotation * environmentRotationCorrection * up);
 		characterComponent.DisableSleeping();
 
+		// Force controller update to ensure new position will be sent
+		m_controller->UpdatePosition(characterComponent);
+
 		m_controlledEntity.emplace<ServerPlayerControlledComponent>(CreateHandle());
 
 		m_controlledEntityEnvironment->ForEachPlayer([&](ServerPlayer& serverPlayer)
