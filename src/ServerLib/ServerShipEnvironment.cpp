@@ -201,7 +201,7 @@ namespace tsom
 			{
 				auto& shipEntry = m_proxyEntity.get<TempShipEntryComponent>();
 				shipEntry.entryTrigger = m_combinedAreaColliders;
-				if (m_combinedAreaColliders)
+				if (shipEntry.entryTrigger)
 					shipEntry.aabb = m_combinedAreaColliders->GetBoundingBox();
 			}
 		}
@@ -223,14 +223,11 @@ namespace tsom
 
 					for (const auto& [chunkIndices, chunkData] : m_chunkData)
 					{
-						if (!chunkData.areaCollider)
+						if (!chunkData.expandedAreaCollider)
 							continue;
 
 						Nz::Vector3f relativePos = playerPos - ship.GetChunkOffset(chunkIndices);
-						// Make position a bit closer so we don't exit further than the entry point
-						relativePos *= 0.9f;
-
-						if (chunkData.areaCollider->CollisionQuery(relativePos))
+						if (chunkData.expandedAreaCollider->CollisionQuery(relativePos))
 							return;
 					}
 
@@ -297,6 +294,7 @@ namespace tsom
 			assert(m_chunkData.contains(chunkIndices));
 			auto& chunkData = m_chunkData[chunkIndices];
 			chunkData.areaCollider = std::move(updateJob.collider);
+			chunkData.expandedAreaCollider = std::move(updateJob.expandedCollider);
 			m_isCombinedAreaColliderInvalidated = true;
 
 			if (!chunkData.areaCollider)
@@ -305,7 +303,7 @@ namespace tsom
 			Packets::DebugDrawLineList debugDrawLineList;
 			debugDrawLineList.color = Nz::Color::Blue();
 			debugDrawLineList.duration = 5.f;
-			debugDrawLineList.position = Nz::Vector3f::Zero();
+			debugDrawLineList.position = GetShip().GetChunkOffset(chunkIndices);
 			debugDrawLineList.rotation = Nz::Quaternionf::Identity();
 			chunkData.areaCollider->BuildDebugMesh(debugDrawLineList.vertices, debugDrawLineList.indices, Nz::Matrix4f::Identity());
 
@@ -324,7 +322,10 @@ namespace tsom
 
 		taskScheduler.AddTask([areaList, chunk, updateJob]
 		{
-			updateJob->collider = BuildTriggerCollider(chunk, *areaList, updateJob->isCancelled);
+			chunk->LockRead();
+			updateJob->collider = BuildTriggerCollider(chunk, *areaList, Nz::Vector3f::Zero(), updateJob->isCancelled);
+			updateJob->expandedCollider = BuildTriggerCollider(chunk, *areaList, Nz::Vector3f(2.f), updateJob->isCancelled);
+			chunk->UnlockRead();
 
 			updateJob->isFinished = true;
 		});
@@ -437,11 +438,8 @@ namespace tsom
 		return area;
 	}
 
-	std::shared_ptr<Nz::Collider3D> ServerShipEnvironment::BuildTriggerCollider(const Chunk* chunk, const AreaList& areaList, std::atomic_bool& isCancelled)
+	std::shared_ptr<Nz::Collider3D> ServerShipEnvironment::BuildTriggerCollider(const Chunk* chunk, const AreaList& areaList, const Nz::Vector3f& sizeMargin, std::atomic_bool& isCancelled)
 	{
-		chunk->LockRead();
-		NAZARA_DEFER({ chunk->UnlockRead(); });
-
 		std::vector<Nz::CompoundCollider3D::ChildCollider> childColliders;
 		for (const Area& area : areaList.areas)
 		{
@@ -452,7 +450,7 @@ namespace tsom
 			{
 				auto& childCollider = childColliders.emplace_back();
 				childCollider.offset = box.GetCenter();
-				childCollider.collider = std::make_shared<Nz::BoxCollider3D>(box.GetLengths());
+				childCollider.collider = std::make_shared<Nz::BoxCollider3D>(box.GetLengths() + sizeMargin);
 			};
 
 			FlatChunk::BuildCollider(chunk->GetSize(),  area.blocks, AddBox);

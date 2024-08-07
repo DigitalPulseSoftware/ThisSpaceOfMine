@@ -60,7 +60,7 @@ namespace tsom
 			void UpdateProxyCollider();
 
 			static Area BuildArea(const Chunk* chunk, std::size_t firstBlockIndex, Nz::Bitset<Nz::UInt64>& remainingBlocks);
-			static std::shared_ptr<Nz::Collider3D> BuildTriggerCollider(const Chunk* chunk, const AreaList& areaList, std::atomic_bool& isCancelled);
+			static std::shared_ptr<Nz::Collider3D> BuildTriggerCollider(const Chunk* chunk, const AreaList& areaList, const Nz::Vector3f& sizeMargin, std::atomic_bool& isCancelled);
 			static std::shared_ptr<AreaList> GenerateChunkAreas(const Chunk* chunk, std::atomic_bool& isCancelled);
 
 			struct Area
@@ -76,6 +76,7 @@ namespace tsom
 			struct ChunkData
 			{
 				std::shared_ptr<Nz::Collider3D> areaCollider;
+				std::shared_ptr<Nz::Collider3D> expandedAreaCollider;
 				std::shared_ptr<AreaList> areas;
 				float blockSize;
 			};
@@ -96,6 +97,7 @@ namespace tsom
 			{
 				std::function<void(ChunkIndices chunkIndices, TriggerUpdateJob&& updateJob)> applyFunc;
 				std::shared_ptr<Nz::Collider3D> collider;
+				std::shared_ptr<Nz::Collider3D> expandedCollider;
 			};
 
 			entt::handle m_proxyEntity;
