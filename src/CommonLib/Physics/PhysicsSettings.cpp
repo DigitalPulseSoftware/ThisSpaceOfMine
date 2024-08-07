@@ -108,12 +108,12 @@ namespace tsom::Physics
 		};
 	}
 
-	std::unique_ptr<Nz::Physics3DSystem::ContactListener> tsom::Physics::BuildContactListener()
+	std::unique_ptr<Nz::Physics3DSystem::ContactListener> BuildContactListener()
 	{
 		return std::make_unique<ContactListenerBridge>();
 	}
 
-	Nz::Physics3DSystem::Settings tsom::Physics::BuildSettings()
+	Nz::Physics3DSystem::Settings BuildSettings()
 	{
 		Nz::Physics3DSystem::Settings physSettings = Nz::PhysWorld3D::BuildDefaultSettings();
 		physSettings.broadphaseLayerInterface = std::make_unique<BroadphaseLayerInterface>();
