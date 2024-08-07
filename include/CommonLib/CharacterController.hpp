@@ -46,6 +46,8 @@ namespace tsom
 
 			void SetInputs(const PlayerInputs& inputs);
 
+			void UpdatePosition(Nz::PhysCharacter3D& character);
+
 			CharacterController& operator=(const CharacterController&) = delete;
 			CharacterController& operator=(CharacterController&&) = delete;
 

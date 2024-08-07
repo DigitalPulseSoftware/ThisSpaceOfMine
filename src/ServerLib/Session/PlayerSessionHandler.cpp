@@ -139,8 +139,6 @@ namespace tsom
 
 			EnvironmentTransform planetToShip(playerNode.GetPosition(), Nz::Quaternionf::Identity()); //< FIXME
 			shipEnv->LinkOutsideEnvironment(currentEnvironment, planetToShip);
-
-			m_player->MoveEntityToEnvironment(shipEnv);
 			return;
 		}
 		else if (message == "/regenchunk")
