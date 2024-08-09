@@ -14,6 +14,7 @@
 #include <CommonLib/Components/ShipComponent.hpp>
 #include <ServerLib/ServerEnvironment.hpp>
 #include <ServerLib/ServerInstance.hpp>
+#include <ServerLib/ServerPlanetEnvironment.hpp>
 #include <ServerLib/ServerShipEnvironment.hpp>
 #include <ServerLib/Components/EnvironmentEnterTriggerComponent.hpp>
 #include <ServerLib/Components/EnvironmentProxyComponent.hpp>
@@ -145,18 +146,21 @@ namespace tsom
 			if (!playerEntity)
 				return;
 
-			PlanetComponent* playerPlanet = playerEntity.try_get<PlanetComponent>();
-			if (!playerPlanet)
+			ServerInstance& serverInstance = m_player->GetServerInstance();
+			ServerEnvironment* currentEnvironment = m_player->GetControlledEntityEnvironment();
+			if (currentEnvironment != &serverInstance.GetPlanetEnvironment())
 				return;
 
+			Planet& planet = serverInstance.GetPlanetEnvironment().GetPlanet();
+
 			Nz::Vector3f playerPos = playerEntity.get<Nz::NodeComponent>().GetGlobalPosition();
-			ChunkIndices chunkIndices = playerPlanet->GetChunkIndicesByPosition(playerPos);
+			ChunkIndices chunkIndices = planet.GetChunkIndicesByPosition(playerPos);
 
 			const BlockLibrary& blockLibrary = m_player->GetServerInstance().GetBlockLibrary();
 
-			if (Chunk* chunk = playerPlanet->GetChunk(chunkIndices))
+			if (Chunk* chunk = planet.GetChunk(chunkIndices))
 			{
-				playerPlanet->GenerateChunk(blockLibrary, *chunk, 42, Nz::Vector3ui(5));
+				planet.GenerateChunk(blockLibrary, *chunk, 42, Nz::Vector3ui(5));
 				fmt::print("regenerated chunk {};{};{}\n", chunkIndices.x, chunkIndices.y, chunkIndices.z);
 			}
 			return;
