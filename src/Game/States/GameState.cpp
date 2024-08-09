@@ -497,19 +497,19 @@ namespace tsom
 				auto& chunkNetworkMap = chunkComponent.parentEntity.get<ChunkNetworkMapComponent>();
 				auto& chunkNode = hitEntity.get<Nz::NodeComponent>();
 
-				const Chunk& chunk = *chunkComponent.chunk;
-				const ChunkContainer& chunkContainer = chunk.GetContainer();
+				const Chunk& hitChunk = *chunkComponent.chunk;
+				const ChunkContainer& chunkContainer = hitChunk.GetContainer();
 
 				if (event.button == Nz::Mouse::Left)
 				{
 					// Mine
 					Nz::Vector3f blockPos = hitPos - hitNormal * chunkContainer.GetTileSize() * 0.25f;
-					auto coordinates = chunk.ComputeCoordinates(chunkNode.ToLocalPosition(blockPos));
+					auto coordinates = hitChunk.ComputeCoordinates(chunkNode.ToLocalPosition(blockPos));
 					if (!coordinates)
 						return;
 
 					Packets::MineBlock mineBlock;
-					mineBlock.chunkId = Nz::Retrieve(chunkNetworkMap.chunkNetworkIndices, &chunk);
+					mineBlock.chunkId = Nz::Retrieve(chunkNetworkMap.chunkNetworkIndices, &hitChunk);
 					mineBlock.voxelLoc.x = coordinates->x;
 					mineBlock.voxelLoc.y = coordinates->y;
 					mineBlock.voxelLoc.z = coordinates->z;
@@ -519,13 +519,16 @@ namespace tsom
 				else
 				{
 					// Place
+					// Don't use hit chunk as it wouldn't work for borders blocks
 					Nz::Vector3f blockPos = hitPos + hitNormal * chunkContainer.GetTileSize() * 0.25f;
-					auto coordinates = chunk.ComputeCoordinates(chunkNode.ToLocalPosition(blockPos));
+					ChunkIndices chunkIndices = chunkContainer.GetChunkIndicesByPosition(blockPos);
+					const Chunk* chunk = chunkContainer.GetChunk(chunkIndices);
+					auto coordinates = chunk->ComputeCoordinates(blockPos - chunkContainer.GetChunkOffset(chunkIndices));
 					if (!coordinates)
 						return;
 
 					Packets::PlaceBlock placeBlock;
-					placeBlock.chunkId = Nz::Retrieve(chunkNetworkMap.chunkNetworkIndices, &chunk);
+					placeBlock.chunkId = Nz::Retrieve(chunkNetworkMap.chunkNetworkIndices, chunk);
 					placeBlock.voxelLoc.x = coordinates->x;
 					placeBlock.voxelLoc.y = coordinates->y;
 					placeBlock.voxelLoc.z = coordinates->z;
