@@ -50,9 +50,9 @@ namespace tsom
 				neighborMask |= Direction::Back;
 
 			if (indices.z == 0)
-				neighborMask |= Direction::Up;
-			else if (indices.z == chunk->GetSize().z - 1)
 				neighborMask |= Direction::Down;
+			else if (indices.z == chunk->GetSize().z - 1)
+				neighborMask |= Direction::Up;
 
 			OnChunkUpdated(this, chunk, neighborMask);
 		});
