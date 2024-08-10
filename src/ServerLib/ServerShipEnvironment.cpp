@@ -81,6 +81,9 @@ namespace tsom
 
 	ServerShipEnvironment::~ServerShipEnvironment()
 	{
+		if (m_proxyEntity.valid())
+			m_proxyEntity.destroy();
+
 		m_shipEntity.destroy();
 	}
 
@@ -118,12 +121,6 @@ namespace tsom
 		outsideEnvironment->Connect(*this, transform);
 		Connect(*outsideEnvironment, -transform);
 
-		// what the hell is this
-		outsideEnvironment->ForEachPlayer([&](ServerPlayer& player)
-		{
-			player.AddToEnvironment(this);
-		});
-
 		m_proxyEntity = outsideEnvironment->CreateEntity();
 		auto& proxyNode = m_proxyEntity.emplace<Nz::NodeComponent>(transform.translation, transform.rotation);
 
@@ -146,12 +143,9 @@ namespace tsom
 		return m_proxyEntity;
 	}
 
-	void ServerShipEnvironment::OnLoad(const std::filesystem::path& loadPath)
+	void ServerShipEnvironment::OnSave()
 	{
-	}
-
-	void ServerShipEnvironment::OnSave(const std::filesystem::path& savePath)
-	{
+		// TODO
 	}
 
 	void ServerShipEnvironment::OnTick(Nz::Time elapsedTime)

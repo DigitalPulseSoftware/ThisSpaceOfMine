@@ -105,7 +105,9 @@ namespace tsom
 		std::string_view message = static_cast<std::string_view>(playerChat.message);
 		if (message == "/respawn")
 		{
-			m_player->Respawn(m_player->GetRootEnvironment(), Constants::PlayerSpawnPos, Constants::PlayerSpawnRot);
+			const auto& spawnpoint = m_player->GetServerInstance().GetDefaultSpawnpoint();
+			m_player->UpdateRootEnvironment(spawnpoint.env);
+			m_player->Respawn(spawnpoint.env, spawnpoint.position, spawnpoint.rotation);
 			return;
 		}
 		else if (message == "/fly")
@@ -133,7 +135,7 @@ namespace tsom
 
 			Nz::NodeComponent& playerNode = playerEntity.get<Nz::NodeComponent>();
 
-			ServerShipEnvironment* shipEnv = serverInstance.CreateShip();
+			ServerShipEnvironment* shipEnv = m_player->SpawnShip();
 			shipEnv->GenerateShip(message == "/spawnsmallship");
 
 			EnvironmentTransform planetToShip(playerNode.GetPosition(), Nz::Quaternionf::Identity()); //< FIXME
@@ -148,10 +150,13 @@ namespace tsom
 
 			ServerInstance& serverInstance = m_player->GetServerInstance();
 			ServerEnvironment* currentEnvironment = m_player->GetControlledEntityEnvironment();
-			if (currentEnvironment != &serverInstance.GetPlanetEnvironment())
+
+			// Bad temporary code
+			ServerPlanetEnvironment* planetEnvironment = dynamic_cast<ServerPlanetEnvironment*>(currentEnvironment);
+			if (!planetEnvironment)
 				return;
 
-			Planet& planet = serverInstance.GetPlanetEnvironment().GetPlanet();
+			Planet& planet = planetEnvironment->GetPlanet();
 
 			Nz::Vector3f playerPos = playerEntity.get<Nz::NodeComponent>().GetGlobalPosition();
 			ChunkIndices chunkIndices = planet.GetChunkIndicesByPosition(playerPos);

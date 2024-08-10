@@ -23,7 +23,7 @@ namespace tsom
 	class ServerPlayer;
 	class Ship;
 
-	class TSOM_SERVERLIB_API ServerShipEnvironment : public ServerEnvironment
+	class TSOM_SERVERLIB_API ServerShipEnvironment final : public ServerEnvironment
 	{
 		public:
 			ServerShipEnvironment(ServerInstance& serverInstance);
@@ -42,8 +42,7 @@ namespace tsom
 
 			entt::handle LinkOutsideEnvironment(ServerEnvironment* environment, const EnvironmentTransform& transform);
 
-			void OnLoad(const std::filesystem::path& loadPath) override;
-			void OnSave(const std::filesystem::path& savePath) override;
+			void OnSave() override;
 			void OnTick(Nz::Time elapsedTime) override;
 
 			ServerShipEnvironment& operator=(const ServerShipEnvironment&) = delete;

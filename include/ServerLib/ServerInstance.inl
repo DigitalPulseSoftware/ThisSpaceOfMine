@@ -81,6 +81,11 @@ namespace tsom
 		return m_connectionTokenEncryptionKey;
 	}
 
+	inline auto ServerInstance::GetDefaultSpawnpoint() const -> const Spawnpoint&
+	{
+		return m_defaultSpawnpoint;
+	}
+
 	inline ServerPlayer* ServerInstance::GetPlayer(PlayerIndex playerIndex)
 	{
 		return m_players.RetrieveFromIndex(playerIndex);
@@ -94,5 +99,10 @@ namespace tsom
 	inline Nz::Time ServerInstance::GetTickDuration() const
 	{
 		return m_tickDuration;
+	}
+
+	inline void ServerInstance::SetDefaultSpawnpoint(ServerEnvironment* environment, Nz::Vector3f position, Nz::Quaternionf rotation)
+	{
+		m_defaultSpawnpoint = Spawnpoint{ environment, rotation, position };
 	}
 }

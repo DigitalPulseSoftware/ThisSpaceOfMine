@@ -44,10 +44,11 @@ namespace tsom
 
 	enum class AuthError : Nz::UInt8
 	{
-		InvalidToken = 3,
-		ProtocolError = 2,
+		InternalError    = 4,
+		InvalidToken     = 3,
+		ProtocolError    = 2,
 		ServerIsOutdated = 0,
-		UpgradeRequired = 1,
+		UpgradeRequired  = 1,
 	};
 
 	TSOM_COMMONLIB_API std::string_view ToString(AuthError authError);

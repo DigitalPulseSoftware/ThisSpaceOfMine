@@ -25,13 +25,14 @@ namespace tsom
 	class ServerEnvironment;
 	class ServerPlayer;
 	class ServerInstance;
+	class ServerShipEnvironment;
 
 	using ServerPlayerHandle = Nz::ObjectHandle<ServerPlayer>;
 
 	class TSOM_SERVERLIB_API ServerPlayer : public Nz::HandledObject<ServerPlayer>
 	{
 		public:
-			inline ServerPlayer(ServerInstance& instance, PlayerIndex playerIndex, NetworkSession* session, const std::optional<Nz::Uuid>& uuid, std::string nickname, PlayerPermissionFlags permissions);
+			ServerPlayer(ServerInstance& instance, PlayerIndex playerIndex, NetworkSession* session, const std::optional<Nz::Uuid>& uuid, std::string nickname, PlayerPermissionFlags permissions);
 			ServerPlayer(const ServerPlayer&) = delete;
 			ServerPlayer(ServerPlayer&&) = delete;
 			~ServerPlayer();
@@ -67,7 +68,11 @@ namespace tsom
 
 			void PushInputs(const PlayerInputs& inputs);
 
+			void RemoveFromEnvironment(ServerEnvironment* environment);
+
 			void Respawn(ServerEnvironment* environment, const Nz::Vector3f& position, const Nz::Quaternionf& rotation);
+
+			ServerShipEnvironment* SpawnShip();
 
 			void Tick();
 
@@ -84,6 +89,7 @@ namespace tsom
 			std::optional<Nz::Uuid> m_uuid;
 			std::shared_ptr<CharacterController> m_controller;
 			std::string m_nickname;
+			std::unique_ptr<ServerShipEnvironment> m_ship;
 			std::vector<PlayerInputs> m_inputQueue;
 			std::vector<ServerEnvironment*> m_registeredEnvironments;
 			entt::handle m_controlledEntity;
@@ -91,7 +97,7 @@ namespace tsom
 			ServerEnvironment* m_controlledEntityEnvironment;
 			ServerEnvironment* m_rootEnvironment;
 			SessionVisibilityHandler m_visibilityHandler;
-			ServerInstance& m_instance;
+			ServerInstance& m_serverInstance;
 			PlayerIndex m_playerIndex;
 			PlayerPermissionFlags m_permissions;
 	};

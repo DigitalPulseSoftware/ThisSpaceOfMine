@@ -29,8 +29,9 @@ namespace tsom
 {
 	constexpr unsigned int chunkSaveVersion = 1;
 
-	ServerPlanetEnvironment::ServerPlanetEnvironment(ServerInstance& serverInstance, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount) :
-	ServerEnvironment(serverInstance)
+	ServerPlanetEnvironment::ServerPlanetEnvironment(ServerInstance& serverInstance, std::filesystem::path savePath, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount) :
+	ServerEnvironment(serverInstance),
+	m_savePath(std::move(savePath))
 	{
 		auto& app = serverInstance.GetApplication();
 		auto& taskScheduler = app.GetComponent<Nz::TaskSchedulerAppComponent>();
@@ -48,6 +49,9 @@ namespace tsom
 		planetComponent.GeneratePlatform(blockLibrary, tsom::Direction::Back, { -34, 2, 53 });
 		planetComponent.GeneratePlatform(blockLibrary, tsom::Direction::Front, { 22, -35, -59 });
 		planetComponent.GeneratePlatform(blockLibrary, tsom::Direction::Down, { 23, -62, 26 });
+
+		if (!m_savePath.empty())
+			LoadFromDirectory();
 
 		planetComponent.OnChunkUpdated.Connect([this](ChunkContainer* /*planet*/, Chunk* chunk, DirectionMask /*neighborMask*/)
 		{
@@ -87,17 +91,44 @@ namespace tsom
 		return m_planetEntity.get<PlanetComponent>();
 	}
 
-	void ServerPlanetEnvironment::OnLoad(const std::filesystem::path& loadPath)
+	void ServerPlanetEnvironment::OnSave()
 	{
-		if (!std::filesystem::is_directory(loadPath))
+		if (m_dirtyChunks.empty())
+			return;
+
+		fmt::print("saving {} dirty chunks...\n", m_dirtyChunks.size());
+
+		if (!std::filesystem::is_directory(m_savePath))
+			std::filesystem::create_directories(m_savePath);
+
+		Nz::ByteArray byteArray;
+		for (const ChunkIndices& chunkIndices : m_dirtyChunks)
 		{
-			fmt::print("save directory {0} doesn't exist, not loading chunks\n", loadPath);
+			byteArray.Clear();
+
+			Nz::ByteStream byteStream(&byteArray);
+			m_planetEntity.get<PlanetComponent>().GetChunk(chunkIndices)->Serialize(m_serverInstance.GetBlockLibrary(), byteStream);
+
+			if (!Nz::File::WriteWhole(m_savePath / Nz::Utf8Path(fmt::format("{0:+}_{1:+}_{2:+}.chunk", chunkIndices.x, chunkIndices.y, chunkIndices.z)), byteArray.GetBuffer(), byteArray.GetSize()))
+				fmt::print(stderr, "failed to save chunk {}\n", fmt::streamed(chunkIndices));
+		}
+		m_dirtyChunks.clear();
+
+		std::string version = std::to_string(chunkSaveVersion);
+		Nz::File::WriteWhole(m_savePath / Nz::Utf8Path("version.txt"), version.data(), version.size());
+	}
+
+	void ServerPlanetEnvironment::LoadFromDirectory()
+	{
+		if (!std::filesystem::is_directory(m_savePath))
+		{
+			fmt::print("save directory {0} doesn't exist, not loading chunks\n", m_savePath);
 			return;
 		}
 
 		// Handle conversion
 		unsigned int saveVersion = 0;
-		if (std::filesystem::path versionPath = loadPath / Nz::Utf8Path("version.txt"); std::filesystem::exists(versionPath))
+		if (std::filesystem::path versionPath = m_savePath / Nz::Utf8Path("version.txt"); std::filesystem::exists(versionPath))
 		{
 			auto contentOpt = Nz::File::ReadWhole(versionPath);
 			if (contentOpt)
@@ -122,9 +153,9 @@ namespace tsom
 		bool didConvert = false;
 		if (saveVersion == 0)
 		{
-			std::filesystem::path oldSave = loadPath / Nz::Utf8Path("old0");
+			std::filesystem::path oldSave = m_savePath / Nz::Utf8Path("old0");
 			std::filesystem::create_directory(oldSave);
-			for (const auto& entry : std::filesystem::directory_iterator(loadPath))
+			for (const auto& entry : std::filesystem::directory_iterator(m_savePath))
 			{
 				if (!entry.is_regular_file())
 					continue;
@@ -147,7 +178,7 @@ namespace tsom
 
 				std::filesystem::path newFilename = Nz::Utf8Path(fmt::format("{0:+}_{1:+}_{2:+}.chunk", chunkIndices.x, chunkIndices.z, chunkIndices.y)); //< reverse y & z
 
-				std::filesystem::rename(entry.path(), loadPath / newFilename);
+				std::filesystem::rename(entry.path(), m_savePath / newFilename);
 			}
 
 			saveVersion++;
@@ -157,12 +188,12 @@ namespace tsom
 		if (didConvert)
 		{
 			std::string version = std::to_string(saveVersion);
-			Nz::File::WriteWhole(loadPath / Nz::Utf8Path("version.txt"), version.data(), version.size());
+			Nz::File::WriteWhole(m_savePath / Nz::Utf8Path("version.txt"), version.data(), version.size());
 		}
 
 		m_planetEntity.get<PlanetComponent>().ForEachChunk([&](const ChunkIndices& chunkIndices, Chunk& chunk)
 		{
-			Nz::File chunkFile(loadPath / Nz::Utf8Path(fmt::format("{0:+}_{1:+}_{2:+}.chunk", chunkIndices.x, chunkIndices.y, chunkIndices.z)), Nz::OpenMode::Read);
+			Nz::File chunkFile(m_savePath / Nz::Utf8Path(fmt::format("{0:+}_{1:+}_{2:+}.chunk", chunkIndices.x, chunkIndices.y, chunkIndices.z)), Nz::OpenMode::Read);
 			if (!chunkFile.IsOpen())
 				return;
 
@@ -176,32 +207,5 @@ namespace tsom
 				fmt::print(stderr, fg(fmt::color::red), "failed to load chunk {}: {}\n", fmt::streamed(chunkIndices), e.what());
 			}
 		});
-	}
-
-	void ServerPlanetEnvironment::OnSave(const std::filesystem::path& savePath)
-	{
-		if (m_dirtyChunks.empty())
-			return;
-
-		fmt::print("saving {} dirty chunks...\n", m_dirtyChunks.size());
-
-		if (!std::filesystem::is_directory(savePath))
-			std::filesystem::create_directories(savePath);
-
-		Nz::ByteArray byteArray;
-		for (const ChunkIndices& chunkIndices : m_dirtyChunks)
-		{
-			byteArray.Clear();
-
-			Nz::ByteStream byteStream(&byteArray);
-			m_planetEntity.get<PlanetComponent>().GetChunk(chunkIndices)->Serialize(m_serverInstance.GetBlockLibrary(), byteStream);
-
-			if (!Nz::File::WriteWhole(savePath / Nz::Utf8Path(fmt::format("{0:+}_{1:+}_{2:+}.chunk", chunkIndices.x, chunkIndices.y, chunkIndices.z)), byteArray.GetBuffer(), byteArray.GetSize()))
-				fmt::print(stderr, "failed to save chunk {}\n", fmt::streamed(chunkIndices));
-		}
-		m_dirtyChunks.clear();
-
-		std::string version = std::to_string(chunkSaveVersion);
-		Nz::File::WriteWhole(savePath / Nz::Utf8Path("version.txt"), version.data(), version.size());
 	}
 }

@@ -22,7 +22,6 @@ namespace tsom
 {
 	ServerInstance::ServerInstance(Nz::ApplicationBase& application, Config config) :
 	m_connectionTokenEncryptionKey(config.connectionTokenEncryptionKey),
-	m_saveDirectory(std::move(config.saveDirectory)),
 	m_players(256),
 	m_saveInterval(config.saveInterval),
 	m_tickAccumulator(Nz::Time::Zero()),
@@ -31,8 +30,6 @@ namespace tsom
 	m_application(application),
 	m_pauseWhenEmpty(config.pauseWhenEmpty)
 	{
-		m_planetEnvironment = std::make_unique<ServerPlanetEnvironment>(*this, config.planetSeed, config.planetChunkCount);
-		m_planetEnvironment->OnLoad(m_saveDirectory);
 	}
 
 	ServerInstance::~ServerInstance()
@@ -58,6 +55,12 @@ namespace tsom
 
 	ServerPlayer* ServerInstance::CreateAnonymousPlayer(NetworkSession* session, std::string nickname)
 	{
+		if (!m_defaultSpawnpoint.env)
+		{
+			fmt::print(fg(fmt::color::red), "cannot create player: no spawnpoint set\n");
+			return nullptr;
+		}
+
 		// Check if a player already has this nickname and rename it if it's the case
 		if (FindPlayerByNickname(nickname) != nullptr)
 		{
@@ -78,7 +81,8 @@ namespace tsom
 		ServerPlayer* player = m_players.Allocate(m_players.DeferConstruct, playerIndex);
 		std::construct_at(player, *this, Nz::SafeCast<PlayerIndex>(playerIndex), session, std::nullopt, std::move(nickname), 0);
 
-		player->UpdateRootEnvironment(m_planetEnvironment.get());
+		player->UpdateRootEnvironment(m_defaultSpawnpoint.env);
+		player->Respawn(m_defaultSpawnpoint.env, m_defaultSpawnpoint.position, m_defaultSpawnpoint.rotation);
 
 		m_newPlayers.UnboundedSet(playerIndex);
 
@@ -87,6 +91,12 @@ namespace tsom
 
 	ServerPlayer* ServerInstance::CreateAuthenticatedPlayer(NetworkSession* session, const Nz::Uuid& uuid, std::string nickname, PlayerPermissionFlags permissions)
 	{
+		if (!m_defaultSpawnpoint.env)
+		{
+			fmt::print(fg(fmt::color::red), "cannot create player: no spawnpoint set\n");
+			return nullptr;
+		}
+
 		// Disconnect an existing player if it exists with this uuid
 		// TODO: Override the player session with this one
 		if (ServerPlayer* player = FindPlayerByUuid(uuid))
@@ -114,25 +124,12 @@ namespace tsom
 		ServerPlayer* player = m_players.Allocate(m_players.DeferConstruct, playerIndex);
 		std::construct_at(player, *this, Nz::SafeCast<PlayerIndex>(playerIndex), session, uuid, std::move(nickname), permissions);
 
-		player->UpdateRootEnvironment(m_planetEnvironment.get());
+		player->UpdateRootEnvironment(m_defaultSpawnpoint.env);
+		player->Respawn(m_defaultSpawnpoint.env, m_defaultSpawnpoint.position, m_defaultSpawnpoint.rotation);
 
 		m_newPlayers.UnboundedSet(playerIndex);
 
 		return player;
-	}
-
-	ServerPlanetEnvironment& ServerInstance::GetPlanetEnvironment()
-	{
-		return *m_planetEnvironment;
-	}
-
-	ServerShipEnvironment* ServerInstance::CreateShip()
-	{
-		auto shipEnv = std::make_unique<ServerShipEnvironment>(*this);
-		ServerShipEnvironment* shipEnvPtr = shipEnv.get();
-		m_shipEnvironments.emplace_back(std::move(shipEnv));
-
-		return shipEnvPtr;
 	}
 
 	void ServerInstance::DestroyPlayer(PlayerIndex playerIndex)
@@ -145,15 +142,17 @@ namespace tsom
 		m_players.Free(playerIndex);
 	}
 
-	void ServerInstance::DestroyShip(ServerShipEnvironment* ship)
+	void ServerInstance::RegisterEnvironment(ServerEnvironment* environment)
 	{
-		auto it = std::find_if(m_shipEnvironments.begin(), m_shipEnvironments.end(), [ship](auto& shipEnvPtr)
-		{
-			return shipEnvPtr.get() == ship;
-		});
+		assert(std::find(m_environments.begin(), m_environments.end(), environment) == m_environments.end());
+		m_environments.push_back(environment);
+	}
 
-		assert(it != m_shipEnvironments.end());
-		m_shipEnvironments.erase(it);
+	void ServerInstance::UnregisterEnvironment(ServerEnvironment* environment)
+	{
+		auto it = std::find(m_environments.begin(), m_environments.end(), environment);
+		assert(it != m_environments.end());
+		m_environments.erase(it);
 	}
 
 	Nz::Time ServerInstance::Update(Nz::Time elapsedTime)
@@ -265,7 +264,8 @@ namespace tsom
 
 	void ServerInstance::OnSave()
 	{
-		m_planetEnvironment->OnSave(m_saveDirectory);
+		for (ServerEnvironment* env : m_environments)
+			env->OnSave();
 	}
 
 	void ServerInstance::OnTick(Nz::Time elapsedTime)
@@ -277,9 +277,8 @@ namespace tsom
 			serverPlayer.Tick();
 		});
 
-		m_planetEnvironment->OnTick(elapsedTime);
-		for (auto& shipEnv : m_shipEnvironments)
-			shipEnv->OnTick(elapsedTime);
+		for (ServerEnvironment* env : m_environments)
+			env->OnTick(elapsedTime);
 
 		OnNetworkTick();
 	}

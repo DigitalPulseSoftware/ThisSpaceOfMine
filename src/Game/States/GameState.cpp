@@ -518,9 +518,12 @@ namespace tsom
 				}
 				else
 				{
+					const Nz::Node* environmentNode = chunkNode.GetParent();
+					assert(environmentNode);
+
 					// Place
 					// Don't use hit chunk as it wouldn't work for borders blocks
-					Nz::Vector3f blockPos = hitPos + hitNormal * chunkContainer.GetTileSize() * 0.25f;
+					Nz::Vector3f blockPos = environmentNode->ToLocalPosition(hitPos + hitNormal * chunkContainer.GetTileSize() * 0.25f);
 					ChunkIndices chunkIndices = chunkContainer.GetChunkIndicesByPosition(blockPos);
 					const Chunk* chunk = chunkContainer.GetChunk(chunkIndices);
 					auto coordinates = chunk->ComputeCoordinates(blockPos - chunkContainer.GetChunkOffset(chunkIndices));

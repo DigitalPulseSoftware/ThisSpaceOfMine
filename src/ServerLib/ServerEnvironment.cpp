@@ -16,6 +16,8 @@ namespace tsom
 	ServerEnvironment::ServerEnvironment(ServerInstance& serverInstance) :
 	m_serverInstance(serverInstance)
 	{
+		m_serverInstance.RegisterEnvironment(this);
+
 		auto& registry = m_world.GetRegistry();
 		registry.ctx().emplace<ServerEnvironment*>(this);
 
@@ -29,12 +31,24 @@ namespace tsom
 		m_world.AddSystem<Nz::Physics3DSystem>(std::move(physSettings));
 	}
 
-	ServerEnvironment::~ServerEnvironment() = default;
+	ServerEnvironment::~ServerEnvironment()
+	{
+		for (auto&& [environment, transform] : m_connectedEnvironments)
+			environment->Disconnect(*this);
+
+		m_serverInstance.UnregisterEnvironment(this);
+	}
 
 	void ServerEnvironment::Connect(ServerEnvironment& environment, const EnvironmentTransform& transform)
 	{
 		NazaraAssert(!m_connectedEnvironments.contains(&environment), "environment is already connected");
 		m_connectedEnvironments.emplace(&environment, transform);
+
+		environment.ForEachPlayer([&](ServerPlayer& player)
+		{
+			if (player.GetRootEnvironment() == &environment)
+				player.AddToEnvironment(this);
+		});
 	}
 
 	void ServerEnvironment::Disconnect(ServerEnvironment& environment)
@@ -42,6 +56,12 @@ namespace tsom
 		auto it = m_connectedEnvironments.find(&environment);
 		NazaraAssert(it != m_connectedEnvironments.end(), "environment is not connected");
 		m_connectedEnvironments.erase(it);
+		
+		environment.ForEachPlayer([&](ServerPlayer& player)
+		{
+			if (player.GetRootEnvironment() == &environment)
+				player.RemoveFromEnvironment(this);
+		});
 	}
 
 	entt::handle ServerEnvironment::CreateEntity()

@@ -43,8 +43,7 @@ namespace tsom
 			inline Nz::EnttWorld& GetWorld();
 			inline const Nz::EnttWorld& GetWorld() const;
 
-			virtual void OnLoad(const std::filesystem::path& loadPath) = 0;
-			virtual void OnSave(const std::filesystem::path& savePath) = 0;
+			virtual void OnSave() = 0;
 			virtual void OnTick(Nz::Time elapsedTime);
 
 			void RegisterPlayer(ServerPlayer* player);

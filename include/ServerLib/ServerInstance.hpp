@@ -34,6 +34,7 @@ namespace tsom
 	{
 		public:
 			struct Config;
+			struct Spawnpoint;
 
 			ServerInstance(Nz::ApplicationBase& application, Config config);
 			ServerInstance(const ServerInstance&) = delete;
@@ -59,28 +60,34 @@ namespace tsom
 			inline Nz::ApplicationBase& GetApplication();
 			inline const BlockLibrary& GetBlockLibrary() const;
 			inline const std::array<std::uint8_t, 32>& GetConnectionTokenEncryptionKey() const;
+			inline const Spawnpoint& GetDefaultSpawnpoint() const;
 			inline ServerPlayer* GetPlayer(PlayerIndex playerIndex);
 			inline const ServerPlayer* GetPlayer(PlayerIndex playerIndex) const;
 			inline Nz::Time GetTickDuration() const;
 
-			Nz::Time Update(Nz::Time elapsedTime);
+			void RegisterEnvironment(ServerEnvironment* environment);
 
-			// TEMP
-			ServerShipEnvironment* CreateShip();
-			void DestroyShip(ServerShipEnvironment* ship);
-			ServerPlanetEnvironment& GetPlanetEnvironment();
+			inline void SetDefaultSpawnpoint(ServerEnvironment* environment, Nz::Vector3f position, Nz::Quaternionf rotation);
+
+			void UnregisterEnvironment(ServerEnvironment* environment);
+
+			Nz::Time Update(Nz::Time elapsedTime);
 
 			ServerInstance& operator=(const ServerInstance&) = delete;
 			ServerInstance& operator=(ServerInstance&&) = delete;
 
 			struct Config
 			{
-				std::filesystem::path saveDirectory = Nz::Utf8Path("save/chunks");
 				std::array<std::uint8_t, 32> connectionTokenEncryptionKey;
 				Nz::Time saveInterval = Nz::Time::Seconds(30);
-				Nz::UInt32 planetSeed = 42;
-				Nz::Vector3ui planetChunkCount = Nz::Vector3ui(5);
 				bool pauseWhenEmpty = true;
+			};
+
+			struct Spawnpoint
+			{
+				ServerEnvironment* env = nullptr;
+				Nz::Quaternionf rotation;
+				Nz::Vector3f position;
 			};
 
 		private:
@@ -95,11 +102,9 @@ namespace tsom
 			};
 
 			std::array<std::uint8_t, 32> m_connectionTokenEncryptionKey;
-			std::filesystem::path m_saveDirectory;
-			std::unique_ptr<ServerPlanetEnvironment> m_planetEnvironment;
 			std::vector<std::unique_ptr<NetworkSessionManager>> m_sessionManagers;
-			std::vector<std::unique_ptr<ServerShipEnvironment>> m_shipEnvironments;
 			std::vector<PlayerRename> m_pendingPlayerRename;
+			std::vector<ServerEnvironment*> m_environments;
 			Nz::Bitset<> m_disconnectedPlayers;
 			Nz::Bitset<> m_newPlayers;
 			Nz::MemoryPool<ServerPlayer> m_players;
@@ -108,8 +113,9 @@ namespace tsom
 			Nz::Time m_tickAccumulator;
 			Nz::Time m_tickDuration;
 			Nz::UInt16 m_tickIndex;
-			BlockLibrary m_blockLibrary;
 			Nz::ApplicationBase& m_application;
+			BlockLibrary m_blockLibrary;
+			Spawnpoint m_defaultSpawnpoint;
 			bool m_pauseWhenEmpty;
 	};
 }

@@ -9,6 +9,7 @@
 #include <CommonLib/Components/PlanetComponent.hpp>
 #include <ServerLib/ServerInstance.hpp>
 #include <ServerLib/ServerPlanetEnvironment.hpp>
+#include <ServerLib/ServerShipEnvironment.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
 #include <ServerLib/Components/ServerPlayerControlledComponent.hpp>
 #include <ServerLib/Systems/NetworkedEntitiesSystem.hpp>
@@ -18,6 +19,18 @@
 
 namespace tsom
 {
+	ServerPlayer::ServerPlayer(ServerInstance& instance, PlayerIndex playerIndex, NetworkSession* session, const std::optional<Nz::Uuid>& uuid, std::string nickname, PlayerPermissionFlags permissions) :
+	m_uuid(uuid),
+	m_nickname(std::move(nickname)),
+	m_session(session),
+	m_controlledEntityEnvironment(nullptr),
+	m_rootEnvironment(nullptr),
+	m_visibilityHandler(m_session),
+	m_serverInstance(instance),
+	m_playerIndex(playerIndex)
+	{
+	}
+
 	ServerPlayer::~ServerPlayer()
 	{
 		if (m_controlledEntity)
@@ -41,7 +54,7 @@ namespace tsom
 
 	void ServerPlayer::Destroy()
 	{
-		m_instance.DestroyPlayer(m_playerIndex);
+		m_serverInstance.DestroyPlayer(m_playerIndex);
 	}
 
 	void ServerPlayer::MoveEntityToEnvironment(ServerEnvironment* environment)
@@ -122,6 +135,17 @@ namespace tsom
 		m_inputQueue.push_back(inputs);
 	}
 
+	void ServerPlayer::RemoveFromEnvironment(ServerEnvironment* environment)
+	{
+		assert(IsInEnvironment(environment));
+		auto it = std::find(m_registeredEnvironments.begin(), m_registeredEnvironments.end(), environment);
+		assert(it != m_registeredEnvironments.end());
+		m_registeredEnvironments.erase(it);
+		environment->UnregisterPlayer(this);
+
+		m_visibilityHandler.DestroyEnvironment(*environment);
+	}
+
 	void ServerPlayer::Respawn(ServerEnvironment* environment, const Nz::Vector3f& position, const Nz::Quaternionf& rotation)
 	{
 		assert(IsInEnvironment(environment));
@@ -151,6 +175,12 @@ namespace tsom
 		characterComponent.DisableSleeping();
 
 		m_controlledEntity.emplace<ServerPlayerControlledComponent>(CreateHandle());
+	}
+
+	ServerShipEnvironment* ServerPlayer::SpawnShip()
+	{
+		m_ship = std::make_unique<ServerShipEnvironment>(m_serverInstance);
+		return m_ship.get();
 	}
 
 	void ServerPlayer::Tick()

@@ -114,6 +114,9 @@ namespace tsom
 		else
 			player = m_instance.CreateAnonymousPlayer(GetSession(), std::move(login));
 
+		if (!player)
+			return FailAuth(AuthError::InternalError);
+
 		Packets::AuthResponse response;
 		response.authResult = Nz::Ok();
 		response.ownPlayerIndex = player->GetPlayerIndex();
@@ -121,8 +124,6 @@ namespace tsom
 		GetSession()->SendPacket(response);
 
 		GetSession()->SetupHandler<PlayerSessionHandler>(player);
-
-		player->Respawn(player->GetRootEnvironment(), Constants::PlayerSpawnPos, Constants::PlayerSpawnRot);
 	}
 
 	void InitialSessionHandler::OnDeserializationError(std::size_t packetIndex)

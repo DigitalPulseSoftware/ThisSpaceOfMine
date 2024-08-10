@@ -4,18 +4,6 @@
 
 namespace tsom
 {
-	inline ServerPlayer::ServerPlayer(ServerInstance& instance, PlayerIndex playerIndex, NetworkSession* session, const std::optional<Nz::Uuid>& uuid, std::string nickname, PlayerPermissionFlags permissions) :
-	m_uuid(uuid),
-	m_nickname(std::move(nickname)),
-	m_session(session),
-	m_controlledEntityEnvironment(nullptr),
-	m_rootEnvironment(nullptr),
-	m_visibilityHandler(m_session),
-	m_instance(instance),
-	m_playerIndex(playerIndex)
-	{
-	}
-
 	inline const std::shared_ptr<CharacterController>& ServerPlayer::GetCharacterController()
 	{
 		return m_controller;
@@ -63,12 +51,12 @@ namespace tsom
 
 	inline ServerInstance& ServerPlayer::GetServerInstance()
 	{
-		return m_instance;
+		return m_serverInstance;
 	}
 
 	inline const ServerInstance& ServerPlayer::GetServerInstance() const
 	{
-		return m_instance;
+		return m_serverInstance;
 	}
 
 	inline NetworkSession* ServerPlayer::GetSession()

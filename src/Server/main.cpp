@@ -4,6 +4,7 @@
 
 #include <CommonLib/InternalConstants.hpp>
 #include <Server/ServerConfigAppComponent.hpp>
+#include <ServerLib/ServerPlanetEnvironment.hpp>
 #include <ServerLib/ServerInstanceAppComponent.hpp>
 #include <ServerLib/Session/InitialSessionHandler.hpp>
 #include <Nazara/Core/Application.hpp>
@@ -28,16 +29,19 @@ int ServerMain(int argc, char* argv[])
 	auto& config = configAppComponent.GetConfig();
 
 	Nz::UInt16 serverPort = config.GetIntegerValue<Nz::UInt16>("Server.Port");
+	std::filesystem::path saveDirectory = Nz::Utf8Path(config.GetStringValue("Save.Directory"));
 
 	tsom::ServerInstance::Config instanceConfig;
 	instanceConfig.pauseWhenEmpty = config.GetBoolValue("Server.SleepWhenEmpty");
-	instanceConfig.saveDirectory = Nz::Utf8Path(config.GetStringValue("Save.Directory"));
 	instanceConfig.saveInterval = Nz::Time::Seconds(config.GetIntegerValue<long long>("Save.Interval"));
 	instanceConfig.connectionTokenEncryptionKey = config.GetConnectionTokenEncryptionKey();
 
-	auto& instance = worldAppComponent.AddInstance(std::move(instanceConfig));
+	auto& instance = worldAppComponent.AddInstance(instanceConfig);
 	auto& sessionManager = instance.AddSessionManager(serverPort);
 	sessionManager.SetDefaultHandler<tsom::InitialSessionHandler>(std::ref(instance));
+
+	tsom::ServerPlanetEnvironment planet(instance, saveDirectory, 42, Nz::Vector3ui(5));
+	instance.SetDefaultSpawnpoint(&planet, Nz::Vector3f::Up() * 100.f + Nz::Vector3f::Backward() * 5.f, Nz::Quaternionf::Identity());
 
 	fmt::print(fg(fmt::color::lime_green), "server ready.\n");
 
