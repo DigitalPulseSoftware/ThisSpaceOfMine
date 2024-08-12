@@ -23,6 +23,9 @@ namespace tsom
 
 		BuildCollider(m_size, GetCollisionCellMask(), AddBox);
 
+		if (childColliders.empty())
+			return nullptr;
+
 		return std::make_shared<Nz::CompoundCollider3D>(std::move(childColliders));
 	}
 

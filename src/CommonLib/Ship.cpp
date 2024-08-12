@@ -67,10 +67,17 @@ namespace tsom
 			std::vector<Nz::CompoundCollider3D::ChildCollider> childColliders;
 			for (auto&& [ChunkIndices, chunkData] : m_chunks)
 			{
+				auto chunkCollider = chunkData.chunk->BuildCollider();
+				if (!chunkCollider)
+					continue;
+
 				auto& childCollider = childColliders.emplace_back();
 				childCollider.collider = chunkData.chunk->BuildCollider();
 				childCollider.offset = GetChunkOffset(chunkData.chunk->GetIndices());
 			}
+
+			if (childColliders.empty())
+				return nullptr;
 
 			return std::make_shared<Nz::CompoundCollider3D>(std::move(childColliders));
 		}
