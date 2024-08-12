@@ -17,11 +17,13 @@ namespace tsom
 	{
 		auto view = m_registry.view<Nz::NodeComponent, EnvironmentEnterTriggerComponent>();
 
-		for (auto&& [entity, triggerNode, enterTrigger] : view.each())
+		for (entt::entity entity : view)
 		{
+			auto& enterTrigger = view.get<EnvironmentEnterTriggerComponent>(entity);
 			if (!enterTrigger.entryTrigger)
 				continue;
 
+			auto& triggerNode = view.get<Nz::NodeComponent>(entity);
 			m_ownerEnvironment->ForEachPlayer([&](ServerPlayer& player)
 			{
 				entt::handle playerEntity = player.GetControlledEntity();
