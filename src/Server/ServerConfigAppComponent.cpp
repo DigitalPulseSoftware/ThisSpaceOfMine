@@ -38,7 +38,14 @@ namespace tsom
 	ServerConfigAppComponent::ServerConfigAppComponent(Nz::ApplicationBase& app) :
 	ApplicationComponent(app)
 	{
-		if (!m_configFile.LoadFromFile(Nz::Utf8Path("serverconfig.lua")))
+		std::filesystem::path configPath = Nz::Utf8Path("serverconfig.lua");
+		std::filesystem::path defaultConfigPath = configPath;
+		defaultConfigPath.replace_extension(Nz::Utf8Path(".lua.default"));
+
+		if (!std::filesystem::is_regular_file(configPath) && std::filesystem::is_regular_file(defaultConfigPath))
+			configPath = std::move(defaultConfigPath);
+
+		if (!m_configFile.LoadFromFile(configPath))
 		{
 			fmt::print(fg(fmt::color::red), "failed to load server config\n");
 			return;

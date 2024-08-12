@@ -218,6 +218,7 @@ target("TSOMGame", function ()
 
 	add_headerfiles("src/Game/**.hpp", "src/Game/**.inl")
 	add_files("src/Game/**.cpp")
+	add_installfiles("gameconfig.lua.default")
 
 	add_rpathdirs("@executable_path")
 
@@ -226,10 +227,6 @@ target("TSOMGame", function ()
 	if is_plat("macosx") then
 		add_packages("moltenvk", { links = {} })
 	end
-
-	after_install(function (target)
-		os.vcp("gameconfig.lua.default", path.join(target:installdir(), "bin", "gameconfig.lua"))
-	end)
 end)
 
 target("TSOMServer", function ()
@@ -241,12 +238,9 @@ target("TSOMServer", function ()
 
 	add_headerfiles("src/Server/**.hpp", "src/Server/**.inl")
 	add_files("src/Server/**.cpp")
+	add_installfiles("serverconfig.lua.default")
 
 	add_rpathdirs("@executable_path")
-
-	after_install(function (target)
-		os.vcp("serverconfig.lua.default", path.join(target:installdir(), "bin", "serverconfig.lua"))
-	end)
 end)
 
 includes("tests/xmake.lua")
