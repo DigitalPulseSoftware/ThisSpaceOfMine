@@ -33,6 +33,11 @@ namespace tsom
 
 	ServerEnvironment::~ServerEnvironment()
 	{
+		ForEachPlayer([this](ServerPlayer& player)
+		{
+			player.RemoveFromEnvironment(this);
+		});
+
 		for (auto&& [environment, transform] : m_connectedEnvironments)
 			environment->Disconnect(*this);
 
