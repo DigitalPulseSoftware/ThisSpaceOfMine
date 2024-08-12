@@ -455,6 +455,8 @@ namespace tsom
 					visibleChunk.onBlockUpdatedSlot.Disconnect();
 
 					m_freeChunkIds.Set(chunkIndex);
+					m_newlyHiddenChunk.UnboundedReset(chunkIndex);
+					m_newlyVisibleChunk.UnboundedReset(chunkIndex);
 					m_resetChunk.UnboundedReset(chunkIndex);
 					m_updatedChunk.UnboundedReset(chunkIndex);
 				}
