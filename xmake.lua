@@ -218,7 +218,7 @@ target("TSOMGame", function ()
 
 	add_headerfiles("src/Game/**.hpp", "src/Game/**.inl")
 	add_files("src/Game/**.cpp")
-	add_installfiles("gameconfig.lua.default")
+	add_installfiles("gameconfig.lua.default", { prefixdir = "bin" })
 
 	add_rpathdirs("@executable_path")
 
@@ -227,6 +227,18 @@ target("TSOMGame", function ()
 	if is_plat("macosx") then
 		add_packages("moltenvk", { links = {} })
 	end
+
+	after_install(function (target)
+		local curl = target:pkg("libcurl")
+		if not curl then
+			return
+		end
+
+		local bin = path.join(curl:installdir(), "bin")
+		os.vcp(path.join(bin, "*.dll"), target:installdir("bin"))
+		os.vcp(path.join(bin, "*.so"), target:installdir("bin"))
+		os.vcp(path.join(bin, "*.dynlib"), target:installdir("bin"))
+	end)
 end)
 
 target("TSOMServer", function ()
@@ -238,7 +250,7 @@ target("TSOMServer", function ()
 
 	add_headerfiles("src/Server/**.hpp", "src/Server/**.inl")
 	add_files("src/Server/**.cpp")
-	add_installfiles("serverconfig.lua.default")
+	add_installfiles("serverconfig.lua.default", { prefixdir = "bin" })
 
 	add_rpathdirs("@executable_path")
 end)
