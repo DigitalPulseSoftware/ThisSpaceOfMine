@@ -519,7 +519,11 @@ namespace tsom
 				else
 				{
 					const Nz::Node* environmentNode = chunkNode.GetParent();
-					assert(environmentNode);
+					if NAZARA_UNLIKELY(!environmentNode)
+					{
+						fmt::print(fg(fmt::color::red), "chunk has no environment node\n");
+						return;
+					}
 
 					// Place
 					// Don't use hit chunk as it wouldn't work for borders blocks
@@ -606,7 +610,11 @@ namespace tsom
 				case 0:
 				{
 					const Nz::Node* environmentNode = characterNode.GetParent();
-					assert(environmentNode);
+					if NAZARA_UNLIKELY(!environmentNode)
+					{
+						fmt::print(fg(fmt::color::red), "character has no environment node\n");
+						break;
+					}
 
 					cameraNode.SetPosition(characterPos + characterRot * (Nz::Vector3f::Up() * Constants::PlayerCameraHeight));
 
