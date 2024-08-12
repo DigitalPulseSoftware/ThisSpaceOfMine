@@ -526,6 +526,9 @@ namespace tsom
 					Nz::Vector3f blockPos = environmentNode->ToLocalPosition(hitPos + hitNormal * chunkContainer.GetTileSize() * 0.25f);
 					ChunkIndices chunkIndices = chunkContainer.GetChunkIndicesByPosition(blockPos);
 					const Chunk* chunk = chunkContainer.GetChunk(chunkIndices);
+					if (!chunk)
+						return;
+
 					auto coordinates = chunk->ComputeCoordinates(blockPos - chunkContainer.GetChunkOffset(chunkIndices));
 					if (!coordinates)
 						return;
