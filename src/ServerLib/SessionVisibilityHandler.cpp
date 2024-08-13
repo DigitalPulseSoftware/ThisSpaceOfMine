@@ -142,6 +142,7 @@ namespace tsom
 			m_visibleEnvironments[envIndex].chunks.Reset(chunkIndex);
 
 			// Mark chunk index as free on dispatch to prevent chunk index reuse while resurrecting it
+			m_chunkIndices.erase(visibleChunk.chunk);
 			m_freeChunkIds.Set(chunkIndex);
 			m_resetChunk.UnboundedReset(chunkIndex);
 			m_updatedChunk.UnboundedReset(chunkIndex);
