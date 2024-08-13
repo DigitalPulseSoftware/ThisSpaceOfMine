@@ -13,8 +13,13 @@ namespace tsom
 {
 	bool SessionVisibilityHandler::CreateChunk(entt::handle entity, Chunk& chunk)
 	{
+		assert(m_chunkNetworkMaps.contains(entity));
+		auto& chunkNetworkIndices = m_chunkNetworkMaps[entity];
+
+		ChunkIndices chunkIndices = chunk.GetIndices();
+
 		// Check if this chunk was marked for destruction
-		if (auto it = m_chunkIndices.find(&chunk); it != m_chunkIndices.end())
+		if (auto it = chunkNetworkIndices.find(chunkIndices); it != chunkNetworkIndices.end())
 		{
 			// Chunk still exists, resurrect it
 			m_newlyHiddenChunk.Reset(it->second);
@@ -33,8 +38,8 @@ namespace tsom
 			m_freeChunkIds.Set(chunkIndex, false);
 			m_newlyVisibleChunk.UnboundedSet(chunkIndex);
 
-			assert(!m_chunkIndices.contains(&chunk));
-			m_chunkIndices.emplace(&chunk, Nz::SafeCaster(chunkIndex));
+			assert(!chunkNetworkIndices.contains(chunkIndices));
+			chunkNetworkIndices.emplace(chunkIndices, Nz::SafeCaster(chunkIndex));
 
 			if (chunkIndex >= m_visibleChunks.size())
 				m_visibleChunks.resize(chunkIndex + 1);
@@ -50,8 +55,15 @@ namespace tsom
 
 	void SessionVisibilityHandler::CreateEntity(entt::handle entity, CreateEntityData entityData)
 	{
+		assert(!m_deletedEntities.contains(entity)); //< resurrecting entities shouldn't be possible
 		if (entityData.isMoving && entity != m_controlledEntity)
 			m_movingEntities.emplace(entity);
+
+		if (entityData.planetData || entityData.shipData)
+		{
+			assert(!m_chunkNetworkMaps.contains(entity));
+			m_chunkNetworkMaps.emplace(entity, ChunkNetworkMap{});
+		}
 
 		m_createdEntities.emplace(entity, std::move(entityData));
 	}
@@ -76,23 +88,49 @@ namespace tsom
 		}
 	}
 
-	void SessionVisibilityHandler::DestroyChunk(Chunk& chunk)
+	void SessionVisibilityHandler::DestroyChunk(entt::handle entity, Chunk& chunk)
 	{
-		std::size_t chunkIndex = Nz::Retrieve(m_chunkIndices, &chunk);
+		assert(m_chunkNetworkMaps.contains(entity));
+		auto& chunkNetworkIndices = m_chunkNetworkMaps[entity];
+
+		ChunkIndices chunkIndices = chunk.GetIndices();
+
+		std::size_t chunkIndex = Nz::Retrieve(chunkNetworkIndices, chunkIndices);
 
 		// Is this a newly visible chunk not sent to the client?
 		if (m_newlyVisibleChunk.Test(chunkIndex))
-			m_newlyVisibleChunk.Reset(chunkIndex); //< dismiss it
+		{
+			// Cancel chunk creation
+			m_freeChunkIds.Set(chunkIndex, true);
+			m_newlyVisibleChunk.Reset(chunkIndex); 
+			chunkNetworkIndices.erase(chunkIndices);
 
-		m_newlyHiddenChunk.UnboundedSet(chunkIndex);
+			ChunkData& chunkData = m_visibleChunks[chunkIndex];
+			chunkData.chunk = nullptr;
+			chunkData.entityOwner = entt::handle{};
+			chunkData.onBlockUpdatedSlot.Disconnect(); //< shouldn't be connected yet
+		}
+		else
+			m_newlyHiddenChunk.UnboundedSet(chunkIndex);
 	}
 
 	void SessionVisibilityHandler::DestroyEntity(entt::handle entity)
 	{
 		assert(!m_deletedEntities.contains(entity));
-		m_createdEntities.erase(entity);
+
+		// Does the entity already exists on the client?
+		if (auto entityIt = m_createdEntities.find(entity); entityIt != m_createdEntities.end())
+		{
+			// Cancel its creation
+			m_createdEntities.erase(entityIt);
+			HandleEntityDestruction(entity);
+		}
+		else
+		{
+			// Schedule deletion
+			m_deletedEntities.emplace(entity);
+		}
 		m_movingEntities.erase(entity);
-		m_deletedEntities.emplace(entity);
 	}
 
 	void SessionVisibilityHandler::DestroyEnvironment(ServerEnvironment& environment)
@@ -136,13 +174,16 @@ namespace tsom
 		for (std::size_t chunkIndex : m_newlyHiddenChunk.IterBits())
 		{
 			ChunkData& visibleChunk = m_visibleChunks[chunkIndex];
+			assert(visibleChunk.chunk);
+
+			assert(m_chunkNetworkMaps.contains(visibleChunk.entityOwner));
+			auto& chunkNetworkIndices = m_chunkNetworkMaps[visibleChunk.entityOwner];
 
 			EntityId entityIndex = Nz::Retrieve(m_entityIndices, visibleChunk.entityOwner);
 			EnvironmentId envIndex = m_visibleEntities[entityIndex].envIndex;
-			m_visibleEnvironments[envIndex].chunks.Reset(chunkIndex);
 
-			// Mark chunk index as free on dispatch to prevent chunk index reuse while resurrecting it
-			m_chunkIndices.erase(visibleChunk.chunk);
+			// Handle chunk liberation only when dispatching to prevent chunk index reuse if resurrection happens
+			chunkNetworkIndices.erase(visibleChunk.chunk->GetIndices());
 			m_freeChunkIds.Set(chunkIndex);
 			m_resetChunk.UnboundedReset(chunkIndex);
 			m_updatedChunk.UnboundedReset(chunkIndex);
@@ -219,8 +260,6 @@ namespace tsom
 
 			// Register chunk to environment
 			EntityId entityIndex = Nz::Retrieve(m_entityIndices, visibleChunk.entityOwner);
-			EnvironmentId envIndex = m_visibleEntities[entityIndex].envIndex;
-			m_visibleEnvironments[envIndex].chunks.UnboundedSet(chunkIndex);
 
 			ChunkIndices chunkLocation = visibleChunk.chunk->GetIndices();
 			Nz::Vector3ui chunkSize = visibleChunk.chunk->GetSize();
@@ -316,7 +355,7 @@ namespace tsom
 
 				m_freeEntityIds.Set(entityId, true);
 				m_visibleEntities[entityId].entity = entt::handle{};
-				m_visibleEntities[entityId].envIndex = std::numeric_limits<EnvironmentId>::max();
+				m_visibleEntities[entityId].envIndex = Nz::MaxValue();
 
 				m_entityIndices.erase(handle);
 
@@ -326,6 +365,8 @@ namespace tsom
 				});
 				if (it != m_environmentUpdates.end())
 					m_environmentUpdates.erase(it);
+
+				HandleEntityDestruction(handle);
 			}
 
 			m_networkSession->SendPacket(deletePacket);
@@ -446,20 +487,8 @@ namespace tsom
 
 					entityData.entity = entt::handle{};
 					entityData.envIndex = std::numeric_limits<EnvironmentId>::max();
-				}
 
-				for (std::size_t chunkIndex : visibleEnvironment.chunks.IterBits())
-				{
-					auto& visibleChunk = m_visibleChunks[chunkIndex];
-					visibleChunk.chunk = nullptr;
-					visibleChunk.entityOwner = entt::handle{};
-					visibleChunk.onBlockUpdatedSlot.Disconnect();
-
-					m_freeChunkIds.Set(chunkIndex);
-					m_newlyHiddenChunk.UnboundedReset(chunkIndex);
-					m_newlyVisibleChunk.UnboundedReset(chunkIndex);
-					m_resetChunk.UnboundedReset(chunkIndex);
-					m_updatedChunk.UnboundedReset(chunkIndex);
+					HandleEntityDestruction(entityData.entity);
 				}
 
 				m_environmentIndices.erase(environment);
@@ -528,6 +557,30 @@ namespace tsom
 			m_networkSession->SendPacket(rootUpdatePacket);
 
 			m_nextRootEnvironment = nullptr;
+		}
+	}
+
+	void SessionVisibilityHandler::HandleEntityDestruction(entt::handle entity)
+	{
+		// handle chunks owned by this entity if any
+		if (auto it = m_chunkNetworkMaps.find(entity); it != m_chunkNetworkMaps.end())
+		{
+			auto& networkIndices = it->second;
+			for (auto&& [chunkIndices, chunkIndex] : networkIndices)
+			{
+				auto& visibleChunk = m_visibleChunks[chunkIndex];
+				visibleChunk.chunk = nullptr;
+				visibleChunk.entityOwner = entt::handle{};
+				visibleChunk.onBlockUpdatedSlot.Disconnect();
+
+				m_freeChunkIds.Set(chunkIndex, true);
+				m_newlyHiddenChunk.UnboundedReset(chunkIndex);
+				m_newlyVisibleChunk.UnboundedReset(chunkIndex);
+				m_resetChunk.UnboundedReset(chunkIndex);
+				m_updatedChunk.UnboundedReset(chunkIndex);
+			}
+
+			m_chunkNetworkMaps.erase(it);
 		}
 	}
 }

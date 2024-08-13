@@ -7,7 +7,7 @@
 namespace tsom
 {
 	inline SessionVisibilityHandler::SessionVisibilityHandler(NetworkSession* networkSession) :
-	m_currentEnvironmentId(std::numeric_limits<EnvironmentId>::max()),
+	m_currentEnvironmentId(Nz::MaxValue()),
 	m_lastInputIndex(0),
 	m_controlledCharacter(nullptr),
 	m_networkSession(networkSession)

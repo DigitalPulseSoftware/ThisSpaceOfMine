@@ -39,7 +39,7 @@ namespace tsom
 			void CreateEntity(entt::handle entity, CreateEntityData entityData);
 			bool CreateEnvironment(ServerEnvironment& environment, const EnvironmentTransform& transform);
 
-			void DestroyChunk(Chunk& chunk);
+			void DestroyChunk(entt::handle entity, Chunk& chunk);
 			void DestroyEntity(entt::handle entity);
 			void DestroyEnvironment(ServerEnvironment& environment);
 
@@ -75,6 +75,7 @@ namespace tsom
 			void DispatchChunkReset(Nz::UInt16 tickIndex);
 			void DispatchEntities(Nz::UInt16 tickIndex);
 			void DispatchEnvironments(Nz::UInt16 tickIndex);
+			void HandleEntityDestruction(entt::handle entity);
 
 			static constexpr std::size_t MaxConcurrentChunkUpdate = 3;
 			static constexpr std::size_t FreeChunkIdGrowRate = 128;
@@ -84,11 +85,6 @@ namespace tsom
 			using ChunkId = Packets::Helper::ChunkId;
 			using EntityId = Packets::Helper::EntityId;
 			using EnvironmentId = Packets::Helper::EnvironmentId;
-
-			struct HandlerHasher
-			{
-				inline std::size_t operator()(const entt::handle& handle) const;
-			};
 
 			struct ChunkData
 			{
@@ -114,7 +110,6 @@ namespace tsom
 
 			struct EnvironmentData
 			{
-				Nz::Bitset<Nz::UInt64> chunks;
 				Nz::Bitset<Nz::UInt64> entities;
 			};
 
@@ -130,9 +125,16 @@ namespace tsom
 				ServerEnvironment* newEnvironment;
 			};
 
+			struct HandlerHasher
+			{
+				inline std::size_t operator()(const entt::handle& handle) const;
+			};
+
+			using ChunkNetworkMap = std::unordered_map<ChunkIndices, ChunkId>;
+
 			tsl::hopscotch_map<entt::handle, EntityId, HandlerHasher> m_entityIndices;
 			tsl::hopscotch_map<entt::handle, CreateEntityData, HandlerHasher> m_createdEntities;
-			tsl::hopscotch_map<Chunk*, ChunkId> m_chunkIndices;
+			tsl::hopscotch_map<entt::handle, ChunkNetworkMap, HandlerHasher> m_chunkNetworkMaps;
 			tsl::hopscotch_map<ServerEnvironment*, EnvironmentId> m_environmentIndices;
 			tsl::hopscotch_set<entt::handle, HandlerHasher> m_deletedEntities;
 			tsl::hopscotch_set<entt::handle, HandlerHasher> m_movingEntities;
