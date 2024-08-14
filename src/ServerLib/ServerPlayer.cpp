@@ -27,7 +27,8 @@ namespace tsom
 	m_rootEnvironment(nullptr),
 	m_visibilityHandler(m_session),
 	m_serverInstance(instance),
-	m_playerIndex(playerIndex)
+	m_playerIndex(playerIndex),
+	m_permissions(permissions)
 	{
 	}
 
