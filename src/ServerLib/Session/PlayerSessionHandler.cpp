@@ -142,7 +142,7 @@ namespace tsom
 			shipEnv->LinkOutsideEnvironment(currentEnvironment, planetToShip);
 			return;
 		}
-		else if (message == "/regenchunk")
+		else if (message == "/regenchunk" && m_player->HasPermission(PlayerPermission::Admin))
 		{
 			entt::handle playerEntity = m_player->GetControlledEntity();
 			if (!playerEntity)
@@ -198,7 +198,7 @@ namespace tsom
 // 			}
 			return;
 		}
-		else if (message == "/spawnplanet")
+		else if (message == "/spawnplanet" && m_player->HasPermission(PlayerPermission::Admin))
 		{
 			entt::handle playerEntity = m_player->GetControlledEntity();
 			if (!playerEntity)
