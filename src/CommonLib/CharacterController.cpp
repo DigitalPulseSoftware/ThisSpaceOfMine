@@ -128,6 +128,9 @@ namespace tsom
 
 		if (m_isFlying)
 		{
+			movementRotation *= Nz::Quaternionf(m_cameraRotation.pitch, Nz::Vector3f::UnitX());
+			movementRotation.Normalize(); 
+
 			if (m_lastInputs.jump)
 				desiredVelocity += Nz::Vector3f::Up();
 
