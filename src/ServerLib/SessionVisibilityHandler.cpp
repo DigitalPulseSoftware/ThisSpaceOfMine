@@ -55,6 +55,8 @@ namespace tsom
 
 	void SessionVisibilityHandler::CreateEntity(entt::handle entity, CreateEntityData entityData)
 	{
+		assert(!m_entityIndices.contains(entity));
+
 		assert(!m_deletedEntities.contains(entity)); //< resurrecting entities shouldn't be possible
 		if (entityData.isMoving && entity != m_controlledEntity)
 			m_movingEntities.emplace(entity);
@@ -157,6 +159,7 @@ namespace tsom
 	void SessionVisibilityHandler::UpdateEntityEnvironment(ServerEnvironment& newEnvironment, entt::handle oldEntity, entt::handle newEntity)
 	{
 		// Don't remove from created entities as client will need it to update its environment
+		// TODO: Create entity directly in the right environment if it wasn't send yet
 		m_deletedEntities.erase(oldEntity);
 		if (m_movingEntities.erase(oldEntity) > 0)
 			m_movingEntities.insert(newEntity);
@@ -478,6 +481,7 @@ namespace tsom
 				for (std::size_t entityIndex : visibleEnvironment.entities.IterBits())
 				{
 					auto& entityData = m_visibleEntities[entityIndex];
+					HandleEntityDestruction(entityData.entity);
 
 					m_createdEntities.erase(entityData.entity);
 					m_deletedEntities.erase(entityData.entity);
@@ -486,9 +490,7 @@ namespace tsom
 					m_freeEntityIds.Set(entityIndex, true);
 
 					entityData.entity = entt::handle{};
-					entityData.envIndex = std::numeric_limits<EnvironmentId>::max();
-
-					HandleEntityDestruction(entityData.entity);
+					entityData.envIndex = Nz::MaxValue();
 				}
 
 				m_environmentIndices.erase(environment);
