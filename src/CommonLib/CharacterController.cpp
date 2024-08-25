@@ -114,29 +114,30 @@ namespace tsom
 		}
 
 		Nz::Vector3f desiredVelocity = Nz::Vector3f::Zero();
-		if (m_lastInputs.moveForward)
-			desiredVelocity += Nz::Vector3f::Forward();
-
-		if (m_lastInputs.moveBackward)
-			desiredVelocity += Nz::Vector3f::Backward();
-
-		if (m_lastInputs.moveLeft)
-			desiredVelocity += Nz::Vector3f::Left();
-
-		if (m_lastInputs.moveRight)
-			desiredVelocity += Nz::Vector3f::Right();
-
+		// Handle up/down when flying before making movement rotation relative to pitch
 		if (m_isFlying)
 		{
-			movementRotation *= Nz::Quaternionf(m_cameraRotation.pitch, Nz::Vector3f::UnitX());
-			movementRotation.Normalize(); 
-
 			if (m_lastInputs.jump)
-				desiredVelocity += Nz::Vector3f::Up();
+				desiredVelocity += movementRotation * Nz::Vector3f::Up();
 
 			if (m_lastInputs.crouch)
-				desiredVelocity -= Nz::Vector3f::Up();
+				desiredVelocity -= movementRotation * Nz::Vector3f::Up();
+
+			movementRotation *= Nz::Quaternionf(m_cameraRotation.pitch, Nz::Vector3f::UnitX());
+			movementRotation.Normalize();
 		}
+
+		if (m_lastInputs.moveForward)
+			desiredVelocity += movementRotation * Nz::Vector3f::Forward();
+
+		if (m_lastInputs.moveBackward)
+			desiredVelocity += movementRotation * Nz::Vector3f::Backward();
+
+		if (m_lastInputs.moveLeft)
+			desiredVelocity += movementRotation * Nz::Vector3f::Left();
+
+		if (m_lastInputs.moveRight)
+			desiredVelocity += movementRotation * Nz::Vector3f::Right();
 
 		if (desiredVelocity != Nz::Vector3f::Zero())
 		{
@@ -146,15 +147,12 @@ namespace tsom
 		else
 			character.SetFriction(1.f);
 
-		float moveSpeed;
 		if (m_isFlying)
-			moveSpeed = Constants::PlayerFlySpeed * ((m_lastInputs.sprint) ? 2.f : 1.f);
+			desiredVelocity *= Constants::PlayerFlySpeed * ((m_lastInputs.sprint) ? 2.f : 1.f);
 		else if (m_lastInputs.sprint)
-			moveSpeed = Constants::PlayerSprintSpeed;
+			desiredVelocity *= Constants::PlayerSprintSpeed;
 		else
-			moveSpeed = Constants::PlayerWalkSpeed;
-
-		desiredVelocity = movementRotation * desiredVelocity * moveSpeed;
+			desiredVelocity *= Constants::PlayerWalkSpeed;
 
 		float desiredImpact;
 		if (m_isFlying)
