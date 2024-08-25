@@ -80,14 +80,7 @@ namespace tsom
 			for (auto depIt = job.chunkDependencies.begin(); depIt != job.chunkDependencies.end();)
 			{
 				auto depJobIt = m_updateJobs.find(*depIt);
-				if (depJobIt == m_updateJobs.end())
-				{
-					fmt::print(fg(fmt::color::red), "update job for chunk {};{};{} depends on chunk {};{};{} which has not been added\n", it->first.x, it->first.y, it->first.z, depIt->x, depIt->y, depIt->z);
-					depIt = job.chunkDependencies.erase(depIt);
-					continue;
-				}
-
-				if (depJobIt->second->HasFinished())
+				if (depJobIt == m_updateJobs.end() || depJobIt->second->HasFinished())
 				{
 					depIt = job.chunkDependencies.erase(depIt);
 					continue;
