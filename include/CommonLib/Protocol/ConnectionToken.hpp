@@ -9,6 +9,7 @@
 
 #include <CommonLib/Export.hpp>
 #include <CommonLib/Protocol/PacketSerializer.hpp>
+#include <Nazara/Core/Timestamp.hpp>
 #include <Nazara/Core/Uuid.hpp>
 #include <Nazara/Network/IpAddress.hpp>
 #include <NazaraUtils/Result.hpp>
@@ -22,9 +23,9 @@ namespace tsom
 	enum class ConnectionTokenAuth
 	{
 		CorruptToken,
+		ExpiredToken,
 		ForgedToken,
 		Success
-		// TODO: Add timestamp check
 	};
 
 	struct TSOM_COMMONLIB_API ConnectionToken
@@ -32,8 +33,8 @@ namespace tsom
 		Nz::UInt32 tokenVersion;
 		std::array<Nz::UInt8, 24> tokenNonce;
 
-		Nz::UInt64 creationTimestamp;
-		Nz::UInt64 expireTimestamp;
+		Nz::Timestamp creationTimestamp;
+		Nz::Timestamp expireTimestamp;
 
 		struct
 		{

@@ -119,8 +119,8 @@ namespace tsom
 			connectionToken.tokenVersion = doc["token_version"];
 			NAZARA_TRY(DecodeBase64Field(doc, "token_nonce", connectionToken.tokenNonce));
 
-			connectionToken.creationTimestamp = doc["creation_timestamp"];
-			connectionToken.expireTimestamp = doc["expire_timestamp"];
+			connectionToken.creationTimestamp = Nz::Timestamp::FromSeconds(doc["creation_timestamp"]);
+			connectionToken.expireTimestamp = Nz::Timestamp::FromSeconds(doc["expire_timestamp"]);
 
 			const nlohmann::json& encryptionKeys = doc["encryption_keys"];
 			NAZARA_TRY(DecodeBase64Field(encryptionKeys, "client_to_server", connectionToken.encryption.clientToServerKey));
@@ -145,6 +145,9 @@ namespace tsom
 	{
 		assert(token);
 
+		if (Nz::Timestamp::Now() >= connectionToken.expireTimestamp)
+			return ConnectionTokenAuth::ExpiredToken;
+
 		std::vector<Nz::UInt8> tokenBinary(ConnectionToken::TokenPrivateMaxSize);
 		unsigned long long tokenBinarySize = ConnectionToken::TokenPrivateMaxSize;
 
@@ -154,7 +157,7 @@ namespace tsom
 		{
 			std::size_t offset = 0;
 			SerializeBinary(additionalData, offset, connectionToken.tokenVersion);
-			SerializeBinary(additionalData, offset, connectionToken.expireTimestamp);
+			SerializeBinary(additionalData, offset, connectionToken.expireTimestamp.AsSeconds());
 			SerializeBinary(additionalData, offset, connectionToken.encryption.clientToServerKey);
 			SerializeBinary(additionalData, offset, connectionToken.encryption.serverToClientKey);
 		}
