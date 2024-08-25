@@ -133,7 +133,7 @@ namespace tsom
 
 		webService.QueueRequest([&](Nz::WebRequest& request)
 		{
-			request.SetupPost();
+			request.SetMethod(Nz::WebRequestMethod::Post);
 			request.SetURL(fmt::format("{}/v1/player/auth", gameConfig.GetStringValue("Api.Url"), BuildConfig));
 			request.SetServiceName("TSOM Player Info");
 
@@ -207,7 +207,7 @@ namespace tsom
 
 			webService.QueueRequest([&](Nz::WebRequest& request)
 			{
-				request.SetupPost();
+				request.SetMethod(Nz::WebRequestMethod::Post);
 				request.SetURL(fmt::format("{}/v1/game/connect", gameConfig.GetStringValue("Api.Url"), BuildConfig));
 				request.SetServiceName("TSOM Player Info");
 

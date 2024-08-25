@@ -119,7 +119,7 @@ namespace tsom
 
 		webService->QueueRequest([&](Nz::WebRequest& request)
 		{
-			request.SetupGet();
+			request.SetMethod(Nz::WebRequestMethod::Get);
 			request.SetURL(fmt::format("{}/game_version?platform={}", m_configFile.GetStringValue("Api.Url"), BuildConfig));
 			request.SetServiceName("TSOM Version Check");
 			request.SetResultCallback([cb = std::move(callback)](Nz::WebRequestResult&& result)

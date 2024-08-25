@@ -95,7 +95,7 @@ namespace tsom
 
 		webService.QueueRequest([&, nickname](Nz::WebRequest& request) mutable
 		{
-			request.SetupPost();
+			request.SetMethod(Nz::WebRequestMethod::Post);
 			request.SetURL(fmt::format("{}/v1/players", gameConfig.GetStringValue("Api.Url"), BuildConfig));
 			request.SetServiceName("TSOM Player Create");
 

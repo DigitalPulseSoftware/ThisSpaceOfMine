@@ -51,7 +51,7 @@ namespace tsom
 
 		webService->QueueRequest([&](Nz::WebRequest& request)
 		{
-			request.SetupGet();
+			request.SetMethod(Nz::WebRequestMethod::Get);
 			request.SetURL(downloadUrl);
 
 			request.SetResultCallback([activeDownloads = m_activeDownloads, download, expectedHash](Nz::WebRequestResult&& result)
