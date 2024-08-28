@@ -7,6 +7,10 @@ namespace tsom
 	inline ClientBlockLibrary::ClientBlockLibrary(Nz::ApplicationBase& applicationBase) :
 	m_applicationBase(applicationBase)
 	{
+		// HAAAAAAAAAAAAAAAAAAAAX
+		// Re-enable collisions for forcefield to allow clients to remove them (player collisions are only handled on the server for now)
+		if (BlockIndex idx = GetBlockIndex("forcefield"); idx != InvalidBlockIndex)
+			m_blocks[idx].hasCollisions = true;
 	}
 
 	inline const std::shared_ptr<Nz::TextureAsset>& ClientBlockLibrary::GetBaseColorTexture() const
