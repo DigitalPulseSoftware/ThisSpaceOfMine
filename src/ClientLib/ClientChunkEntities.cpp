@@ -43,7 +43,7 @@ namespace tsom
 		Nz::MaterialSettings settings;
 		settings.AddValueProperty<Nz::Color>("BaseColor", Nz::Color::White());
 		settings.AddValueProperty<bool>("AlphaTest", false);
-		settings.AddValueProperty<float>("AlphaTestThreshold", 0.2f);
+		settings.AddValueProperty<float>("AlphaTestThreshold", 0.5f);
 		settings.AddValueProperty<float>("ShadowMapNormalOffset", 0.f);
 		settings.AddValueProperty<float>("ShadowPosScale", 1.f - 0.0025f);
 		settings.AddTextureProperty("BaseColorMap", Nz::ImageType::E2D_Array);

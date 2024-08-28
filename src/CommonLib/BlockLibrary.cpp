@@ -74,6 +74,11 @@ namespace tsom
 		RegisterBlock("copper_block", {
 			.basePath = "blocks/copper_block",
 		});
+		
+		RegisterBlock("glass", {
+			.basePath = "blocks/glass",
+			.isTransparent = true
+		});
 	}
 
 	BlockIndex BlockLibrary::RegisterBlock(std::string name, BlockInfo blockInfo)

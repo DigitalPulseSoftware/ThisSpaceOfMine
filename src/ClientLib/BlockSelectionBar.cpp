@@ -16,7 +16,7 @@
 
 namespace tsom
 {
-	constexpr std::array<std::string_view, 9> s_selectableBlocks = { "dirt", "grass", "stone", "snow", "stone_bricks", "planks", "debug", "hull", "forcefield" };
+	constexpr std::array<std::string_view, 11> s_selectableBlocks = { "dirt", "grass", "stone", "snow", "stone_bricks", "planks", "debug", "hull", "forcefield", "copper_block", "glass" };
 
 	BlockSelectionBar::BlockSelectionBar(Nz::BaseWidget* parent, const ClientBlockLibrary& blockLibrary) :
 	BaseWidget(parent),
