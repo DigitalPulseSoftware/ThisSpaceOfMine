@@ -4,6 +4,7 @@
 
 #include <CommonLib/Protocol/Packets.hpp>
 #include <CommonLib/Version.hpp>
+#include <CommonLib/Utility/BinaryCompressor.hpp>
 #include <NazaraUtils/TypeTraits.hpp>
 #include <lz4.h>
 #include <fmt/format.h>
@@ -167,37 +168,34 @@ namespace tsom
 			serializer.SerializeArraySize(data.content);
 			std::size_t bufferSize = data.content.size() * sizeof(BlockIndex);
 
+			BinaryCompressor& binaryCompressor = serializer.GetBinaryCompressor();
 			if (serializer.IsWriting())
 			{
-				const char* srcData = reinterpret_cast<const char*>(data.content.data());
-
-				int maxCompressedSize = LZ4_compressBound(Nz::SafeCast<int>(bufferSize));
-
-				std::vector<Nz::UInt8> compressedChunk(maxCompressedSize);
-				int compressedSizeInt = LZ4_compress_default(srcData, reinterpret_cast<char*>(compressedChunk.data()), Nz::SafeCast<int>(bufferSize), maxCompressedSize);
-				if (compressedSizeInt <= 0)
+				std::optional compressedData = binaryCompressor.Compress(data.content.data(), bufferSize);
+				if (!compressedData)
 					throw std::runtime_error("failed to compress chunk");
 
-				Nz::UInt16 compressedSize = Nz::UInt16(compressedSizeInt);
+				std::span<Nz::UInt8>& buffer = *compressedData;
+
+				CompressedUnsigned<Nz::UInt32> compressedSize(Nz::SafeCast<Nz::UInt32>(buffer.size()));
 				serializer &= compressedSize;
 
-				serializer.Write(compressedChunk.data(), compressedSize * sizeof(BlockIndex));
+				serializer.Write(buffer.data(), buffer.size());
 			}
 			else
 			{
-				Nz::UInt16 compressedSize;
+				CompressedUnsigned<Nz::UInt32> compressedSize;
 				serializer &= compressedSize;
 
 				Nz::Stream* stream = serializer.GetByteStream().GetStream();
 				const char* srcData = static_cast<const char*>(stream->GetMappedPointer()) + stream->GetCursorPos();
 
-				data.content.resize(data.content.size());
-				int decompressedSize = LZ4_decompress_safe(srcData, reinterpret_cast<char*>(data.content.data()), Nz::SafeCast<int>(compressedSize), Nz::SafeCast<int>(bufferSize));
-				if (decompressedSize < 0)
+				std::optional<std::size_t> decompressedSize = binaryCompressor.Decompress(srcData, compressedSize, data.content.data(), bufferSize);
+				if (!decompressedSize)
 					throw std::runtime_error("failed to decompress chunk");
 
-				if (decompressedSize != bufferSize)
-					throw std::runtime_error(fmt::format("malformed packet (decompressed size exceeds max packet size: {0} != {1})", decompressedSize, bufferSize));
+				if (*decompressedSize != bufferSize)
+					throw std::runtime_error(fmt::format("malformed packet (decompressed size exceeds max packet size: {0} != {1})", *decompressedSize, bufferSize));
 			}
 		}
 

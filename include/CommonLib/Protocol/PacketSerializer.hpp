@@ -8,6 +8,7 @@
 #define TSOM_COMMONLIB_PROTOCOL_PACKETSERIALIZER_HPP
 
 #include <CommonLib/Export.hpp>
+#include <CommonLib/Utility/BinaryCompressor.hpp>
 #include <Nazara/Core/ByteStream.hpp>
 #include <NazaraUtils/Result.hpp>
 #include <optional>
@@ -22,15 +23,18 @@ namespace tsom
 	class TSOM_COMMONLIB_API PacketSerializer
 	{
 		public:
-			inline PacketSerializer(Nz::ByteStream& packetStream, bool isWriting, Nz::UInt32 protocolVersion);
+			inline PacketSerializer(Nz::ByteStream& packetStream, bool isWriting, Nz::UInt32 protocolVersion, BinaryCompressor& binaryCompressor = BinaryCompressor::GetThreadCompressor());
 			~PacketSerializer() = default;
 
+			inline BinaryCompressor& GetBinaryCompressor();
 			inline Nz::ByteStream& GetByteStream();
 			inline Nz::UInt32 GetProtocolVersion() const;
 
 			inline void Read(void* ptr, std::size_t size);
 
 			inline bool IsWriting() const;
+
+			inline void SetBinaryCompressor(BinaryCompressor& binaryCompressor);
 
 			inline void Write(const void* ptr, std::size_t size);
 
@@ -58,6 +62,7 @@ namespace tsom
 		private:
 			Nz::ByteStream& m_stream;
 			Nz::UInt32 m_protocolVersion;
+			BinaryCompressor* m_binaryCompressor;
 			bool m_isWriting;
 	};
 }

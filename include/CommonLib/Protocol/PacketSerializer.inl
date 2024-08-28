@@ -44,11 +44,17 @@ namespace tsom
 		};
 	}
 
-	inline PacketSerializer::PacketSerializer(Nz::ByteStream& packetStream, bool isWriting, Nz::UInt32 protocolVersion) :
+	inline PacketSerializer::PacketSerializer(Nz::ByteStream& packetStream, bool isWriting, Nz::UInt32 protocolVersion, BinaryCompressor& binaryCompressor) :
 	m_stream(packetStream),
 	m_protocolVersion(protocolVersion),
+	m_binaryCompressor(&binaryCompressor),
 	m_isWriting(isWriting)
 	{
+	}
+
+	inline BinaryCompressor& PacketSerializer::GetBinaryCompressor()
+	{
+		return *m_binaryCompressor;
 	}
 
 	inline Nz::ByteStream& PacketSerializer::GetByteStream()
@@ -70,6 +76,11 @@ namespace tsom
 	inline bool PacketSerializer::IsWriting() const
 	{
 		return m_isWriting;
+	}
+
+	inline void PacketSerializer::SetBinaryCompressor(BinaryCompressor& binaryCompressor)
+	{
+		m_binaryCompressor = &binaryCompressor;
 	}
 
 	inline void PacketSerializer::Write(const void* ptr, std::size_t size)
