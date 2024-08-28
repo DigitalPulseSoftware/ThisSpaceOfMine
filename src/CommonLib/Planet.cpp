@@ -69,7 +69,12 @@ namespace tsom
 
 	float Planet::ComputeGravityAcceleration(const Nz::Vector3f& position) const
 	{
+		// At the center
 		if (position.SquaredDistance(GetCenter()) < Nz::IntegralPow(10.f, 2))
+			return 0.f;
+
+		// Too far away
+		if (position.SquaredDistance(GetCenter()) > Nz::IntegralPow(200.f, 2))
 			return 0.f;
 
 		return m_gravity;
