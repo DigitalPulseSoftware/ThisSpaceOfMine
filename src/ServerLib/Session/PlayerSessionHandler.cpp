@@ -27,6 +27,7 @@
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <nlohmann/json.hpp>
 #include <fmt/color.h>
+#include <charconv>
 #include <numeric>
 
 namespace tsom
