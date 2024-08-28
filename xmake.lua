@@ -6,6 +6,13 @@ option("commonlib_static", { default = false, defines = "TSOM_COMMONLIB_STATIC"}
 option("clientlib_static", { default = false, defines = "TSOM_CLIENTLIB_STATIC"})
 option("serverlib_static", { default = false, defines = "TSOM_SERVERLIB_STATIC"})
 
+-- Simple rule to make targets inherit their version from CommonLib version (which is extracted from git in on_config callback)
+rule("inherit_version", function ()
+	on_config(function (target)
+		target:set("version", target:dep("CommonLib"):version())
+	end)
+end)
+
 add_repositories("nazara-repo https://github.com/NazaraEngine/xmake-repo.git")
 add_requires("nazaraengine >=2023.08.15", { configs = { debug = is_mode("debug"), symbols = true }})
 add_requires("fmt", { configs = { header_only = false }})
@@ -43,7 +50,7 @@ add_rules("dbgdll", "natvis")
 --set_policy("package.requires_lock", true)
 
 set_project("ThisSpaceOfMine")
-set_version("0.6.0")
+set_version("0.0.0")
 
 set_encodings("utf-8")
 set_exceptions("cxx")
@@ -84,6 +91,28 @@ target("CommonLib", function ()
 	if is_plat("windows") then
 		add_packages("stackwalker")
 	end
+
+	on_config(function (target, opt)
+		import("core.base.semver")
+		import("detect.tools.find_git")
+
+		-- extract latest release from git
+		local ok = try
+		{
+			function ()
+				local git = assert(find_git(), "git not found")
+				local tag = os.iorunv(git, {"describe", "--abbrev=0", "--tags"}):trim()
+				local version = semver.new(tag)
+				target:set("version", version:shortstr())
+			end,
+			catch
+			{
+				function (err)
+					print(string.format("failed to retrieve version from git: %s", err))
+				end
+			}
+		}
+	end)
 
 	before_build(function (target, opt)
 		import("core.base.semver")
@@ -168,6 +197,7 @@ target("ServerLib", function ()
 	add_files("src/ServerLib/**.cpp")
 	add_deps("CommonLib", { public = true })
 	add_packages("libcurl", { links = {}, public = true })
+	add_rules("inherit_version")
 
 	after_load(function (target)
 		target:set("kind", target:dep("serverlib_static") and "static" or "shared")
@@ -184,6 +214,7 @@ target("ClientLib", function ()
 	add_headerfiles("src/ClientLib/**.hpp", "src/ClientLib/**.inl", { install = false })
 	add_files("src/ClientLib/**.cpp")
 	add_deps("CommonLib", { public = true })
+	add_rules("inherit_version")
 
 	after_load(function (target)
 		target:set("kind", target:dep("clientlib_static") and "static" or "shared")
@@ -201,6 +232,7 @@ target("Main", function ()
 	set_kind("static")
 
 	add_deps("CommonLib")
+	add_rules("inherit_version")
 
 	add_defines("TSOM_MAIN_BUILD")
 
@@ -214,6 +246,7 @@ target("TSOMGame", function ()
 	set_group("Executable")
 	set_basename("ThisSpaceOfMine")
 	add_deps("ClientLib", "Main")
+	add_rules("inherit_version")
 
 	add_defines("TSOM_GAME_BUILD")
 
@@ -246,6 +279,7 @@ target("TSOMServer", function ()
 	set_group("Executable")
 	set_basename("ThisServerOfMine")
 	add_deps("ServerLib", "Main")
+	add_rules("inherit_version")
 
 	add_defines("TSOM_SERVER_BUILD")
 
