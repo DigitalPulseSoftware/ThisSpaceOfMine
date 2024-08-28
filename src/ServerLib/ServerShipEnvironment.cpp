@@ -8,6 +8,7 @@
 #include <CommonLib/Ship.hpp>
 #include <CommonLib/Components/ShipComponent.hpp>
 #include <CommonLib/Systems/ShipSystem.hpp>
+#include <ServerLib/PlayerTokenAppComponent.hpp>
 #include <ServerLib/ServerInstance.hpp>
 #include <ServerLib/ServerPlanetEnvironment.hpp>
 #include <ServerLib/Components/EnvironmentEnterTriggerComponent.hpp>
@@ -19,8 +20,10 @@
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <NazaraUtils/CallOnExit.hpp>
+#include <cppcodec/base64_rfc4648.hpp>
 #include <fmt/color.h>
 #include <fmt/std.h>
+#include <nlohmann/json.hpp>
 
 namespace tsom
 {
@@ -29,10 +32,13 @@ namespace tsom
 		constexpr unsigned int ShipChunkBlockCount = Ship::ChunkSize * Ship::ChunkSize * Ship::ChunkSize;
 	}
 
-	ServerShipEnvironment::ServerShipEnvironment(ServerInstance& serverInstance) :
+	ServerShipEnvironment::ServerShipEnvironment(ServerInstance& serverInstance, const std::optional<Nz::Uuid>& playerUuid, int saveSlot) :
 	ServerEnvironment(serverInstance),
+	m_playerUuid(playerUuid),
 	m_outsideEnvironment(nullptr),
-	m_isCombinedAreaColliderInvalidated(false)
+	m_isCombinedAreaColliderInvalidated(false),
+	m_shouldSave(false),
+	m_saveSlot(saveSlot)
 	{
 		auto& app = serverInstance.GetApplication();
 		auto& blockLibrary = serverInstance.GetBlockLibrary();
@@ -76,12 +82,15 @@ namespace tsom
 		shipComponent.OnChunkUpdated.Connect([this](ChunkContainer*, Chunk* chunk, DirectionMask)
 		{
 			m_invalidatedChunks.emplace(chunk);
+			m_shouldSave = true;
 		});
 	}
 
 	ServerShipEnvironment::~ServerShipEnvironment()
 	{
-		if (m_proxyEntity.valid())
+		OnSave();
+
+		if (m_proxyEntity)
 			m_proxyEntity.destroy();
 
 		m_shipEntity.destroy();
@@ -126,6 +135,7 @@ namespace tsom
 
 		Nz::RigidBody3D::DynamicSettings physSettings(GetShip().BuildHullCollider(), 100.f);
 		physSettings.objectLayer = Constants::ObjectLayerDynamic;
+		physSettings.linearDamping = 0.f;
 
 		m_proxyEntity.emplace<Nz::RigidBody3DComponent>(physSettings);
 
@@ -143,9 +153,102 @@ namespace tsom
 		return m_proxyEntity;
 	}
 
+	Nz::Result<void, std::string> ServerShipEnvironment::Load(const nlohmann::json& data)
+	{
+		BinaryCompressor& binaryCompressor = BinaryCompressor::GetThreadCompressor();
+
+		auto& blockLibrary = m_serverInstance.GetBlockLibrary();
+		Ship& ship = GetShip();
+		try
+		{
+			Nz::UInt32 version = data["version"];
+			if (version != 1)
+				return Nz::Err(fmt::format("unhandled version {}", version));
+
+			const nlohmann::json& chunks = data["chunks"];
+			if (chunks.empty())
+				return Nz::Err("no chunk in ship save");
+
+			for (const nlohmann::json& chunkDoc : chunks)
+			{
+				ChunkIndices chunkIndices;
+				chunkIndices.x = chunkDoc["x"];
+				chunkIndices.y = chunkDoc["y"];
+				chunkIndices.z = chunkDoc["z"];
+
+				std::string_view chunkData = chunkDoc["chunk_data"];
+				std::size_t chunkDataSize = chunkDoc["chunk_datasize"];
+
+				using base64 = cppcodec::base64_rfc4648;
+				std::vector<Nz::UInt8> compressedData = base64::decode(chunkData);
+				std::vector<Nz::UInt8> decompressedData(chunkDataSize);
+				std::optional compressedDataOpt = binaryCompressor.Decompress(compressedData.data(), compressedData.size(), decompressedData.data(), decompressedData.size());
+				if (!compressedDataOpt)
+					return Nz::Err("chunk decompression failed");
+
+				if (*compressedDataOpt != chunkDataSize)
+					return Nz::Err("chunk decompression failed (corrupt size)");
+
+				Nz::ByteStream byteStream(decompressedData.data(), decompressedData.size());
+
+				Chunk& chunk = ship.AddChunk(blockLibrary, chunkIndices);
+				chunk.Deserialize(byteStream);
+			}
+
+			return Nz::Ok();
+		}
+		catch (const std::exception& e)
+		{
+			return Nz::Err(fmt::format("ship decoding failed: {}", e.what()));
+		}
+	}
+
 	void ServerShipEnvironment::OnSave()
 	{
-		// TODO
+		if (!m_playerUuid || !m_shouldSave)
+			return;
+
+		nlohmann::json chunks;
+
+		BinaryCompressor& binaryCompressor = BinaryCompressor::GetThreadCompressor();
+		Nz::ByteArray byteArray;
+		GetShip().ForEachChunk([&](const ChunkIndices& chunkIndices, const Chunk& chunk)
+		{
+			nlohmann::json& chunkDoc = chunks.emplace_back();
+			chunkDoc["x"] = chunkIndices.x;
+			chunkDoc["y"] = chunkIndices.y;
+			chunkDoc["z"] = chunkIndices.z;
+
+			byteArray.Clear();
+			Nz::ByteStream byteStream(&byteArray);
+			chunk.Serialize(byteStream);
+
+			std::optional compressedDataOpt = binaryCompressor.Compress(byteArray.GetBuffer(), byteArray.GetSize());
+			if NAZARA_UNLIKELY(!compressedDataOpt)
+				throw std::runtime_error("chunk compression failed");
+
+			std::span<Nz::UInt8>& compressedData = *compressedDataOpt;
+
+			using base64 = cppcodec::base64_rfc4648;
+			chunkDoc["chunk_data"] = base64::encode(compressedData.data(), compressedData.size());
+			chunkDoc["chunk_datasize"] = byteArray.GetSize();
+		});
+
+		nlohmann::json shipData;
+		shipData["chunks"] = std::move(chunks);
+		shipData["version"] = Nz::UInt32(1);
+
+		nlohmann::json body;
+		body["data"] = shipData.dump();
+
+		auto& playerToken = m_serverInstance.GetApplication().GetComponent<PlayerTokenAppComponent>();
+		playerToken.QueueRequest(*m_playerUuid, Nz::WebRequestMethod::Patch, fmt::format("/v1/player_ship/{}", m_saveSlot), body, [this, uuid = *m_playerUuid](Nz::UInt32 code, const std::string& body)
+		{
+			if (code == 200)
+				m_shouldSave = false;
+			else
+				fmt::print(fg(fmt::color::red), "failed to save player {} ship ({}): {}\n", uuid.ToString(), code, body);
+		});
 	}
 
 	void ServerShipEnvironment::OnTick(Nz::Time elapsedTime)
@@ -360,10 +463,17 @@ namespace tsom
 		if (!m_proxyEntity)
 			return;
 
-		std::shared_ptr<Nz::Collider3D> chunkCollider = GetShip().BuildHullCollider();
+		auto& ship = GetShip();
+		std::shared_ptr<Nz::Collider3D> hullCollider = ship.BuildHullCollider();
+		std::size_t fullBlockCount = 0;
+		ship.ForEachChunk([&](const ChunkIndices& chunkIndices, const Chunk& chunk)
+		{
+			fullBlockCount += chunk.GetCollisionCellMask().Count();
+		});
 
 		auto& rigidBody = m_proxyEntity.get<Nz::RigidBody3DComponent>();
-		rigidBody.SetGeom(std::move(chunkCollider));
+		rigidBody.SetGeom(std::move(hullCollider));
+		rigidBody.SetMass(fullBlockCount);
 	}
 
 	auto ServerShipEnvironment::BuildArea(const Chunk* chunk, std::size_t firstBlockIndex, Nz::Bitset<Nz::UInt64>& remainingBlocks) -> Area

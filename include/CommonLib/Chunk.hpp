@@ -53,7 +53,7 @@ namespace tsom
 			virtual std::optional<Nz::Vector3ui> ComputeCoordinates(const Nz::Vector3f& position) const = 0;
 			virtual Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> ComputeVoxelCorners(const Nz::Vector3ui& indices) const = 0;
 
-			virtual void Deserialize(const BlockLibrary& blockLibrary, Nz::ByteStream& byteStream);
+			virtual void Deserialize(Nz::ByteStream& byteStream);
 
 			inline const Nz::Bitset<Nz::UInt64>& GetCollisionCellMask() const;
 			inline unsigned int GetBlockLocalIndex(const Nz::Vector3ui& indices) const;
@@ -76,7 +76,7 @@ namespace tsom
 			inline void Reset();
 			template<typename F> void Reset(F&& func);
 
-			virtual void Serialize(const BlockLibrary& blockLibrary, Nz::ByteStream& byteStream);
+			virtual void Serialize(Nz::ByteStream& byteStream) const;
 
 			inline void UnlockRead() const;
 			inline void UnlockWrite();

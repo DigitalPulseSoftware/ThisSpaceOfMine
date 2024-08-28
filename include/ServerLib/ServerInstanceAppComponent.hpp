@@ -19,8 +19,8 @@ namespace tsom
 	{
 		public:
 			using ApplicationComponent::ApplicationComponent;
-			ServerInstanceAppComponent(const ServerInstance&) = delete;
-			ServerInstanceAppComponent(ServerInstance&&) = delete;
+			ServerInstanceAppComponent(const ServerInstanceAppComponent&) = delete;
+			ServerInstanceAppComponent(ServerInstanceAppComponent&&) = delete;
 			~ServerInstanceAppComponent() = default;
 
 			template<typename... Args> ServerInstance& AddInstance(Args&&... args);

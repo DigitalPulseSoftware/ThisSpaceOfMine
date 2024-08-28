@@ -167,6 +167,7 @@ target("ServerLib", function ()
 	add_headerfiles("src/ServerLib/**.hpp", "src/ServerLib/**.inl", { install = false })
 	add_files("src/ServerLib/**.cpp")
 	add_deps("CommonLib", { public = true })
+	add_packages("libcurl", { links = {}, public = true })
 
 	after_load(function (target)
 		target:set("kind", target:dep("serverlib_static") and "static" or "shared")

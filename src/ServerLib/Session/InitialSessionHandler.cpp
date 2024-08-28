@@ -3,9 +3,11 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ServerLib/Session/InitialSessionHandler.hpp>
+#include <Nazara/Core/ApplicationBase.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/Version.hpp>
+#include <ServerLib/PlayerTokenAppComponent.hpp>
 #include <ServerLib/ServerEnvironment.hpp>
 #include <ServerLib/ServerInstance.hpp>
 #include <ServerLib/ServerPlayer.hpp>
@@ -77,6 +79,10 @@ namespace tsom
 					else
 						fmt::print(fg(fmt::color::yellow), "unknown permission \"{}\"\n", permissionStr);
 				}
+
+				// Register player token (FIXME: not really the right place)
+				auto& playerTokens = m_instance.GetApplication().GetComponent<PlayerTokenAppComponent>();
+				playerTokens.Register(tokenPrivate.player.uuid, tokenPrivate.api.url, tokenPrivate.api.refreshToken);
 
 				fmt::print("{0} authenticated\n", login);
 				return true;

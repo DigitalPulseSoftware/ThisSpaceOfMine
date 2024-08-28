@@ -72,7 +72,9 @@ namespace tsom
 
 			void Respawn(ServerEnvironment* environment, const Nz::Vector3f& position, const Nz::Quaternionf& rotation);
 
-			ServerShipEnvironment* SpawnShip();
+			void SendChatMessage(std::string chatMessage);
+
+			void SetOwnedShip(std::unique_ptr<ServerShipEnvironment>&& ship);
 
 			void Tick();
 

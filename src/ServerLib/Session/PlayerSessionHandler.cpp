@@ -12,6 +12,7 @@
 #include <CommonLib/Ship.hpp>
 #include <CommonLib/Components/PlanetComponent.hpp>
 #include <CommonLib/Components/ShipComponent.hpp>
+#include <ServerLib/PlayerTokenAppComponent.hpp>
 #include <ServerLib/ServerEnvironment.hpp>
 #include <ServerLib/ServerInstance.hpp>
 #include <ServerLib/ServerPlanetEnvironment.hpp>
@@ -24,6 +25,8 @@
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Collider3D.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
+#include <nlohmann/json.hpp>
+#include <fmt/color.h>
 #include <numeric>
 
 namespace tsom
@@ -120,26 +123,110 @@ namespace tsom
 			GetSession()->SendPacket(std::move(chatMessage));
 			return;
 		}
-		else if (message == "/spawnship" || message == "/spawnsmallship")
+		else if (message == "/spawnship" || message.starts_with("/spawnship "))
 		{
+			constexpr std::size_t commandLength = sizeof("/spawnship ") - 1;
+
+			int slot = 0;
+			if (message.starts_with("/spawnship ") && message.size() > commandLength)
+			{
+				const char* last = message.data() + message.size();
+				std::from_chars_result res = std::from_chars(&message[commandLength], last, slot);
+				if (res.ptr != last || res.ec != std::errc{})
+				{
+					m_player->SendChatMessage("failed to parse ship slot");
+					return;
+				}
+
+				if (slot < 0 || slot >= 3)
+				{
+					m_player->SendChatMessage("slot must lie in [0;3[");
+					return;
+				}
+			}
+
 			entt::handle playerEntity = m_player->GetControlledEntity();
 			if (!playerEntity)
 				return;
 
 			ServerInstance& serverInstance = m_player->GetServerInstance();
-			const BlockLibrary& blockLibrary = serverInstance.GetBlockLibrary();
 
-			ServerEnvironment* currentEnvironment = m_player->GetControlledEntityEnvironment();
-			if (currentEnvironment != m_player->GetRootEnvironment())
+			if (!m_player->IsAuthenticated())
+			{
+				m_player->SendChatMessage("warning: your ship won't be saved as you're not authenticated");
+
+				// spawn ship like before saving
+				auto shipEnv = std::make_unique<ServerShipEnvironment>(serverInstance, m_player->GetUuid(), slot);
+				shipEnv->GenerateShip(true);
+
+				ServerEnvironment* currentEnvironment = m_player->GetControlledEntityEnvironment();
+				if (currentEnvironment != m_player->GetRootEnvironment())
+					return;
+
+				Nz::NodeComponent& playerNode = playerEntity.get<Nz::NodeComponent>();
+
+				EnvironmentTransform planetToShip(playerNode.GetPosition(), Nz::Quaternionf::Identity()); //< FIXME
+				shipEnv->LinkOutsideEnvironment(currentEnvironment, planetToShip);
+
+				m_player->SetOwnedShip(std::move(shipEnv));
 				return;
+			}
 
-			Nz::NodeComponent& playerNode = playerEntity.get<Nz::NodeComponent>();
+			PlayerTokenAppComponent& playerToken = serverInstance.GetApplication().GetComponent<PlayerTokenAppComponent>();
 
-			ServerShipEnvironment* shipEnv = m_player->SpawnShip();
-			shipEnv->GenerateShip(message == "/spawnsmallship");
+			playerToken.QueueRequest(*m_player->GetUuid(), Nz::WebRequestMethod::Get, fmt::format("/v1/player_ship/{}", slot), {}, [&serverInstance, slot, player = m_player->CreateHandle(), playerEntity](Nz::UInt32 resultCode, const std::string& body)
+			{
+				if (!player || !playerEntity)
+					return; //< player disconnected
 
-			EnvironmentTransform planetToShip(playerNode.GetPosition(), Nz::Quaternionf::Identity()); //< FIXME
-			shipEnv->LinkOutsideEnvironment(currentEnvironment, planetToShip);
+				if (resultCode == 200 || resultCode == 404)
+				{
+					const BlockLibrary& blockLibrary = serverInstance.GetBlockLibrary();
+
+					Nz::NodeComponent& playerNode = playerEntity.get<Nz::NodeComponent>();
+
+					auto shipEnv = std::make_unique<ServerShipEnvironment>(serverInstance, player->GetUuid(), slot);
+
+					if (resultCode == 200)
+					{
+						nlohmann::json dataDoc;
+						try
+						{
+							dataDoc = nlohmann::json::parse(body);
+							dataDoc = nlohmann::json::parse(std::string(dataDoc["ship_data"]));
+						}
+						catch (const std::exception& e)
+						{
+							fmt::print(fg(fmt::color::red), "failed to parse ship data json: {}\n", e.what());
+							player->SendChatMessage("failed to load ship (an internal error occurred)");
+							return;
+						}
+
+						if (auto result = shipEnv->Load(dataDoc); !result)
+						{
+							fmt::print(fg(fmt::color::red), "failed to parse ship data json: {}\n", result.GetError());
+							player->SendChatMessage("failed to load ship (an internal error occurred)");
+							return;
+						}
+					}
+					else
+						shipEnv->GenerateShip(true);
+
+					ServerEnvironment* currentEnvironment = player->GetControlledEntityEnvironment();
+					if (currentEnvironment != player->GetRootEnvironment())
+						return;
+
+					EnvironmentTransform planetToShip(playerNode.GetPosition(), Nz::Quaternionf::Identity()); //< FIXME
+					shipEnv->LinkOutsideEnvironment(currentEnvironment, planetToShip);
+
+					player->SetOwnedShip(std::move(shipEnv));
+				}
+				else
+				{
+					fmt::print(fg(fmt::color::red), "failed to parse ship data json: (code {}) {}\n", resultCode, body);
+					player->SendChatMessage("failed to load ship (an internal error occurred)");
+				}
+			});
 			return;
 		}
 		else if (message == "/regenchunk" && m_player->HasPermission(PlayerPermission::Admin))

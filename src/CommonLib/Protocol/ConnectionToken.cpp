@@ -75,7 +75,7 @@ namespace tsom
 
 		void Serialize(PacketSerializer& serializer, ConnectionTokenPrivate& token)
 		{
-			serializer &= token.api.token;
+			serializer &= token.api.refreshToken;
 			serializer &= token.api.url;
 
 			serializer &= token.player.uuid;

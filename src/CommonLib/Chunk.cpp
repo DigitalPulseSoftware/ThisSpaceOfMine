@@ -223,7 +223,7 @@ namespace tsom
 		}
 	}
 
-	void Chunk::Deserialize(const BlockLibrary& blockLibrary, Nz::ByteStream& byteStream)
+	void Chunk::Deserialize(Nz::ByteStream& byteStream)
 	{
 		Nz::UInt32 chunkBinaryVersion;
 		byteStream >> chunkBinaryVersion;
@@ -249,17 +249,17 @@ namespace tsom
 		{
 			byteStream >> blockName;
 
-			BlockIndex blockIndex = blockLibrary.GetBlockIndex(blockName);
+			BlockIndex blockIndex = m_blockLibrary.GetBlockIndex(blockName);
 			if (blockIndex == InvalidBlockIndex)
 				throw std::runtime_error("unknown block " + blockName);
 
 			deserializationIndices.push_back(blockIndex);
 		}
 
-		std::vector<BlockIndex> blocks(m_blocks.size());
+		Reset();
 		if (blockTypeCount > 8)
 		{
-			for (BlockIndex& blockIndex : blocks)
+			for (BlockIndex& blockIndex : m_blocks)
 			{
 				Nz::UInt16 value;
 				byteStream >> value;
@@ -269,7 +269,7 @@ namespace tsom
 		}
 		else
 		{
-			for (BlockIndex& blockIndex : blocks)
+			for (BlockIndex& blockIndex : m_blocks)
 			{
 				Nz::UInt8 value;
 				byteStream >> value;
@@ -278,11 +278,10 @@ namespace tsom
 			}
 		}
 
-		m_blocks = std::move(blocks);
 		OnChunkReset();
 	}
 
-	void Chunk::Serialize(const BlockLibrary& blockLibrary, Nz::ByteStream& byteStream)
+	void Chunk::Serialize(Nz::ByteStream& byteStream) const
 	{
 		byteStream << Constants::ChunkBinaryVersion;
 		byteStream << m_size;
@@ -304,7 +303,7 @@ namespace tsom
 			if (m_blockTypeCount[i] == 0)
 				continue;
 
-			byteStream << blockLibrary.GetBlockData(i).name;
+			byteStream << m_blockLibrary.GetBlockData(i).name;
 		}
 
 		// nextUniqueIndex is the number of bits required to store all the different block types used

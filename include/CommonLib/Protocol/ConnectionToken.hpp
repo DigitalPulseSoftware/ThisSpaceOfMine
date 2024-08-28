@@ -61,7 +61,7 @@ namespace tsom
 		// API part
 		struct
 		{
-			std::string token;
+			std::string refreshToken;
 			std::string url;
 		} api;
 

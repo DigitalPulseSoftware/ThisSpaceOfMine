@@ -107,7 +107,7 @@ namespace tsom
 			byteArray.Clear();
 
 			Nz::ByteStream byteStream(&byteArray);
-			m_planetEntity.get<PlanetComponent>().GetChunk(chunkIndices)->Serialize(m_serverInstance.GetBlockLibrary(), byteStream);
+			m_planetEntity.get<PlanetComponent>().GetChunk(chunkIndices)->Serialize(byteStream);
 
 			if (!Nz::File::WriteWhole(m_savePath / Nz::Utf8Path(fmt::format("{0:+}_{1:+}_{2:+}.chunk", chunkIndices.x, chunkIndices.y, chunkIndices.z)), byteArray.GetBuffer(), byteArray.GetSize()))
 				fmt::print(stderr, "failed to save chunk {}\n", fmt::streamed(chunkIndices));
@@ -200,7 +200,7 @@ namespace tsom
 			try
 			{
 				Nz::ByteStream fileStream(&chunkFile);
-				chunk.Deserialize(m_serverInstance.GetBlockLibrary(), fileStream);
+				chunk.Deserialize(fileStream);
 			}
 			catch (const std::exception& e)
 			{

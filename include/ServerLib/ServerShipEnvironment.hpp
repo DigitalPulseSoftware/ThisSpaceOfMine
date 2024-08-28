@@ -26,7 +26,7 @@ namespace tsom
 	class TSOM_SERVERLIB_API ServerShipEnvironment final : public ServerEnvironment
 	{
 		public:
-			ServerShipEnvironment(ServerInstance& serverInstance);
+			ServerShipEnvironment(ServerInstance& serverInstance, const std::optional<Nz::Uuid>& playerUuid, int saveSlot);
 			ServerShipEnvironment(const ServerShipEnvironment&) = delete;
 			ServerShipEnvironment(ServerShipEnvironment&&) = delete;
 			~ServerShipEnvironment();
@@ -41,6 +41,8 @@ namespace tsom
 			inline entt::handle GetShipEntity() const;
 
 			entt::handle LinkOutsideEnvironment(ServerEnvironment* environment, const EnvironmentTransform& transform);
+
+			Nz::Result<void, std::string> Load(const nlohmann::json& data);
 
 			void OnSave() override;
 			void OnTick(Nz::Time elapsedTime) override;
@@ -101,6 +103,7 @@ namespace tsom
 
 			entt::handle m_proxyEntity;
 			entt::handle m_shipEntity;
+			std::optional<Nz::Uuid> m_playerUuid;
 			std::shared_ptr<Nz::Collider3D> m_combinedAreaColliders;
 			tsl::hopscotch_map<ChunkIndices, std::shared_ptr<AreaUpdateJob>> m_areaUpdateJobs;
 			tsl::hopscotch_map<ChunkIndices, std::shared_ptr<TriggerUpdateJob>> m_triggerUpdateJobs;
@@ -108,6 +111,8 @@ namespace tsom
 			tsl::hopscotch_set<Chunk*> m_invalidatedChunks;
 			ServerEnvironment* m_outsideEnvironment;
 			bool m_isCombinedAreaColliderInvalidated;
+			bool m_shouldSave;
+			int m_saveSlot;
 	};
 }
 

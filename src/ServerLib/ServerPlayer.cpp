@@ -178,10 +178,17 @@ namespace tsom
 		m_controlledEntity.emplace<ServerPlayerControlledComponent>(CreateHandle());
 	}
 
-	ServerShipEnvironment* ServerPlayer::SpawnShip()
+	void ServerPlayer::SendChatMessage(std::string chatMessage)
 	{
-		m_ship = std::make_unique<ServerShipEnvironment>(m_serverInstance);
-		return m_ship.get();
+		Packets::ChatMessage chatMessagePacket;
+		chatMessagePacket.message = std::move(chatMessage);
+
+		GetSession()->SendPacket(std::move(chatMessagePacket));
+	}
+
+	void ServerPlayer::SetOwnedShip(std::unique_ptr<ServerShipEnvironment>&& ship)
+	{
+		m_ship = std::move(ship);
 	}
 
 	void ServerPlayer::Tick()

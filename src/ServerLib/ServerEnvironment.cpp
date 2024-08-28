@@ -61,7 +61,7 @@ namespace tsom
 		auto it = m_connectedEnvironments.find(&environment);
 		NazaraAssert(it != m_connectedEnvironments.end(), "environment is not connected");
 		m_connectedEnvironments.erase(it);
-		
+
 		environment.ForEachPlayer([&](ServerPlayer& player)
 		{
 			if (player.GetRootEnvironment() == &environment)

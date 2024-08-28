@@ -4,14 +4,16 @@
 
 #include <CommonLib/InternalConstants.hpp>
 #include <Server/ServerConfigAppComponent.hpp>
-#include <ServerLib/ServerPlanetEnvironment.hpp>
+#include <ServerLib/PlayerTokenAppComponent.hpp>
 #include <ServerLib/ServerInstanceAppComponent.hpp>
+#include <ServerLib/ServerPlanetEnvironment.hpp>
 #include <ServerLib/Session/InitialSessionHandler.hpp>
 #include <Nazara/Core/Application.hpp>
 #include <Nazara/Core/Core.hpp>
 #include <Nazara/Core/SignalHandlerAppComponent.hpp>
 #include <Nazara/Core/TaskSchedulerAppComponent.hpp>
 #include <Nazara/Network/Network.hpp>
+#include <Nazara/Network/WebServiceAppComponent.hpp>
 #include <Nazara/Physics3D/Physics3D.hpp>
 #include <NazaraUtils/PathUtils.hpp>
 #include <Main/Main.hpp>
@@ -23,6 +25,8 @@ int ServerMain(int argc, char* argv[])
 
 	app.AddComponent<Nz::SignalHandlerAppComponent>();
 	app.AddComponent<Nz::TaskSchedulerAppComponent>();
+	app.AddComponent<Nz::WebServiceAppComponent>();
+	app.AddComponent<tsom::PlayerTokenAppComponent>();
 	auto& configAppComponent = app.AddComponent<tsom::ServerConfigAppComponent>();
 	auto& worldAppComponent = app.AddComponent<tsom::ServerInstanceAppComponent>();
 

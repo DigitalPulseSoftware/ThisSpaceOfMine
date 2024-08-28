@@ -104,7 +104,7 @@ namespace tsom
 		{
 			// Cancel chunk creation
 			m_freeChunkIds.Set(chunkIndex, true);
-			m_newlyVisibleChunk.Reset(chunkIndex); 
+			m_newlyVisibleChunk.Reset(chunkIndex);
 			chunkNetworkIndices.erase(chunkIndices);
 
 			ChunkData& chunkData = m_visibleChunks[chunkIndex];

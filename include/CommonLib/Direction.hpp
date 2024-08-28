@@ -88,7 +88,7 @@ namespace tsom
 		Nz::Vector3i {  1,  0,  0 }, //< Right
 		Nz::Vector3i {  0,  1,  0 }, //< Up
 	};
-	
+
 	constexpr Direction DirectionFromNormal(const Nz::Vector3f& outsideNormal);
 }
 
