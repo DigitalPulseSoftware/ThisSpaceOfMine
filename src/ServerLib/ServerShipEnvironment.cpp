@@ -176,7 +176,7 @@ namespace tsom
 				chunkIndices.y = chunkDoc["y"];
 				chunkIndices.z = chunkDoc["z"];
 
-				std::string_view chunkData = chunkDoc["chunk_data"];
+				std::string chunkData = chunkDoc["chunk_data"];
 				std::size_t chunkDataSize = chunkDoc["chunk_datasize"];
 
 				using base64 = cppcodec::base64_rfc4648;
