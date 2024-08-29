@@ -26,6 +26,10 @@ namespace tsom
 
 	void ConnectionState::Connect(const Nz::IpAddress& serverAddress, std::variant<Packets::AuthRequest::AuthenticatedPlayerData, Packets::AuthRequest::AnonymousPlayerData> playerData, std::shared_ptr<Nz::State> previousState)
 	{
+		// Don't allow connection while we're switching to game state
+		if (m_nextState)
+			return;
+
 		Disconnect();
 
 		m_previousState = std::move(previousState);
@@ -91,6 +95,7 @@ namespace tsom
 		if (m_serverSession)
 		{
 			m_serverSession->Disconnect();
+			m_serverSession.reset();
 
 			auto& stateData = GetStateData();
 			stateData.networkSession = nullptr;

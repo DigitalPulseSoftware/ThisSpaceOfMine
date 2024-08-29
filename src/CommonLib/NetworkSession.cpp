@@ -23,11 +23,13 @@ namespace tsom
 		assert(m_peerId != NetworkReactor::InvalidPeerId);
 
 		m_reactor.DisconnectPeer(m_peerId, 0, type);
+		m_sessionHandler = nullptr;
 	}
 
 	void NetworkSession::HandlePacket(Nz::ByteArray&& byteArray)
 	{
-		m_sessionHandler->HandlePacket(std::move(byteArray));
+		if NAZARA_LIKELY(m_sessionHandler)
+			m_sessionHandler->HandlePacket(std::move(byteArray));
 	}
 
 	void NetworkSession::QueryInfo(NetworkReactor::PeerInfoCallback callback)

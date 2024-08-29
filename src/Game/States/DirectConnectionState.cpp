@@ -62,6 +62,7 @@ namespace tsom
 		m_loginArea->SetCharacterSize(24);
 		m_loginArea->SetText(std::string(nickname));
 		m_loginArea->SetTextColor(Nz::Color::Black());
+		m_loginArea->SetMaximumTextLength(Constants::PlayerMaxNicknameLength);
 
 		m_connectButton = m_layout->Add<Nz::ButtonWidget>();
 		m_connectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Connect", 30, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
@@ -76,7 +77,8 @@ namespace tsom
 		backButton->SetMaximumWidth(backButton->GetPreferredWidth() * 1.5f);
 		ConnectSignal(backButton->OnButtonTrigger, [&](const Nz::ButtonWidget*)
 		{
-			m_nextState = m_previousState;
+			if (!m_nextState)
+				m_nextState = m_previousState;
 		});
 
 		m_autoConnect = cmdParams.HasFlag("auto-connect");
