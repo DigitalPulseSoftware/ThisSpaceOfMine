@@ -90,14 +90,13 @@ namespace tsom
 		}
 	}
 
-	float Ship::ComputeGravityAcceleration(const Nz::Vector3f& /*position*/) const
+	auto Ship::ComputeGravity(const Nz::Vector3f& /*position*/) const -> GravityForce
 	{
-		return Constants::ShipGravityAcceleration;
-	}
-
-	Nz::Vector3f Ship::ComputeUpDirection(const Nz::Vector3f& /*position*/) const
-	{
-		return m_upDirection;
+		return GravityForce {
+			.direction = m_upDirection,
+			.acceleration = Constants::ShipGravityAcceleration,
+			.factor = 1.f
+		};
 	}
 
 	void Ship::ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, Chunk& chunk)> callback)

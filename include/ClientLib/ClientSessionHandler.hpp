@@ -28,6 +28,7 @@ namespace Nz
 namespace tsom
 {
 	class ClientBlockLibrary;
+	class GravityController;
 	struct PlayerAnimationAssets;
 
 	class TSOM_CLIENTLIB_API ClientSessionHandler : public SessionHandler
@@ -39,6 +40,7 @@ namespace tsom
 			~ClientSessionHandler();
 
 			inline entt::handle GetControlledEntity() const;
+			inline const GravityController* GetGravityController(std::size_t environmentIndex) const;
 
 			void HandlePacket(Packets::AuthResponse&& authResponse);
 			void HandlePacket(Packets::ChatMessage&& chatMessage);
@@ -90,6 +92,7 @@ namespace tsom
 				Nz::Bitset<Nz::UInt64> entities;
 				Nz::Node rootNode;
 				EnvironmentTransform transform;
+				GravityController* gravityController;
 			};
 
 			struct EntityData

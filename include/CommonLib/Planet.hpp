@@ -33,8 +33,8 @@ namespace tsom
 
 			Chunk& AddChunk(const BlockLibrary& blockLibrary, const ChunkIndices& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback = nullptr);
 
-			float ComputeGravityAcceleration(const Nz::Vector3f& position) const override;
-			Nz::Vector3f ComputeUpDirection(const Nz::Vector3f& position) const override;
+			GravityForce ComputeGravity(const Nz::Vector3f& position) const override;
+			Nz::Vector3f ComputeUpDirection(const Nz::Vector3f& position) const;
 
 			void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, Chunk& chunk)> callback) override;
 			void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, const Chunk& chunk)> callback) const override;

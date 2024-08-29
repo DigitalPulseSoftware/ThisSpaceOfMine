@@ -33,10 +33,9 @@ namespace tsom
 		Nz::Vector3f newUp = charUp;
 
 		// Update up vector if player is around a gravity well
-		if (m_gravityUp.GetSquaredLength() > 0.0001f)
+		if (m_gravityForce.factor > 0.0f)
 		{
-			newUp = Nz::Vector3f::RotateTowards(charUp, m_gravityUp, Constants::GravityMaxRotationSpeed * elapsedTime);
-
+			newUp = Nz::Vector3f::RotateTowards(charUp, -m_gravityForce.direction, Constants::GravityMaxRotationSpeed * elapsedTime);
 			if (Nz::Vector3f previousUp = newRotation * Nz::Vector3f::Up(); !previousUp.ApproxEqual(newUp, 0.00001f))
 			{
 				Nz::Quaternionf upCorrected = Nz::Quaternionf::RotationBetween(previousUp, newUp) * newRotation;
@@ -84,10 +83,8 @@ namespace tsom
 
 		Nz::Vector3f velocity = character.GetLinearVelocity();
 		Nz::Vector3f up = character.GetUp();
-		if (m_gravityController && m_gravityController->ComputeGravityAcceleration(m_characterPosition) > 0.3f)
-			m_gravityUp = m_gravityController->ComputeUpDirection(m_characterPosition);
-		else
-			m_gravityUp = Nz::Vector3f::Zero();
+
+		m_gravityForce = (m_gravityController) ? m_gravityController->ComputeGravity(m_characterPosition) : GravityForce::Zero();
 
 		Nz::Quaternionf movementRotation;
 		if (m_gravityController)
@@ -96,7 +93,7 @@ namespace tsom
 			{
 				// Apply gravity
 				Nz::Vector3f position = character.GetPosition();
-				velocity -= m_gravityController->ComputeGravityAcceleration(position) * m_gravityController->ComputeUpDirection(character.GetPosition()) * elapsedTime;
+				velocity += m_gravityForce.acceleration * m_gravityForce.direction * m_gravityForce.factor * elapsedTime;
 			}
 
 			movementRotation = character.GetRotation();
@@ -104,7 +101,9 @@ namespace tsom
 		else
 			movementRotation = character.GetRotation() * Nz::Quaternionf(Nz::EulerAnglesf(m_lastInputs.pitch, 0.f, 0.f));
 
-		if (!m_isFlying)
+		bool hasGravity = m_gravityForce.acceleration * m_gravityForce.factor > 0.2f;
+
+		if (!m_isFlying && hasGravity)
 		{
 			if (m_lastInputs.jump)
 			{
@@ -115,7 +114,7 @@ namespace tsom
 
 		Nz::Vector3f desiredVelocity = Nz::Vector3f::Zero();
 		// Handle up/down when flying before making movement rotation relative to pitch
-		if (m_isFlying)
+		if (m_isFlying || !hasGravity)
 		{
 			if (m_lastInputs.jump)
 				desiredVelocity += movementRotation * Nz::Vector3f::Up();
@@ -157,15 +156,15 @@ namespace tsom
 		float desiredImpact;
 		if (m_isFlying)
 			desiredImpact = 0.2f;
-		else if (m_gravityUp.GetSquaredLength() > 0.0001f)
+		else if (hasGravity)
 		{
-			desiredVelocity += velocity.Project(m_gravityUp);
+			desiredVelocity += velocity.Project(m_gravityForce.direction);
 			desiredImpact = (character.IsOnGround()) ? 0.25f : 0.1f;
 		}
 		else
 		{
 			desiredVelocity += velocity;
-			desiredImpact = 0.1f;
+			desiredImpact = 0.01f;
 		}
 
 		character.SetLinearVelocity(Lerp(velocity, desiredVelocity, desiredImpact));

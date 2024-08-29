@@ -11,6 +11,14 @@ namespace tsom
 		return m_playerControlledEntity;
 	}
 
+	inline const GravityController* ClientSessionHandler::GetGravityController(std::size_t environmentIndex) const
+	{
+		if (environmentIndex > m_environments.size() || !m_environments[environmentIndex])
+			return nullptr;
+
+		return m_environments[environmentIndex]->gravityController;
+	}
+
 	inline auto ClientSessionHandler::FetchPlayerInfo(PlayerIndex playerIndex) -> PlayerInfo*
 	{
 		if (playerIndex >= m_players.size() || !m_players[playerIndex])

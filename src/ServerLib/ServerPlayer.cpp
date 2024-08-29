@@ -84,7 +84,7 @@ namespace tsom
 		if (!environment->GetEnvironmentTransformation(*m_controlledEntityEnvironment, &prevToNewTransform))
 			assert(false && "old environment is not linked to the new");
 
-		Nz::Vector3f prevEnvironmentUp = m_controlledEntityEnvironment->GetGravityController()->ComputeUpDirection(position);
+		Nz::Vector3f prevEnvironmentUp = -m_controlledEntityEnvironment->GetGravityController()->ComputeGravity(position).direction;
 		Nz::Quaternionf environmentRotationCorrection = Nz::Quaternionf::RotationBetween(prevEnvironmentUp, Nz::Vector3f::Up());
 
 		position = prevToNewTransform.Translate(position);

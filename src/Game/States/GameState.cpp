@@ -8,6 +8,7 @@
 #include <ClientLib/EscapeMenu.hpp>
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Components/ChunkNetworkMapComponent.hpp>
+#include <ClientLib/Components/EnvironmentComponent.hpp>
 #include <ClientLib/Systems/AnimationSystem.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/InternalConstants.hpp>
@@ -657,6 +658,18 @@ namespace tsom
 				m_debugOverlay->textDrawer.AppendText(fmt::format("{0:-^{1}}\n", "Player position", 20));
 				m_debugOverlay->textDrawer.AppendText(fmt::format("Position: {0:.3f};{1:.3f};{2:.3f} (local: {3:.3f};{4:.3f};{5:.3f})\n", characterPos.x, characterPos.y, characterPos.z, localPos.x, localPos.y, localPos.z));
 				m_debugOverlay->textDrawer.AppendText(fmt::format("Rotation: {0:.3f};{1:.3f};{2:.3f};{3:.3f} (local: {4:.3f};{5:.3f};{6:.3f};{7:.3f})\n", characterRot.x, characterRot.y, characterRot.z, characterRot.w, localRot.x, localRot.y, localRot.z, localRot.w));
+
+				if (m_debugOverlay->mode >= 1)
+				{
+					EnvironmentComponent& characterEnv = m_controlledEntity.get<EnvironmentComponent>();
+
+					m_debugOverlay->textDrawer.AppendText(fmt::format("Current environment: #{}\n", characterEnv.environmentIndex));
+					if (const GravityController* gravityController = stateData.sessionHandler->GetGravityController(characterEnv.environmentIndex))
+					{
+						GravityForce gravityForce = gravityController->ComputeGravity(localPos);
+						m_debugOverlay->textDrawer.AppendText(fmt::format("Current gravity: {0} x {1:.3f};{2:.3f};{3:.3f} ({4:.2f}%)\n", gravityForce.acceleration, gravityForce.direction.x, gravityForce.direction.y, gravityForce.direction.z, gravityForce.factor * 100.f));
+					}
+				}
 
 				/*Nz::Vector3f up = m_planet->ComputeUpDirection(characterPos);
 				float gravity = m_planet->GetGravityFactor(characterPos);

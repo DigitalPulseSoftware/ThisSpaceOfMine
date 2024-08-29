@@ -67,17 +67,64 @@ namespace tsom
 		return *it->second.chunk;
 	}
 
-	float Planet::ComputeGravityAcceleration(const Nz::Vector3f& position) const
+	auto Planet::ComputeGravity(const Nz::Vector3f& position) const -> GravityForce
 	{
-		// At the center
-		if (position.SquaredDistance(GetCenter()) < Nz::IntegralPow(10.f, 2))
-			return 0.f;
+		constexpr float PlanetGravityCenterStartDecrease = 16.f;
+		constexpr float PlanetGravityCenterNoGravity = 4.f;
+		constexpr float PlanetGravitySpaceStart = 100.f;
+		constexpr float PlanetGravitySpaceFinish = 150.f;
+		constexpr float PlanetGravitySpaceNone = 250.f;
 
-		// Too far away
-		if (position.SquaredDistance(GetCenter()) > Nz::IntegralPow(200.f, 2))
-			return 0.f;
+		// Decrease gravity near the center
+		float distSq = position.SquaredDistance(GetCenter());
+		if (distSq < Nz::IntegralPow(PlanetGravityCenterStartDecrease, 2))
+		{
+			Nz::Vector3f up = ComputeUpDirection(position);
+			return GravityForce{
+				.direction = -up,
+				.acceleration = m_gravity,
+				.factor = std::max(std::sqrt(distSq) - PlanetGravityCenterNoGravity, 0.f) / (PlanetGravityCenterStartDecrease - PlanetGravityCenterNoGravity)
+			};
+		}
 
-		return m_gravity;
+		// Turn rounded gravity to newtonian gravity
+		if (distSq > Nz::IntegralPow(PlanetGravitySpaceStart, 2))
+		{
+			if (distSq > Nz::IntegralPow(PlanetGravitySpaceNone, 2))
+				return GravityForce::Zero();
+
+			float dist = std::sqrt(distSq);
+			float newtonianInterp;
+			if (distSq > Nz::IntegralPow(PlanetGravitySpaceFinish, 2))
+				newtonianInterp = 1.f;
+			else
+				newtonianInterp = std::max(dist - PlanetGravitySpaceStart, 0.f) / (PlanetGravitySpaceFinish - PlanetGravitySpaceStart);
+
+			Nz::Vector3f direction = Nz::Vector3f::Normalize(GetCenter() - position);
+			if (newtonianInterp < 0.99f)
+				direction = Nz::Lerp(-ComputeUpDirection(position), direction, newtonianInterp);
+			else
+				direction = GetCenter() - position;
+
+			direction.Normalize();
+
+			float gravity = std::max(dist - PlanetGravitySpaceFinish, 0.f) / (PlanetGravitySpaceNone - PlanetGravitySpaceFinish);
+			gravity *= gravity;
+
+			return GravityForce{
+				.direction = direction,
+				.acceleration = m_gravity,
+				.factor = 1.f - gravity
+			};
+		}
+
+		// Regular gravity
+		Nz::Vector3f up = ComputeUpDirection(position);
+		return GravityForce{
+			.direction = -up,
+			.acceleration = m_gravity,
+			.factor = 1.f
+		};
 	}
 
 	Nz::Vector3f Planet::ComputeUpDirection(const Nz::Vector3f& position) const

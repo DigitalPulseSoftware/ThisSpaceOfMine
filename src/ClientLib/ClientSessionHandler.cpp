@@ -9,6 +9,7 @@
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Components/AnimationComponent.hpp>
 #include <ClientLib/Components/ChunkNetworkMapComponent.hpp>
+#include <ClientLib/Components/EnvironmentComponent.hpp>
 #include <ClientLib/Components/MovementInterpolationComponent.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/PhysicsConstants.hpp>
@@ -223,6 +224,9 @@ namespace tsom
 			auto& entityNode = entity.emplace<Nz::NodeComponent>(entityData.initialStates.position, entityData.initialStates.rotation);
 			entityNode.SetParent(environment.rootNode);
 
+			auto& entityEnv = entity.emplace<EnvironmentComponent>();
+			entityEnv.environmentIndex = entityData.environmentId;
+
 			std::string entityTypes;
 			if (entityData.planet)
 			{
@@ -231,6 +235,10 @@ namespace tsom
 
 				entityTypes += "planet";
 				SetupEntity(entity, std::move(entityData.planet.value()));
+
+				// TEMP
+				auto& planetComponent = entity.get<PlanetComponent>();
+				environment.gravityController = &planetComponent;
 			}
 
 			if (entityData.playerControlled)
@@ -249,6 +257,10 @@ namespace tsom
 
 				entityTypes += "ship";
 				SetupEntity(entity, std::move(entityData.ship.value()));
+
+				// TEMP
+				auto& shipComponent = entity.get<ShipComponent>();
+				environment.gravityController = &shipComponent;
 			}
 
 			if (!entityTypes.empty())
@@ -314,6 +326,9 @@ namespace tsom
 
 		auto& entityNode = entityData.entity.get<Nz::NodeComponent>();
 		entityNode.SetParent(newEnvironment.rootNode, true);
+
+		auto& entityEnv = entityData.entity.get<EnvironmentComponent>();
+		entityEnv.environmentIndex = environmentUpdate.newEnvironmentId;
 
 		entityData.environmentIndex = environmentUpdate.newEnvironmentId;
 		if (MovementInterpolationComponent* movementInterpolation = entityData.entity.try_get<MovementInterpolationComponent>())

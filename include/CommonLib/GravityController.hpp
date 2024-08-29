@@ -8,7 +8,7 @@
 #define TSOM_COMMONLIB_GRAVITYCONTROLLER_HPP
 
 #include <CommonLib/Export.hpp>
-#include <Nazara/Math/Vector3.hpp>
+#include <CommonLib/GravityForce.hpp>
 
 namespace tsom
 {
@@ -20,8 +20,7 @@ namespace tsom
 			GravityController(GravityController&&) = delete;
 			virtual ~GravityController();
 
-			virtual float ComputeGravityAcceleration(const Nz::Vector3f& position) const = 0;
-			virtual Nz::Vector3f ComputeUpDirection(const Nz::Vector3f& position) const = 0;
+			virtual GravityForce ComputeGravity(const Nz::Vector3f& position) const = 0;
 
 			GravityController& operator=(const GravityController&) = delete;
 			GravityController& operator=(GravityController&&) = delete;

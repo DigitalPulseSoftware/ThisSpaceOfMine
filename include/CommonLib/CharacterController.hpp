@@ -8,6 +8,7 @@
 #define TSOM_COMMONLIB_CHARACTERCONTROLLER_HPP
 
 #include <CommonLib/Export.hpp>
+#include <CommonLib/GravityForce.hpp>
 #include <CommonLib/PlayerInputs.hpp>
 #include <Nazara/Math/Box.hpp>
 #include <Nazara/Math/Quaternion.hpp>
@@ -56,7 +57,7 @@ namespace tsom
 			Nz::Quaternionf m_referenceRotation;
 			Nz::Quaternionf m_characterRotation;
 			Nz::Vector3f m_characterPosition;
-			Nz::Vector3f m_gravityUp;
+			GravityForce m_gravityForce;
 			PlayerInputs m_lastInputs;
 			const GravityController* m_gravityController;
 			bool m_allowInputRotation;

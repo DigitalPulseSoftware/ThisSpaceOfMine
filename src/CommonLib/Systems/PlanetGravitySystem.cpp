@@ -35,8 +35,9 @@ namespace tsom
 				continue;
 
 			Nz::Vector3f pos = rigidBody.GetPosition();
-			Nz::Vector3f up = m_planet.ComputeUpDirection(rigidBody.GetPosition());
-			rigidBody.AddForce(-up * m_planet.ComputeGravityAcceleration(pos) * rigidBody.GetMass());
+			GravityForce gravityForce = m_planet.ComputeGravity(rigidBody.GetPosition());
+
+			rigidBody.AddForce(gravityForce.direction * gravityForce.acceleration * gravityForce.factor * rigidBody.GetMass());
 		}
 	}
 }
