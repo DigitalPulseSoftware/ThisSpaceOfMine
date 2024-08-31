@@ -112,13 +112,14 @@ namespace tsom
 			return FailAuth(AuthError::ServerIsOutdated);
 		}
 
-		GetSession()->SetProtocolVersion(authRequest.gameVersion);
+		NetworkSession* session = GetSession();
+		session->SetProtocolVersion(authRequest.gameVersion);
 
 		ServerPlayer* player;
 		if (uuid.has_value())
-			player = m_instance.CreateAuthenticatedPlayer(GetSession(), *uuid, std::move(login), permissions);
+			player = m_instance.CreateAuthenticatedPlayer(session, *uuid, std::move(login), permissions);
 		else
-			player = m_instance.CreateAnonymousPlayer(GetSession(), std::move(login));
+			player = m_instance.CreateAnonymousPlayer(session, std::move(login));
 
 		if (!player)
 			return FailAuth(AuthError::InternalError);
@@ -127,7 +128,7 @@ namespace tsom
 		response.authResult = Nz::Ok();
 		response.ownPlayerIndex = player->GetPlayerIndex();
 
-		GetSession()->SendPacket(response);
+		session->SendPacket(response);
 
 		GetSession()->SetupHandler<PlayerSessionHandler>(player);
 	}

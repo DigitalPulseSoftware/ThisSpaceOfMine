@@ -310,14 +310,20 @@ namespace tsom
 		{
 			ForEachPlayer([this](ServerPlayer& player)
 			{
+				if (player.GetControlledEntityEnvironment() != this)
+					return;
+
 				entt::handle controlledEntity = player.GetControlledEntity();
 				if (!controlledEntity)
 					return;
 
-				if (player.GetControlledEntityEnvironment() == this)
+				Nz::Vector3f playerPos = controlledEntity.get<Nz::NodeComponent>().GetPosition();
+				Ship& ship = GetShip();
+
+				for (const auto& [chunkIndices, chunkData] : m_chunkData)
 				{
-					Nz::Vector3f playerPos = controlledEntity.get<Nz::NodeComponent>().GetPosition();
-					Ship& ship = GetShip();
+					if (!chunkData.expandedAreaCollider)
+						continue;
 
 					for (const auto& [chunkIndices, chunkData] : m_chunkData)
 					{
@@ -329,10 +335,10 @@ namespace tsom
 						if (chunkData.expandedAreaCollider->CollisionQuery(relativePos))
 							return;
 					}
-
-					// No longer colliding with the interior
-					player.MoveEntityToEnvironment(m_outsideEnvironment);
 				}
+
+				// No longer colliding with the interior
+				player.MoveEntityToEnvironment(m_outsideEnvironment);
 			});
 		}
 
@@ -425,7 +431,7 @@ namespace tsom
 		{
 			chunk->LockRead();
 			updateJob->collider = BuildTriggerCollider(chunk, *areaList, Nz::Vector3f::Zero(), updateJob->isCancelled);
-			updateJob->expandedCollider = BuildTriggerCollider(chunk, *areaList, Nz::Vector3f(2.f), updateJob->isCancelled);
+			updateJob->expandedCollider = BuildTriggerCollider(chunk, *areaList, Nz::Vector3f(chunk->GetBlockSize() * 2.f), updateJob->isCancelled);
 			chunk->UnlockRead();
 
 			updateJob->isFinished = true;
@@ -557,11 +563,11 @@ namespace tsom
 			auto AddBox = [&](const Nz::Boxf& box)
 			{
 				auto& childCollider = childColliders.emplace_back();
-				childCollider.offset = box.GetCenter();
-				childCollider.collider = std::make_shared<Nz::BoxCollider3D>(box.GetLengths() + sizeMargin);
+				childCollider.offset = box.GetCenter() * chunk->GetBlockSize();
+				childCollider.collider = std::make_shared<Nz::BoxCollider3D>(box.GetLengths() * chunk->GetBlockSize() + sizeMargin);
 			};
 
-			FlatChunk::BuildCollider(chunk->GetSize(),  area.blocks, AddBox);
+			FlatChunk::BuildCollider(chunk->GetSize(), area.blocks, AddBox);
 		}
 
 		if (childColliders.empty())
@@ -572,8 +578,6 @@ namespace tsom
 
 	auto ServerShipEnvironment::GenerateChunkAreas(const Chunk* chunk, std::atomic_bool& isCancelled) -> std::shared_ptr<AreaList>
 	{
-		Nz::HighPrecisionClock clock;
-
 		Nz::Bitset<Nz::UInt64> remainingBlocks(ShipChunkBlockCount, true);
 
 		// Find first candidate (= a random empty block)
@@ -598,8 +602,8 @@ namespace tsom
 
 		std::shared_ptr<AreaList> chunkArea = std::make_shared<AreaList>();
 
-		std::size_t firstCandidate = FindFirstCandidate();
-		if (firstCandidate != Nz::MaxValue<std::size_t>())
+		unsigned int firstCandidate = FindFirstCandidate();
+		if (firstCandidate != Nz::MaxValue<unsigned int>())
 		{
 			if (isCancelled)
 				return {};
@@ -613,10 +617,6 @@ namespace tsom
 
 				chunkArea->areas.push_back(BuildArea(chunk, remainingBlocks.FindFirst(), remainingBlocks));
 			}
-
-			fmt::print("integrity check took {}\n", fmt::streamed(clock.GetElapsedTime()));
-
-			fmt::print("{} area found\n", chunkArea->areas.size());
 		}
 
 		return chunkArea;

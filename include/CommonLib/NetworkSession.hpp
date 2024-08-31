@@ -53,9 +53,9 @@ namespace tsom
 		private:
 			std::size_t m_peerId;
 			std::unique_ptr<SessionHandler> m_sessionHandler;
-			NetworkReactor& m_reactor;
 			Nz::IpAddress m_remoteAddress;
 			Nz::UInt32 m_protocolVersion;
+			NetworkReactor& m_reactor;
 	};
 }
 

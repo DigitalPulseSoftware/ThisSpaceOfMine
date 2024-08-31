@@ -10,8 +10,13 @@
 namespace tsom
 {
 	template<std::size_t N, bool CodepointLimit>
-	SecuredString<N, CodepointLimit>::SecuredString(std::string_view str)
+	SecuredString<N, CodepointLimit>::SecuredString(std::string_view str) :
+	m_str(str)
 	{
+		if constexpr (CodepointLimit)
+			assert(Nz::ComputeCharacterCount(str) <= N);
+		else
+			assert(str.size() <= N);
 	}
 
 	template<std::size_t N, bool CodepointLimit>
