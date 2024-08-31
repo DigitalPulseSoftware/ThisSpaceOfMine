@@ -93,7 +93,7 @@ namespace tsom
 	auto Ship::ComputeGravity(const Nz::Vector3f& /*position*/) const -> GravityForce
 	{
 		return GravityForce {
-			.direction = m_upDirection,
+			.direction = -m_upDirection,
 			.acceleration = Constants::ShipGravityAcceleration,
 			.factor = 1.f
 		};
