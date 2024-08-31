@@ -257,12 +257,24 @@ namespace tsom
 			switch (event.scancode)
 			{
 				case Nz::Keyboard::Scancode::Tilde:
-					m_console->Show(!m_console->IsVisible());
+				{
+					if (m_console->IsVisible())
+						m_console->Hide();
+					else
+					{
+						m_console->Show();
+
+						// Execute next update to avoid the following TextEntered to be sent to the console
+						m_timerManager.AddImmediateTimer([this]
+						{
+							if (m_console->IsVisible())
+								m_console->SetFocus();
+						});
+					}
 					UpdateMouseLock();
 
-					// FIXME: Shouldn't have to do this (Nazara bug)
-					LayoutWidgets(Nz::Vector2f(stateData.renderTarget->GetSize()));
 					break;
+				}
 
 				case Nz::Keyboard::Scancode::Escape:
 				{
@@ -280,6 +292,7 @@ namespace tsom
 				}
 
 				case Nz::Keyboard::Scancode::Return:
+				case Nz::Keyboard::Scancode::NumpadReturn:
 				{
 					if (m_chatBox->IsOpen())
 					{
@@ -600,6 +613,8 @@ namespace tsom
 		auto& stateData = GetStateData();
 		if (!stateData.networkSession)
 			return true;
+
+		m_timerManager.Update(elapsedTime);
 
 		if (m_debugOverlay)
 			m_debugOverlay->textDrawer.Clear();

@@ -97,6 +97,11 @@ namespace tsom
 			OnChatMessage(text);
 	}
 
+	void Chatbox::SetFocus()
+	{
+		m_chatEnteringBox->SetFocus();
+	}
+
 	void Chatbox::Layout()
 	{
 		BaseWidget::Layout();
