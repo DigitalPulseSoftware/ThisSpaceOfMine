@@ -148,6 +148,11 @@ namespace tsom
 		RefreshContent();
 	}
 
+	void Console::SetFocus()
+	{
+		m_inputArea->SetFocus();
+	}
+
 	void Console::Layout()
 	{
 		BaseWidget::Layout();

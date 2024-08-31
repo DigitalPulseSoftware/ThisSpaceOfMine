@@ -35,8 +35,9 @@ namespace tsom
 
 			void PrintMessage(std::string message, const Nz::Color& color = Nz::Color::White());
 
-			void SetBackgroundColor(const Nz::Color& backgroundColor);
+			void SetBackgroundColor(const Nz::Color& backgroundColor) override;
 			void SetCharacterSize(unsigned int size);
+			void SetFocus();
 
 			Console& operator=(const Console&) = delete;
 			Console& operator=(Console&&) = delete;

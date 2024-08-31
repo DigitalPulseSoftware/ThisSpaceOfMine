@@ -14,6 +14,7 @@
 #include <Game/States/WidgetState.hpp>
 #include <Nazara/Core/State.hpp>
 #include <Nazara/Core/Time.hpp>
+#include <Nazara/Core/TimerManager.hpp>
 #include <Nazara/Math/EulerAngles.hpp>
 #include <Nazara/Platform/WindowEventHandler.hpp>
 #include <Nazara/TextRenderer/SimpleTextDrawer.hpp>
@@ -100,6 +101,7 @@ namespace tsom
 			Nz::Quaternionf m_upCorrection;
 			Nz::Time m_tickAccumulator;
 			Nz::Time m_tickDuration;
+			Nz::TimerManager m_timerManager;
 			Nz::UInt8 m_nextInputIndex;
 			ConsoleExecutor m_consoleExecutor;
 			BlockSelectionBar* m_blockSelectionBar;
