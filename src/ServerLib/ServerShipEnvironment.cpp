@@ -299,7 +299,10 @@ namespace tsom
 				auto& shipEntry = m_proxyEntity.get<EnvironmentEnterTriggerComponent>();
 				shipEntry.entryTrigger = m_combinedAreaColliders;
 				if (shipEntry.entryTrigger)
+				{
 					shipEntry.aabb = m_combinedAreaColliders->GetBoundingBox();
+					shipEntry.aabb.Translate(m_combinedAreaColliders->GetCenterOfMass());
+				}
 			}
 		}
 
@@ -322,6 +325,7 @@ namespace tsom
 							continue;
 
 						Nz::Vector3f relativePos = playerPos - ship.GetChunkOffset(chunkIndices);
+						relativePos -= chunkData.expandedAreaCollider->GetCenterOfMass(); //< https://jrouwe.github.io/JoltPhysics/index.html#center-of-mass
 						if (chunkData.expandedAreaCollider->CollisionQuery(relativePos))
 							return;
 					}

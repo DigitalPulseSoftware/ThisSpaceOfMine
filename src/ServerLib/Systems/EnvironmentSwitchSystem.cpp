@@ -36,8 +36,12 @@ namespace tsom
 				{
 					Nz::Vector3f localPlayerPos = triggerNode.ToLocalPosition(playerPosition);
 					// Use AABB as a cheap test
-					if (enterTrigger.aabb.Contains(localPlayerPos) && enterTrigger.entryTrigger->CollisionQuery(localPlayerPos))
-						player.MoveEntityToEnvironment(enterTrigger.targetEnvironment);
+					if (enterTrigger.aabb.Contains(localPlayerPos))
+					{
+						localPlayerPos -= enterTrigger.entryTrigger->GetCenterOfMass(); //< https://jrouwe.github.io/JoltPhysics/index.html#center-of-mass
+						if (enterTrigger.entryTrigger->CollisionQuery(localPlayerPos))
+							player.MoveEntityToEnvironment(enterTrigger.targetEnvironment);
+					}
 				}
 			});
 		}
