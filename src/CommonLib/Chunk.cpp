@@ -181,6 +181,8 @@ namespace tsom
 					if (blockIndex == EmptyBlockIndex)
 						continue;
 
+					const auto& blockData = m_blockLibrary.GetBlockData(blockIndex);
+
 					Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> corners = ComputeVoxelCorners({ x, y, z });
 
 					Nz::Vector3f blockCenter = std::accumulate(corners.begin(), corners.end(), Nz::Vector3f::Zero()) / corners.size();
@@ -191,33 +193,57 @@ namespace tsom
 						if (blockIndex == neighborBlockIndex)
 							return false;
 
-						const auto& blockData = m_blockLibrary.GetBlockData(neighborBlockIndex);
-						return blockData.isTransparent;
+						const auto& neighborBlockData = m_blockLibrary.GetBlockData(neighborBlockIndex);
+						return neighborBlockData.isTransparent;
 					};
 
 					// Up
 					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, Direction::Up); !neighborOpt || IsTransparent(*neighborOpt))
+					{
 						DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::RightTopNear], corners[Nz::BoxCorner::LeftTopNear], corners[Nz::BoxCorner::RightBottomNear], corners[Nz::BoxCorner::LeftBottomNear] });
+						if (blockData.isDoubleSided)
+							DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::LeftTopNear], corners[Nz::BoxCorner::RightTopNear], corners[Nz::BoxCorner::LeftBottomNear], corners[Nz::BoxCorner::RightBottomNear] });
+					}
 
 					// Down
 					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, Direction::Down); !neighborOpt || IsTransparent(*neighborOpt))
+					{
 						DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::LeftTopFar], corners[Nz::BoxCorner::RightTopFar], corners[Nz::BoxCorner::LeftBottomFar], corners[Nz::BoxCorner::RightBottomFar] });
+						if (blockData.isDoubleSided)
+							DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::RightTopFar], corners[Nz::BoxCorner::LeftTopFar], corners[Nz::BoxCorner::RightBottomFar], corners[Nz::BoxCorner::LeftBottomFar] });
+					}
 
 					// Front
 					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, Direction::Front); !neighborOpt || IsTransparent(*neighborOpt))
+					{
 						DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::RightTopFar], corners[Nz::BoxCorner::RightTopNear], corners[Nz::BoxCorner::RightBottomFar], corners[Nz::BoxCorner::RightBottomNear] });
+						if (blockData.isDoubleSided)
+							DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::RightTopNear], corners[Nz::BoxCorner::RightTopFar], corners[Nz::BoxCorner::RightBottomNear], corners[Nz::BoxCorner::RightBottomFar] });
+					}
 
 					// Back
 					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, Direction::Back); !neighborOpt || IsTransparent(*neighborOpt))
+					{
 						DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::LeftTopNear], corners[Nz::BoxCorner::LeftTopFar], corners[Nz::BoxCorner::LeftBottomNear], corners[Nz::BoxCorner::LeftBottomFar] });
+						if (blockData.isDoubleSided)
+							DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::LeftTopFar], corners[Nz::BoxCorner::LeftTopNear], corners[Nz::BoxCorner::LeftBottomFar], corners[Nz::BoxCorner::LeftBottomNear] });
+					}
 
 					// Left
 					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, Direction::Left); !neighborOpt || IsTransparent(*neighborOpt))
+					{
 						DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::RightBottomNear], corners[Nz::BoxCorner::LeftBottomNear], corners[Nz::BoxCorner::RightBottomFar], corners[Nz::BoxCorner::LeftBottomFar] });
+						if (blockData.isDoubleSided)
+							DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::LeftBottomNear], corners[Nz::BoxCorner::RightBottomNear], corners[Nz::BoxCorner::LeftBottomFar], corners[Nz::BoxCorner::RightBottomFar] });
+					}
 
 					// Right
 					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, Direction::Right); !neighborOpt || IsTransparent(*neighborOpt))
+					{
 						DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::LeftTopNear], corners[Nz::BoxCorner::RightTopNear], corners[Nz::BoxCorner::LeftTopFar], corners[Nz::BoxCorner::RightTopFar] });
+						if (blockData.isDoubleSided)
+							DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::RightTopNear], corners[Nz::BoxCorner::LeftTopNear], corners[Nz::BoxCorner::RightTopFar], corners[Nz::BoxCorner::LeftTopFar] });
+					}
 				}
 			}
 		}

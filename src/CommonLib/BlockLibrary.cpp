@@ -77,6 +77,7 @@ namespace tsom
 		
 		RegisterBlock("glass", {
 			.basePath = "blocks/glass",
+			.isDoubleSided = true,
 			.isTransparent = true
 		});
 	}
@@ -87,6 +88,7 @@ namespace tsom
 
 		auto& blockData = m_blocks.emplace_back();
 		blockData.hasCollisions = blockInfo.hasCollisions;
+		blockData.isDoubleSided = blockInfo.isDoubleSided;
 		blockData.isTransparent = blockInfo.isTransparent;
 		blockData.permeability = blockInfo.permeability;
 		blockData.name = name;
