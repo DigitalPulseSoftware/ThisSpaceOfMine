@@ -105,13 +105,13 @@ namespace tsom
 			entt::handle m_shipEntity;
 			std::optional<Nz::Uuid> m_playerUuid;
 			std::shared_ptr<Nz::Collider3D> m_combinedAreaColliders;
+			std::shared_ptr<bool> m_shouldSave;
 			tsl::hopscotch_map<ChunkIndices, std::shared_ptr<AreaUpdateJob>> m_areaUpdateJobs;
 			tsl::hopscotch_map<ChunkIndices, std::shared_ptr<TriggerUpdateJob>> m_triggerUpdateJobs;
 			tsl::hopscotch_map<ChunkIndices, ChunkData> m_chunkData;
 			tsl::hopscotch_set<Chunk*> m_invalidatedChunks;
 			ServerEnvironment* m_outsideEnvironment;
 			bool m_isCombinedAreaColliderInvalidated;
-			bool m_shouldSave;
 			int m_saveSlot;
 	};
 }

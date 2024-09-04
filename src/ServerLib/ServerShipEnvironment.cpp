@@ -35,9 +35,9 @@ namespace tsom
 	ServerShipEnvironment::ServerShipEnvironment(ServerInstance& serverInstance, const std::optional<Nz::Uuid>& playerUuid, int saveSlot) :
 	ServerEnvironment(serverInstance),
 	m_playerUuid(playerUuid),
+	m_shouldSave(std::make_shared<bool>(false)),
 	m_outsideEnvironment(nullptr),
 	m_isCombinedAreaColliderInvalidated(false),
-	m_shouldSave(false),
 	m_saveSlot(saveSlot)
 	{
 		auto& app = serverInstance.GetApplication();
@@ -83,7 +83,7 @@ namespace tsom
 		shipComponent.OnChunkUpdated.Connect([this](ChunkContainer*, Chunk* chunk, DirectionMask)
 		{
 			m_invalidatedChunks.emplace(chunk);
-			m_shouldSave = true;
+			*m_shouldSave = true;
 		});
 	}
 
@@ -243,12 +243,15 @@ namespace tsom
 		body["data"] = shipData.dump();
 
 		auto& playerToken = m_serverInstance.GetApplication().GetComponent<PlayerTokenAppComponent>();
-		playerToken.QueueRequest(*m_playerUuid, Nz::WebRequestMethod::Patch, fmt::format("/v1/player_ship/{}", m_saveSlot), body, [this, uuid = *m_playerUuid](Nz::UInt32 code, const std::string& body)
+		playerToken.QueueRequest(*m_playerUuid, Nz::WebRequestMethod::Patch, fmt::format("/v1/player_ship/{}", m_saveSlot), body, [shouldSave = m_shouldSave, uuid = *m_playerUuid](Nz::UInt32 code, const std::string& body)
 		{
-			if (code == 200)
-				m_shouldSave = false;
-			else
+			if (code != 200)
+			{
 				fmt::print(fg(fmt::color::red), "failed to save player {} ship ({}): {}\n", uuid.ToString(), code, body);
+				return;
+			}
+
+			*shouldSave = false;
 		});
 	}
 
