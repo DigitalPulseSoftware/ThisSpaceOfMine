@@ -47,10 +47,10 @@ namespace tsom
 
 			ChunkEntities(Nz::ApplicationBase& app, Nz::EnttWorld& world, ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary, NoInit);
 
-			void CreateChunkEntity(const ChunkIndices& chunkIndices, Chunk* chunk);
+			void CreateChunkEntity(const ChunkIndices& chunkIndices, Chunk& chunk);
 			void DestroyChunkEntity(const ChunkIndices& chunkIndices);
 			void FillChunks();
-			virtual UpdateJob* ProcessChunkUpdate(const Chunk* chunk, DirectionMask neighborMask);
+			virtual UpdateJob* ProcessChunkUpdate(const Chunk& chunk, DirectionMask neighborMask);
 			void OnParentNodeInvalidated(const Nz::Node* node);
 			inline void UpdateChunkEntity(const ChunkIndices& chunkIndices, DirectionMask neighborMask);
 

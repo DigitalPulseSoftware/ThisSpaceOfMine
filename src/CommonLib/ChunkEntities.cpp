@@ -32,7 +32,7 @@ namespace tsom
 	{
 		m_onChunkAdded.Connect(chunkContainer.OnChunkAdded, [this](ChunkContainer* /*emitter*/, Chunk* chunk)
 		{
-			CreateChunkEntity(chunk->GetIndices(), chunk);
+			CreateChunkEntity(chunk->GetIndices(), *chunk);
 		});
 
 		m_onChunkRemove.Connect(chunkContainer.OnChunkRemove, [this](ChunkContainer* /*emitter*/, Chunk* chunk)
@@ -109,7 +109,7 @@ namespace tsom
 		m_invalidatedChunks.clear();
 	}
 
-	void ChunkEntities::CreateChunkEntity(const ChunkIndices& chunkIndices, Chunk* chunk)
+	void ChunkEntities::CreateChunkEntity(const ChunkIndices& chunkIndices, Chunk& chunk)
 	{
 		entt::handle chunkEntity = m_world.CreateEntity();
 
@@ -121,7 +121,7 @@ namespace tsom
 		}
 
 		auto& chunkComponent = chunkEntity.emplace<ChunkComponent>();
-		chunkComponent.chunk = chunk;
+		chunkComponent.chunk = &chunk;
 		chunkComponent.parentEntity = m_parentEntity;
 
 		Nz::RigidBody3D::StaticSettings physicsSettings(nullptr);
@@ -132,7 +132,7 @@ namespace tsom
 		assert(!m_chunkEntities.contains(chunkIndices));
 		m_chunkEntities.insert_or_assign(chunkIndices, chunkEntity);
 
-		if (chunk->HasContent())
+		if (chunk.HasContent())
 			ProcessChunkUpdate(chunk, 0);
 	}
 
@@ -159,16 +159,16 @@ namespace tsom
 	{
 		m_chunkContainer.ForEachChunk([this](const ChunkIndices& chunkIndices, Chunk& chunk)
 		{
-			CreateChunkEntity(chunkIndices, &chunk);
+			CreateChunkEntity(chunkIndices, chunk);
 		});
 	}
 
-	auto ChunkEntities::ProcessChunkUpdate(const Chunk* chunk, DirectionMask /*neighborMask*/) -> UpdateJob*
+	auto ChunkEntities::ProcessChunkUpdate(const Chunk& chunk, DirectionMask /*neighborMask*/) -> UpdateJob*
 	{
-		assert(chunk->HasContent());
+		assert(chunk.HasContent());
 
 		// Try to cancel current update job to avoid useless work
-		if (auto it = m_updateJobs.find(chunk->GetIndices()); it != m_updateJobs.end())
+		if (auto it = m_updateJobs.find(chunk.GetIndices()); it != m_updateJobs.end())
 		{
 			UpdateJob& job = *it->second;
 			job.cancelled = true;
@@ -187,20 +187,20 @@ namespace tsom
 		};
 
 		auto& taskScheduler = m_application.GetComponent<Nz::TaskSchedulerAppComponent>();
-		taskScheduler.AddTask([this, chunk, updateJob]
+		taskScheduler.AddTask([this, updateJob, chunkPtr = chunk.shared_from_this()]
 		{
 			if (updateJob->cancelled)
 				return;
 
-			chunk->LockRead();
-			updateJob->collider = chunk->BuildCollider();
-			chunk->UnlockRead();
+			chunkPtr->LockRead();
+			updateJob->collider = chunkPtr->BuildCollider();
+			chunkPtr->UnlockRead();
 
 			updateJob->jobDone++;
 		});
 
 		UpdateJob* updateJobPtr = updateJob.get();
-		m_updateJobs.insert_or_assign(chunk->GetIndices(), std::move(updateJob));
+		m_updateJobs.insert_or_assign(chunk.GetIndices(), std::move(updateJob));
 
 		return updateJobPtr;
 	}

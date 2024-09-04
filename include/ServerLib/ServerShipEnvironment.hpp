@@ -54,15 +54,15 @@ namespace tsom
 			struct Area;
 			struct AreaList;
 
-			void StartAreaUpdate(const Chunk* chunk);
-			void StartTriggerUpdate(const Chunk* chunk, std::shared_ptr<AreaList> areaList);
+			void StartAreaUpdate(const Chunk& chunk);
+			void StartTriggerUpdate(const Chunk& chunk, std::shared_ptr<AreaList> areaList);
 
 			std::shared_ptr<Nz::Collider3D> BuildCombinedAreaCollider();
 			void UpdateProxyCollider();
 
-			static Area BuildArea(const Chunk* chunk, std::size_t firstBlockIndex, Nz::Bitset<Nz::UInt64>& remainingBlocks);
-			static std::shared_ptr<Nz::Collider3D> BuildTriggerCollider(const Chunk* chunk, const AreaList& areaList, const Nz::Vector3f& sizeMargin, std::atomic_bool& isCancelled);
-			static std::shared_ptr<AreaList> GenerateChunkAreas(const Chunk* chunk, std::atomic_bool& isCancelled);
+			static Area BuildArea(const Chunk& chunk, std::size_t firstBlockIndex, Nz::Bitset<Nz::UInt64>& remainingBlocks);
+			static std::shared_ptr<Nz::Collider3D> BuildTriggerCollider(const Chunk& chunk, const AreaList& areaList, const Nz::Vector3f& sizeMargin, std::atomic_bool& isCancelled);
+			static std::shared_ptr<AreaList> GenerateChunkAreas(const Chunk& chunk, std::atomic_bool& isCancelled);
 
 			struct Area
 			{

@@ -37,7 +37,7 @@ namespace tsom
 	using BlockIndices = Nz::Vector3i32;
 	using ChunkIndices = Nz::Vector3i32;
 
-	class TSOM_COMMONLIB_API Chunk
+	class TSOM_COMMONLIB_API Chunk : public std::enable_shared_from_this<Chunk>
 	{
 		public:
 			struct VertexAttributes;

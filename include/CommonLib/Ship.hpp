@@ -57,7 +57,7 @@ namespace tsom
 		private:
 			struct ChunkData
 			{
-				std::unique_ptr<FlatChunk> chunk;
+				std::shared_ptr<FlatChunk> chunk;
 
 				NazaraSlot(FlatChunk, OnBlockUpdated, onUpdated);
 				NazaraSlot(FlatChunk, OnReset, onReset);

@@ -65,6 +65,7 @@ namespace tsom
 		{
 			const ChunkIndices& indices = chunk->GetIndices();
 			m_chunkData.erase(indices);
+			m_invalidatedChunks.erase(chunk);
 
 			if (auto it = m_areaUpdateJobs.find(indices); it != m_areaUpdateJobs.end())
 			{
@@ -284,7 +285,7 @@ namespace tsom
 		{
 			UpdateProxyCollider();
 			for (Chunk* chunk : m_invalidatedChunks)
-				StartAreaUpdate(chunk);
+				StartAreaUpdate(*chunk);
 
 			m_invalidatedChunks.clear();
 		}
@@ -345,10 +346,10 @@ namespace tsom
 		ServerEnvironment::OnTick(elapsedTime);
 	}
 
-	void ServerShipEnvironment::StartAreaUpdate(const Chunk* chunk)
+	void ServerShipEnvironment::StartAreaUpdate(const Chunk& chunk)
 	{
 		// Try to cancel current update job to avoid useless work
-		if (auto it = m_areaUpdateJobs.find(chunk->GetIndices()); it != m_areaUpdateJobs.end())
+		if (auto it = m_areaUpdateJobs.find(chunk.GetIndices()); it != m_areaUpdateJobs.end())
 		{
 			AreaUpdateJob& job = *it->second;
 			job.isCancelled = true;
@@ -359,30 +360,30 @@ namespace tsom
 
 		std::shared_ptr<AreaUpdateJob> updateJob = std::make_shared<AreaUpdateJob>();
 
-		updateJob->applyFunc = [this, chunk](const ChunkIndices& chunkIndices, AreaUpdateJob&& updateJob)
+		updateJob->applyFunc = [this, chunkPtr = chunk.shared_from_this()](const ChunkIndices& chunkIndices, AreaUpdateJob&& updateJob)
 		{
 			assert(m_chunkData.contains(chunkIndices));
 			auto& chunkData = m_chunkData[chunkIndices];
 			chunkData.areas = std::move(updateJob.chunkArea);
-			StartTriggerUpdate(chunk, chunkData.areas);
+			StartTriggerUpdate(*chunkPtr, chunkData.areas);
 		};
 
-		taskScheduler.AddTask([chunk, updateJob]
+		taskScheduler.AddTask([updateJob, chunkPtr = chunk.shared_from_this()]
 		{
-			chunk->LockRead();
-			updateJob->chunkArea = GenerateChunkAreas(chunk, updateJob->isCancelled);
-			chunk->UnlockRead();
+			chunkPtr->LockRead();
+			updateJob->chunkArea = GenerateChunkAreas(*chunkPtr, updateJob->isCancelled);
+			chunkPtr->UnlockRead();
 
 			updateJob->isFinished = true;
 		});
 
-		m_areaUpdateJobs.insert_or_assign(chunk->GetIndices(), std::move(updateJob));
+		m_areaUpdateJobs.insert_or_assign(chunk.GetIndices(), std::move(updateJob));
 	}
 
-	void ServerShipEnvironment::StartTriggerUpdate(const Chunk* chunk, std::shared_ptr<AreaList> areaList)
+	void ServerShipEnvironment::StartTriggerUpdate(const Chunk& chunk, std::shared_ptr<AreaList> areaList)
 	{
 		// Try to cancel current update job to avoid useless work
-		if (auto it = m_triggerUpdateJobs.find(chunk->GetIndices()); it != m_triggerUpdateJobs.end())
+		if (auto it = m_triggerUpdateJobs.find(chunk.GetIndices()); it != m_triggerUpdateJobs.end())
 		{
 			TriggerUpdateJob& job = *it->second;
 			job.isCancelled = true;
@@ -391,8 +392,8 @@ namespace tsom
 		auto& app = m_serverInstance.GetApplication();
 		auto& taskScheduler = app.GetComponent<Nz::TaskSchedulerAppComponent>();
 
-		assert(m_chunkData.contains(chunk->GetIndices()));
-		ChunkData& chunkData = m_chunkData[chunk->GetIndices()];
+		assert(m_chunkData.contains(chunk.GetIndices()));
+		ChunkData& chunkData = m_chunkData[chunk.GetIndices()];
 
 		std::shared_ptr<TriggerUpdateJob> updateJob = std::make_shared<TriggerUpdateJob>();
 
@@ -427,17 +428,17 @@ namespace tsom
 			});
 		};
 
-		taskScheduler.AddTask([areaList, chunk, updateJob]
+		taskScheduler.AddTask([areaList, updateJob, chunkPtr = chunk.shared_from_this()]
 		{
-			chunk->LockRead();
-			updateJob->collider = BuildTriggerCollider(chunk, *areaList, Nz::Vector3f::Zero(), updateJob->isCancelled);
-			updateJob->expandedCollider = BuildTriggerCollider(chunk, *areaList, Nz::Vector3f(chunk->GetBlockSize() * 2.f), updateJob->isCancelled);
-			chunk->UnlockRead();
+			chunkPtr->LockRead();
+			updateJob->collider = BuildTriggerCollider(*chunkPtr, *areaList, Nz::Vector3f::Zero(), updateJob->isCancelled);
+			updateJob->expandedCollider = BuildTriggerCollider(*chunkPtr, *areaList, Nz::Vector3f(chunkPtr->GetBlockSize() * 2.f), updateJob->isCancelled);
+			chunkPtr->UnlockRead();
 
 			updateJob->isFinished = true;
 		});
 
-		m_triggerUpdateJobs.insert_or_assign(chunk->GetIndices(), std::move(updateJob));
+		m_triggerUpdateJobs.insert_or_assign(chunk.GetIndices(), std::move(updateJob));
 	}
 
 	std::shared_ptr<Nz::Collider3D> ServerShipEnvironment::BuildCombinedAreaCollider()
@@ -486,7 +487,7 @@ namespace tsom
 		rigidBody.SetMass(fullBlockCount);
 	}
 
-	auto ServerShipEnvironment::BuildArea(const Chunk* chunk, std::size_t firstBlockIndex, Nz::Bitset<Nz::UInt64>& remainingBlocks) -> Area
+	auto ServerShipEnvironment::BuildArea(const Chunk& chunk, std::size_t firstBlockIndex, Nz::Bitset<Nz::UInt64>& remainingBlocks) -> Area
 	{
 		Nz::Bitset<Nz::UInt64> areaBlocks(ShipChunkBlockCount, false);
 
@@ -502,20 +503,20 @@ namespace tsom
 
 			remainingBlocks[blockIndex] = false;
 
-			Nz::Vector3ui chunkSize = chunk->GetSize();
+			Nz::Vector3ui chunkSize = chunk.GetSize();
 
-			BlockIndex block = chunk->GetBlockContent(blockIndex);
+			BlockIndex block = chunk.GetBlockContent(blockIndex);
 			bool isEmpty = block == EmptyBlockIndex;
 
 			auto AddCandidateBlock = [&](const Nz::Vector3ui& blockIndices)
 			{
-				std::size_t blockIndex = chunk->GetBlockLocalIndex(blockIndices);
+				std::size_t blockIndex = chunk.GetBlockLocalIndex(blockIndices);
 				if (remainingBlocks[blockIndex])
 				{
 					if (!isEmpty)
 					{
 						// Non-empty blocks can look at other non-empty blocks
-						if (chunk->GetBlockContent(blockIndex) != EmptyBlockIndex)
+						if (chunk.GetBlockContent(blockIndex) != EmptyBlockIndex)
 							candidateBlocks.push_back(blockIndex);
 					}
 					else
@@ -523,7 +524,7 @@ namespace tsom
 				}
 			};
 
-			Nz::Vector3ui blockIndices = chunk->GetBlockLocalIndices(blockIndex);
+			Nz::Vector3ui blockIndices = chunk.GetBlockLocalIndices(blockIndex);
 			for (int zOffset = -1; zOffset <= 1; ++zOffset)
 			{
 				for (int yOffset = -1; yOffset <= 1; ++yOffset)
@@ -552,7 +553,7 @@ namespace tsom
 		return area;
 	}
 
-	std::shared_ptr<Nz::Collider3D> ServerShipEnvironment::BuildTriggerCollider(const Chunk* chunk, const AreaList& areaList, const Nz::Vector3f& sizeMargin, std::atomic_bool& isCancelled)
+	std::shared_ptr<Nz::Collider3D> ServerShipEnvironment::BuildTriggerCollider(const Chunk& chunk, const AreaList& areaList, const Nz::Vector3f& sizeMargin, std::atomic_bool& isCancelled)
 	{
 		std::vector<Nz::CompoundCollider3D::ChildCollider> childColliders;
 		for (const Area& area : areaList.areas)
@@ -563,11 +564,11 @@ namespace tsom
 			auto AddBox = [&](const Nz::Boxf& box)
 			{
 				auto& childCollider = childColliders.emplace_back();
-				childCollider.offset = box.GetCenter() * chunk->GetBlockSize();
-				childCollider.collider = std::make_shared<Nz::BoxCollider3D>(box.GetLengths() * chunk->GetBlockSize() + sizeMargin);
+				childCollider.offset = box.GetCenter() * chunk.GetBlockSize();
+				childCollider.collider = std::make_shared<Nz::BoxCollider3D>(box.GetLengths() * chunk.GetBlockSize() + sizeMargin);
 			};
 
-			FlatChunk::BuildCollider(chunk->GetSize(), area.blocks, AddBox);
+			FlatChunk::BuildCollider(chunk.GetSize(), area.blocks, AddBox);
 		}
 
 		if (childColliders.empty())
@@ -576,14 +577,14 @@ namespace tsom
 		return std::make_shared<Nz::CompoundCollider3D>(std::move(childColliders));
 	}
 
-	auto ServerShipEnvironment::GenerateChunkAreas(const Chunk* chunk, std::atomic_bool& isCancelled) -> std::shared_ptr<AreaList>
+	auto ServerShipEnvironment::GenerateChunkAreas(const Chunk& chunk, std::atomic_bool& isCancelled) -> std::shared_ptr<AreaList>
 	{
 		Nz::Bitset<Nz::UInt64> remainingBlocks(ShipChunkBlockCount, true);
 
 		// Find first candidate (= a random empty block)
 		auto FindFirstCandidate = [&]
 		{
-			const Nz::Bitset<Nz::UInt64>& collisionCellMask = chunk->GetCollisionCellMask();
+			const Nz::Bitset<Nz::UInt64>& collisionCellMask = chunk.GetCollisionCellMask();
 			for (std::size_t i = 0; i < collisionCellMask.GetBlockCount(); ++i)
 			{
 				Nz::UInt64 mask = collisionCellMask.GetBlock(i);

@@ -10,6 +10,6 @@ namespace tsom
 		const Chunk* chunk = m_chunkContainer.GetChunk(chunkIndices);
 		assert(chunk);
 
-		ProcessChunkUpdate(chunk, neighborMask);
+		ProcessChunkUpdate(*chunk, neighborMask);
 	}
 }

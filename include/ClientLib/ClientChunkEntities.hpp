@@ -50,8 +50,8 @@ namespace tsom
 				std::shared_ptr<Nz::Mesh> mesh;
 			};
 
-			std::shared_ptr<Nz::Mesh> BuildMesh(const Chunk* chunk);
-			ColliderModelUpdateJob* ProcessChunkUpdate(const Chunk* chunk, DirectionMask neighborMask) override;
+			std::shared_ptr<Nz::Mesh> BuildMesh(const Chunk& chunk);
+			ColliderModelUpdateJob* ProcessChunkUpdate(const Chunk& chunk, DirectionMask neighborMask) override;
 			void UpdateChunkDebugCollider(const ChunkIndices& chunkIndices);
 
 			std::shared_ptr<Nz::MaterialInstance> m_chunkMaterial;
