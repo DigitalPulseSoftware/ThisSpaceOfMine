@@ -166,7 +166,9 @@ namespace tsom
 
 				Nz::NodeComponent& playerNode = playerEntity.get<Nz::NodeComponent>();
 
-				EnvironmentTransform planetToShip(playerNode.GetPosition(), Nz::Quaternionf::Identity()); //< FIXME
+				GravityForce gravityForce = currentEnvironment->GetGravityController()->ComputeGravity(playerNode.GetPosition());
+
+				EnvironmentTransform planetToShip(playerNode.GetPosition(), Nz::Quaternionf::RotationBetween(Nz::Vector3f::Down(), gravityForce.direction));
 				shipEnv->LinkOutsideEnvironment(currentEnvironment, planetToShip);
 
 				m_player->SetOwnedShip(std::move(shipEnv));
@@ -217,7 +219,9 @@ namespace tsom
 					if (currentEnvironment != player->GetRootEnvironment())
 						return;
 
-					EnvironmentTransform planetToShip(playerNode.GetPosition(), Nz::Quaternionf::Identity()); //< FIXME
+					GravityForce gravityForce = currentEnvironment->GetGravityController()->ComputeGravity(playerNode.GetPosition());
+
+					EnvironmentTransform planetToShip(playerNode.GetPosition(), Nz::Quaternionf::RotationBetween(Nz::Vector3f::Down(), gravityForce.direction));
 					shipEnv->LinkOutsideEnvironment(currentEnvironment, planetToShip);
 
 					player->SetOwnedShip(std::move(shipEnv));
