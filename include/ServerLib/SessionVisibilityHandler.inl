@@ -21,6 +21,8 @@ namespace tsom
 			return false;
 
 		auto& chunkData = m_visibleChunks[networkId];
+		if (!chunkData.chunk)
+			return false;
 
 		if (entityOwner)
 			*entityOwner = chunkData.entityOwner;
