@@ -169,7 +169,14 @@ namespace tsom
 		m_entityIndices.erase(it);
 		m_entityIndices.emplace(newEntity, it.value());
 
-		m_environmentUpdates.push_back({ entityIndex, &newEnvironment });
+		auto envUpdateIt = std::find_if(m_environmentUpdates.begin(), m_environmentUpdates.end(), [&](const EnvironmentUpdate& envUpdate) { return envUpdate.newEntity == oldEntity; });
+		if (envUpdateIt != m_environmentUpdates.end())
+		{
+			envUpdateIt->newEntity = newEntity;
+			envUpdateIt->newEnvironment = &newEnvironment;
+		}
+		else
+			m_environmentUpdates.push_back({ newEntity, &newEnvironment });
 	}
 
 	void SessionVisibilityHandler::DispatchChunks(Nz::UInt16 tickIndex)
@@ -364,7 +371,7 @@ namespace tsom
 
 				auto it = std::find_if(m_environmentUpdates.begin(), m_environmentUpdates.end(), [&](const EnvironmentUpdate& environmentUpdate)
 				{
-					return environmentUpdate.entityId == entityId;
+					return environmentUpdate.newEntity == handle;
 				});
 				if (it != m_environmentUpdates.end())
 					m_environmentUpdates.erase(it);
@@ -424,11 +431,12 @@ namespace tsom
 		{
 			for (const EnvironmentUpdate& envUpdate : m_environmentUpdates)
 			{
+				EntityId entityIndex = Nz::Retrieve(m_entityIndices, envUpdate.newEntity);
 				EnvironmentId envIndex = Nz::Retrieve(m_environmentIndices, envUpdate.newEnvironment);
 
 				Packets::EntityEnvironmentUpdate envUpdatePacket;
 				envUpdatePacket.tickIndex = tickIndex;
-				envUpdatePacket.entity = envUpdate.entityId;
+				envUpdatePacket.entity = entityIndex;
 				envUpdatePacket.newEnvironmentId = envIndex;
 
 				m_networkSession->SendPacket(envUpdatePacket);
@@ -499,6 +507,20 @@ namespace tsom
 				destroyPacket.id = envId;
 				destroyPacket.tickIndex = tickIndex;
 				m_networkSession->SendPacket(destroyPacket);
+
+				// Remove environment update packets
+				for (auto it = m_environmentUpdates.begin(); it != m_environmentUpdates.end(); )
+				{
+					EnvironmentUpdate& envUpdate = *it;
+					if (envUpdate.newEnvironment != environment)
+					{
+						++it;
+						continue;
+					}
+
+					DestroyEntity(envUpdate.newEntity);
+					it = m_environmentUpdates.erase(it);
+				}
 			}
 
 			m_destroyedEnvironments.clear();

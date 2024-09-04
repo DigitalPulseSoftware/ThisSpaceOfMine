@@ -121,7 +121,7 @@ namespace tsom
 
 			struct EnvironmentUpdate
 			{
-				EntityId entityId;
+				entt::handle newEntity;
 				ServerEnvironment* newEnvironment;
 			};
 
