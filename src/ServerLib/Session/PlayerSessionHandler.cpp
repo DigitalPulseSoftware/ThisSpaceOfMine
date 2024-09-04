@@ -152,6 +152,14 @@ namespace tsom
 
 			ServerInstance& serverInstance = m_player->GetServerInstance();
 
+			ServerEnvironment* currentEnvironment = m_player->GetControlledEntityEnvironment();
+			if (currentEnvironment != m_player->GetRootEnvironment())
+				return;
+
+			Nz::NodeComponent& playerNode = playerEntity.get<Nz::NodeComponent>();
+			Nz::Vector3f spawnPos = playerNode.GetPosition();
+			Nz::Quaternionf spawnRot = Nz::Quaternionf::RotationBetween(Nz::Vector3f::Down(), playerNode.GetDown());
+
 			if (!m_player->IsAuthenticated())
 			{
 				m_player->SendChatMessage("warning: your ship won't be saved as you're not authenticated");
@@ -160,15 +168,7 @@ namespace tsom
 				auto shipEnv = std::make_unique<ServerShipEnvironment>(serverInstance, m_player->GetUuid(), slot);
 				shipEnv->GenerateShip(true);
 
-				ServerEnvironment* currentEnvironment = m_player->GetControlledEntityEnvironment();
-				if (currentEnvironment != m_player->GetRootEnvironment())
-					return;
-
-				Nz::NodeComponent& playerNode = playerEntity.get<Nz::NodeComponent>();
-
-				GravityForce gravityForce = currentEnvironment->GetGravityController()->ComputeGravity(playerNode.GetPosition());
-
-				EnvironmentTransform planetToShip(playerNode.GetPosition(), Nz::Quaternionf::RotationBetween(Nz::Vector3f::Down(), gravityForce.direction));
+				EnvironmentTransform planetToShip(spawnPos, spawnRot);
 				shipEnv->LinkOutsideEnvironment(currentEnvironment, planetToShip);
 
 				m_player->SetOwnedShip(std::move(shipEnv));
@@ -177,7 +177,7 @@ namespace tsom
 
 			PlayerTokenAppComponent& playerToken = serverInstance.GetApplication().GetComponent<PlayerTokenAppComponent>();
 
-			playerToken.QueueRequest(*m_player->GetUuid(), Nz::WebRequestMethod::Get, fmt::format("/v1/player_ship/{}", slot), {}, [&serverInstance, slot, player = m_player->CreateHandle(), playerEntity](Nz::UInt32 resultCode, const std::string& body)
+			playerToken.QueueRequest(*m_player->GetUuid(), Nz::WebRequestMethod::Get, fmt::format("/v1/player_ship/{}", slot), {}, [&serverInstance, slot, spawnPos, spawnRot, player = m_player->CreateHandle(), playerEntity](Nz::UInt32 resultCode, const std::string& body)
 			{
 				if (!player || !playerEntity)
 					return; //< player disconnected
@@ -219,9 +219,7 @@ namespace tsom
 					if (currentEnvironment != player->GetRootEnvironment())
 						return;
 
-					GravityForce gravityForce = currentEnvironment->GetGravityController()->ComputeGravity(playerNode.GetPosition());
-
-					EnvironmentTransform planetToShip(playerNode.GetPosition(), Nz::Quaternionf::RotationBetween(Nz::Vector3f::Down(), gravityForce.direction));
+					EnvironmentTransform planetToShip(spawnPos, spawnRot);
 					shipEnv->LinkOutsideEnvironment(currentEnvironment, planetToShip);
 
 					player->SetOwnedShip(std::move(shipEnv));
