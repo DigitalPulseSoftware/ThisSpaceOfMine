@@ -28,6 +28,8 @@ namespace tsom
 			void DeformNormalsAndTangents(Nz::SparsePtr<Nz::Vector3f> normals, Nz::SparsePtr<Nz::Vector3f> tangents, const Nz::Vector3f& referenceNormal, Nz::SparsePtr<const Nz::Vector3f> positions, std::size_t vertexCount) const override;
 			bool DeformPositions(Nz::SparsePtr<Nz::Vector3f> positions, std::size_t positionCount) const override;
 
+			inline float GetDeformationRadius() const;
+
 			inline void UpdateDeformationRadius(float deformationRadius);
 
 			DeformedChunk& operator=(const DeformedChunk&) = delete;

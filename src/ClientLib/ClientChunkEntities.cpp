@@ -4,6 +4,7 @@
 
 #include <ClientLib/ClientChunkEntities.hpp>
 #include <ClientLib/RenderConstants.hpp>
+#include <CommonLib/DeformedChunk.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <Nazara/Core/IndexBuffer.hpp>
@@ -46,6 +47,8 @@ namespace tsom
 		settings.AddValueProperty<float>("AlphaTestThreshold", 0.2f);
 		settings.AddValueProperty<float>("ShadowMapNormalOffset", 0.f);
 		settings.AddValueProperty<float>("ShadowPosScale", 1.f - 0.0025f);
+		settings.AddValueProperty<Nz::Vector3f>("DeformationOrigin", Nz::Vector3f::Zero());
+		settings.AddValueProperty<float>("DeformationRadius", 0.f);
 		settings.AddTextureProperty("BaseColorMap", Nz::ImageType::E2D_Array);
 		settings.AddTextureProperty("AlphaMap", Nz::ImageType::E2D_Array);
 		settings.AddTextureProperty("DetailMap", Nz::ImageType::E2D_Array);
@@ -56,6 +59,8 @@ namespace tsom
 		settings.AddPropertyHandler(std::make_unique<Nz::UniformValuePropertyHandler>("AlphaTestThreshold"));
 		settings.AddPropertyHandler(std::make_unique<Nz::UniformValuePropertyHandler>("ShadowMapNormalOffset"));
 		settings.AddPropertyHandler(std::make_unique<Nz::UniformValuePropertyHandler>("ShadowPosScale"));
+		settings.AddPropertyHandler(std::make_unique<Nz::UniformValuePropertyHandler>("DeformationOrigin"));
+		settings.AddPropertyHandler(std::make_unique<Nz::UniformValuePropertyHandler>("DeformationRadius"));
 		settings.AddTextureProperty("EmissiveMap", Nz::ImageType::E2D_Array);
 		settings.AddTextureProperty("HeightMap", Nz::ImageType::E2D_Array);
 		settings.AddTextureProperty("MetallicMap", Nz::ImageType::E2D_Array);
@@ -91,13 +96,13 @@ namespace tsom
 
 		auto chunkMaterial = std::make_shared<Nz::Material>(std::move(settings), "TSOM.BlockPBR");
 
-		m_chunkMaterial = chunkMaterial->Instantiate();
-		m_chunkMaterial->SetTextureProperty("BaseColorMap", blockLibrary.GetBaseColorTexture(), blockSampler);
-		m_chunkMaterial->SetTextureProperty("NormalMap", blockLibrary.GetNormalTexture(), blockSampler);
-		m_chunkMaterial->SetTextureProperty("DetailMap", blockLibrary.GetDetailTexture(), blockSampler);
-		m_chunkMaterial->SetValueProperty("ShadowPosScale", 1.f);
-		m_chunkMaterial->SetValueProperty("AlphaTest", true);
-		m_chunkMaterial->UpdatePassesStates({ "ShadowPass", "DistanceShadowPass" }, [](Nz::RenderStates& states)
+		m_flatChunkMaterial = chunkMaterial->Instantiate();
+		m_flatChunkMaterial->SetTextureProperty("BaseColorMap", blockLibrary.GetBaseColorTexture(), blockSampler);
+		m_flatChunkMaterial->SetTextureProperty("NormalMap", blockLibrary.GetNormalTexture(), blockSampler);
+		m_flatChunkMaterial->SetTextureProperty("DetailMap", blockLibrary.GetDetailTexture(), blockSampler);
+		m_flatChunkMaterial->SetValueProperty("ShadowPosScale", 1.f);
+		m_flatChunkMaterial->SetValueProperty("AlphaTest", true);
+		m_flatChunkMaterial->UpdatePassesStates({ "ShadowPass", "DistanceShadowPass" }, [](Nz::RenderStates& states)
 		{
 			states.frontFace = Nz::FrontFace::CounterClockwise;
 			states.depthBias = true;
@@ -189,7 +194,7 @@ namespace tsom
 		std::shared_ptr<ColliderModelUpdateJob> updateJob = std::make_shared<ColliderModelUpdateJob>();
 		updateJob->taskCount = 2;
 
-		updateJob->applyFunc = [this](const ChunkIndices& chunkIndices, UpdateJob&& job)
+		updateJob->applyFunc = [this, chunk](const ChunkIndices& chunkIndices, UpdateJob&& job)
 		{
 			ColliderModelUpdateJob&& colliderUpdateJob = static_cast<ColliderModelUpdateJob&&>(job);
 
@@ -207,7 +212,16 @@ namespace tsom
 				std::shared_ptr<Nz::GraphicalMesh> gfxMesh = Nz::GraphicalMesh::BuildFromMesh(*colliderUpdateJob.mesh);
 
 				std::shared_ptr<Nz::Model> model = std::make_shared<Nz::Model>(std::move(gfxMesh));
-				model->SetMaterial(0, m_chunkMaterial);
+
+				auto mat = m_flatChunkMaterial;
+				if (const DeformedChunk* deformedChunk = dynamic_cast<const DeformedChunk*>(chunk))
+				{
+					mat = mat->Clone();
+					mat->SetValueProperty("DeformationOrigin", -m_chunkContainer.GetChunkOffset(chunkIndices));
+					mat->SetValueProperty("DeformationRadius", deformedChunk->GetDeformationRadius());
+				}
+
+				model->SetMaterial(0, std::move(mat));
 
 				gfxComponent.AttachRenderable(std::move(model), tsom::Constants::RenderMask3D);
 			}

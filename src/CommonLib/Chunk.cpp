@@ -109,13 +109,13 @@ namespace tsom
 			}
 
 			// deform positions after generating UV
-			if (DeformPositions(vertexAttributes.position, pos.size()))
+			/*if (DeformPositions(vertexAttributes.position, pos.size()))
 			{
 				if (vertexAttributes.normal && vertexAttributes.tangent)
 					DeformNormalsAndTangents(vertexAttributes.normal, vertexAttributes.tangent, faceDirection, vertexAttributes.position, pos.size());
 				else if (vertexAttributes.normal)
 					DeformNormals(vertexAttributes.normal, faceDirection, vertexAttributes.position, pos.size());
-			}
+			}*/
 		};
 
 		// Find and lock all neighbor chunks to avoid discrepancies between chunks
@@ -243,11 +243,9 @@ namespace tsom
 
 	Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> Chunk::ComputeVoxelCorners(const Nz::Vector3ui& indices) const
 	{
-		float fX = indices.x * m_blockSize;
-		float fY = indices.y * m_blockSize;
-		float fZ = indices.z * m_blockSize;
+		Nz::Vector3f blockPos = (Nz::Vector3f(indices) - Nz::Vector3f(m_size) * 0.5f) * m_blockSize;
 
-		Nz::Boxf box(fX, fZ, fY, m_blockSize, m_blockSize, m_blockSize);
+		Nz::Boxf box(blockPos.x, blockPos.z, blockPos.y, m_blockSize, m_blockSize, m_blockSize);
 		return box.GetCorners();
 	}
 

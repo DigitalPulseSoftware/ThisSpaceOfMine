@@ -69,6 +69,12 @@ struct MaterialSettings
 
 	[tag("BaseColor")]
 	BaseColor: vec4[f32],
+
+	[tag("DeformationOrigin")]
+	DeformationOrigin: vec3[f32],
+
+	[tag("DeformationRadius")]
+	DeformationRadius: f32
 }
 
 // TODO: Add enums
@@ -361,6 +367,24 @@ fn VertBillboard(input: VertIn) -> VertOut
 	return output;
 }
 
+fn DeformPosition(position: vec3[f32], deformationCenter: vec3[f32], deformationRadius: f32) -> vec3[f32]
+{
+	let distToCenter = max(
+		max(abs(position.x - deformationCenter.x),
+		    abs(position.y - deformationCenter.y)),
+		abs(position.z - deformationCenter.z)
+	);
+
+	let innerReductionSize = max(distToCenter - deformationRadius, 0.0);
+	let mins = deformationCenter - innerReductionSize.xxx;
+	let maxs = mins + innerReductionSize.xxx * 2.0;
+
+	let innerPos = clamp(position, mins, maxs);
+	let normal = normalize(position - innerPos);
+
+	return innerPos + normal * min(deformationRadius, distToCenter);
+}
+
 [entry(vert), cond(!Billboard)]
 fn VertMain(input: VertIn) -> VertOut
 {
@@ -394,6 +418,10 @@ fn VertMain(input: VertIn) -> VertOut
 		const if (HasNormal)
 			normal = input.normal;
 	}
+
+	// Apply deformation
+	if (settings.DeformationRadius > 0.0)
+		pos = DeformPosition(pos, settings.DeformationOrigin, settings.DeformationRadius);
 
 	const if (ShadowPass)
 	{

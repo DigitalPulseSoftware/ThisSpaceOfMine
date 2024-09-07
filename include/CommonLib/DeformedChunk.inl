@@ -11,6 +11,11 @@ namespace tsom
 	{
 	}
 
+	inline float DeformedChunk::GetDeformationRadius() const
+	{
+		return m_deformationRadius;
+	}
+
 	inline void DeformedChunk::UpdateDeformationRadius(float deformationRadius)
 	{
 		m_deformationRadius = deformationRadius;

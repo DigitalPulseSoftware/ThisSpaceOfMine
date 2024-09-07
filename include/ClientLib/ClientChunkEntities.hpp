@@ -54,7 +54,7 @@ namespace tsom
 			ColliderModelUpdateJob* ProcessChunkUpdate(const Chunk* chunk, DirectionMask neighborMask) override;
 			void UpdateChunkDebugCollider(const ChunkIndices& chunkIndices);
 
-			std::shared_ptr<Nz::MaterialInstance> m_chunkMaterial;
+			std::shared_ptr<Nz::MaterialInstance> m_flatChunkMaterial;
 			std::shared_ptr<Nz::VertexDeclaration> m_chunkVertexDeclaration;
 	};
 }

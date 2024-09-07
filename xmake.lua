@@ -219,6 +219,7 @@ target("TSOMGame", function ()
 	add_headerfiles("src/Game/**.hpp", "src/Game/**.inl")
 	add_files("src/Game/**.cpp")
 	add_installfiles("gameconfig.lua.default", { prefixdir = "bin" })
+	add_extrafiles("assets/shaders/**.nzsl")
 
 	add_rpathdirs("@executable_path")
 
