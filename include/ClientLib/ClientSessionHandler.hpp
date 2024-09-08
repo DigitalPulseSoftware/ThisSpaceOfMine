@@ -8,9 +8,11 @@
 #define TSOM_CLIENTLIB_CLIENTSESSIONHANDLER_HPP
 
 #include <ClientLib/Export.hpp>
+#include <CommonLib/EntityRegistry.hpp>
 #include <CommonLib/EnvironmentTransform.hpp>
 #include <CommonLib/SessionHandler.hpp>
 #include <CommonLib/Protocol/Packets.hpp>
+#include <CommonLib/Scripting/ScriptingContext.hpp>
 #include <Nazara/Core/Node.hpp>
 #include <NazaraUtils/Signal.hpp>
 #include <entt/entt.hpp>
@@ -41,6 +43,7 @@ namespace tsom
 
 			inline entt::handle GetControlledEntity() const;
 			inline const GravityController* GetGravityController(std::size_t environmentIndex) const;
+			inline ScriptingContext& GetScriptingContext();
 
 			void HandlePacket(Packets::AuthResponse&& authResponse);
 			void HandlePacket(Packets::ChatMessage&& chatMessage);
@@ -57,6 +60,7 @@ namespace tsom
 			void HandlePacket(Packets::EnvironmentDestroy&& envDestroy);
 			void HandlePacket(Packets::EnvironmentUpdate&& envUpdate);
 			void HandlePacket(Packets::GameData&& gameData);
+			void HandlePacket(Packets::NetworkStrings&& networkStrings);
 			void HandlePacket(Packets::PlayerJoin&& playerJoin);
 			void HandlePacket(Packets::PlayerLeave&& playerLeave);
 			void HandlePacket(Packets::PlayerNameUpdate&& playerNameUpdate);
@@ -118,6 +122,8 @@ namespace tsom
 			Nz::UInt16 m_lastTickIndex;
 			Nz::UInt16 m_ownPlayerIndex;
 			Packets::Helper::EnvironmentId m_currentEnvironmentIndex;
+			ScriptingContext m_scriptingContext;
+			EntityRegistry m_entityRegistry;
 			InputIndex m_lastInputIndex;
 	};
 }

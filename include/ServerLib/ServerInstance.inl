@@ -86,6 +86,16 @@ namespace tsom
 		return m_defaultSpawnpoint;
 	}
 
+	inline EntityRegistry& ServerInstance::GetEntityRegistry()
+	{
+		return m_entityRegistry;
+	}
+
+	inline const EntityRegistry& ServerInstance::GetEntityRegistry() const
+	{
+		return m_entityRegistry;
+	}
+
 	inline ServerPlayer* ServerInstance::GetPlayer(PlayerIndex playerIndex)
 	{
 		return m_players.RetrieveFromIndex(playerIndex);
