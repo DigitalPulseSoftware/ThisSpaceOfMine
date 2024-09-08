@@ -26,22 +26,22 @@ namespace tsom
 			auto& triggerNode = view.get<Nz::NodeComponent>(entity);
 			m_ownerEnvironment->ForEachPlayer([&](ServerPlayer& player)
 			{
+				if (player.GetControlledEntityEnvironment() != m_ownerEnvironment)
+					return;
+
 				entt::handle playerEntity = player.GetControlledEntity();
 				if (!playerEntity)
 					return;
 
 				Nz::Vector3f playerPosition = playerEntity.get<Nz::NodeComponent>().GetPosition();
 
-				if (player.GetControlledEntityEnvironment() == m_ownerEnvironment)
+				Nz::Vector3f localPlayerPos = triggerNode.ToLocalPosition(playerPosition);
+				// Use AABB as a cheap test
+				if (enterTrigger.aabb.Contains(localPlayerPos))
 				{
-					Nz::Vector3f localPlayerPos = triggerNode.ToLocalPosition(playerPosition);
-					// Use AABB as a cheap test
-					if (enterTrigger.aabb.Contains(localPlayerPos))
-					{
-						localPlayerPos -= enterTrigger.entryTrigger->GetCenterOfMass(); //< https://jrouwe.github.io/JoltPhysics/index.html#center-of-mass
-						if (enterTrigger.entryTrigger->CollisionQuery(localPlayerPos))
-							player.MoveEntityToEnvironment(enterTrigger.targetEnvironment);
-					}
+					localPlayerPos -= enterTrigger.entryTrigger->GetCenterOfMass(); //< https://jrouwe.github.io/JoltPhysics/index.html#center-of-mass
+					if (enterTrigger.entryTrigger->CollisionQuery(localPlayerPos))
+						player.MoveEntityToEnvironment(enterTrigger.targetEnvironment);
 				}
 			});
 		}
