@@ -9,7 +9,9 @@
 
 #include <CommonLib/BlockLibrary.hpp>
 #include <CommonLib/ChunkEntities.hpp>
+#include <CommonLib/EntityRegistry.hpp>
 #include <CommonLib/NetworkSessionManager.hpp>
+#include <CommonLib/Scripting/ScriptingContext.hpp>
 #include <ServerLib/ServerPlayer.hpp>
 #include <Nazara/Core/Clock.hpp>
 #include <NazaraUtils/Bitset.hpp>
@@ -61,6 +63,8 @@ namespace tsom
 			inline const BlockLibrary& GetBlockLibrary() const;
 			inline const std::array<std::uint8_t, 32>& GetConnectionTokenEncryptionKey() const;
 			inline const Spawnpoint& GetDefaultSpawnpoint() const;
+			inline EntityRegistry& GetEntityRegistry();
+			inline const EntityRegistry& GetEntityRegistry() const;
 			inline ServerPlayer* GetPlayer(PlayerIndex playerIndex);
 			inline const ServerPlayer* GetPlayer(PlayerIndex playerIndex) const;
 			inline Nz::Time GetTickDuration() const;
@@ -115,6 +119,8 @@ namespace tsom
 			Nz::UInt16 m_tickIndex;
 			Nz::ApplicationBase& m_application;
 			BlockLibrary m_blockLibrary;
+			ScriptingContext m_scriptingContext;
+			EntityRegistry m_entityRegistry;
 			Spawnpoint m_defaultSpawnpoint;
 			bool m_pauseWhenEmpty;
 	};

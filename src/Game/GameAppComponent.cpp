@@ -161,8 +161,17 @@ namespace tsom
 			return false;
 		}
 
+		std::filesystem::path scriptPath = Nz::Utf8Path("scripts");
+		if (!std::filesystem::is_directory(scriptPath))
+		{
+			fmt::print(fg(fmt::color::red), "scripts are missing!\n");
+			app.Quit();
+			return false;
+		}
+
 		auto& filesystem = app.GetComponent<Nz::FilesystemAppComponent>();
 		filesystem.Mount("assets", assetPath);
+		filesystem.Mount("scripts", scriptPath);
 
 		Nz::Graphics* graphics = Nz::Graphics::Instance();
 		graphics->GetShaderModuleResolver()->RegisterModuleDirectory(Nz::Utf8Path("assets/shaders"), true);

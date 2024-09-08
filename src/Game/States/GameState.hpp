@@ -87,6 +87,7 @@ namespace tsom
 				Nz::EulerAnglesf inputRotation;
 			};
 
+			std::optional<ConsoleExecutor> m_consoleExecutor;
 			std::shared_ptr<DebugOverlay> m_debugOverlay;
 			std::unique_ptr<ClientChunkEntities> m_planetEntities;
 			std::vector<InputRotation> m_predictedInputRotations;
@@ -103,7 +104,6 @@ namespace tsom
 			Nz::Time m_tickDuration;
 			Nz::TimerManager m_timerManager;
 			Nz::UInt8 m_nextInputIndex;
-			ConsoleExecutor m_consoleExecutor;
 			BlockSelectionBar* m_blockSelectionBar;
 			Chatbox* m_chatBox;
 			Console* m_console;

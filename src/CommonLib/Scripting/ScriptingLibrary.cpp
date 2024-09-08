@@ -2,6 +2,9 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
+#include <CommonLib/Scripting/ScriptingLibrary.hpp>
+
 namespace tsom
 {
+	ScriptingLibrary::~ScriptingLibrary() = default;
 }

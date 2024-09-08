@@ -2,6 +2,7 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
+#include <ClientLib/ClientAssetLibraryAppComponent.hpp>
 #include <CommonLib/UpdaterAppComponent.hpp>
 #include <Game/GameAppComponent.hpp>
 #include <Game/GameConfigAppComponent.hpp>
@@ -39,6 +40,7 @@ int GameMain(int argc, char* argv[])
 	app.AddComponent<Nz::WindowingAppComponent>();
 
 	// Game setup
+	app.AddComponent<tsom::ClientAssetLibraryAppComponent>();
 	auto& gameConfig = app.AddComponent<tsom::GameConfigAppComponent>();
 
 	// Create GameAppComponent before WebService for destruction order

@@ -11,12 +11,17 @@
 #include <ClientLib/Components/ChunkNetworkMapComponent.hpp>
 #include <ClientLib/Components/EnvironmentComponent.hpp>
 #include <ClientLib/Components/MovementInterpolationComponent.hpp>
+#include <ClientLib/Scripting/ClientEntityScriptingLibrary.hpp>
+#include <ClientLib/Scripting/ClientScriptingLibrary.hpp>
 #include <CommonLib/GameConstants.hpp>
+#include <CommonLib/NetworkSession.hpp>
 #include <CommonLib/PhysicsConstants.hpp>
 #include <CommonLib/Ship.hpp>
 #include <CommonLib/Components/EntityOwnerComponent.hpp>
 #include <CommonLib/Components/PlanetComponent.hpp>
 #include <CommonLib/Components/ShipComponent.hpp>
+#include <CommonLib/Scripting/EntityScriptingLibrary.hpp>
+#include <CommonLib/Scripting/MathScriptingLibrary.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/EnttWorld.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
@@ -53,11 +58,19 @@ namespace tsom
 	m_world(world),
 	m_blockLibrary(blockLibrary),
 	m_ownPlayerIndex(InvalidPlayerIndex),
-	m_currentEnvironmentIndex(std::numeric_limits<Packets::Helper::EnvironmentId>::max()),
+	m_currentEnvironmentIndex(Nz::MaxValue()),
+	m_scriptingContext(app),
 	m_lastInputIndex(0)
 	{
 		SetupHandlerTable(this);
 		SetupAttributeTable(s_packetAttributes);
+
+		m_scriptingContext.RegisterLibrary<MathScriptingLibrary>();
+		m_scriptingContext.RegisterLibrary<ClientScriptingLibrary>(m_app);
+		m_scriptingContext.LoadDirectory("scripts/assets");
+
+		m_scriptingContext.RegisterLibrary<ClientEntityScriptingLibrary>(m_entityRegistry);
+		m_scriptingContext.LoadDirectory("scripts/entities");
 	}
 
 	ClientSessionHandler::~ClientSessionHandler()
@@ -227,10 +240,8 @@ namespace tsom
 			auto& entityEnv = entity.emplace<EnvironmentComponent>();
 			entityEnv.environmentIndex = entityData.environmentId;
 
-			std::string entityTypes;
 			if (entityData.planet)
 			{
-				if (!entityTypes.empty())
 					entityTypes += ", ";
 
 				entityTypes += "planet";
@@ -242,17 +253,14 @@ namespace tsom
 			}
 
 			if (entityData.playerControlled)
-			{
 				if (!entityTypes.empty())
 					entityTypes += ", ";
 
 				entityTypes += "player";
 				SetupEntity(entity, std::move(entityData.playerControlled.value()));
-			}
 
 			if (entityData.ship)
 			{
-				if (!entityTypes.empty())
 					entityTypes += ", ";
 
 				entityTypes += "ship";
@@ -263,7 +271,6 @@ namespace tsom
 				environment.gravityController = &shipComponent;
 			}
 
-			if (!entityTypes.empty())
 				entityTypes = fmt::format(" ({})", entityTypes);
 
 			fmt::print("Created entity {} in environment {}{}\n", entityData.entityId, entityData.environmentId, entityTypes);
@@ -383,6 +390,7 @@ namespace tsom
 		}
 	}
 
+	void ClientSessionHandler::HandlePacket(Packets::NetworkStrings&& networkStrings)
 	void ClientSessionHandler::HandlePacket(Packets::PlayerJoin&& playerJoin)
 	{
 		if (playerJoin.index >= m_players.size())

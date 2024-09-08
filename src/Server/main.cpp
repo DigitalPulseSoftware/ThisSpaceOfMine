@@ -10,6 +10,7 @@
 #include <ServerLib/Session/InitialSessionHandler.hpp>
 #include <Nazara/Core/Application.hpp>
 #include <Nazara/Core/Core.hpp>
+#include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <Nazara/Core/SignalHandlerAppComponent.hpp>
 #include <Nazara/Core/TaskSchedulerAppComponent.hpp>
 #include <Nazara/Network/Network.hpp>
@@ -29,6 +30,16 @@ int ServerMain(int argc, char* argv[])
 	app.AddComponent<tsom::PlayerTokenAppComponent>();
 	auto& configAppComponent = app.AddComponent<tsom::ServerConfigAppComponent>();
 	auto& worldAppComponent = app.AddComponent<tsom::ServerInstanceAppComponent>();
+
+	std::filesystem::path scriptPath = Nz::Utf8Path("scripts");
+	if (!std::filesystem::is_directory(scriptPath))
+	{
+		fmt::print(fg(fmt::color::red), "scripts are missing!\n");
+		return EXIT_FAILURE;
+	}
+
+	auto& filesystem = app.AddComponent<Nz::FilesystemAppComponent>();
+	filesystem.Mount("scripts", scriptPath);
 
 	auto& config = configAppComponent.GetConfig();
 

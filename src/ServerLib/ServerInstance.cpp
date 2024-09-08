@@ -5,8 +5,11 @@
 #include <ServerLib/ServerInstance.hpp>
 #include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/Planet.hpp>
+#include <CommonLib/Scripting/EntityScriptingLibrary.hpp>
+#include <CommonLib/Scripting/MathScriptingLibrary.hpp>
 #include <ServerLib/ServerPlanetEnvironment.hpp>
 #include <ServerLib/ServerShipEnvironment.hpp>
+#include <ServerLib/Scripting/ServerScriptingLibrary.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/File.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
@@ -28,8 +31,13 @@ namespace tsom
 	m_tickDuration(Constants::TickDuration),
 	m_tickIndex(0),
 	m_application(application),
+	m_scriptingContext(application),
 	m_pauseWhenEmpty(config.pauseWhenEmpty)
 	{
+		m_scriptingContext.RegisterLibrary<MathScriptingLibrary>();
+		m_scriptingContext.RegisterLibrary<EntityScriptingLibrary>(m_entityRegistry);
+		m_scriptingContext.RegisterLibrary<ServerScriptingLibrary>(m_application);
+		m_scriptingContext.LoadDirectory("scripts/entities");
 	}
 
 	ServerInstance::~ServerInstance()

@@ -7,16 +7,18 @@
 #ifndef TSOM_COMMONLIB_CONSOLEEXECUTOR_HPP
 #define TSOM_COMMONLIB_CONSOLEEXECUTOR_HPP
 
-#include <NazaraUtils/Signal.hpp>
 #include <CommonLib/Export.hpp>
-#include <sol/sol.hpp>
+#include <NazaraUtils/Signal.hpp>
+#include <string>
 
 namespace tsom
 {
+	class ScriptingContext;
+
 	class TSOM_COMMONLIB_API ConsoleExecutor
 	{
 		public:
-			ConsoleExecutor();
+			ConsoleExecutor(ScriptingContext& scriptingContext);
 			ConsoleExecutor(const ConsoleExecutor&) = delete;
 			ConsoleExecutor(ConsoleExecutor&&) = delete;
 			~ConsoleExecutor() = default;
@@ -30,7 +32,7 @@ namespace tsom
 			NazaraSignal(OnOutput, ConsoleExecutor* /*executor*/, std::string_view /*output*/);
 
 		private:
-			sol::state m_state;
+			ScriptingContext& m_scriptingContext;
 	};
 }
 

@@ -235,17 +235,18 @@ namespace tsom
 		m_console->SetBackgroundColor(Nz::Color(0.f, 0.f, 0.33f, 0.5f));
 		m_console->SetRenderLayerOffset(1);
 
+		m_consoleExecutor.emplace(stateData.sessionHandler->GetScriptingContext());
 		m_console->OnCommand.Connect([this](std::string_view command)
 		{
-			m_consoleExecutor.Execute(command, "client console");
+			m_consoleExecutor->Execute(command, "client console");
 		});
 
-		m_consoleExecutor.OnError.Connect([this](ConsoleExecutor* /*executor*/, std::string_view error)
+		m_consoleExecutor->OnError.Connect([this](ConsoleExecutor* /*executor*/, std::string_view error)
 		{
 			m_console->PrintMessage(std::string(error), Nz::Color::Red());
 		});
 
-		m_consoleExecutor.OnOutput.Connect([this](ConsoleExecutor* /*executor*/, std::string_view error)
+		m_consoleExecutor->OnOutput.Connect([this](ConsoleExecutor* /*executor*/, std::string_view error)
 		{
 			m_console->PrintMessage(std::string(error));
 		});

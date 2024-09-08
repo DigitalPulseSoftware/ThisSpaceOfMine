@@ -19,6 +19,11 @@ namespace tsom
 		return m_environments[environmentIndex]->gravityController;
 	}
 
+	inline ScriptingContext& ClientSessionHandler::GetScriptingContext()
+	{
+		return m_scriptingContext;
+	}
+
 	inline auto ClientSessionHandler::FetchPlayerInfo(PlayerIndex playerIndex) -> PlayerInfo*
 	{
 		if (playerIndex >= m_players.size() || !m_players[playerIndex])

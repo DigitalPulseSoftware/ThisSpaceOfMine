@@ -20,6 +20,7 @@ add_requires("libcurl", { configs = { shared = true }, system = false })
 add_requires(
 	"concurrentqueue",
 	"cppcodec",
+	"frozen",
 	"libsodium",
 	"lz4",
 	"hopscotch-map",
@@ -86,7 +87,7 @@ target("CommonLib", function ()
 
 	add_packages("nazaraengine", { components = { "physics3d", "network" }, public = true })
 	add_packages("concurrentqueue", "cppcodec", "semver", "fmt", "hopscotch-map", "nlohmann_json", "sol2", { public = true })
-	add_packages("libsodium", "lz4", "perlinnoise")
+	add_packages("frozen", "libsodium", "lz4", "perlinnoise")
 
 	if is_plat("windows") then
 		add_packages("stackwalker")
@@ -186,7 +187,6 @@ std::string_view BuildCommitDate = "%s";
 			values = {targetversion:shortstr(), buildconf, system, branch, commitHash, commitDate}
 		})
 	end)
-
 end)
 
 target("ServerLib", function ()
@@ -214,6 +214,7 @@ target("ClientLib", function ()
 	add_headerfiles("src/ClientLib/**.hpp", "src/ClientLib/**.inl", { install = false })
 	add_files("src/ClientLib/**.cpp")
 	add_deps("CommonLib", { public = true })
+	add_packages("frozen")
 	add_rules("inherit_version")
 
 	after_load(function (target)

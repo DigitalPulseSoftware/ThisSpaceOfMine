@@ -4,4 +4,8 @@
 
 namespace tsom
 {
+	inline ClientScriptingLibrary::ClientScriptingLibrary(Nz::ApplicationBase& app) :
+	m_app(app)
+	{
+	}
 }
