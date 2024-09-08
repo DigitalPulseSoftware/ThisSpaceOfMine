@@ -50,6 +50,8 @@ namespace tsom
 			m_inputArea->SetText(std::string(CommandPrefix));
 
 			m_historyPosition = m_commandHistory.size();
+			m_commandHistory.push_back(std::string(inputCmd));
+
 			PrintMessage(std::move(input)); //< With the input prefix
 
 			OnCommand(inputCmd);
@@ -100,10 +102,11 @@ namespace tsom
 			if (m_commandHistory.empty())
 				return;
 
-			if (++m_historyPosition >= m_commandHistory.size())
-				m_historyPosition = 0;
-
-			m_inputArea->SetText(fmt::format("{}{}", CommandPrefix, m_commandHistory[m_historyPosition]));
+			m_historyPosition = std::min(m_historyPosition + 1, m_commandHistory.size());
+			if (m_historyPosition < m_commandHistory.size())
+				m_inputArea->SetText(fmt::format("{}{}", CommandPrefix, m_commandHistory[m_historyPosition]));
+			else
+				m_inputArea->SetText(std::string(CommandPrefix));
 		});
 	}
 
