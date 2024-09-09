@@ -17,7 +17,7 @@ namespace tsom
 		return packet;
 	}
 
-	void NetworkStringStore::FillStore(Nz::UInt32 firstId, std::vector<std::string> strings)
+	void NetworkStringStore::FillStore(Nz::UInt32 firstId, std::vector<SecuredString<1024>> strings)
 	{
 		assert(firstId <= m_strings.size());
 
@@ -28,7 +28,7 @@ namespace tsom
 		m_strings.erase(m_strings.begin() + firstId, m_strings.end());
 
 		m_strings.reserve(m_strings.size() - firstId + strings.size());
-		for (std::string& str : strings)
-			RegisterString(std::move(str));
+		for (SecuredString<1024>& str : strings)
+			RegisterString(std::move(str).Str());
 	}
 }

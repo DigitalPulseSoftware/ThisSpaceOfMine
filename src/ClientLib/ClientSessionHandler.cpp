@@ -17,6 +17,7 @@
 #include <CommonLib/NetworkSession.hpp>
 #include <CommonLib/PhysicsConstants.hpp>
 #include <CommonLib/Ship.hpp>
+#include <CommonLib/Components/EntityClassComponent.hpp>
 #include <CommonLib/Components/EntityOwnerComponent.hpp>
 #include <CommonLib/Components/PlanetComponent.hpp>
 #include <CommonLib/Components/ShipComponent.hpp>
@@ -240,11 +241,26 @@ namespace tsom
 			auto& entityEnv = entity.emplace<EnvironmentComponent>();
 			entityEnv.environmentIndex = entityData.environmentId;
 
+			std::string entityClassName = GetSession()->GetStringStore().GetString(entityData.entityClass);
+			if (const EntityClass* entityClass = m_entityRegistry.FindClass(entityClassName))
+			{
+				entityClass->SetupEntity(entity);
+				auto& entityClassData = entity.get<EntityClassComponent>();
+
+				std::size_t networkedPropertyIndex = 0;
+				for (Nz::UInt32 i = 0; i < entityClass->GetPropertyCount(); ++i)
+				{
+					if (entityClass->GetProperty(i).isNetworked)
+						entityClassData.properties[i] = entityData.properties[networkedPropertyIndex++];
+				}
+
+				entityClass->ActivateEntity(entity);
+			}
+			else
+				fmt::print(fg(fmt::color::red), "unknown entity class {}\n", entityClassName);
+
 			if (entityData.planet)
 			{
-					entityTypes += ", ";
-
-				entityTypes += "planet";
 				SetupEntity(entity, std::move(entityData.planet.value()));
 
 				// TEMP
@@ -253,17 +269,10 @@ namespace tsom
 			}
 
 			if (entityData.playerControlled)
-				if (!entityTypes.empty())
-					entityTypes += ", ";
-
-				entityTypes += "player";
 				SetupEntity(entity, std::move(entityData.playerControlled.value()));
 
 			if (entityData.ship)
 			{
-					entityTypes += ", ";
-
-				entityTypes += "ship";
 				SetupEntity(entity, std::move(entityData.ship.value()));
 
 				// TEMP
@@ -271,9 +280,7 @@ namespace tsom
 				environment.gravityController = &shipComponent;
 			}
 
-				entityTypes = fmt::format(" ({})", entityTypes);
-
-			fmt::print("Created entity {} in environment {}{}\n", entityData.entityId, entityData.environmentId, entityTypes);
+			fmt::print("Created entity {} in environment {} ({})\n", entityData.entityId, entityData.environmentId, entityClassName);
 		}
 	}
 
@@ -391,6 +398,10 @@ namespace tsom
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::NetworkStrings&& networkStrings)
+	{
+		GetSession()->GetStringStore().FillStore(networkStrings.startId, std::move(networkStrings.strings));
+	}
+
 	void ClientSessionHandler::HandlePacket(Packets::PlayerJoin&& playerJoin)
 	{
 		if (playerJoin.index >= m_players.size())

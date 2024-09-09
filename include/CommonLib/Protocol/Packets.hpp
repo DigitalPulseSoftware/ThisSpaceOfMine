@@ -9,6 +9,7 @@
 
 #include <CommonLib/Export.hpp>
 #include <CommonLib/BlockIndex.hpp>
+#include <CommonLib/EntityProperties.hpp>
 #include <CommonLib/EnvironmentTransform.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/PlayerIndex.hpp>
@@ -193,6 +194,8 @@ namespace tsom
 				std::optional<Helper::PlanetData> planet;
 				std::optional<Helper::PlayerControlledData> playerControlled;
 				std::optional<Helper::ShipData> ship;
+				std::vector<EntityProperty> properties;
+				CompressedUnsigned<Nz::UInt32> entityClass;
 			};
 
 			Nz::UInt16 tickIndex;

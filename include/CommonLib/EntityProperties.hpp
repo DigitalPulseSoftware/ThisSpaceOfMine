@@ -8,6 +8,7 @@
 #define TSOM_COMMONLIB_ENTITYPROPERTIES_HPP
 
 #include <CommonLib/Export.hpp>
+#include <Nazara/Core/Serialization.hpp>
 #include <Nazara/Math/Rect.hpp>
 #include <Nazara/Math/Vector2.hpp>
 #include <Nazara/Math/Vector3.hpp>
@@ -109,6 +110,12 @@ namespace tsom
 	TSOM_COMMONLIB_API std::pair<EntityPropertyType, bool> ExtractPropertyType(const EntityProperty& value);
 	TSOM_COMMONLIB_API EntityPropertyType ParseEntityPropertyType(std::string_view str);
 	TSOM_COMMONLIB_API std::string_view ToString(EntityPropertyType propertyType);
+}
+
+namespace Nz
+{
+	TSOM_COMMONLIB_API bool Deserialize(SerializationContext& context, tsom::EntityProperty* entityProperty, TypeTag<tsom::EntityProperty>);
+	TSOM_COMMONLIB_API bool Serialize(SerializationContext& context, const tsom::EntityProperty& entityProperty, TypeTag<tsom::EntityProperty>);
 }
 
 #include <CommonLib/EntityProperties.inl>

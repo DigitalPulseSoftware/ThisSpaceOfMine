@@ -28,12 +28,15 @@ namespace tsom
 			EntityClass(EntityClass&&) noexcept = default;
 			~EntityClass() = default;
 
+			void ActivateEntity(entt::handle entity) const;
+
 			inline Nz::UInt32 FindProperty(std::string_view propertyName) const;
 
 			inline const std::string& GetName() const;
 			inline const Property& GetProperty(Nz::UInt32 propertyIndex) const;
+			inline Nz::UInt32 GetPropertyCount() const;
 
-			void InitializeEntity(entt::handle entity) const;
+			void SetupEntity(entt::handle entity) const;
 
 			EntityClass& operator=(const EntityClass&) = delete;
 			EntityClass& operator=(EntityClass&&) noexcept = default;

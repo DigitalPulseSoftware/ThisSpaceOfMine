@@ -9,6 +9,7 @@
 
 #include <CommonLib/Export.hpp>
 #include <CommonLib/Protocol/Packets.hpp>
+#include <CommonLib/Protocol/SecuredString.hpp>
 #include <tsl/hopscotch_map.h>
 #include <limits>
 #include <optional>
@@ -28,7 +29,7 @@ namespace tsom
 
 			inline Nz::UInt32 CheckStringIndex(const std::string& string) const;
 
-			void FillStore(Nz::UInt32 firstId, std::vector<std::string> strings);
+			void FillStore(Nz::UInt32 firstId, std::vector<SecuredString<1024>> strings);
 
 			inline const std::string& GetString(Nz::UInt32 id) const;
 			inline Nz::UInt32 GetStringIndex(const std::string& string) const;

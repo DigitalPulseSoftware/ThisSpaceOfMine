@@ -3,7 +3,6 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ServerLib/Session/InitialSessionHandler.hpp>
-#include <Nazara/Core/ApplicationBase.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/Version.hpp>
@@ -12,13 +11,15 @@
 #include <ServerLib/ServerInstance.hpp>
 #include <ServerLib/ServerPlayer.hpp>
 #include <ServerLib/Session/PlayerSessionHandler.hpp>
+#include <Nazara/Core/ApplicationBase.hpp>
 #include <fmt/color.h>
 #include <fmt/format.h>
 
 namespace tsom
 {
 	constexpr SessionHandler::SendAttributeTable s_packetAttributes = SessionHandler::BuildAttributeTable({
-		{ PacketIndex<Packets::AuthResponse>, { .channel = 0, .flags = Nz::ENetPacketFlag::Reliable } }
+		{ PacketIndex<Packets::AuthResponse>,   { .channel = 0, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::NetworkStrings>, { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } }
 	});
 
 	InitialSessionHandler::InitialSessionHandler(ServerInstance& instance, NetworkSession* session) :
@@ -27,6 +28,12 @@ namespace tsom
 	{
 		SetupHandlerTable(this);
 		SetupAttributeTable(s_packetAttributes);
+
+		auto& stringStore = session->GetStringStore();
+		instance.GetEntityRegistry().ForEachClass([&](const std::string& className, const EntityClass& /*entityClass*/)
+		{
+			stringStore.RegisterString(className);
+		});
 	}
 
 	void InitialSessionHandler::HandlePacket(Packets::AuthRequest&& authRequest)
@@ -130,7 +137,9 @@ namespace tsom
 
 		session->SendPacket(response);
 
-		GetSession()->SetupHandler<PlayerSessionHandler>(player);
+		session->SendPacket(session->GetStringStore().BuildPacket());
+
+		session->SetupHandler<PlayerSessionHandler>(player);
 	}
 
 	void InitialSessionHandler::OnDeserializationError(std::size_t packetIndex)

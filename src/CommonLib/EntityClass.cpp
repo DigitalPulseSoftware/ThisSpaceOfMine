@@ -24,15 +24,19 @@ namespace tsom
 		}
 	}
 
-	void EntityClass::InitializeEntity(entt::handle entity) const
+	void EntityClass::ActivateEntity(entt::handle entity) const
+	{
+		assert(entity.get<EntityClassComponent>().entityClass == this);
+		if (m_callbacks.onInit)
+			m_callbacks.onInit(entity);
+	}
+
+	void EntityClass::SetupEntity(entt::handle entity) const
 	{
 		auto& entityClass = entity.emplace<EntityClassComponent>();
 		entityClass.entityClass = this;
 		entityClass.properties.reserve(m_properties.size());
 		for (const auto& property : m_properties)
 			entityClass.properties.emplace_back(property.defaultValue);
-
-		if (m_callbacks.onInit)
-			m_callbacks.onInit(entity);
 	}
 }

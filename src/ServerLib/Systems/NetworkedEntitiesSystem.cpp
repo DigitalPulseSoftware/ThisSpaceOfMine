@@ -4,6 +4,7 @@
 
 #include <ServerLib/Systems/NetworkedEntitiesSystem.hpp>
 #include <CommonLib/Planet.hpp>
+#include <CommonLib/Components/EntityClassComponent.hpp>
 #include <CommonLib/Components/PlanetComponent.hpp>
 #include <CommonLib/Components/ShipComponent.hpp>
 #include <ServerLib/ServerEnvironment.hpp>
@@ -74,11 +75,26 @@ namespace tsom
 
 		auto& entityNode = m_registry.get<Nz::NodeComponent>(entity);
 
+		auto& entityNet = m_registry.get<NetworkedComponent>(entity);
+
+		auto* entityClass = m_registry.try_get<EntityClassComponent>(entity);
+
 		SessionVisibilityHandler::CreateEntityData createData;
+		createData.entityClass = (entityClass) ? entityClass->entityClass : nullptr;
 		createData.environment = &m_environment;
 		createData.initialPosition = entityNode.GetPosition();
 		createData.initialRotation = entityNode.GetRotation();
 		createData.isMoving = isMoving;
+
+		if (entityClass)
+		{
+			createData.entityProperties.reserve(entityClass->properties.size());
+			for (std::size_t i = 0; i < entityClass->properties.size(); ++i)
+			{
+				if (entityClass->entityClass->GetProperty(i).isNetworked)
+					createData.entityProperties.emplace_back(entityClass->properties[i]);
+			}
+		}
 
 		if (auto* planetComp = m_registry.try_get<PlanetComponent>(entity))
 		{
