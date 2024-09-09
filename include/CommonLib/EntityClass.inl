@@ -4,15 +4,23 @@
 
 namespace tsom
 {
-	inline EntityClass::EntityClass(std::string name, std::vector<Property> properties, Callbacks callbacks) :
-	m_callbacks(std::move(callbacks)),
-	m_name(std::move(name)),
-	m_properties(std::move(properties))
+	inline Nz::UInt32 EntityClass::FindProperty(std::string_view propertyName) const
 	{
+		auto it = m_propertyIndices.find(propertyName);
+		if (it == m_propertyIndices.end())
+			return InvalidIndex;
+
+		return it->second;
 	}
 
 	inline const std::string& EntityClass::GetName() const
 	{
 		return m_name;
+	}
+
+	inline auto EntityClass::GetProperty(Nz::UInt32 propertyIndex) const -> const Property&
+	{
+		assert(propertyIndex < m_properties.size());
+		return m_properties[propertyIndex];
 	}
 }

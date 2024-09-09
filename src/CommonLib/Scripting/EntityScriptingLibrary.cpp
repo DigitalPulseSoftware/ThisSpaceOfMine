@@ -3,11 +3,14 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/Scripting/EntityScriptingLibrary.hpp>
-#include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/EntityClass.hpp>
+#include <CommonLib/EntityProperties.hpp>
 #include <CommonLib/EntityRegistry.hpp>
+#include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/PhysicsConstants.hpp>
+#include <CommonLib/Components/EntityClassComponent.hpp>
 #include <CommonLib/Components/ScriptedEntityComponent.hpp>
+#include <CommonLib/Scripting/ScriptingProperties.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Collider3D.hpp>
@@ -184,8 +187,19 @@ namespace tsom
 			sol::no_constructor,
 			"AddProperty", LuaFunction([](EntityBuilder& entityBuilder, std::string propertyName, sol::table propertyData)
 			{
+				std::string_view type = propertyData.get<std::string_view>("type");
+				bool isArray = propertyData.get_or("isArray", false);
+				bool isNetworked = propertyData.get_or("isNetworked", false);
+
+				EntityPropertyType propertyType = ParseEntityPropertyType(type);
+				EntityProperty entityProperty = TranslatePropertyFromLua(propertyData["default"], propertyType, isArray);
+
 				entityBuilder.properties.push_back({
-					.name = std::move(propertyName)
+					.name = std::move(propertyName),
+					.defaultValue = std::move(entityProperty),
+					.type = propertyType,
+					.isArray = isArray,
+					.isNetworked = isNetworked
 				});
 			}),
 			"On", LuaFunction([](EntityBuilder& entityBuilder, std::string_view eventName, sol::protected_function callback)
@@ -209,7 +223,7 @@ namespace tsom
 	void EntityScriptingLibrary::RegisterEntityMetatable(sol::state& state)
 	{
 		m_entityMetatable = state.create_table();
-		m_entityMetatable["AddComponent"] = LuaFunction([this](sol::this_state L, sol::stack_table entityTable, std::string_view componentType, sol::optional<sol::table> parameters)
+		m_entityMetatable["AddComponent"] = LuaFunction([this](sol::this_state L, sol::table entityTable, std::string_view componentType, sol::optional<sol::table> parameters)
 		{
 			entt::handle entity = AssertScriptEntity(entityTable);
 
@@ -220,7 +234,7 @@ namespace tsom
 			return addComponent(L, entity, parameters);
 		});
 
-		m_entityMetatable["GetComponent"] = LuaFunction([this](sol::this_state L, sol::stack_table entityTable, std::string_view componentType) -> sol::object
+		m_entityMetatable["GetComponent"] = LuaFunction([this](sol::this_state L, sol::table entityTable, std::string_view componentType) -> sol::object
 		{
 			entt::handle entity = AssertScriptEntity(entityTable);
 
@@ -229,6 +243,32 @@ namespace tsom
 				throw std::runtime_error(fmt::format("invalid component {}", componentType));
 
 			return getComponent(L, entity);
+		});
+
+		m_entityMetatable["GetProperty"] = LuaFunction([this](sol::this_state L, sol::table entityTable, std::string_view propertyName)
+		{
+			entt::handle entity = AssertScriptEntity(entityTable);
+
+			auto& classComponent = entity.get<EntityClassComponent>();
+			Nz::UInt32 propertyIndex = classComponent.entityClass->FindProperty(propertyName);
+			if (propertyIndex == EntityClass::InvalidIndex)
+				TriggerLuaArgError(L, 2, fmt::format("invalid property {}", propertyName));
+
+			sol::state_view state(L);
+			return TranslatePropertyToLua(state, classComponent.properties[propertyIndex]);
+		});
+
+		m_entityMetatable["SetProperty"] = LuaFunction([this](sol::this_state L, sol::table entityTable, std::string_view propertyName, sol::object value)
+		{
+			entt::handle entity = AssertScriptEntity(entityTable);
+
+			auto& classComponent = entity.get<EntityClassComponent>();
+			Nz::UInt32 propertyIndex = classComponent.entityClass->FindProperty(propertyName);
+			if (propertyIndex == EntityClass::InvalidIndex)
+				TriggerLuaArgError(L, 2, fmt::format("invalid property {}", propertyName));
+
+			const auto& property = classComponent.entityClass->GetProperty(propertyIndex);
+			classComponent.properties[propertyIndex] = TranslatePropertyFromLua(value, property.type, property.isArray);
 		});
 	}
 
