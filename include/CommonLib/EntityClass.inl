@@ -23,4 +23,9 @@ namespace tsom
 		assert(propertyIndex < m_properties.size());
 		return m_properties[propertyIndex];
 	}
+
+	inline Nz::UInt32 EntityClass::GetPropertyCount() const
+	{
+		return Nz::UInt32(m_properties.size());
+	}
 }

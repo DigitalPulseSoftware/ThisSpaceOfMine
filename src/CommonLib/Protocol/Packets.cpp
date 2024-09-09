@@ -239,6 +239,8 @@ namespace tsom
 				serializer.SerializePresence(entity.playerControlled);
 				serializer.SerializePresence(entity.ship);
 
+				serializer.Serialize(entity.entityClass);
+
 				if (entity.planet)
 					Helper::Serialize(serializer, *entity.planet);
 
@@ -247,6 +249,10 @@ namespace tsom
 
 				if (entity.ship)
 					Helper::Serialize(serializer, *entity.ship);
+
+				serializer.SerializeArraySize(entity.properties);
+				for (auto& property : entity.properties)
+					serializer &= property;
 			}
 		}
 

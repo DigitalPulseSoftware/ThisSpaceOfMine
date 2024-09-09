@@ -5,6 +5,7 @@
 #include <ServerLib/SessionVisibilityHandler.hpp>
 #include <CommonLib/CharacterController.hpp>
 #include <CommonLib/ChunkContainer.hpp>
+#include <CommonLib/EntityClass.hpp>
 #include <CommonLib/NetworkSession.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <NazaraUtils/Algorithm.hpp>
@@ -414,6 +415,8 @@ namespace tsom
 				m_entityIndices[handle] = entityIndex;
 
 				auto& entityData = creationPacket.entities.emplace_back();
+				if (data.entityClass)
+					entityData.entityClass = m_networkSession->GetStringStore().CheckStringIndex(data.entityClass->GetName());
 				entityData.entityId = Nz::SafeCast<EntityId>(entityIndex);
 				entityData.environmentId = envIndex;
 				entityData.initialStates.position = data.initialPosition;
@@ -421,6 +424,7 @@ namespace tsom
 				entityData.planet = std::move(data.planetData);
 				entityData.playerControlled = std::move(data.playerControlledData);
 				entityData.ship = std::move(data.shipData);
+				entityData.properties = std::move(data.entityProperties);
 			}
 
 			m_networkSession->SendPacket(creationPacket);

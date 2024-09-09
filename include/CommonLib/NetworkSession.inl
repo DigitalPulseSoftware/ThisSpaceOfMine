@@ -22,6 +22,16 @@ namespace tsom
 		return m_sessionHandler.get();
 	}
 
+	inline NetworkStringStore& NetworkSession::GetStringStore()
+	{
+		return m_stringStore;
+	}
+
+	inline const NetworkStringStore& NetworkSession::GetStringStore() const
+	{
+		return m_stringStore;
+	}
+
 	inline bool NetworkSession::IsConnected() const
 	{
 		return m_peerId != NetworkReactor::InvalidPeerId;

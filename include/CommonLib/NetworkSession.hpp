@@ -10,6 +10,7 @@
 #include <CommonLib/Export.hpp>
 #include <CommonLib/NetworkReactor.hpp>
 #include <CommonLib/SessionHandler.hpp>
+#include <CommonLib/Protocol/NetworkStringStore.hpp>
 #include <Nazara/Network/ENetPacket.hpp>
 #include <Nazara/Network/IpAddress.hpp>
 
@@ -33,6 +34,8 @@ namespace tsom
 			inline std::size_t GetPeerId() const;
 			inline Nz::UInt32 GetProtocolVersion() const;
 			inline SessionHandler* GetSessionHandler();
+			inline NetworkStringStore& GetStringStore();
+			inline const NetworkStringStore& GetStringStore() const;
 
 			inline bool IsConnected() const;
 
@@ -56,6 +59,7 @@ namespace tsom
 			Nz::IpAddress m_remoteAddress;
 			Nz::UInt32 m_protocolVersion;
 			NetworkReactor& m_reactor;
+			NetworkStringStore m_stringStore;
 	};
 }
 

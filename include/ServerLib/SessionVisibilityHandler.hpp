@@ -9,6 +9,7 @@
 
 #include <ServerLib/Export.hpp>
 #include <CommonLib/Chunk.hpp>
+#include <CommonLib/EntityProperties.hpp>
 #include <CommonLib/EnvironmentTransform.hpp>
 #include <CommonLib/PlayerInputs.hpp>
 #include <CommonLib/Protocol/Packets.hpp>
@@ -22,6 +23,7 @@
 namespace tsom
 {
 	class CharacterController;
+	class EntityClass;
 	class NetworkSession;
 	class ServerEnvironment;
 
@@ -60,12 +62,14 @@ namespace tsom
 
 			struct CreateEntityData
 			{
-				ServerEnvironment* environment;
+				const ServerEnvironment* environment;
+				const EntityClass* entityClass;
 				Nz::Quaternionf initialRotation;
 				Nz::Vector3f initialPosition;
 				std::optional<Packets::Helper::PlanetData> planetData;
 				std::optional<Packets::Helper::PlayerControlledData> playerControlledData;
 				std::optional<Packets::Helper::ShipData> shipData;
+				std::vector<EntityProperty> entityProperties;
 				bool isMoving;
 			};
 
@@ -135,7 +139,7 @@ namespace tsom
 			tsl::hopscotch_map<entt::handle, EntityId, HandlerHasher> m_entityIndices;
 			tsl::hopscotch_map<entt::handle, CreateEntityData, HandlerHasher> m_createdEntities;
 			tsl::hopscotch_map<entt::handle, ChunkNetworkMap, HandlerHasher> m_chunkNetworkMaps;
-			tsl::hopscotch_map<ServerEnvironment*, EnvironmentId> m_environmentIndices;
+			tsl::hopscotch_map<const ServerEnvironment*, EnvironmentId> m_environmentIndices;
 			tsl::hopscotch_set<entt::handle, HandlerHasher> m_deletedEntities;
 			tsl::hopscotch_set<entt::handle, HandlerHasher> m_movingEntities;
 			std::shared_ptr<std::size_t> m_activeChunkUpdates;
