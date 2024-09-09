@@ -8,7 +8,9 @@
 #define TSOM_COMMONLIB_ENTITYCLASS_HPP
 
 #include <CommonLib/Export.hpp>
+#include <CommonLib/EntityProperties.hpp>
 #include <entt/fwd.hpp>
+#include <tsl/hopscotch_map.h>
 #include <functional>
 #include <string>
 #include <vector>
@@ -26,7 +28,10 @@ namespace tsom
 			EntityClass(EntityClass&&) noexcept = default;
 			~EntityClass() = default;
 
+			inline Nz::UInt32 FindProperty(std::string_view propertyName) const;
+
 			inline const std::string& GetName() const;
+			inline const Property& GetProperty(Nz::UInt32 propertyIndex) const;
 
 			void InitializeEntity(entt::handle entity) const;
 
@@ -41,12 +46,19 @@ namespace tsom
 			struct Property
 			{
 				std::string name;
+				EntityProperty defaultValue;
+				EntityPropertyType type;
+				bool isArray;
+				bool isNetworked;
 			};
 
+			static constexpr Nz::UInt32 InvalidIndex = Nz::MaxValue();
+
 		private:
-			Callbacks m_callbacks;
 			std::string m_name;
 			std::vector<Property> m_properties;
+			tsl::hopscotch_map<std::string, std::size_t, std::hash<std::string_view>, std::equal_to<>> m_propertyIndices;
+			Callbacks m_callbacks;
 	};
 }
 

@@ -7,7 +7,7 @@
 
 namespace tsom
 {
-	entt::handle AssertScriptEntity(const sol::table& entityTable)
+	entt::handle AssertScriptEntity(sol::table entityTable)
 	{
 		entt::handle entity = RetrieveScriptEntity(entityTable);
 		if (!entity)
@@ -16,7 +16,7 @@ namespace tsom
 		return entity;
 	}
 
-	entt::handle RetrieveScriptEntity(const sol::table& entityTable)
+	entt::handle RetrieveScriptEntity(sol::table entityTable)
 	{
 		sol::object entityObject = entityTable["_Entity"];
 		if (!entityObject)

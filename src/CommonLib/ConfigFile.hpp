@@ -119,7 +119,7 @@ namespace tsom
 				std::unordered_map<std::string, std::unique_ptr<ConfigSection>> subsections;
 			};
 
-			bool LoadSection(const sol::table& table, ConfigSection& section, Nz::Bitset<>& missingOptions, const std::string& prefix = {});
+			bool LoadSection(sol::table table, ConfigSection& section, Nz::Bitset<>& missingOptions, const std::string& prefix = {});
 
 			template<typename T> void RegisterOption(std::string optionName, T&& optionData);
 			void RegisterConfig(std::string optionName, ConfigData value);

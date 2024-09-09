@@ -13,8 +13,8 @@
 
 namespace tsom
 {
-	TSOM_COMMONLIB_API entt::handle AssertScriptEntity(const sol::table& entityTable);
-	TSOM_COMMONLIB_API entt::handle RetrieveScriptEntity(const sol::table& entityTable);
+	TSOM_COMMONLIB_API entt::handle AssertScriptEntity(sol::table entityTable);
+	TSOM_COMMONLIB_API entt::handle RetrieveScriptEntity(sol::table entityTable);
 
 	template<typename... Args> [[noreturn]] void TriggerLuaError(lua_State* L, const char* format, Args&&... args);
 	[[noreturn]] TSOM_COMMONLIB_API void TriggerLuaError(lua_State* L, const std::string& errMessage);

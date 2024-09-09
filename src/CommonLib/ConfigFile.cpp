@@ -17,7 +17,7 @@ namespace tsom
 	namespace
 	{
 		template<typename SectionFunc, typename VarFunc>
-		bool ForEachSection(const std::string_view& varName, SectionFunc&& sectionCB, VarFunc&& varCB)
+		bool ForEachSection(std::string_view varName, SectionFunc&& sectionCB, VarFunc&& varCB)
 		{
 			std::size_t pos = 0;
 			std::size_t previousPos = 0;
@@ -33,7 +33,7 @@ namespace tsom
 		}
 
 		template<typename F>
-		bool ForEachSection(const std::string_view& varName, F&& func)
+		bool ForEachSection(std::string_view varName, F&& func)
 		{
 			return ForEachSection(varName, func, func);
 		}
@@ -112,11 +112,11 @@ namespace tsom
 		return file.good();
 	}
 
-	bool ConfigFile::LoadSection(const sol::table& table, ConfigSection& section, Nz::Bitset<>& missingOptions, const std::string& prefix)
+	bool ConfigFile::LoadSection(sol::table table, ConfigSection& section, Nz::Bitset<>& missingOptions, const std::string& prefix)
 	{
 		bool hasError = false;
 
-		table.for_each([&](const sol::object& key, const sol::object& value)
+		table.for_each([&](sol::object key, sol::object value)
 		{
 			std::string keyName = key.as<std::string>();
 

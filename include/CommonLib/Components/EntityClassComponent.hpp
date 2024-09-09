@@ -7,12 +7,16 @@
 #ifndef TSOM_COMMONLIB_COMPONENTS_ENTITYCLASSCOMPONENT_HPP
 #define TSOM_COMMONLIB_COMPONENTS_ENTITYCLASSCOMPONENT_HPP
 
+#include <CommonLib/EntityProperties.hpp>
+#include <vector>
+
 namespace tsom
 {
 	class EntityClass;
 
 	struct EntityClassComponent
 	{
+		std::vector<EntityProperty> properties;
 		const EntityClass* entityClass;
 	};
 }
