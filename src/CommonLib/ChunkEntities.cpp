@@ -42,6 +42,8 @@ namespace tsom
 
 		m_onChunkUpdated.Connect(chunkContainer.OnChunkUpdated, [this](ChunkContainer* /*emitter*/, Chunk* chunk, DirectionMask neighborMask)
 		{
+			// Chunks can be updated in parallel (e.g. planet generation)
+			std::lock_guard lock(m_invalidatedChunkMutex);
 			m_invalidatedChunks[chunk->GetIndices()] |= neighborMask;
 		});
 	}
