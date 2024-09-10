@@ -26,7 +26,7 @@ namespace tsom
 		public:
 			Ship(float tileSize);
 			Ship(const Ship&) = delete;
-			Ship(Ship&&) noexcept = default;
+			Ship(Ship&&) = delete;
 			~Ship() = default;
 
 			FlatChunk& AddChunk(const BlockLibrary& blockLibrary, const ChunkIndices& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback = nullptr);
@@ -50,7 +50,7 @@ namespace tsom
 			inline void UpdateUpDirection(const Nz::Vector3f& upDirection);
 
 			Ship& operator=(const Ship&) = delete;
-			Ship& operator=(Ship&&) noexcept = default;
+			Ship& operator=(Ship&&) = delete;
 
 			static constexpr unsigned int ChunkSize = 32;
 

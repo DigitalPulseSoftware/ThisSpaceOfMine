@@ -23,13 +23,13 @@ namespace tsom
 
 			inline PlayerAnimationSystem(entt::registry& registry);
 			PlayerAnimationSystem(const PlayerAnimationSystem&) = delete;
-			PlayerAnimationSystem(PlayerAnimationSystem&&) = default;
+			PlayerAnimationSystem(PlayerAnimationSystem&&) = delete;
 			~PlayerAnimationSystem() = default;
 
 			void Update(Nz::Time elapsedTime);
 
 			PlayerAnimationSystem& operator=(const PlayerAnimationSystem&) = delete;
-			PlayerAnimationSystem& operator=(PlayerAnimationSystem&&) = default;
+			PlayerAnimationSystem& operator=(PlayerAnimationSystem&&) = delete;
 
 		private:
 			entt::registry& m_registry;
