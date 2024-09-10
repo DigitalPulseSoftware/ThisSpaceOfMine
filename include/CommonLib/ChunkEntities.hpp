@@ -78,6 +78,7 @@ namespace tsom
 			NazaraSlot(ChunkContainer, OnChunkUpdated, m_onChunkUpdated);
 			NazaraSlot(Nz::Node, OnNodeInvalidation, m_onParentNodeInvalidated);
 
+			std::mutex m_invalidatedChunkMutex;
 			entt::handle m_parentEntity;
 			tsl::hopscotch_map<ChunkIndices, DirectionMask> m_invalidatedChunks;
 			tsl::hopscotch_map<ChunkIndices, std::shared_ptr<UpdateJob>> m_updateJobs;
