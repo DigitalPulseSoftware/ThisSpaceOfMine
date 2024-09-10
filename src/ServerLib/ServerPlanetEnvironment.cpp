@@ -5,8 +5,9 @@
 #include <ServerLib/ServerPlanetEnvironment.hpp>
 #include <CommonLib/BlockLibrary.hpp>
 #include <CommonLib/ChunkEntities.hpp>
+#include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Components/PlanetComponent.hpp>
-#include <CommonLib/Systems/PlanetGravitySystem.hpp>
+#include <CommonLib/Systems/GravityPhysicsSystem.hpp>
 #include <CommonLib/Systems/PlanetSystem.hpp>
 #include <ServerLib/ServerInstance.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
@@ -43,26 +44,32 @@ namespace tsom
 		m_planetEntity.emplace<Nz::NodeComponent>();
 		m_planetEntity.emplace<NetworkedComponent>();
 
-		auto& planetComponent = m_planetEntity.emplace<PlanetComponent>(1.f, 16.f, 9.81f);
-		planetComponent.GenerateChunks(blockLibrary, taskScheduler, seed, chunkCount);
-		planetComponent.GeneratePlatform(blockLibrary, tsom::Direction::Right, { 65, -18, -39 });
-		planetComponent.GeneratePlatform(blockLibrary, tsom::Direction::Back, { -34, 2, 53 });
-		planetComponent.GeneratePlatform(blockLibrary, tsom::Direction::Front, { 22, -35, -59 });
-		planetComponent.GeneratePlatform(blockLibrary, tsom::Direction::Down, { 23, -62, 26 });
+		const EntityClass* planetClass = serverInstance.GetEntityRegistry().FindClass("planet");
+
+		auto& entityInstance = planetClass->SetupEntity(m_planetEntity);
+		entityInstance.UpdateProperty<EntityPropertyType::Float>("CellSize", 1.f);
+		entityInstance.UpdateProperty<EntityPropertyType::Float>("CornerRadius", 16.f);
+		entityInstance.UpdateProperty<EntityPropertyType::Float>("Gravity", 9.81f);
+
+		planetClass->ActivateEntity(m_planetEntity);
+
+		auto& planetComponent = m_planetEntity.get<PlanetComponent>();
+		planetComponent.planet->GenerateChunks(blockLibrary, taskScheduler, seed, chunkCount);
+		planetComponent.planet->GeneratePlatform(blockLibrary, tsom::Direction::Right, { 65, -18, -39 });
+		planetComponent.planet->GeneratePlatform(blockLibrary, tsom::Direction::Back, { -34, 2, 53 });
+		planetComponent.planet->GeneratePlatform(blockLibrary, tsom::Direction::Front, { 22, -35, -59 });
+		planetComponent.planet->GeneratePlatform(blockLibrary, tsom::Direction::Down, { 23, -62, 26 });
 
 		if (!m_savePath.empty())
 			LoadFromDirectory();
 
-		planetComponent.OnChunkUpdated.Connect([this](ChunkContainer* /*planet*/, Chunk* chunk, DirectionMask /*neighborMask*/)
+		planetComponent.planet->OnChunkUpdated.Connect([this](ChunkContainer* /*planet*/, Chunk* chunk, DirectionMask /*neighborMask*/)
 		{
 			m_dirtyChunks.insert(chunk->GetIndices());
 		});
 
-		planetComponent.planetEntities = std::make_unique<ChunkEntities>(app, m_world, planetComponent, blockLibrary);
-		planetComponent.planetEntities->SetParentEntity(m_planetEntity);
-
 		auto& physicsSystem = m_world.GetSystem<Nz::Physics3DSystem>();
-		m_world.AddSystem<PlanetGravitySystem>(planetComponent, physicsSystem.GetPhysWorld());
+		m_world.AddSystem<GravityPhysicsSystem>(*planetComponent.planet, physicsSystem.GetPhysWorld());
 		m_world.AddSystem<PlanetSystem>();
 	}
 
@@ -78,17 +85,17 @@ namespace tsom
 
 	const GravityController* ServerPlanetEnvironment::GetGravityController() const
 	{
-		return &m_planetEntity.get<PlanetComponent>();
+		return m_planetEntity.get<PlanetComponent>().planet.get();
 	}
 
 	Planet& ServerPlanetEnvironment::GetPlanet()
 	{
-		return m_planetEntity.get<PlanetComponent>();
+		return *m_planetEntity.get<PlanetComponent>().planet;
 	}
 
 	const Planet& ServerPlanetEnvironment::GetPlanet() const
 	{
-		return m_planetEntity.get<PlanetComponent>();
+		return *m_planetEntity.get<PlanetComponent>().planet;
 	}
 
 	void ServerPlanetEnvironment::OnSave()
@@ -107,7 +114,7 @@ namespace tsom
 			byteArray.Clear();
 
 			Nz::ByteStream byteStream(&byteArray);
-			m_planetEntity.get<PlanetComponent>().GetChunk(chunkIndices)->Serialize(byteStream);
+			m_planetEntity.get<PlanetComponent>().planet->GetChunk(chunkIndices)->Serialize(byteStream);
 
 			if (!Nz::File::WriteWhole(m_savePath / Nz::Utf8Path(fmt::format("{0:+}_{1:+}_{2:+}.chunk", chunkIndices.x, chunkIndices.y, chunkIndices.z)), byteArray.GetBuffer(), byteArray.GetSize()))
 				fmt::print(stderr, "failed to save chunk {}\n", fmt::streamed(chunkIndices));
@@ -191,7 +198,7 @@ namespace tsom
 			Nz::File::WriteWhole(m_savePath / Nz::Utf8Path("version.txt"), version.data(), version.size());
 		}
 
-		m_planetEntity.get<PlanetComponent>().ForEachChunk([&](const ChunkIndices& chunkIndices, Chunk& chunk)
+		m_planetEntity.get<PlanetComponent>().planet->ForEachChunk([&](const ChunkIndices& chunkIndices, Chunk& chunk)
 		{
 			Nz::File chunkFile(m_savePath / Nz::Utf8Path(fmt::format("{0:+}_{1:+}_{2:+}.chunk", chunkIndices.x, chunkIndices.y, chunkIndices.z)), Nz::OpenMode::Read);
 			if (!chunkFile.IsOpen())

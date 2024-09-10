@@ -14,10 +14,9 @@
 
 namespace tsom
 {
-	struct ShipComponent : Ship
+	struct ShipComponent
 	{
-		using Ship::Ship;
-
+		std::unique_ptr<Ship> ship;
 		std::unique_ptr<ChunkEntities> shipEntities;
 	};
 }

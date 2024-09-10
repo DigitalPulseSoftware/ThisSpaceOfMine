@@ -14,13 +14,15 @@
 
 namespace tsom
 {
+	class EntityClassLibrary;
+
 	class TSOM_COMMONLIB_API EntityRegistry
 	{
 		public:
-			EntityRegistry() = default;
+			EntityRegistry();
 			EntityRegistry(const EntityRegistry&) = delete;
 			EntityRegistry(EntityRegistry&&) = delete;
-			~EntityRegistry() = default;
+			~EntityRegistry();
 
 			inline const EntityClass* FindClass(std::string_view entityClass) const;
 
@@ -29,10 +31,14 @@ namespace tsom
 
 			void RegisterClass(EntityClass entityClass);
 
+			template<typename T, typename... Args> void RegisterClassLibrary(Args&&... args);
+			void RegisterClassLibrary(std::unique_ptr<EntityClassLibrary>&& library);
+
 			EntityRegistry& operator=(const EntityRegistry&) = delete;
 			EntityRegistry& operator=(EntityRegistry&&) = delete;
 
 		private:
+			std::vector<std::unique_ptr<EntityClassLibrary>> m_classLibraries;
 			tsl::hopscotch_map<std::string, EntityClass, std::hash<std::string_view>, std::equal_to<>> m_classes;
 	};
 }

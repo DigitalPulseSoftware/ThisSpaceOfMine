@@ -8,7 +8,7 @@
 #include <CommonLib/EntityRegistry.hpp>
 #include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/PhysicsConstants.hpp>
-#include <CommonLib/Components/EntityClassComponent.hpp>
+#include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Components/ScriptedEntityComponent.hpp>
 #include <CommonLib/Scripting/ScriptingProperties.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
@@ -196,8 +196,8 @@ namespace tsom
 
 				entityBuilder.properties.push_back({
 					.name = std::move(propertyName),
-					.defaultValue = std::move(entityProperty),
 					.type = propertyType,
+					.defaultValue = std::move(entityProperty),
 					.isArray = isArray,
 					.isNetworked = isNetworked
 				});
@@ -249,7 +249,7 @@ namespace tsom
 		{
 			entt::handle entity = AssertScriptEntity(entityTable);
 
-			auto& classComponent = entity.get<EntityClassComponent>();
+			auto& classComponent = entity.get<ClassInstanceComponent>();
 			Nz::UInt32 propertyIndex = classComponent.entityClass->FindProperty(propertyName);
 			if (propertyIndex == EntityClass::InvalidIndex)
 				TriggerLuaArgError(L, 2, fmt::format("invalid property {}", propertyName));
@@ -262,7 +262,7 @@ namespace tsom
 		{
 			entt::handle entity = AssertScriptEntity(entityTable);
 
-			auto& classComponent = entity.get<EntityClassComponent>();
+			auto& classComponent = entity.get<ClassInstanceComponent>();
 			Nz::UInt32 propertyIndex = classComponent.entityClass->FindProperty(propertyName);
 			if (propertyIndex == EntityClass::InvalidIndex)
 				TriggerLuaArgError(L, 2, fmt::format("invalid property {}", propertyName));

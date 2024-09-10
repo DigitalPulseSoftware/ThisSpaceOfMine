@@ -87,9 +87,7 @@ namespace tsom
 		private:
 			inline PlayerInfo* FetchPlayerInfo(PlayerIndex playerIndex);
 			inline const PlayerInfo* FetchPlayerInfo(PlayerIndex playerIndex) const;
-			void SetupEntity(entt::handle entity, Packets::Helper::PlanetData&& entityData);
 			void SetupEntity(entt::handle entity, Packets::Helper::PlayerControlledData&& entityData);
-			void SetupEntity(entt::handle entity, Packets::Helper::ShipData&& entityData);
 
 			struct EnvironmentData
 			{

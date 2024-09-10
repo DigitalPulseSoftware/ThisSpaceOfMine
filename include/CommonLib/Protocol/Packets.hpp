@@ -68,21 +68,9 @@ namespace tsom
 				Nz::Vector3f position;
 			};
 
-			struct PlanetData
-			{
-				float cellSize;
-				float cornerRadius;
-				float gravity;
-			};
-
 			struct PlayerControlledData
 			{
 				PlayerIndex controllingPlayerId;
-			};
-
-			struct ShipData
-			{
-				float cellSize;
 			};
 
 			struct VoxelLocation
@@ -191,9 +179,7 @@ namespace tsom
 				Helper::EnvironmentId environmentId;
 				Helper::EntityId entityId;
 				Helper::EntityState initialStates;
-				std::optional<Helper::PlanetData> planet;
 				std::optional<Helper::PlayerControlledData> playerControlled;
-				std::optional<Helper::ShipData> ship;
 				std::vector<EntityProperty> properties;
 				CompressedUnsigned<Nz::UInt32> entityClass;
 			};

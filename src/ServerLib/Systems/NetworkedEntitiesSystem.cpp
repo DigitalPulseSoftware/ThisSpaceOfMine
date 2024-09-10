@@ -4,7 +4,7 @@
 
 #include <ServerLib/Systems/NetworkedEntitiesSystem.hpp>
 #include <CommonLib/Planet.hpp>
-#include <CommonLib/Components/EntityClassComponent.hpp>
+#include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Components/PlanetComponent.hpp>
 #include <CommonLib/Components/ShipComponent.hpp>
 #include <ServerLib/ServerEnvironment.hpp>
@@ -77,7 +77,7 @@ namespace tsom
 
 		auto& entityNet = m_registry.get<NetworkedComponent>(entity);
 
-		auto* entityClass = m_registry.try_get<EntityClassComponent>(entity);
+		auto* entityClass = m_registry.try_get<ClassInstanceComponent>(entity);
 
 		SessionVisibilityHandler::CreateEntityData createData;
 		createData.entityClass = (entityClass) ? entityClass->entityClass : nullptr;
@@ -96,14 +96,6 @@ namespace tsom
 			}
 		}
 
-		if (auto* planetComp = m_registry.try_get<PlanetComponent>(entity))
-		{
-			auto& data = createData.planetData.emplace();
-			data.cellSize = planetComp->GetTileSize();
-			data.cornerRadius = planetComp->GetCornerRadius();
-			data.gravity = planetComp->GetGravity();
-		}
-
 		if (auto* playerControlled = m_registry.try_get<ServerPlayerControlledComponent>(entity))
 		{
 			if (ServerPlayer* controllingPlayer = playerControlled->GetPlayer())
@@ -111,12 +103,6 @@ namespace tsom
 				auto& data = createData.playerControlledData.emplace();
 				data.controllingPlayerId = controllingPlayer->GetPlayerIndex();
 			}
-		}
-
-		if (auto* shipComp = m_registry.try_get<ShipComponent>(entity))
-		{
-			auto& data = createData.shipData.emplace();
-			data.cellSize = shipComp->GetTileSize();
 		}
 
 		return createData;
@@ -127,17 +113,17 @@ namespace tsom
 		entt::handle handle(m_registry, entity);
 		visibility.CreateEntity(handle, createData);
 
-		if (PlanetComponent* planet = handle.try_get<PlanetComponent>())
+		if (PlanetComponent* planetComponent = handle.try_get<PlanetComponent>())
 		{
-			planet->ForEachChunk([&](const ChunkIndices& /*chunkIndices*/, Chunk& chunk)
+			planetComponent->planet->ForEachChunk([&](const ChunkIndices& /*chunkIndices*/, Chunk& chunk)
 			{
 				visibility.CreateChunk(handle, chunk);
 			});
 		}
 
-		if (ShipComponent* ship = handle.try_get<ShipComponent>())
+		if (ShipComponent* shipComponent = handle.try_get<ShipComponent>())
 		{
-			ship->ForEachChunk([&](const ChunkIndices& /*chunkIndices*/, Chunk& chunk)
+			shipComponent->ship->ForEachChunk([&](const ChunkIndices& /*chunkIndices*/, Chunk& chunk)
 			{
 				visibility.CreateChunk(handle, chunk);
 			});

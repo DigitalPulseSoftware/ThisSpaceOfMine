@@ -7,6 +7,8 @@
 #include <CommonLib/ChunkContainer.hpp>
 #include <CommonLib/EntityClass.hpp>
 #include <CommonLib/NetworkSession.hpp>
+#include <CommonLib/Components/PlanetComponent.hpp>
+#include <CommonLib/Components/ShipComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <NazaraUtils/Algorithm.hpp>
 
@@ -62,7 +64,7 @@ namespace tsom
 		if (entityData.isMoving && entity != m_controlledEntity)
 			m_movingEntities.emplace(entity);
 
-		if (entityData.planetData || entityData.shipData)
+		if (entity.try_get<PlanetComponent>() || entity.try_get<ShipComponent>())
 		{
 			assert(!m_chunkNetworkMaps.contains(entity));
 			m_chunkNetworkMaps.emplace(entity, ChunkNetworkMap{});
@@ -421,9 +423,7 @@ namespace tsom
 				entityData.environmentId = envIndex;
 				entityData.initialStates.position = data.initialPosition;
 				entityData.initialStates.rotation = data.initialRotation;
-				entityData.planet = std::move(data.planetData);
 				entityData.playerControlled = std::move(data.playerControlledData);
-				entityData.ship = std::move(data.shipData);
 				entityData.properties = std::move(data.entityProperties);
 			}
 

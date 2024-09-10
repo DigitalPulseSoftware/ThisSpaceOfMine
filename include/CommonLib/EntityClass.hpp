@@ -17,13 +17,15 @@
 
 namespace tsom
 {
+	struct ClassInstanceComponent;
+
 	class TSOM_COMMONLIB_API EntityClass
 	{
 		public:
 			struct Callbacks;
 			struct Property;
 
-			inline EntityClass(std::string name, std::vector<Property> properties, Callbacks callbacks);
+			EntityClass(std::string name, std::vector<Property> properties, Callbacks callbacks);
 			EntityClass(const EntityClass&) = delete;
 			EntityClass(EntityClass&&) noexcept = default;
 			~EntityClass() = default;
@@ -36,7 +38,7 @@ namespace tsom
 			inline const Property& GetProperty(Nz::UInt32 propertyIndex) const;
 			inline Nz::UInt32 GetPropertyCount() const;
 
-			void SetupEntity(entt::handle entity) const;
+			ClassInstanceComponent& SetupEntity(entt::handle entity) const;
 
 			EntityClass& operator=(const EntityClass&) = delete;
 			EntityClass& operator=(EntityClass&&) noexcept = default;
@@ -49,8 +51,8 @@ namespace tsom
 			struct Property
 			{
 				std::string name;
-				EntityProperty defaultValue;
 				EntityPropertyType type;
+				EntityProperty defaultValue;
 				bool isArray;
 				bool isNetworked;
 			};

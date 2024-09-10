@@ -3,7 +3,7 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/EntityClass.hpp>
-#include <CommonLib/Components/EntityClassComponent.hpp>
+#include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <entt/entt.hpp>
 #include <fmt/format.h>
 #include <stdexcept>
@@ -26,17 +26,19 @@ namespace tsom
 
 	void EntityClass::ActivateEntity(entt::handle entity) const
 	{
-		assert(entity.get<EntityClassComponent>().entityClass == this);
+		assert(entity.get<ClassInstanceComponent>().entityClass == this);
 		if (m_callbacks.onInit)
 			m_callbacks.onInit(entity);
 	}
 
-	void EntityClass::SetupEntity(entt::handle entity) const
+	ClassInstanceComponent& EntityClass::SetupEntity(entt::handle entity) const
 	{
-		auto& entityClass = entity.emplace<EntityClassComponent>();
-		entityClass.entityClass = this;
-		entityClass.properties.reserve(m_properties.size());
+		auto& entityInstance = entity.emplace<ClassInstanceComponent>();
+		entityInstance.entityClass = this;
+		entityInstance.properties.reserve(m_properties.size());
 		for (const auto& property : m_properties)
-			entityClass.properties.emplace_back(property.defaultValue);
+			entityInstance.properties.emplace_back(property.defaultValue);
+
+		return entityInstance;
 	}
 }

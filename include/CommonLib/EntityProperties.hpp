@@ -94,6 +94,10 @@ namespace tsom
 		UnderlyingType&& operator*() &&;
 		const UnderlyingType& operator*() const &;
 
+		operator UnderlyingType&() &;
+		operator UnderlyingType&&() &&;
+		operator const UnderlyingType&() const &;
+
 		EntityPropertySingleValue& operator=(const EntityPropertySingleValue&) = default;
 		EntityPropertySingleValue& operator=(EntityPropertySingleValue&&) noexcept = default;
 

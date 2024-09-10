@@ -5,6 +5,7 @@
 #include <ServerLib/ServerInstance.hpp>
 #include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/Planet.hpp>
+#include <CommonLib/Entities/ChunkClassLibrary.hpp>
 #include <CommonLib/Scripting/EntityScriptingLibrary.hpp>
 #include <CommonLib/Scripting/MathScriptingLibrary.hpp>
 #include <ServerLib/ServerPlanetEnvironment.hpp>
@@ -34,6 +35,8 @@ namespace tsom
 	m_scriptingContext(application),
 	m_pauseWhenEmpty(config.pauseWhenEmpty)
 	{
+		m_entityRegistry.RegisterClassLibrary<ChunkClassLibrary>(m_application, m_blockLibrary);
+
 		m_scriptingContext.RegisterLibrary<MathScriptingLibrary>();
 		m_scriptingContext.RegisterLibrary<EntityScriptingLibrary>(m_entityRegistry);
 		m_scriptingContext.RegisterLibrary<ServerScriptingLibrary>(m_application);

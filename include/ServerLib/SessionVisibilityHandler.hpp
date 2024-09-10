@@ -66,9 +66,7 @@ namespace tsom
 				const EntityClass* entityClass;
 				Nz::Quaternionf initialRotation;
 				Nz::Vector3f initialPosition;
-				std::optional<Packets::Helper::PlanetData> planetData;
 				std::optional<Packets::Helper::PlayerControlledData> playerControlledData;
-				std::optional<Packets::Helper::ShipData> shipData;
 				std::vector<EntityProperty> entityProperties;
 				bool isMoving;
 			};
@@ -134,7 +132,7 @@ namespace tsom
 				inline std::size_t operator()(const entt::handle& handle) const;
 			};
 
-			using ChunkNetworkMap = std::unordered_map<ChunkIndices, ChunkId>;
+			using ChunkNetworkMap = tsl::hopscotch_map<ChunkIndices, ChunkId>;
 
 			tsl::hopscotch_map<entt::handle, EntityId, HandlerHasher> m_entityIndices;
 			tsl::hopscotch_map<entt::handle, CreateEntityData, HandlerHasher> m_createdEntities;

@@ -8,7 +8,7 @@
 #define TSOM_GAME_GAMEAPPCOMPONENT_HPP
 
 #include <ClientLib/ClientBlockLibrary.hpp>
-#include <CommonLib/Systems/PlanetGravitySystem.hpp>
+#include <CommonLib/Systems/GravityPhysicsSystem.hpp>
 #include <Nazara/Core/ApplicationComponent.hpp>
 #include <Nazara/Core/StateMachine.hpp>
 #include <Nazara/Widgets/Canvas.hpp>
