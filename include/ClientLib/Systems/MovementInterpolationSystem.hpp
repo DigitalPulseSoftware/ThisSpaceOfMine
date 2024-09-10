@@ -28,13 +28,13 @@ namespace tsom
 
 			MovementInterpolationSystem(entt::registry& registry, Nz::Time movementTickDuration, std::size_t targetMovementPoints = 4);
 			MovementInterpolationSystem(const MovementInterpolationSystem&) = delete;
-			MovementInterpolationSystem(MovementInterpolationSystem&&) = default;
+			MovementInterpolationSystem(MovementInterpolationSystem&&) = delete;
 			~MovementInterpolationSystem() = default;
 
 			void Update(Nz::Time elapsedTime);
 
 			MovementInterpolationSystem& operator=(const MovementInterpolationSystem&) = delete;
-			MovementInterpolationSystem& operator=(MovementInterpolationSystem&&) = default;
+			MovementInterpolationSystem& operator=(MovementInterpolationSystem&&) = delete;
 
 		private:
 			entt::observer m_interpolatedObserver;

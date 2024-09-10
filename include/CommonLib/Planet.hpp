@@ -28,7 +28,7 @@ namespace tsom
 		public:
 			Planet(float tileSize, float cornerRadius, float gravity);
 			Planet(const Planet&) = delete;
-			Planet(Planet&&) noexcept = default;
+			Planet(Planet&&) = delete;
 			~Planet() = default;
 
 			Chunk& AddChunk(const BlockLibrary& blockLibrary, const ChunkIndices& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback = nullptr);
@@ -55,7 +55,7 @@ namespace tsom
 			inline void UpdateCornerRadius(float cornerRadius);
 
 			Planet& operator=(const Planet&) = delete;
-			Planet& operator=(Planet&&) noexcept = default;
+			Planet& operator=(Planet&&) = delete;
 
 			static constexpr unsigned int ChunkSize = 32;
 
