@@ -39,8 +39,8 @@ namespace tsom
 
 			PrintCallback OverridePrintCallback(PrintCallback&& printOutput);
 
-			void RegisterLibrary(std::unique_ptr<ScriptingLibrary>&& library);
 			template<typename T, typename... Args> void RegisterLibrary(Args&&... args);
+			void RegisterLibrary(std::unique_ptr<ScriptingLibrary>&& library);
 
 			ScriptingContext& operator=(const ScriptingContext&) = delete;
 			ScriptingContext& operator=(ScriptingContext&&) = delete;

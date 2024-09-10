@@ -2,8 +2,8 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
-#include <ClientLib/Components/AnimationComponent.hpp>
 #include <ClientLib/Systems/AnimationSystem.hpp>
+#include <ClientLib/Components/AnimationComponent.hpp>
 #include <Nazara/Core/Components/DisabledComponent.hpp>
 
 namespace tsom

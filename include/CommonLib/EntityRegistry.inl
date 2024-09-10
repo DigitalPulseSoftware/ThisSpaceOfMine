@@ -26,4 +26,10 @@ namespace tsom
 		for (auto&& [className, classData] : m_classes)
 			functor(className, classData);
 	}
+
+	template<typename T, typename... Args>
+	void EntityRegistry::RegisterClassLibrary(Args&&... args)
+	{
+		return RegisterClassLibrary(std::make_unique<T>(std::forward<Args>(args)...));
+	}
 }

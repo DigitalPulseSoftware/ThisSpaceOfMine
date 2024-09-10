@@ -11,13 +11,14 @@
 #include <ClientLib/Components/ChunkNetworkMapComponent.hpp>
 #include <ClientLib/Components/EnvironmentComponent.hpp>
 #include <ClientLib/Components/MovementInterpolationComponent.hpp>
+#include <ClientLib/Entities/ClientChunkClassLibrary.hpp>
 #include <ClientLib/Scripting/ClientEntityScriptingLibrary.hpp>
 #include <ClientLib/Scripting/ClientScriptingLibrary.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/NetworkSession.hpp>
 #include <CommonLib/PhysicsConstants.hpp>
 #include <CommonLib/Ship.hpp>
-#include <CommonLib/Components/EntityClassComponent.hpp>
+#include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Components/EntityOwnerComponent.hpp>
 #include <CommonLib/Components/PlanetComponent.hpp>
 #include <CommonLib/Components/ShipComponent.hpp>
@@ -70,6 +71,8 @@ namespace tsom
 		m_scriptingContext.RegisterLibrary<ClientScriptingLibrary>(m_app);
 		m_scriptingContext.LoadDirectory("scripts/assets");
 
+		m_entityRegistry.RegisterClassLibrary<ClientChunkClassLibrary>(m_app, m_blockLibrary);
+
 		m_scriptingContext.RegisterLibrary<ClientEntityScriptingLibrary>(m_entityRegistry);
 		m_scriptingContext.LoadDirectory("scripts/entities");
 	}
@@ -116,9 +119,9 @@ namespace tsom
 
 		Chunk* chunk;
 		if (PlanetComponent* planetComponent = entity.try_get<PlanetComponent>())
-			chunk = &planetComponent->AddChunk(m_blockLibrary, indices);
+			chunk = &planetComponent->planet->AddChunk(m_blockLibrary, indices);
 		else if (ShipComponent* shipComponent = entity.try_get<ShipComponent>())
-			chunk = &shipComponent->AddChunk(m_blockLibrary, indices);
+			chunk = &shipComponent->ship->AddChunk(m_blockLibrary, indices);
 
 		auto& chunkNetworkMap = entity.get<ChunkNetworkMapComponent>();
 		chunkNetworkMap.chunkByNetworkIndex.emplace(chunkCreate.chunkId, chunk);
@@ -245,7 +248,7 @@ namespace tsom
 			if (const EntityClass* entityClass = m_entityRegistry.FindClass(entityClassName))
 			{
 				entityClass->SetupEntity(entity);
-				auto& entityClassData = entity.get<EntityClassComponent>();
+				auto& entityClassData = entity.get<ClassInstanceComponent>();
 
 				std::size_t networkedPropertyIndex = 0;
 				for (Nz::UInt32 i = 0; i < entityClass->GetPropertyCount(); ++i)
@@ -259,26 +262,14 @@ namespace tsom
 			else
 				fmt::print(fg(fmt::color::red), "unknown entity class {}\n", entityClassName);
 
-			if (entityData.planet)
-			{
-				SetupEntity(entity, std::move(entityData.planet.value()));
-
-				// TEMP
-				auto& planetComponent = entity.get<PlanetComponent>();
-				environment.gravityController = &planetComponent;
-			}
-
 			if (entityData.playerControlled)
 				SetupEntity(entity, std::move(entityData.playerControlled.value()));
 
-			if (entityData.ship)
-			{
-				SetupEntity(entity, std::move(entityData.ship.value()));
-
-				// TEMP
-				auto& shipComponent = entity.get<ShipComponent>();
-				environment.gravityController = &shipComponent;
-			}
+			// TEMP
+			if (PlanetComponent* planetComponent = entity.try_get<PlanetComponent>())
+				environment.gravityController = planetComponent->planet.get();
+			else if (ShipComponent* shipComponent = entity.try_get<ShipComponent>())
+				environment.gravityController = shipComponent->ship.get();
 
 			fmt::print("Created entity {} in environment {} ({})\n", entityData.entityId, entityData.environmentId, entityClassName);
 		}
@@ -477,14 +468,6 @@ namespace tsom
 		m_currentEnvironmentIndex = playerEnv.newRootEnv;
 	}
 
-	void ClientSessionHandler::SetupEntity(entt::handle entity, Packets::Helper::PlanetData&& entityData)
-	{
-		entity.emplace<ChunkNetworkMapComponent>();
-		auto& planetComponent = entity.emplace<PlanetComponent>(entityData.cellSize, entityData.cornerRadius, entityData.gravity);
-		planetComponent.planetEntities = std::make_unique<ClientChunkEntities>(m_app, m_world, planetComponent, m_blockLibrary);
-		planetComponent.planetEntities->SetParentEntity(entity);
-	}
-
 	void ClientSessionHandler::SetupEntity(entt::handle entity, Packets::Helper::PlayerControlledData&& entityData)
 	{
 		auto collider = std::make_shared<Nz::CapsuleCollider3D>(Constants::PlayerCapsuleHeight, Constants::PlayerColliderRadius);
@@ -644,13 +627,5 @@ namespace tsom
 
 		if (playerInfo)
 			playerInfo->textSprite = std::move(textSprite);
-	}
-
-	void ClientSessionHandler::SetupEntity(entt::handle entity, Packets::Helper::ShipData&& entityData)
-	{
-		entity.emplace<ChunkNetworkMapComponent>();
-		auto& shipComponent = entity.emplace<ShipComponent>(entityData.cellSize);
-		shipComponent.shipEntities = std::make_unique<ClientChunkEntities>(m_app, m_world, shipComponent, m_blockLibrary);
-		shipComponent.shipEntities->SetParentEntity(entity);
 	}
 }

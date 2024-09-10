@@ -300,15 +300,16 @@ namespace tsom
 			newPlanetEntity.emplace<Nz::NodeComponent>().CopyTransform(playerEntity.get<Nz::NodeComponent>());
 			newPlanetEntity.emplace<NetworkedComponent>();
 
-			auto& planetComponent = newPlanetEntity.emplace<PlanetComponent>(1.f, 16.f, 9.81f);
+			auto& planetComponent = newPlanetEntity.emplace<PlanetComponent>();
 
 			ServerInstance& serverInstance = m_player->GetServerInstance();
 
 			auto& taskScheduler = serverInstance.GetApplication().GetComponent<Nz::TaskSchedulerAppComponent>();
 
-			planetComponent.GenerateChunks(serverInstance.GetBlockLibrary(), taskScheduler, std::rand(), Nz::Vector3ui(5));
+			planetComponent.planet = std::make_unique<Planet>(1.f, 16.f, 9.81f);
+			planetComponent.planet->GenerateChunks(serverInstance.GetBlockLibrary(), taskScheduler, std::rand(), Nz::Vector3ui(5));
 
-			planetComponent.planetEntities = std::make_unique<ChunkEntities>(serverInstance.GetApplication(), environment->GetWorld(), planetComponent, serverInstance.GetBlockLibrary());
+			planetComponent.planetEntities = std::make_unique<ChunkEntities>(serverInstance.GetApplication(), environment->GetWorld(), *planetComponent.planet, serverInstance.GetBlockLibrary());
 			planetComponent.planetEntities->SetParentEntity(newPlanetEntity);
 			return;
 		}

@@ -20,28 +20,28 @@ namespace Nz
 
 namespace tsom
 {
-	class Planet;
+	class GravityController;
 
-	class TSOM_COMMONLIB_API PlanetGravitySystem : public Nz::PhysWorld3DStepListener
+	class TSOM_COMMONLIB_API GravityPhysicsSystem : public Nz::PhysWorld3DStepListener
 	{
 		public:
-			PlanetGravitySystem(entt::registry& registry, const Planet& planet, Nz::PhysWorld3D& physWorld);
-			PlanetGravitySystem(const PlanetGravitySystem&) = delete;
-			PlanetGravitySystem(PlanetGravitySystem&&) = delete;
-			~PlanetGravitySystem();
+			GravityPhysicsSystem(entt::registry& registry, const GravityController& gravityController, Nz::PhysWorld3D& physWorld);
+			GravityPhysicsSystem(const GravityPhysicsSystem&) = delete;
+			GravityPhysicsSystem(GravityPhysicsSystem&&) = delete;
+			~GravityPhysicsSystem();
 
 			void PreSimulate(float elapsedTime) override;
 
-			PlanetGravitySystem& operator=(const PlanetGravitySystem&) = delete;
-			PlanetGravitySystem& operator=(PlanetGravitySystem&&) = delete;
+			GravityPhysicsSystem& operator=(const GravityPhysicsSystem&) = delete;
+			GravityPhysicsSystem& operator=(GravityPhysicsSystem&&) = delete;
 
 		private:
 			entt::registry& m_registry;
-			const Planet& m_planet;
+			const GravityController& m_gravityController;
 			Nz::PhysWorld3D& m_physWorld;
 	};
 }
 
-#include <CommonLib/Systems/PlanetGravitySystem.inl>
+#include <CommonLib/Systems/GravityPhysicsSystem.inl>
 
 #endif // TSOM_COMMONLIB_SYSTEMS_PLANETGRAVITYSYSTEM_HPP

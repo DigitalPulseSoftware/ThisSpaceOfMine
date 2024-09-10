@@ -4,6 +4,7 @@
 
 #include <ServerLib/ServerShipEnvironment.hpp>
 #include <CommonLib/ChunkEntities.hpp>
+#include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/PhysicsConstants.hpp>
 #include <CommonLib/Ship.hpp>
 #include <CommonLib/Components/ShipComponent.hpp>
@@ -43,25 +44,28 @@ namespace tsom
 		auto& app = serverInstance.GetApplication();
 		auto& blockLibrary = serverInstance.GetBlockLibrary();
 
+		m_world.AddSystem<ShipSystem>();
+
 		m_shipEntity = CreateEntity();
 		m_shipEntity.emplace<Nz::NodeComponent>();
 		m_shipEntity.emplace<NetworkedComponent>();
 
-		auto& shipComponent = m_shipEntity.emplace<ShipComponent>(1.f);
+		const EntityClass* shipClass = serverInstance.GetEntityRegistry().FindClass("ship");
 
-		shipComponent.shipEntities = std::make_unique<ChunkEntities>(app, m_world, shipComponent, blockLibrary);
-		shipComponent.shipEntities->SetParentEntity(m_shipEntity);
+		auto& entityInstance = shipClass->SetupEntity(m_shipEntity);
+		entityInstance.UpdateProperty<EntityPropertyType::Float>("CellSize", 1.f);
 
-		m_world.AddSystem<ShipSystem>();
+		shipClass->ActivateEntity(m_shipEntity);
 
-		shipComponent.OnChunkAdded.Connect([this](ChunkContainer*, Chunk* chunk)
+		auto& shipComponent = m_shipEntity.get<ShipComponent>();
+		shipComponent.ship->OnChunkAdded.Connect([this](ChunkContainer*, Chunk* chunk)
 		{
 			auto& chunkData = m_chunkData[chunk->GetIndices()];
 			chunkData.blockSize = chunk->GetBlockSize();
 			m_invalidatedChunks.emplace(chunk);
 		});
 
-		shipComponent.OnChunkRemove.Connect([this](ChunkContainer*, Chunk* chunk)
+		shipComponent.ship->OnChunkRemove.Connect([this](ChunkContainer*, Chunk* chunk)
 		{
 			const ChunkIndices& indices = chunk->GetIndices();
 			m_chunkData.erase(indices);
@@ -80,7 +84,7 @@ namespace tsom
 			}
 		});
 
-		shipComponent.OnChunkUpdated.Connect([this](ChunkContainer*, Chunk* chunk, DirectionMask)
+		shipComponent.ship->OnChunkUpdated.Connect([this](ChunkContainer*, Chunk* chunk, DirectionMask)
 		{
 			m_invalidatedChunks.emplace(chunk);
 			*m_shouldSave = true;
@@ -110,17 +114,17 @@ namespace tsom
 
 	const GravityController* ServerShipEnvironment::GetGravityController() const
 	{
-		return &m_shipEntity.get<ShipComponent>();
+		return m_shipEntity.get<ShipComponent>().ship.get();
 	}
 
 	Ship& ServerShipEnvironment::GetShip()
 	{
-		return m_shipEntity.get<ShipComponent>();
+		return *m_shipEntity.get<ShipComponent>().ship;
 	}
 
 	const Ship& ServerShipEnvironment::GetShip() const
 	{
-		return m_shipEntity.get<ShipComponent>();
+		return *m_shipEntity.get<ShipComponent>().ship;
 	}
 
 	entt::handle ServerShipEnvironment::LinkOutsideEnvironment(ServerEnvironment* outsideEnvironment, const EnvironmentTransform& transform)

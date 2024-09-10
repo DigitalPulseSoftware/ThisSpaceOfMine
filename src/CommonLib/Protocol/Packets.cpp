@@ -46,18 +46,6 @@ namespace tsom
 				serializer &= data.rotation;
 			}
 
-			void Serialize(PacketSerializer& serializer, PlanetData& data)
-			{
-				serializer &= data.cellSize;
-				serializer &= data.cornerRadius;
-				serializer &= data.gravity;
-			}
-
-			void Serialize(PacketSerializer& serializer, ShipData& data)
-			{
-				serializer &= data.cellSize;
-			}
-
 			void Serialize(PacketSerializer& serializer, PlayerControlledData& data)
 			{
 				serializer &= data.controllingPlayerId;
@@ -235,20 +223,12 @@ namespace tsom
 				serializer &= entity.entityId;
 				Helper::Serialize(serializer, entity.initialStates);
 
-				serializer.SerializePresence(entity.planet);
 				serializer.SerializePresence(entity.playerControlled);
-				serializer.SerializePresence(entity.ship);
 
 				serializer.Serialize(entity.entityClass);
 
-				if (entity.planet)
-					Helper::Serialize(serializer, *entity.planet);
-
 				if (entity.playerControlled)
 					Helper::Serialize(serializer, *entity.playerControlled);
-
-				if (entity.ship)
-					Helper::Serialize(serializer, *entity.ship);
 
 				serializer.SerializeArraySize(entity.properties);
 				for (auto& property : entity.properties)
