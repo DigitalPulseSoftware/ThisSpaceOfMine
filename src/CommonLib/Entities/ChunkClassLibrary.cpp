@@ -15,13 +15,11 @@ namespace tsom
 {
 	void ChunkClassLibrary::Register(EntityRegistry& registry)
 	{
-		using namespace std::string_literals;
-
 		registry.RegisterClass(EntityClass("planet", {
 			{
-				{ .name = "CellSize"s,     .type = EntityPropertyType::Float, .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(1.f),   .isNetworked = true },
-				{ .name = "CornerRadius"s, .type = EntityPropertyType::Float, .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(16.f),  .isNetworked = true },
-				{ .name = "Gravity"s,      .type = EntityPropertyType::Float, .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(9.81f), .isNetworked = true }
+				EntityClass::Property { .name = "CellSize",     .type = EntityPropertyType::Float, .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(1.f),   .isNetworked = true },
+				EntityClass::Property { .name = "CornerRadius", .type = EntityPropertyType::Float, .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(16.f),  .isNetworked = true },
+				EntityClass::Property { .name = "Gravity",      .type = EntityPropertyType::Float, .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(9.81f), .isNetworked = true }
 			}
 		},
 		{
@@ -46,7 +44,7 @@ namespace tsom
 
 		registry.RegisterClass(EntityClass("ship", {
 			{
-				{ .name = "CellSize"s, .type = EntityPropertyType::Float, .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(1.f), .isNetworked = true }
+				EntityClass::Property { .name = "CellSize", .type = EntityPropertyType::Float, .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(1.f), .isNetworked = true }
 			}
 		},
 		{
