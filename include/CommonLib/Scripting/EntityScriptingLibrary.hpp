@@ -24,7 +24,7 @@ namespace tsom
 			EntityScriptingLibrary(EntityScriptingLibrary&&) = delete;
 			virtual ~EntityScriptingLibrary();
 
-			virtual void Register(sol::state& state) override;
+			void Register(sol::state& state) override;
 
 			EntityScriptingLibrary& operator=(const EntityScriptingLibrary&) = delete;
 			EntityScriptingLibrary& operator=(EntityScriptingLibrary&&) = delete;
@@ -44,6 +44,10 @@ namespace tsom
 
 		protected:
 			virtual void FillConstants(sol::state& state, sol::table constants);
+			virtual void FillEntityMetatable(sol::state& state, sol::table entityMetatable);
+
+			virtual void HandleInit(sol::table classMetatable, entt::handle entity);
+			virtual bool RegisterEvent(sol::table classMetatable, std::string_view eventName, sol::protected_function callback);
 
 			virtual AddComponentFunc RetrieveAddComponentHandler(std::string_view componentType);
 			virtual GetComponentFunc RetrieveGetComponentHandler(std::string_view componentType);

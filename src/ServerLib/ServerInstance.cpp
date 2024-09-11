@@ -6,10 +6,10 @@
 #include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/Planet.hpp>
 #include <CommonLib/Entities/ChunkClassLibrary.hpp>
-#include <CommonLib/Scripting/EntityScriptingLibrary.hpp>
 #include <CommonLib/Scripting/MathScriptingLibrary.hpp>
 #include <ServerLib/ServerPlanetEnvironment.hpp>
 #include <ServerLib/ServerShipEnvironment.hpp>
+#include <ServerLib/Scripting/ServerEntityScriptingLibrary.hpp>
 #include <ServerLib/Scripting/ServerScriptingLibrary.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/File.hpp>
@@ -38,7 +38,7 @@ namespace tsom
 		m_entityRegistry.RegisterClassLibrary<ChunkClassLibrary>(m_application, m_blockLibrary);
 
 		m_scriptingContext.RegisterLibrary<MathScriptingLibrary>();
-		m_scriptingContext.RegisterLibrary<EntityScriptingLibrary>(m_entityRegistry);
+		m_scriptingContext.RegisterLibrary<ServerEntityScriptingLibrary>(m_entityRegistry);
 		m_scriptingContext.RegisterLibrary<ServerScriptingLibrary>(m_application);
 		m_scriptingContext.LoadDirectory("scripts/entities");
 	}

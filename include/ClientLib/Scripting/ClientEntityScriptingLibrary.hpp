@@ -13,7 +13,7 @@
 
 namespace tsom
 {
-	class TSOM_CLIENTLIB_API ClientEntityScriptingLibrary : public EntityScriptingLibrary
+	class TSOM_CLIENTLIB_API ClientEntityScriptingLibrary final : public EntityScriptingLibrary
 	{
 		public:
 			using EntityScriptingLibrary::EntityScriptingLibrary;
@@ -22,6 +22,8 @@ namespace tsom
 
 		private:
 			void FillConstants(sol::state& state, sol::table constants) override;
+			void FillEntityMetatable(sol::state& state, sol::table entityMetatable) override;
+
 			void RegisterClientComponents(sol::state& state);
 
 			AddComponentFunc RetrieveAddComponentHandler(std::string_view componentType) override;

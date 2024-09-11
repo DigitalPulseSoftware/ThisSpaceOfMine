@@ -31,6 +31,8 @@ namespace tsom
 			ServerScriptingLibrary& operator=(ServerScriptingLibrary&&) = delete;
 
 		private:
+			void RegisterPlayer(sol::state& state);
+
 			Nz::ApplicationBase& m_app;
 	};
 }

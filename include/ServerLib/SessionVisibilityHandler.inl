@@ -15,7 +15,7 @@ namespace tsom
 		m_activeChunkUpdates = std::make_shared<std::size_t>(0);
 	}
 
-	inline bool SessionVisibilityHandler::GetChunkByNetworkId(std::size_t networkId, entt::handle* entityOwner, Chunk** chunk) const
+	inline bool SessionVisibilityHandler::GetChunkByNetworkId(Packets::Helper::ChunkId networkId, entt::handle* entityOwner, Chunk** chunk) const
 	{
 		if (networkId >= m_visibleChunks.size())
 			return false;
@@ -30,6 +30,19 @@ namespace tsom
 		if (chunk)
 			*chunk = chunkData.chunk;
 
+		return true;
+	}
+
+	inline bool SessionVisibilityHandler::GetEntityByNetworkId(Packets::Helper::EntityId networkId, entt::handle* entity) const
+	{
+		if (networkId >= m_visibleEntities.size())
+			return false;
+
+		auto& entityData = m_visibleEntities[networkId];
+		if (!entityData.entity)
+			return false;
+
+		*entity = entityData.entity;
 		return true;
 	}
 

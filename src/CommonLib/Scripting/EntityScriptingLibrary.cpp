@@ -12,6 +12,7 @@
 #include <CommonLib/Components/ScriptedEntityComponent.hpp>
 #include <CommonLib/Scripting/ScriptingProperties.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
+#include <ServerLib/ServerPlayer.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Collider3D.hpp>
 #include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
@@ -139,6 +140,66 @@ namespace tsom
 		constants["ObjectLayerStaticTrigger"] = Constants::ObjectLayerStaticTrigger;
 	}
 
+	void EntityScriptingLibrary::FillEntityMetatable(sol::state& state, sol::table entityMetatable)
+	{
+		entityMetatable["AddComponent"] = LuaFunction([this](sol::this_state L, sol::table entityTable, std::string_view componentType, sol::optional<sol::table> parameters)
+		{
+			entt::handle entity = AssertScriptEntity(entityTable);
+
+			AddComponentFunc addComponent = RetrieveAddComponentHandler(componentType);
+			if (!addComponent)
+				throw std::runtime_error(fmt::format("invalid component {}", componentType));
+
+			return addComponent(L, entity, parameters);
+		});
+
+		entityMetatable["GetComponent"] = LuaFunction([this](sol::this_state L, sol::table entityTable, std::string_view componentType) -> sol::object
+		{
+			entt::handle entity = AssertScriptEntity(entityTable);
+
+			GetComponentFunc getComponent = RetrieveGetComponentHandler(componentType);
+			if (!getComponent)
+				throw std::runtime_error(fmt::format("invalid component {}", componentType));
+
+			return getComponent(L, entity);
+		});
+
+		entityMetatable["GetProperty"] = LuaFunction([this](sol::this_state L, sol::table entityTable, std::string_view propertyName)
+		{
+			entt::handle entity = AssertScriptEntity(entityTable);
+
+			auto& classComponent = entity.get<ClassInstanceComponent>();
+			Nz::UInt32 propertyIndex = classComponent.entityClass->FindProperty(propertyName);
+			if (propertyIndex == EntityClass::InvalidIndex)
+				TriggerLuaArgError(L, 2, fmt::format("invalid property {}", propertyName));
+
+			sol::state_view state(L);
+			return TranslatePropertyToLua(state, classComponent.properties[propertyIndex]);
+		});
+
+		entityMetatable["UpdateProperty"] = LuaFunction([this](sol::this_state L, sol::table entityTable, std::string_view propertyName, sol::object value)
+		{
+			entt::handle entity = AssertScriptEntity(entityTable);
+
+			auto& classComponent = entity.get<ClassInstanceComponent>();
+			Nz::UInt32 propertyIndex = classComponent.entityClass->FindProperty(propertyName);
+			if (propertyIndex == EntityClass::InvalidIndex)
+				TriggerLuaArgError(L, 2, fmt::format("invalid property {}", propertyName));
+
+			const auto& property = classComponent.entityClass->GetProperty(propertyIndex);
+			classComponent.properties[propertyIndex] = TranslatePropertyFromLua(value, property.type, property.isArray);
+		});
+	}
+
+	void EntityScriptingLibrary::HandleInit(sol::table classMetatable, entt::handle entity)
+	{
+	}
+
+	bool EntityScriptingLibrary::RegisterEvent(sol::table classMetatable, std::string_view eventName, sol::protected_function callback)
+	{
+		return false;
+	}
+
 	auto EntityScriptingLibrary::RetrieveAddComponentHandler(std::string_view componentType) -> AddComponentFunc
 	{
 		auto it = s_components.find(componentType);
@@ -202,12 +263,15 @@ namespace tsom
 					.isNetworked = isNetworked
 				});
 			}),
-			"On", LuaFunction([](EntityBuilder& entityBuilder, std::string_view eventName, sol::protected_function callback)
+			"On", LuaFunction([this](sol::this_state L, EntityBuilder& entityBuilder, std::string_view eventName, sol::protected_function callback)
 			{
-				if (eventName != "init")
-					throw std::runtime_error(fmt::format("unknown event {}", eventName));
-
-				entityBuilder.classMetatable["_Init"] = std::move(callback);
+				if (eventName == "init")
+					entityBuilder.classMetatable["_Init"] = std::move(callback);
+				else
+				{
+					if (!RegisterEvent(entityBuilder.classMetatable, eventName, std::move(callback)))
+						TriggerLuaError(L, fmt::format("unknown event {}", eventName));
+				}
 			}),
 			sol::meta_method::index, LuaFunction([](EntityBuilder& entityBuilder, std::string_view key)
 			{
@@ -223,53 +287,7 @@ namespace tsom
 	void EntityScriptingLibrary::RegisterEntityMetatable(sol::state& state)
 	{
 		m_entityMetatable = state.create_table();
-		m_entityMetatable["AddComponent"] = LuaFunction([this](sol::this_state L, sol::table entityTable, std::string_view componentType, sol::optional<sol::table> parameters)
-		{
-			entt::handle entity = AssertScriptEntity(entityTable);
-
-			AddComponentFunc addComponent = RetrieveAddComponentHandler(componentType);
-			if (!addComponent)
-				throw std::runtime_error(fmt::format("invalid component {}", componentType));
-
-			return addComponent(L, entity, parameters);
-		});
-
-		m_entityMetatable["GetComponent"] = LuaFunction([this](sol::this_state L, sol::table entityTable, std::string_view componentType) -> sol::object
-		{
-			entt::handle entity = AssertScriptEntity(entityTable);
-
-			GetComponentFunc getComponent = RetrieveGetComponentHandler(componentType);
-			if (!getComponent)
-				throw std::runtime_error(fmt::format("invalid component {}", componentType));
-
-			return getComponent(L, entity);
-		});
-
-		m_entityMetatable["GetProperty"] = LuaFunction([this](sol::this_state L, sol::table entityTable, std::string_view propertyName)
-		{
-			entt::handle entity = AssertScriptEntity(entityTable);
-
-			auto& classComponent = entity.get<ClassInstanceComponent>();
-			Nz::UInt32 propertyIndex = classComponent.entityClass->FindProperty(propertyName);
-			if (propertyIndex == EntityClass::InvalidIndex)
-				TriggerLuaArgError(L, 2, fmt::format("invalid property {}", propertyName));
-
-			sol::state_view state(L);
-			return TranslatePropertyToLua(state, classComponent.properties[propertyIndex]);
-		});
-
-		m_entityMetatable["SetProperty"] = LuaFunction([this](sol::this_state L, sol::table entityTable, std::string_view propertyName, sol::object value)
-		{
-			entt::handle entity = AssertScriptEntity(entityTable);
-
-			auto& classComponent = entity.get<ClassInstanceComponent>();
-			Nz::UInt32 propertyIndex = classComponent.entityClass->FindProperty(propertyName);
-			if (propertyIndex == EntityClass::InvalidIndex)
-				TriggerLuaArgError(L, 2, fmt::format("invalid property {}", propertyName));
-
-			const auto& property = classComponent.entityClass->GetProperty(propertyIndex);
-			classComponent.properties[propertyIndex] = TranslatePropertyFromLua(value, property.type, property.isArray);
-		});
+		FillEntityMetatable(state, m_entityMetatable);
 	}
 
 	void EntityScriptingLibrary::RegisterEntityRegistry(sol::state& state)
@@ -282,13 +300,15 @@ namespace tsom
 			metatable[sol::meta_method::index] = m_entityMetatable;
 
 			EntityClass::Callbacks callbacks;
-			callbacks.onInit = [metatable, state](entt::handle entity) mutable
+			callbacks.onInit = [this, metatable, state](entt::handle entity) mutable
 			{
 				auto& entityScripted = entity.emplace<ScriptedEntityComponent>();
 				entityScripted.classMetatable = metatable;
 				entityScripted.entityTable = state.create_table();
 				entityScripted.entityTable[sol::metatable_key] = entityScripted.classMetatable;
 				entityScripted.entityTable["_Entity"] = entity;
+
+				HandleInit(entityScripted.classMetatable, entity);
 
 				sol::optional<sol::protected_function> initCallback = entityScripted.classMetatable["_Init"];
 				if (initCallback)

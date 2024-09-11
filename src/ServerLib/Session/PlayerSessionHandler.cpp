@@ -20,13 +20,14 @@
 #include <ServerLib/Components/EnvironmentEnterTriggerComponent.hpp>
 #include <ServerLib/Components/EnvironmentProxyComponent.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
+#include <ServerLib/Components/ServerInteractibleComponent.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/TaskSchedulerAppComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Collider3D.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
-#include <nlohmann/json.hpp>
 #include <fmt/color.h>
+#include <nlohmann/json.hpp>
 #include <charconv>
 #include <numeric>
 
@@ -64,6 +65,28 @@ namespace tsom
 	PlayerSessionHandler::~PlayerSessionHandler()
 	{
 		m_player->Destroy();
+	}
+
+	void PlayerSessionHandler::HandlePacket(Packets::Interact&& interact)
+	{
+		entt::handle entity;
+		if (!m_player->GetVisibilityHandler().GetEntityByNetworkId(interact.entityId, &entity))
+			return;
+
+		ServerInteractibleComponent* interactibleEntity = entity.try_get<ServerInteractibleComponent>();
+		if (!interactibleEntity || !interactibleEntity->isEnabled)
+		{
+			fmt::print("blocked interact request on non-interactible entity {} from player {}\n", entt::to_integral(entity.entity()), m_player->GetNickname());
+			return;
+		}
+
+		if (!interactibleEntity->onInteraction)
+		{
+			fmt::print("entity {} has no interaction callback\n", entt::to_integral(entity.entity()));
+			return;
+		}
+
+		interactibleEntity->onInteraction(entity, m_player);
 	}
 
 	void PlayerSessionHandler::HandlePacket(Packets::MineBlock&& mineBlock)
@@ -300,12 +323,11 @@ namespace tsom
 			newPlanetEntity.emplace<Nz::NodeComponent>().CopyTransform(playerEntity.get<Nz::NodeComponent>());
 			newPlanetEntity.emplace<NetworkedComponent>();
 
-			auto& planetComponent = newPlanetEntity.emplace<PlanetComponent>();
-
 			ServerInstance& serverInstance = m_player->GetServerInstance();
 
 			auto& taskScheduler = serverInstance.GetApplication().GetComponent<Nz::TaskSchedulerAppComponent>();
 
+			auto& planetComponent = newPlanetEntity.emplace<PlanetComponent>();
 			planetComponent.planet = std::make_unique<Planet>(1.f, 16.f, 9.81f);
 			planetComponent.planet->GenerateChunks(serverInstance.GetBlockLibrary(), taskScheduler, std::rand(), Nz::Vector3ui(5));
 

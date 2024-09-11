@@ -4,18 +4,18 @@
 
 #pragma once
 
-#ifndef TSOM_CLIENTLIB_COMPONENTS_ENVIRONMENTCOMPONENT_HPP
-#define TSOM_CLIENTLIB_COMPONENTS_ENVIRONMENTCOMPONENT_HPP
+#ifndef TSOM_CLIENTLIB_COMPONENTS_CLIENTENTITYNETWORKINDEX_HPP
+#define TSOM_CLIENTLIB_COMPONENTS_CLIENTENTITYNETWORKINDEX_HPP
 
 #include <ClientLib/Export.hpp>
 #include <CommonLib/Protocol/Packets.hpp>
 
 namespace tsom
 {
-	struct EnvironmentComponent
+	struct ClientEntityNetworkIndex
 	{
-		Packets::Helper::EnvironmentId environmentIndex;
+		Packets::Helper::EntityId networkIndex;
 	};
 }
 
-#endif // TSOM_CLIENTLIB_COMPONENTS_ENVIRONMENTCOMPONENT_HPP
+#endif // TSOM_CLIENTLIB_COMPONENTS_CLIENTENTITYNETWORKINDEX_HPP

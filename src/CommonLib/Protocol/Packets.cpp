@@ -308,6 +308,11 @@ namespace tsom
 			}
 		}
 
+		void Serialize(PacketSerializer& serializer, Interact& data)
+		{
+			serializer &= data.entityId;
+		}
+
 		void Serialize(PacketSerializer& serializer, MineBlock& data)
 		{
 			serializer &= data.chunkId;
