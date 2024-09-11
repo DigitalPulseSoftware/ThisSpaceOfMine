@@ -243,6 +243,11 @@ namespace tsom
 			EnvironmentTransform transform;
 		};
 
+		struct Interact
+		{
+			Helper::EntityId entityId;
+		};
+
 		struct GameData
 		{
 			struct PlayerData
@@ -324,6 +329,7 @@ namespace tsom
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EnvironmentDestroy& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EnvironmentUpdate& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, GameData& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, Interact& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, MineBlock& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, NetworkStrings& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, PlaceBlock& data);

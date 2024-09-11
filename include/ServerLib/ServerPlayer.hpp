@@ -78,6 +78,8 @@ namespace tsom
 
 			void Tick();
 
+			std::string ToString() const;
+
 			void UpdateNickname(std::string nickname);
 			void UpdateRootEnvironment(ServerEnvironment* environment);
 

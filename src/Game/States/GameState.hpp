@@ -29,6 +29,7 @@
 namespace Nz
 {
 	class LabelWidget;
+	class SimpleLabelWidget;
 }
 
 namespace tsom
@@ -104,6 +105,7 @@ namespace tsom
 			Nz::Time m_tickDuration;
 			Nz::TimerManager m_timerManager;
 			Nz::UInt8 m_nextInputIndex;
+			Nz::SimpleLabelWidget* m_interactionLabel;
 			BlockSelectionBar* m_blockSelectionBar;
 			Chatbox* m_chatBox;
 			Console* m_console;

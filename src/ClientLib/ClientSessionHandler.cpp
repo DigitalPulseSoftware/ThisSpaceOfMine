@@ -9,6 +9,7 @@
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Components/AnimationComponent.hpp>
 #include <ClientLib/Components/ChunkNetworkMapComponent.hpp>
+#include <ClientLib/Components/ClientEntityNetworkIndex.hpp>
 #include <ClientLib/Components/EnvironmentComponent.hpp>
 #include <ClientLib/Components/MovementInterpolationComponent.hpp>
 #include <ClientLib/Entities/ClientChunkClassLibrary.hpp>
@@ -48,6 +49,7 @@ namespace tsom
 {
 	constexpr SessionHandler::SendAttributeTable s_packetAttributes = SessionHandler::BuildAttributeTable({
 		{ PacketIndex<Packets::AuthRequest>,        { .channel = 0, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::Interact>,           { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::MineBlock>,          { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::PlaceBlock>,         { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::SendChatMessage>,    { .channel = 0, .flags = Nz::ENetPacketFlag::Reliable } },
@@ -244,6 +246,9 @@ namespace tsom
 			auto& entityEnv = entity.emplace<EnvironmentComponent>();
 			entityEnv.environmentIndex = entityData.environmentId;
 
+			auto& entityNetId = entity.emplace<ClientEntityNetworkIndex>();
+			entityNetId.networkIndex = entityData.entityId;
+
 			std::string entityClassName = GetSession()->GetStringStore().GetString(entityData.entityClass);
 			if (const EntityClass* entityClass = m_entityRegistry.FindClass(entityClassName))
 			{
@@ -304,6 +309,8 @@ namespace tsom
 
 			if (MovementInterpolationComponent* movementInterpolation = entityData.entity.try_get<MovementInterpolationComponent>())
 				movementInterpolation->PushMovement(stateUpdate.tickIndex, entityStates.newStates.position, entityStates.newStates.rotation);
+			else if (Nz::RigidBody3DComponent* rigidBody = entityData.entity.try_get<Nz::RigidBody3DComponent>())
+				rigidBody->TeleportTo(entityStates.newStates.position, entityStates.newStates.rotation);
 			else
 			{
 				auto& entityNode = entityData.entity.get<Nz::NodeComponent>();

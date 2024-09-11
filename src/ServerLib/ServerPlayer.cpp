@@ -206,6 +206,11 @@ namespace tsom
 		}
 	}
 
+	std::string ServerPlayer::ToString() const
+	{
+		return fmt::format("<Player #{}: {}>", m_playerIndex, m_nickname);
+	}
+
 	void ServerPlayer::UpdateRootEnvironment(ServerEnvironment* environment)
 	{
 		assert(environment);

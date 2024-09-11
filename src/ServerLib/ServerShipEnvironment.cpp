@@ -4,9 +4,9 @@
 
 #include <ServerLib/ServerShipEnvironment.hpp>
 #include <CommonLib/ChunkEntities.hpp>
-#include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/PhysicsConstants.hpp>
 #include <CommonLib/Ship.hpp>
+#include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Components/ShipComponent.hpp>
 #include <CommonLib/Systems/ShipSystem.hpp>
 #include <ServerLib/PlayerTokenAppComponent.hpp>

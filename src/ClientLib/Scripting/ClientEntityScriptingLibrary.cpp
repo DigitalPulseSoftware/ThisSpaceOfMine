@@ -4,6 +4,7 @@
 
 #include <ClientLib/Scripting/ClientEntityScriptingLibrary.hpp>
 #include <ClientLib/RenderConstants.hpp>
+#include <ClientLib/Components/ClientInteractibleComponent.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
 #include <Nazara/Graphics/Components/GraphicsComponent.hpp>
 #include <frozen/string.h>
@@ -44,6 +45,38 @@ namespace tsom
 		constants["RenderMask3D"] = Constants::RenderMask3D;
 		constants["RenderMaskLocalPlayer"] = Constants::RenderMaskLocalPlayer;
 		constants["RenderMaskOtherPlayer"] = Constants::RenderMaskOtherPlayer;
+	}
+
+	void ClientEntityScriptingLibrary::FillEntityMetatable(sol::state& state, sol::table entityMetatable)
+	{
+		EntityScriptingLibrary::FillEntityMetatable(state, entityMetatable);
+
+		entityMetatable["SetInteractible"] = LuaFunction([](sol::table entityTable, bool isInteractible)
+		{
+			entt::handle entity = AssertScriptEntity(entityTable);
+
+			if (isInteractible)
+			{
+				auto& interactible = entity.get_or_emplace<ClientInteractibleComponent>();
+				interactible.isEnabled = true;
+			}
+			else if (ClientInteractibleComponent* interactibleComponent = entity.try_get<ClientInteractibleComponent>())
+			{
+				// Preserve interact text if set
+				if (!interactibleComponent->interactText.empty())
+					interactibleComponent->isEnabled = false;
+				else
+					entity.remove<ClientInteractibleComponent>();
+			}
+		});
+
+		entityMetatable["SetInteractibleText"] = LuaFunction([](sol::table entityTable, std::string interactibleText)
+		{
+			entt::handle entity = AssertScriptEntity(entityTable);
+
+			auto& interactible = entity.get_or_emplace<ClientInteractibleComponent>();
+			interactible.interactText = std::move(interactibleText);
+		});
 	}
 
 	void ClientEntityScriptingLibrary::RegisterClientComponents(sol::state& state)
