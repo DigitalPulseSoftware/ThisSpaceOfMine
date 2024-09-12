@@ -38,8 +38,6 @@ namespace tsom
 			inline const Property& GetProperty(Nz::UInt32 propertyIndex) const;
 			inline Nz::UInt32 GetPropertyCount() const;
 
-			ClassInstanceComponent& SetupEntity(entt::handle entity) const;
-
 			EntityClass& operator=(const EntityClass&) = delete;
 			EntityClass& operator=(EntityClass&&) noexcept = default;
 

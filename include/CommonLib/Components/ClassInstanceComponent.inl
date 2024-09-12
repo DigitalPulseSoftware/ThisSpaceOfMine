@@ -6,11 +6,22 @@
 
 namespace tsom
 {
-	template<EntityPropertyType Property>
-	auto ClassInstanceComponent::GetProperty(std::size_t propertyIndex) const
+	inline const EntityClass* ClassInstanceComponent::GetClass() const
 	{
-		assert(propertyIndex < properties.size());
-		return std::get<EntityPropertySingleValue<Property>>(properties[propertyIndex]);
+		return m_entityClass;
+	}
+
+	inline const EntityProperty& ClassInstanceComponent::GetProperty(Nz::UInt32 propertyIndex) const
+	{
+		assert(propertyIndex < m_properties.size());
+		return m_properties[propertyIndex];
+	}
+
+	template<EntityPropertyType Property>
+	auto ClassInstanceComponent::GetProperty(Nz::UInt32 propertyIndex) const
+	{
+		assert(propertyIndex < m_properties.size());
+		return std::get<EntityPropertySingleValue<Property>>(m_properties[propertyIndex]);
 	}
 
 	template<EntityPropertyType Property>
@@ -19,11 +30,17 @@ namespace tsom
 		return GetProperty<Property>(GetPropertyIndex(propertyName));
 	}
 
-	template<EntityPropertyType Property, typename T>
-	void ClassInstanceComponent::UpdateProperty(std::size_t propertyIndex, T&& value)
+	inline void ClassInstanceComponent::UpdateProperty(Nz::UInt32 propertyIndex, EntityProperty&& value)
 	{
-		assert(propertyIndex < properties.size());
-		std::get<EntityPropertySingleValue<Property>>(properties[propertyIndex]) = std::forward<T>(value);
+		assert(propertyIndex < m_properties.size());
+		OnPropertyUpdate(this, propertyIndex, value);
+		m_properties[propertyIndex] = std::move(value);
+	}
+
+	template<EntityPropertyType Property, typename T>
+	void ClassInstanceComponent::UpdateProperty(Nz::UInt32 propertyIndex, T&& value)
+	{
+		return UpdateProperty(propertyIndex, EntityPropertySingleValue<Property>(std::forward<T>(value)));
 	}
 
 	template<EntityPropertyType Property, typename T>

@@ -78,6 +78,11 @@ namespace tsom
 		m_movingEntities.erase(m_controlledEntity);
 	}
 
+	inline void SessionVisibilityHandler::UpdateEntityProperty(entt::handle entity, Nz::UInt32 propertyIndex)
+	{
+		m_propertyUpdatedEntities[entity] |= 1u << propertyIndex;
+	}
+
 	inline void SessionVisibilityHandler::UpdateLastInputIndex(InputIndex inputIndex)
 	{
 		m_lastInputIndex = inputIndex;

@@ -26,19 +26,8 @@ namespace tsom
 
 	void EntityClass::ActivateEntity(entt::handle entity) const
 	{
-		assert(entity.get<ClassInstanceComponent>().entityClass == this);
+		assert(entity.get<ClassInstanceComponent>().GetClass() == this);
 		if (m_callbacks.onInit)
 			m_callbacks.onInit(entity);
-	}
-
-	ClassInstanceComponent& EntityClass::SetupEntity(entt::handle entity) const
-	{
-		auto& entityInstance = entity.emplace<ClassInstanceComponent>();
-		entityInstance.entityClass = this;
-		entityInstance.properties.reserve(m_properties.size());
-		for (const auto& property : m_properties)
-			entityInstance.properties.emplace_back(property.defaultValue);
-
-		return entityInstance;
 	}
 }

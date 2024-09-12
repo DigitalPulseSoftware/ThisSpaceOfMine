@@ -8,11 +8,13 @@
 #define TSOM_SERVERLIB_SYSTEMS_NETWORKEDENTITIESSYSTEM_HPP
 
 #include <ServerLib/Export.hpp>
+#include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <ServerLib/SessionVisibilityHandler.hpp>
 #include <Nazara/Core/Time.hpp>
 #include <NazaraUtils/FunctionRef.hpp>
 #include <NazaraUtils/TypeList.hpp>
 #include <entt/entt.hpp>
+#include <tsl/hopscotch_map.h>
 #include <tsl/hopscotch_set.h>
 
 namespace tsom
@@ -46,8 +48,12 @@ namespace tsom
 			void CreateEntity(SessionVisibilityHandler& visibility, entt::handle entity, const SessionVisibilityHandler::CreateEntityData& createData) const;
 			void OnNetworkedDestroy(entt::registry& registry, entt::entity entity);
 
-			tsl::hopscotch_set<entt::entity> m_movingEntities;
-			tsl::hopscotch_set<entt::entity> m_networkedEntities;
+			struct EntityData
+			{
+				NazaraSlot(ClassInstanceComponent, OnPropertyUpdate, onPropertyUpdate);
+			};
+
+			tsl::hopscotch_map<entt::entity, EntityData> m_networkedEntities;
 			entt::observer m_networkedConstructObserver;
 			entt::scoped_connection m_disabledConstructConnection;
 			entt::scoped_connection m_networkedDestroyConnection;

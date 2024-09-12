@@ -252,14 +252,13 @@ namespace tsom
 			std::string entityClassName = GetSession()->GetStringStore().GetString(entityData.entityClass);
 			if (const EntityClass* entityClass = m_entityRegistry.FindClass(entityClassName))
 			{
-				entityClass->SetupEntity(entity);
-				auto& entityClassData = entity.get<ClassInstanceComponent>();
+				auto& entityInstance = entity.emplace<ClassInstanceComponent>(entityClass);
 
 				std::size_t networkedPropertyIndex = 0;
 				for (Nz::UInt32 i = 0; i < entityClass->GetPropertyCount(); ++i)
 				{
 					if (entityClass->GetProperty(i).isNetworked)
-						entityClassData.properties[i] = entityData.properties[networkedPropertyIndex++];
+						entityInstance.UpdateProperty(i, std::move(entityData.properties[networkedPropertyIndex++]));
 				}
 
 				entityClass->ActivateEntity(entity);
@@ -345,6 +344,15 @@ namespace tsom
 		entityData.environmentIndex = environmentUpdate.newEnvironmentId;
 		if (MovementInterpolationComponent* movementInterpolation = entityData.entity.try_get<MovementInterpolationComponent>())
 			movementInterpolation->UpdateRoot(oldEnvironment.rootNode, newEnvironment.rootNode);
+	}
+
+	void ClientSessionHandler::HandlePacket(Packets::EntityPropertyUpdate&& propertyUpdate)
+	{
+		assert(m_entities[propertyUpdate.entity]);
+		EntityData& entityData = *m_entities[propertyUpdate.entity];
+
+		auto& classInstance = entityData.entity.get<ClassInstanceComponent>();
+		classInstance.UpdateProperty(propertyUpdate.propertyIndex, std::move(propertyUpdate.propertyValue));
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::EnvironmentCreate&& envCreate)
