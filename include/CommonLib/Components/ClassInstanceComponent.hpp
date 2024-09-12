@@ -8,6 +8,8 @@
 #define TSOM_COMMONLIB_COMPONENTS_CLASSINSTANCECOMPONENT_HPP
 
 #include <CommonLib/EntityProperties.hpp>
+#include <NazaraUtils/MovablePtr.hpp>
+#include <NazaraUtils/Signal.hpp>
 #include <string_view>
 #include <vector>
 
@@ -15,18 +17,37 @@ namespace tsom
 {
 	class EntityClass;
 
-	struct TSOM_COMMONLIB_API ClassInstanceComponent
+	class TSOM_COMMONLIB_API ClassInstanceComponent
 	{
-		std::vector<EntityProperty> properties;
-		const EntityClass* entityClass;
+		public:
+			using PropertyUpdateSignal = Nz::Signal<Nz::UInt32, const EntityProperty&>;
 
-		template<EntityPropertyType Property> auto GetProperty(std::size_t propertyIndex) const;
-		template<EntityPropertyType Property> auto GetProperty(std::string_view propertyName) const;
+			ClassInstanceComponent(const EntityClass* entityClass);
+			ClassInstanceComponent(const ClassInstanceComponent&) = delete;
+			ClassInstanceComponent(ClassInstanceComponent&&) noexcept = default;
+			~ClassInstanceComponent() = default;
 
-		Nz::UInt32 GetPropertyIndex(std::string_view propertyName) const;
+			Nz::UInt32 FindPropertyIndex(std::string_view propertyName) const;
 
-		template<EntityPropertyType Property, typename T> void UpdateProperty(std::size_t propertyIndex, T&& value);
-		template<EntityPropertyType Property, typename T> void UpdateProperty(std::string_view propertyName, T&& value);
+			inline const EntityClass* GetClass() const;
+			inline const EntityProperty& GetProperty(Nz::UInt32 propertyIndex) const;
+			template<EntityPropertyType Property> auto GetProperty(Nz::UInt32 propertyIndex) const;
+			template<EntityPropertyType Property> auto GetProperty(std::string_view propertyName) const;
+
+			Nz::UInt32 GetPropertyIndex(std::string_view propertyName) const;
+
+			inline void UpdateProperty(Nz::UInt32 propertyIndex, EntityProperty&& value);
+			template<EntityPropertyType Property, typename T> void UpdateProperty(Nz::UInt32 propertyIndex, T&& value);
+			template<EntityPropertyType Property, typename T> void UpdateProperty(std::string_view propertyName, T&& value);
+
+			ClassInstanceComponent& operator=(const ClassInstanceComponent&) = delete;
+			ClassInstanceComponent& operator=(ClassInstanceComponent&&) noexcept = default;
+
+			NazaraSignal(OnPropertyUpdate, ClassInstanceComponent* /*classInstance*/, Nz::UInt32 /*propertyIndex*/, const EntityProperty& /*newValue*/);
+
+		private:
+			std::vector<EntityProperty> m_properties;
+			Nz::MovablePtr<const EntityClass> m_entityClass;
 	};
 }
 

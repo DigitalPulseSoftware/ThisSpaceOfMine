@@ -54,6 +54,7 @@ namespace tsom
 			inline void MoveEnvironment(ServerEnvironment& environment, const EnvironmentTransform& transform);
 
 			inline void UpdateControlledEntity(entt::handle entity, CharacterController* controller);
+			inline void UpdateEntityProperty(entt::handle entity, Nz::UInt32 propertyIndex);
 			void UpdateEntityEnvironment(ServerEnvironment& newEnvironment, entt::handle oldEntity, entt::handle newEntity);
 			inline void UpdateLastInputIndex(InputIndex inputIndex);
 			inline void UpdateRootEnvironment(ServerEnvironment& environment);
@@ -137,6 +138,7 @@ namespace tsom
 
 			tsl::hopscotch_map<entt::handle, EntityId, HandlerHasher> m_entityIndices;
 			tsl::hopscotch_map<entt::handle, CreateEntityData, HandlerHasher> m_createdEntities;
+			tsl::hopscotch_map<entt::handle, Nz::UInt32, HandlerHasher> m_propertyUpdatedEntities;
 			tsl::hopscotch_map<entt::handle, ChunkNetworkMap, HandlerHasher> m_chunkNetworkMaps;
 			tsl::hopscotch_map<const ServerEnvironment*, EnvironmentId> m_environmentIndices;
 			tsl::hopscotch_set<entt::handle, HandlerHasher> m_deletedEntities;

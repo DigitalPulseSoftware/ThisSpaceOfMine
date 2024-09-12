@@ -7,6 +7,7 @@
 #include <CommonLib/ChunkContainer.hpp>
 #include <CommonLib/EntityClass.hpp>
 #include <CommonLib/NetworkSession.hpp>
+#include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Components/PlanetComponent.hpp>
 #include <CommonLib/Components/ShipComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
@@ -135,7 +136,6 @@ namespace tsom
 			// Schedule deletion
 			m_deletedEntities.emplace(entity);
 		}
-		m_movingEntities.erase(entity);
 	}
 
 	void SessionVisibilityHandler::DestroyEnvironment(ServerEnvironment& environment)
@@ -166,6 +166,12 @@ namespace tsom
 		m_deletedEntities.erase(oldEntity);
 		if (m_movingEntities.erase(oldEntity) > 0)
 			m_movingEntities.insert(newEntity);
+
+		if (auto it = m_propertyUpdatedEntities.find(oldEntity); it != m_propertyUpdatedEntities.end())
+		{
+			m_propertyUpdatedEntities[newEntity] = it->second;
+			m_propertyUpdatedEntities.erase(it);
+		}
 
 		auto it = m_entityIndices.find(oldEntity);
 		EntityId entityIndex = it.value();
@@ -448,6 +454,33 @@ namespace tsom
 			m_environmentUpdates.clear();
 		}
 
+		if (!m_propertyUpdatedEntities.empty())
+		{
+			for (auto&& [entity, propertyFlags] : m_propertyUpdatedEntities)
+			{
+				EntityId entityIndex = Nz::Retrieve(m_entityIndices, entity);
+
+				auto& entityInstance = entity.get<ClassInstanceComponent>();
+
+				Nz::UInt32 propertyBits = propertyFlags;
+				while (Nz::UInt32 propertyIndex = Nz::FindFirstBit(propertyBits))
+				{
+					propertyIndex--; //< FFB returns 0 if no bit was found
+
+					Packets::EntityPropertyUpdate propertyUpdatePacket;
+					propertyUpdatePacket.entity = entityIndex;
+					propertyUpdatePacket.propertyIndex = propertyIndex;
+					propertyUpdatePacket.propertyValue = entityInstance.GetProperty(propertyIndex);
+					propertyUpdatePacket.tickIndex = tickIndex;
+
+					m_networkSession->SendPacket(propertyUpdatePacket);
+
+					propertyBits = Nz::ClearBit(propertyBits, propertyIndex);
+				}
+			}
+			m_propertyUpdatedEntities.clear();
+		}
+
 		Packets::EntitiesStateUpdate stateUpdate;
 		stateUpdate.tickIndex = tickIndex;
 		stateUpdate.lastInputIndex = m_lastInputIndex;
@@ -497,7 +530,6 @@ namespace tsom
 
 					m_createdEntities.erase(entityData.entity);
 					m_deletedEntities.erase(entityData.entity);
-					m_movingEntities.erase(entityData.entity);
 					m_entityIndices.erase(entityData.entity);
 					m_freeEntityIds.Set(entityIndex, true);
 
@@ -590,6 +622,9 @@ namespace tsom
 
 	void SessionVisibilityHandler::HandleEntityDestruction(entt::handle entity)
 	{
+		m_movingEntities.erase(entity);
+		m_propertyUpdatedEntities.erase(entity);
+
 		// handle chunks owned by this entity if any
 		if (auto it = m_chunkNetworkMaps.find(entity); it != m_chunkNetworkMaps.end())
 		{

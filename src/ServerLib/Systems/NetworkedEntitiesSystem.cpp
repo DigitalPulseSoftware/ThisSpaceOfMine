@@ -29,8 +29,8 @@ namespace tsom
 
 	void NetworkedEntitiesSystem::CreateAllEntities(SessionVisibilityHandler& visibility) const
 	{
-		for (entt::entity entity : m_networkedEntities)
-			CreateEntity(visibility, entt::handle(m_registry, entity), BuildCreateEntityData(entity));
+		for (auto it = m_networkedEntities.begin(); it != m_networkedEntities.end(); ++it)
+			CreateEntity(visibility, entt::handle(m_registry, it.key()), BuildCreateEntityData(it.key()));
 	}
 
 	void NetworkedEntitiesSystem::ForEachVisibility(const Nz::FunctionRef<void(SessionVisibilityHandler& visibility)>& functor)
@@ -44,7 +44,6 @@ namespace tsom
 	void NetworkedEntitiesSystem::ForgetEntity(entt::entity entity)
 	{
 		m_networkedEntities.erase(entity);
-		m_movingEntities.erase(entity);
 	}
 
 	void NetworkedEntitiesSystem::Update(Nz::Time elapsedTime)
@@ -52,16 +51,25 @@ namespace tsom
 		m_networkedConstructObserver.each([&](entt::entity entity)
 		{
 			assert(!m_networkedEntities.contains(entity));
-			m_networkedEntities.insert(entity);
+			EntityData& entityData = m_networkedEntities[entity];
+
+			if (ClassInstanceComponent* entityInstance = m_registry.try_get<ClassInstanceComponent>(entity))
+			{
+				entityData.onPropertyUpdate.Connect(entityInstance->OnPropertyUpdate, [this, entity](ClassInstanceComponent* /*emitter*/, Nz::UInt32 propertyIndex, const EntityProperty& /*newValue*/)
+				{
+					entt::handle handle(m_registry, entity);
+					ForEachVisibility([&](SessionVisibilityHandler& visibility)
+					{
+						visibility.UpdateEntityProperty(handle, propertyIndex);
+					});
+				});
+			}
 
 			auto& entityNetwork = m_registry.get<NetworkedComponent>(entity);
 			if (!entityNetwork.ShouldSignalCreation())
 				return;
 
 			SessionVisibilityHandler::CreateEntityData createData = BuildCreateEntityData(entity);
-			if (createData.isMoving)
-				m_movingEntities.insert(entity);
-
 			ForEachVisibility([&](SessionVisibilityHandler& visibility)
 			{
 				CreateEntity(visibility, entt::handle(m_registry, entity), createData);
@@ -77,22 +85,22 @@ namespace tsom
 
 		auto& entityNet = m_registry.get<NetworkedComponent>(entity);
 
-		auto* entityClass = m_registry.try_get<ClassInstanceComponent>(entity);
+		auto* entityInstance = m_registry.try_get<ClassInstanceComponent>(entity);
 
 		SessionVisibilityHandler::CreateEntityData createData;
-		createData.entityClass = (entityClass) ? entityClass->entityClass : nullptr;
+		createData.entityClass = (entityInstance) ? entityInstance->GetClass() : nullptr;
 		createData.environment = &m_environment;
 		createData.initialPosition = entityNode.GetPosition();
 		createData.initialRotation = entityNode.GetRotation();
 		createData.isMoving = isMoving;
 
-		if (entityClass)
+		if (entityInstance)
 		{
-			createData.entityProperties.reserve(entityClass->properties.size());
-			for (std::size_t i = 0; i < entityClass->properties.size(); ++i)
+			createData.entityProperties.reserve(createData.entityClass->GetPropertyCount());
+			for (std::size_t i = 0; i < createData.entityClass->GetPropertyCount(); ++i)
 			{
-				if (entityClass->entityClass->GetProperty(i).isNetworked)
-					createData.entityProperties.emplace_back(entityClass->properties[i]);
+				if (entityInstance->GetClass()->GetProperty(i).isNetworked)
+					createData.entityProperties.emplace_back(entityInstance->GetProperty(i));
 			}
 		}
 
@@ -138,7 +146,6 @@ namespace tsom
 			return;
 
 		m_networkedEntities.erase(entity);
-		m_movingEntities.erase(entity);
 
 		ForEachVisibility([&](SessionVisibilityHandler& visibility)
 		{

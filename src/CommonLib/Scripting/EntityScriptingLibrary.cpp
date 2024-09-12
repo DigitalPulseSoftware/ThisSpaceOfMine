@@ -169,25 +169,25 @@ namespace tsom
 			entt::handle entity = AssertScriptEntity(entityTable);
 
 			auto& classComponent = entity.get<ClassInstanceComponent>();
-			Nz::UInt32 propertyIndex = classComponent.entityClass->FindProperty(propertyName);
+			Nz::UInt32 propertyIndex = classComponent.FindPropertyIndex(propertyName);
 			if (propertyIndex == EntityClass::InvalidIndex)
 				TriggerLuaArgError(L, 2, fmt::format("invalid property {}", propertyName));
 
 			sol::state_view state(L);
-			return TranslatePropertyToLua(state, classComponent.properties[propertyIndex]);
+			return TranslatePropertyToLua(state, classComponent.GetProperty(propertyIndex));
 		});
 
 		entityMetatable["UpdateProperty"] = LuaFunction([this](sol::this_state L, sol::table entityTable, std::string_view propertyName, sol::object value)
 		{
 			entt::handle entity = AssertScriptEntity(entityTable);
 
-			auto& classComponent = entity.get<ClassInstanceComponent>();
-			Nz::UInt32 propertyIndex = classComponent.entityClass->FindProperty(propertyName);
+			auto& classInstance = entity.get<ClassInstanceComponent>();
+			Nz::UInt32 propertyIndex = classInstance.FindPropertyIndex(propertyName);
 			if (propertyIndex == EntityClass::InvalidIndex)
 				TriggerLuaArgError(L, 2, fmt::format("invalid property {}", propertyName));
 
-			const auto& property = classComponent.entityClass->GetProperty(propertyIndex);
-			classComponent.properties[propertyIndex] = TranslatePropertyFromLua(value, property.type, property.isArray);
+			const auto& property = classInstance.GetClass()->GetProperty(propertyIndex);
+			classInstance.UpdateProperty(propertyIndex, TranslatePropertyFromLua(value, property.type, property.isArray));
 		});
 	}
 

@@ -275,6 +275,14 @@ namespace tsom
 			serializer &= data.newEnvironmentId;
 		}
 
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntityPropertyUpdate& data)
+		{
+			serializer &= data.tickIndex;
+			serializer &= data.entity;
+			serializer &= data.propertyIndex;
+			serializer &= data.propertyValue;
+		}
+
 		void Serialize(PacketSerializer& serializer, EnvironmentCreate& data)
 		{
 			serializer &= data.tickIndex;

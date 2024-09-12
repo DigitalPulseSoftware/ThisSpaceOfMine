@@ -52,7 +52,7 @@ namespace tsom
 
 		const EntityClass* shipClass = serverInstance.GetEntityRegistry().FindClass("ship");
 
-		auto& entityInstance = shipClass->SetupEntity(m_shipEntity);
+		auto& entityInstance = m_shipEntity.emplace<ClassInstanceComponent>(shipClass);
 		entityInstance.UpdateProperty<EntityPropertyType::Float>("CellSize", 1.f);
 
 		shipClass->ActivateEntity(m_shipEntity);

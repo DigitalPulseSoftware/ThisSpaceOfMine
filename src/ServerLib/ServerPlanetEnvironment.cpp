@@ -46,7 +46,7 @@ namespace tsom
 
 		const EntityClass* planetClass = serverInstance.GetEntityRegistry().FindClass("planet");
 
-		auto& entityInstance = planetClass->SetupEntity(m_planetEntity);
+		auto& entityInstance = m_planetEntity.emplace<ClassInstanceComponent>(planetClass);
 		entityInstance.UpdateProperty<EntityPropertyType::Float>("CellSize", 1.f);
 		entityInstance.UpdateProperty<EntityPropertyType::Float>("CornerRadius", 16.f);
 		entityInstance.UpdateProperty<EntityPropertyType::Float>("Gravity", 9.81f);

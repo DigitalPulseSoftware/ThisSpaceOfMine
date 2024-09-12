@@ -8,9 +8,24 @@
 
 namespace tsom
 {
+	ClassInstanceComponent::ClassInstanceComponent(const EntityClass* entityClass) :
+	m_entityClass(entityClass)
+	{
+		std::size_t propertyCount = entityClass->GetPropertyCount();
+
+		m_properties.reserve(propertyCount);
+		for (std::size_t i = 0; i < propertyCount; ++i)
+			m_properties.emplace_back(entityClass->GetProperty(i).defaultValue);
+	}
+
+	Nz::UInt32 ClassInstanceComponent::FindPropertyIndex(std::string_view propertyName) const
+	{
+		return m_entityClass->FindProperty(propertyName);
+	}
+
 	Nz::UInt32 ClassInstanceComponent::GetPropertyIndex(std::string_view propertyName) const
 	{
-		Nz::UInt32 propertyIndex = entityClass->FindProperty(propertyName);
+		Nz::UInt32 propertyIndex = FindPropertyIndex(propertyName);
 		if (propertyIndex == EntityClass::InvalidIndex)
 			throw std::runtime_error(fmt::format("invalid property {}", propertyName));
 
