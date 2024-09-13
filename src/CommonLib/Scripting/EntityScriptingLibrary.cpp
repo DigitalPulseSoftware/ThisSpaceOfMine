@@ -22,7 +22,9 @@
 #include <frozen/unordered_map.h>
 
 SOL_BASE_CLASSES(Nz::BoxCollider3D, Nz::Collider3D);
+SOL_BASE_CLASSES(Nz::RigidBody3DComponent, Nz::RigidBody3D);
 SOL_DERIVED_CLASSES(Nz::Collider3D, Nz::BoxCollider3D);
+SOL_DERIVED_CLASSES(Nz::RigidBody3D, Nz::RigidBody3DComponent);
 
 namespace tsom
 {
@@ -55,25 +57,7 @@ namespace tsom
 							commonSettings.initiallySleeping = parameters.get_or("initiallySleeping", commonSettings.initiallySleeping);
 							commonSettings.isSimulationEnabled = parameters.get_or("isSimulationEnabled", commonSettings.isSimulationEnabled);
 							commonSettings.isTrigger = parameters.get_or("isTrigger", commonSettings.isTrigger);
-
-							if (sol::optional<std::string_view> layerOpt = parameters["objectLayer"])
-							{
-								static constexpr auto s_layerMapping = frozen::make_unordered_map<frozen::string, Nz::PhysObjectLayer3D>({
-									{ "dynamic", Constants::ObjectLayerDynamic },
-									{ "dynamic_noplayer", Constants::ObjectLayerDynamicNoPlayer },
-									{ "dynamic_trigger", Constants::ObjectLayerDynamicTrigger },
-									{ "player", Constants::ObjectLayerPlayer },
-									{ "static", Constants::ObjectLayerStatic },
-									{ "static_noplayer", Constants::ObjectLayerStaticNoPlayer },
-									{ "static_trigger", Constants::ObjectLayerStaticTrigger }
-								});
-
-								auto it = s_layerMapping.find(*layerOpt);
-								if (it == s_layerMapping.end())
-									throw std::runtime_error(fmt::format("invalid objectLayer {}", *layerOpt));
-
-								commonSettings.objectLayer = it->second;
-							}
+							commonSettings.objectLayer = parameters.get_or("objectLayer", commonSettings.objectLayer);
 						};
 
 						if (kind == "dynamic")
@@ -239,6 +223,30 @@ namespace tsom
 			{
 				return nodeComponent.Scale(scale);
 			})
+		);
+
+		state.new_usertype<Nz::RigidBody3DComponent>("Rigidbody3DComponent",
+			sol::no_constructor,
+			sol::base_classes, sol::bases<Nz::RigidBody3D>(),
+			"GetAABB", LuaFunction(&Nz::RigidBody3DComponent::GetAABB),
+			"GetAngularDamping", LuaFunction(&Nz::RigidBody3DComponent::GetAngularDamping),
+			"GetAngularVelocity", LuaFunction(&Nz::RigidBody3DComponent::GetAngularVelocity),
+			"GetGeom", LuaFunction(&Nz::RigidBody3DComponent::GetGeom),
+			"GetLinearDamping", LuaFunction(&Nz::RigidBody3DComponent::GetLinearDamping),
+			"GetLinearVelocity", LuaFunction(&Nz::RigidBody3DComponent::GetLinearVelocity),
+			"GetMass", LuaFunction(&Nz::RigidBody3DComponent::GetMass),
+			"GetPosition", LuaFunction(&Nz::RigidBody3DComponent::GetPosition),
+			"GetRotation", LuaFunction(&Nz::RigidBody3DComponent::GetRotation),
+			"SetAngularDamping", LuaFunction(&Nz::RigidBody3DComponent::SetAngularDamping),
+			"SetAngularVelocity", LuaFunction(&Nz::RigidBody3DComponent::SetAngularVelocity),
+			"SetGeom", LuaFunction(&Nz::RigidBody3DComponent::SetGeom),
+			"SetLinearDamping", LuaFunction(&Nz::RigidBody3DComponent::SetLinearDamping),
+			"SetLinearVelocity", LuaFunction(&Nz::RigidBody3DComponent::SetLinearVelocity),
+			"SetMass", LuaFunction(&Nz::RigidBody3DComponent::SetMass),
+			"SetObjectLayer", LuaFunction(&Nz::RigidBody3DComponent::SetObjectLayer),
+			"SetPosition", LuaFunction(&Nz::RigidBody3DComponent::SetPosition),
+			"SetRotation", LuaFunction(&Nz::RigidBody3DComponent::SetRotation),
+			"TeleportTo", LuaFunction(&Nz::RigidBody3DComponent::TeleportTo)
 		);
 	}
 
