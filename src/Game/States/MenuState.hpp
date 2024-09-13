@@ -15,6 +15,7 @@ namespace Nz
 {
 	class BoxLayout;
 	class ButtonWidget;
+	class ImageWidget;
 	class LabelWidget;
 	class SimpleLabelWidget;
 }
@@ -37,12 +38,14 @@ namespace tsom
 			std::optional<UpdateInfo> m_newVersionInfo;
 			std::shared_ptr<Nz::State> m_nextState;
 			Nz::Time m_accumulator;
-			Nz::BoxLayout* m_layout;
-			Nz::SimpleLabelWidget* m_logo;
-			Nz::SimpleLabelWidget* m_logoBackground;
+			Nz::BoxLayout* m_buttonLayout;
+			Nz::ImageWidget* m_logo;
+			Nz::SimpleLabelWidget* m_title;
+			Nz::SimpleLabelWidget* m_titleBackground;
 			Nz::ButtonWidget* m_playButton;
 			Nz::ButtonWidget* m_quitGameButton;
 			bool m_autoConnect;
+			float m_logoBasePositionY;
 	};
 }
 

@@ -18,6 +18,7 @@
 #include <Nazara/Core/StateMachine.hpp>
 #include <Nazara/Core/StringExt.hpp>
 #include <Nazara/Graphics/PredefinedMaterials.hpp>
+#include <Nazara/Graphics/TextureAsset.hpp>
 #include <Nazara/Network/Algorithm.hpp>
 #include <Nazara/Network/IpAddress.hpp>
 #include <Nazara/Network/Network.hpp>
@@ -31,11 +32,21 @@ namespace tsom
 {
 	MenuState::MenuState(std::shared_ptr<StateData> stateData) :
 	WidgetState(stateData),
-	m_accumulator(Nz::Time::Zero())
+	m_accumulator(Nz::Time::Zero()),
+	m_logoBasePositionY(0.f)
 	{
-		m_logo = CreateWidget<Nz::SimpleLabelWidget>();
+		auto& fs = GetStateData().app->GetComponent<Nz::FilesystemAppComponent>();
 
-		m_logo->UpdateDrawer([&](Nz::SimpleTextDrawer& textDrawer)
+		std::shared_ptr<Nz::MaterialInstance> logoMat = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic);
+		logoMat->SetTextureProperty("BaseColorMap", fs.Open<Nz::TextureAsset>("assets/logo.png", { .sRGB = true }));
+
+		m_logo = CreateWidget<Nz::ImageWidget>(logoMat);
+		m_logo->Resize({ 512, 512 });
+		m_logo->SetRenderLayerOffset(-1);
+
+		m_title = CreateWidget<Nz::SimpleLabelWidget>();
+
+		m_title->UpdateDrawer([&](Nz::SimpleTextDrawer& textDrawer)
 		{
 			auto& filesystem = GetStateData().app->GetComponent<Nz::FilesystemAppComponent>();
 
@@ -45,8 +56,8 @@ namespace tsom
 			textDrawer.SetTextStyle(Nz::TextStyle::OutlineOnly);
 		});
 
-		m_logoBackground = m_logo->Add<Nz::SimpleLabelWidget>();
-		m_logoBackground->UpdateDrawer([&](Nz::SimpleTextDrawer& textDrawer)
+		m_titleBackground = m_title->Add<Nz::SimpleLabelWidget>();
+		m_titleBackground->UpdateDrawer([&](Nz::SimpleTextDrawer& textDrawer)
 		{
 			auto& filesystem = GetStateData().app->GetComponent<Nz::FilesystemAppComponent>();
 
@@ -55,20 +66,20 @@ namespace tsom
 			textDrawer.SetTextFont(filesystem.Open<Nz::Font>("assets/fonts/axaxax bd.otf"));
 			textDrawer.SetTextStyle(Nz::TextStyle::OutlineOnly);
 		});
-		m_logoBackground->SetPosition({ 7.f, -7.f });
+		m_titleBackground->SetPosition({ 7.f, -7.f });
 
-		m_layout = CreateWidget<Nz::BoxLayout>(Nz::BoxLayoutOrientation::TopToBottom);
+		m_buttonLayout = CreateWidget<Nz::BoxLayout>(Nz::BoxLayoutOrientation::LeftToRight);
 
-		m_playButton = m_layout->Add<Nz::ButtonWidget>();
-		m_playButton->UpdateText(Nz::SimpleTextDrawer::Draw("Play", 30, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
+		m_playButton = m_buttonLayout->Add<Nz::ButtonWidget>();
+		m_playButton->UpdateText(Nz::SimpleTextDrawer::Draw("Play", 48, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
 		m_playButton->SetMaximumWidth(m_playButton->GetPreferredWidth() * 1.5f);
 		ConnectSignal(m_playButton->OnButtonTrigger, [this](const Nz::ButtonWidget*)
 		{
 			m_nextState = std::make_shared<PlayState>(GetStateDataPtr(), shared_from_this());
 		});
 
-		m_quitGameButton = m_layout->Add<Nz::ButtonWidget>();
-		m_quitGameButton->UpdateText(Nz::SimpleTextDrawer::Draw("Quit", 30, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
+		m_quitGameButton = m_buttonLayout->Add<Nz::ButtonWidget>();
+		m_quitGameButton->UpdateText(Nz::SimpleTextDrawer::Draw("Quit", 48, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
 		m_quitGameButton->SetMaximumWidth(m_quitGameButton->GetPreferredWidth() * 1.5f);
 		ConnectSignal(m_quitGameButton->OnButtonTrigger, [this](const Nz::ButtonWidget*)
 		{
@@ -94,13 +105,16 @@ namespace tsom
 		}
 
 		m_accumulator += elapsedTime;
-		m_logo->UpdateDrawer([&](Nz::SimpleTextDrawer& textDrawer)
+
+		m_logo->SetPosition({ m_logo->GetPosition().x, m_logoBasePositionY + std::sin(m_accumulator.AsSeconds() * 0.5f) * 20.f });
+
+		m_title->UpdateDrawer([&](Nz::SimpleTextDrawer& textDrawer)
 		{
 			textDrawer.SetCharacterSpacingOffset(std::sin(m_accumulator.AsSeconds() * 0.2f) * 5.f);
 		});
-		m_logo->CenterHorizontal();
+		m_title->CenterHorizontal();
 
-		m_logoBackground->UpdateDrawer([&](Nz::SimpleTextDrawer& textDrawer)
+		m_titleBackground->UpdateDrawer([&](Nz::SimpleTextDrawer& textDrawer)
 		{
 			textDrawer.SetCharacterSpacingOffset(std::sin(m_accumulator.AsSeconds() * 0.2f) * 5.f);
 		});
@@ -110,22 +124,27 @@ namespace tsom
 
 	void MenuState::LayoutWidgets(const Nz::Vector2f& newSize)
 	{
-		m_logo->UpdateDrawer([&](Nz::SimpleTextDrawer& textDrawer)
+		m_logo->SetPosition({ 0.f, newSize.y * 0.75f - m_logo->GetHeight() * 0.5f });
+		m_logo->CenterHorizontal();
+
+		m_logoBasePositionY = m_logo->GetPosition().y;
+
+		m_title->UpdateDrawer([&](Nz::SimpleTextDrawer& textDrawer)
 		{
 			textDrawer.SetCharacterSize(static_cast<unsigned int>(newSize.y / 7.5f));
 			textDrawer.SetTextOutlineThickness(std::floor(newSize.y / 360.f));
 		});
 
-		m_logoBackground->UpdateDrawer([&](Nz::SimpleTextDrawer& textDrawer)
+		m_titleBackground->UpdateDrawer([&](Nz::SimpleTextDrawer& textDrawer)
 		{
 			textDrawer.SetCharacterSize(static_cast<unsigned int>(newSize.y / 7.5f));
 			textDrawer.SetTextOutlineThickness(std::floor(newSize.y / 300.f));
 		});
 
-		m_logo->SetPosition({ 0.f, newSize.y * 0.66f });
-		m_logo->CenterHorizontal();
+		m_title->SetPosition({ 0.f, newSize.y * 0.5f });
 
-		m_layout->Resize({ newSize.x * 0.2f, m_layout->GetPreferredHeight() });
-		m_layout->Center();
+		m_buttonLayout->Resize({ newSize.x * 0.2f, m_buttonLayout->GetPreferredHeight() });
+		m_buttonLayout->SetPosition({ 0.f, newSize.y * 0.1f });
+		m_buttonLayout->CenterHorizontal();
 	}
 }
