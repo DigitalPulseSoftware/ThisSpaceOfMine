@@ -254,6 +254,10 @@ target("TSOMGame", function ()
 	add_files("src/Game/**.cpp")
 	add_installfiles("gameconfig.lua.default", { prefixdir = "bin" })
 
+	if is_plat("windows", "mingw") then
+		add_files("src/Game/resources.rc")
+	end
+
 	add_rpathdirs("@executable_path")
 
 	add_packages("nazaraengine", { components = { "widgets" }, public = true })
