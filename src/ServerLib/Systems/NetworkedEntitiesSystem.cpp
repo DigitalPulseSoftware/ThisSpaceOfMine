@@ -55,8 +55,11 @@ namespace tsom
 
 			if (ClassInstanceComponent* entityInstance = m_registry.try_get<ClassInstanceComponent>(entity))
 			{
-				entityData.onPropertyUpdate.Connect(entityInstance->OnPropertyUpdate, [this, entity](ClassInstanceComponent* /*emitter*/, Nz::UInt32 propertyIndex, const EntityProperty& /*newValue*/)
+				entityData.onPropertyUpdate.Connect(entityInstance->OnPropertyUpdate, [this, entity](ClassInstanceComponent* emitter, Nz::UInt32 propertyIndex, const EntityProperty& /*newValue*/)
 				{
+					if (!emitter->GetClass()->GetProperty(propertyIndex).isNetworked)
+						return;
+
 					entt::handle handle(m_registry, entity);
 					ForEachVisibility([&](SessionVisibilityHandler& visibility)
 					{
