@@ -34,6 +34,7 @@ namespace tsom
 		{
 			sol::table classMetatable;
 			std::vector<EntityClass::Property> properties;
+			std::vector<sol::protected_function> propertyUpdateCallbacks;
 			EntityClass::Callbacks callbacks;
 		};
 
@@ -281,6 +282,20 @@ namespace tsom
 						TriggerLuaError(L, fmt::format("unknown event {}", eventName));
 				}
 			}),
+
+			"OnPropertyUpdate", LuaFunction([this](sol::this_state L, EntityBuilder& entityBuilder, std::string_view propertyName, sol::protected_function callback)
+			{
+				auto propertyIt = std::find_if(entityBuilder.properties.begin(), entityBuilder.properties.end(), [&](const EntityClass::Property& property) { return property.name == propertyName; });
+				if (propertyIt == entityBuilder.properties.end())
+					TriggerLuaArgError(L, 2, fmt::format("unknown property {}", propertyName));
+
+				std::size_t propertyIndex = std::distance(entityBuilder.properties.begin(), propertyIt);
+
+				if (propertyIndex >= entityBuilder.propertyUpdateCallbacks.size())
+					entityBuilder.propertyUpdateCallbacks.resize(propertyIndex + 1);
+
+				entityBuilder.propertyUpdateCallbacks[propertyIndex] = std::move(callback);
+			}),
 			sol::meta_method::index, LuaFunction([](EntityBuilder& entityBuilder, std::string_view key)
 			{
 				return entityBuilder.classMetatable.get<sol::object>(key);
@@ -295,6 +310,8 @@ namespace tsom
 	void EntityScriptingLibrary::RegisterEntityMetatable(sol::state& state)
 	{
 		m_entityMetatable = state.create_table();
+		m_entityMetatable[sol::meta_method::index] = m_entityMetatable;
+
 		FillEntityMetatable(state, m_entityMetatable);
 	}
 
@@ -305,11 +322,40 @@ namespace tsom
 		{
 			sol::state_view state(L);
 			sol::table metatable = state.create_table();
-			metatable[sol::meta_method::index] = m_entityMetatable;
+			metatable[sol::meta_method::index] = metatable;
+			metatable[sol::metatable_key] = m_entityMetatable;
 
-			EntityClass::Callbacks callbacks;
-			callbacks.onInit = [this, metatable, state](entt::handle entity) mutable
+			return EntityBuilder{
+				.classMetatable = metatable
+			};
+		});
+
+		entityRegistry["RegisterClass"] = LuaFunction([this](sol::this_state L, std::string name, EntityBuilder entityBuilder)
+		{
+			sol::state_view state(L);
+
+			std::shared_ptr sharedCallbacks = std::make_shared<std::vector<sol::protected_function>>(std::move(entityBuilder.propertyUpdateCallbacks));
+			entityBuilder.callbacks.onInit = [this, state, metatable = std::move(entityBuilder.classMetatable), sharedCallbacks](entt::handle entity) mutable
 			{
+				auto& entityInstance = entity.get<ClassInstanceComponent>();
+				entityInstance.OnPropertyUpdate.Connect([entity, sharedCallbacks, state](ClassInstanceComponent* classInstance, Nz::UInt32 propertyIndex, const EntityProperty& newValue) mutable
+				{
+					auto& callbacks = (*sharedCallbacks);
+					if (propertyIndex >= callbacks.size() || !callbacks[propertyIndex])
+						return;
+
+					auto& entityScripted = entity.get<ScriptedEntityComponent>();
+
+					auto res = callbacks[propertyIndex](entityScripted.entityTable, TranslatePropertyToLua(state, newValue));
+					if (!res.valid())
+					{
+						const auto& propertyData = classInstance->GetClass()->GetProperty(propertyIndex);
+
+						sol::error err = res;
+						fmt::print(fg(fmt::color::red), "entity {} property callback failed: {}\n", propertyData.name, err.what());
+					}
+				});
+
 				auto& entityScripted = entity.emplace<ScriptedEntityComponent>();
 				entityScripted.classMetatable = metatable;
 				entityScripted.entityTable = state.create_table();
@@ -330,14 +376,6 @@ namespace tsom
 				}
 			};
 
-			return EntityBuilder{
-				.classMetatable = metatable,
-				.callbacks = std::move(callbacks)
-			};
-		});
-
-		entityRegistry["RegisterClass"] = LuaFunction([this](std::string name, EntityBuilder entityBuilder)
-		{
 			m_entityRegistry.RegisterClass(EntityClass{std::move(name), std::move(entityBuilder.properties), std::move(entityBuilder.callbacks)});
 		});
 	}
