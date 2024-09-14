@@ -31,6 +31,8 @@ namespace tsom
 	namespace
 	{
 		constexpr unsigned int ShipChunkBlockCount = Ship::ChunkSize * Ship::ChunkSize * Ship::ChunkSize;
+
+		constexpr Nz::UInt32 ShipDataVersion = 2;
 	}
 
 	ServerShipEnvironment::ServerShipEnvironment(ServerInstance& serverInstance, const std::optional<Nz::Uuid>& playerUuid, int saveSlot) :
@@ -55,7 +57,7 @@ namespace tsom
 		NazaraAssert(shipClass);
 
 		auto& entityInstance = m_shipEntity.emplace<ClassInstanceComponent>(shipClass);
-		entityInstance.UpdateProperty<EntityPropertyType::Float>("CellSize", 1.f);
+		entityInstance.UpdateProperty<EntityPropertyType::Float>("CellSize", 0.25f);
 
 		shipClass->InitAndActivateEntity(m_shipEntity);
 
@@ -234,7 +236,7 @@ namespace tsom
 		try
 		{
 			Nz::UInt32 version = data["version"];
-			if (version != 1)
+			if (version < 1 || version > ShipDataVersion)
 				return Nz::Err(fmt::format("unhandled version {}", version));
 
 			// Load chunks
@@ -264,8 +266,56 @@ namespace tsom
 
 				Nz::ByteStream byteStream(decompressedData.data(), decompressedData.size());
 
-				Chunk& chunk = ship.AddChunk(blockLibrary, chunkIndices);
-				chunk.Deserialize(byteStream);
+				if (version == ShipDataVersion)
+				{
+					Chunk& chunk = ship.AddChunk(blockLibrary, chunkIndices);
+					chunk.Deserialize(byteStream);
+				}
+				else if (version == 1)
+				{
+					// Ship grid went from 1 to 0.25 in version 2
+					FlatChunk dummyChunk(blockLibrary, ship, chunkIndices, Nz::Vector3ui32{ Ship::ChunkSize }, 1.f);
+					dummyChunk.Deserialize(byteStream);
+					const BlockIndex* content = dummyChunk.GetContent();
+
+					unsigned int scale = 4;
+					for (std::size_t z = 0; z < Ship::ChunkSize; ++z)
+					{
+						for (std::size_t y = 0; y < Ship::ChunkSize; ++y)
+						{
+							for (std::size_t x = 0; x < Ship::ChunkSize; ++x)
+							{
+								Nz::Vector3ui newBlockCoords(x, y, z);
+								newBlockCoords *= scale;
+
+								for (std::size_t z2 = 0; z2 < scale; ++z2)
+								{
+									for (std::size_t y2 = 0; y2 < scale; ++y2)
+									{
+										for (std::size_t x2 = 0; x2 < scale; ++x2)
+										{
+											Nz::Vector3ui blockCoords = newBlockCoords + Nz::Vector3ui(x2, y2, z2);
+											ChunkIndices chunkOffset(blockCoords / Ship::ChunkSize);
+											std::swap(chunkOffset.y, chunkOffset.z);
+
+											ChunkIndices newChunkIndices = chunkIndices + chunkOffset;
+											Chunk* chunk = ship.GetChunk(newChunkIndices);
+											if (!chunk)
+											{
+												chunk = &ship.AddChunk(blockLibrary, newChunkIndices);
+												chunk->Reset();
+											}
+
+											Nz::Vector3ui localBlockIndices = blockCoords % Ship::ChunkSize;
+											chunk->UpdateBlock(localBlockIndices, *content);
+										}
+									}
+								}
+								content++;
+							}
+						}
+					}
+				}
 			}
 
 			// Load entities

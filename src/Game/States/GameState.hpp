@@ -176,6 +176,7 @@ namespace tsom
 			float m_currentCameraDistance;
 			float m_defaultCameraDistance;
 			float m_targetCameraDistance;
+			unsigned int m_cursorSize;
 	};
 }
 

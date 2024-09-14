@@ -69,9 +69,9 @@ namespace tsom
 		};
 	}
 
-	Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> DeformedChunk::ComputeBlockCorners(const Nz::Vector3ui& indices) const
+	Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> DeformedChunk::ComputeBlockCorners(const Nz::Vector3ui& indices, float blockScale) const
 	{
-		Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> corners = Chunk::ComputeBlockCorners(indices);
+		Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> corners = Chunk::ComputeBlockCorners(indices, blockScale);
 		for (auto& position : corners)
 			position = DeformPosition(position, m_deformationCenter, m_deformationRadius);
 

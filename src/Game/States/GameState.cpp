@@ -70,7 +70,8 @@ namespace tsom
 	m_tickDuration(Constants::TickDuration),
 	m_nextInputIndex(1),
 	m_cameraMode(CameraMode::Firstperson),
-	m_isMouseLocked(true)
+	m_isMouseLocked(true),
+	m_cursorSize(1)
 	{
 		auto& stateData = GetStateData();
 		auto& filesystem = stateData.app->GetComponent<Nz::FilesystemAppComponent>();
@@ -270,6 +271,21 @@ namespace tsom
 			if (m_pilotedShip)
 			{
 				m_targetCameraDistance = Nz::Clamp(m_targetCameraDistance - event.delta, m_defaultCameraDistance * 0.5f, m_defaultCameraDistance * 2.f);
+			}
+			else if (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::LShift))
+			{
+				if (event.delta < 0.f)
+				{
+					m_cursorSize <<= 1;
+					if (m_cursorSize > 4)
+						m_cursorSize = 1;
+				}
+				else
+				{
+					m_cursorSize >>= 1;
+					if (m_cursorSize == 0)
+						m_cursorSize = 4;
+				}
 			}
 			else if (m_blockSelectionBar->IsVisible())
 			{
@@ -1056,7 +1072,7 @@ namespace tsom
 							m_debugOverlay->textDrawer.AppendText(fmt::format("Target block depth: {0}\n", depth));
 						}
 
-						auto cornerPos = hitChunk.ComputeBlockCorners(hitCoordinates->blockIndices);
+						auto cornerPos = hitChunk.ComputeBlockCorners(hitCoordinates->blockIndices, m_cursorSize);
 
 						constexpr Nz::EnumArray<Direction, std::array<Nz::BoxCorner, 4>> directionToCorners = {
 							// Back

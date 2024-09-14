@@ -271,10 +271,17 @@ namespace tsom
 		}
 	}
 
-	Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> Chunk::ComputeBlockCorners(const Nz::Vector3ui& indices) const
+	Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> Chunk::ComputeBlockCorners(const Nz::Vector3ui& indices, float blockScale) const
 	{
 		Nz::Vector3f blockPos = (Nz::Vector3f(indices) - Nz::Vector3f(m_size) * 0.5f) * m_blockSize;
-		Nz::Boxf box(blockPos.x, blockPos.z, blockPos.y, m_blockSize, m_blockSize, m_blockSize);
+		if (blockScale != 1.f)
+		{
+			blockPos.x = std::floor(blockPos.x * blockScale) / blockScale;
+			blockPos.y = std::floor(blockPos.y * blockScale) / blockScale;
+			blockPos.z = std::floor(blockPos.z * blockScale) / blockScale;
+		}
+
+		Nz::Boxf box(blockPos.x, blockPos.z, blockPos.y, m_blockSize * blockScale, m_blockSize * blockScale, m_blockSize * blockScale);
 		return box.GetCorners();
 	}
 
