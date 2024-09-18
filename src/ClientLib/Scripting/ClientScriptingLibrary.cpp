@@ -49,24 +49,28 @@ namespace tsom
 
 	void ClientScriptingLibrary::RegisterMaterialInstance(sol::state& state)
 	{
+		state.new_enum<Nz::MaterialType>("MaterialType",
+		{
+			{ "Basic", Nz::MaterialType::Basic },
+			{ "Phong", Nz::MaterialType::Phong },
+			{ "PhysicallyBased", Nz::MaterialType::PhysicallyBased }
+		});
+
+		state.new_enum<Nz::MaterialInstancePreset>("MaterialInstancePreset",
+		{
+			{ "Default", Nz::MaterialInstancePreset::Default },
+			{ "NoDepth", Nz::MaterialInstancePreset::NoDepth },
+			{ "Transparent", Nz::MaterialInstancePreset::Transparent }
+		});
+
 		state.new_usertype<Nz::MaterialInstance>(
 			"MaterialInstance", sol::no_constructor,
 
 			"SetTextureProperty", LuaFunction(Nz::Overload<std::string_view, std::shared_ptr<Nz::TextureAsset>>(&Nz::MaterialInstance::SetTextureProperty)),
 
-			"Instantiate", LuaFunction([this](std::string_view matType)
+			"Instantiate", LuaFunction([this](Nz::MaterialType matType, std::optional<Nz::MaterialInstancePreset> preset)
 			{
-				std::shared_ptr<Nz::MaterialInstance> matInstance;
-				if (matType == "basic")
-					matInstance = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic);
-				else if (matType == "phong")
-					matInstance = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Phong);
-				else if (matType == "pbr")
-					matInstance = Nz::MaterialInstance::Instantiate(Nz::MaterialType::PhysicallyBased);
-				else
-					throw std::runtime_error(fmt::format("unknown material type {}", matType));
-
-				return matInstance;
+				return Nz::MaterialInstance::Instantiate(matType, preset.value_or(Nz::MaterialInstancePreset::Default));
 			})
 		);
 	}
@@ -75,7 +79,9 @@ namespace tsom
 	{
 		state.new_usertype<Nz::InstancedRenderable>("InstancedRenderable",
 			sol::no_constructor,
-			"GetAABB", LuaFunction(&Nz::InstancedRenderable::GetAABB)
+			"GetAABB", LuaFunction(&Nz::InstancedRenderable::GetAABB),
+			"GetMaterial", LuaFunction(&Nz::InstancedRenderable::GetMaterial),
+			"GetMaterialCount", LuaFunction(&Nz::InstancedRenderable::GetMaterialCount)
 		);
 
 		state.new_usertype<Nz::Model>("Model",
