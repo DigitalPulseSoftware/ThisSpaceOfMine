@@ -56,7 +56,15 @@ namespace tsom
 			GameState& operator=(GameState&&) = delete;
 
 		private:
+			struct RaycastResult
+			{
+				entt::handle hitEntity;
+				Nz::Vector3f hitPos;
+				Nz::Vector3f hitNormal;
+			};
+
 			void LayoutWidgets(const Nz::Vector2f& newSize) override;
+			std::optional<RaycastResult> RaycastQuery() const;
 			void OnTick(Nz::Time elapsedTime, bool lastTick);
 			void SendInputs();
 			void UpdateMouseLock();

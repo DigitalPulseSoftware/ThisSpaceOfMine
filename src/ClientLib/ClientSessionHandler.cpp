@@ -40,6 +40,7 @@
 #include <Nazara/Graphics/Components/GraphicsComponent.hpp>
 #include <Nazara/Graphics/PropertyHandler/TexturePropertyHandler.hpp>
 #include <Nazara/Physics3D/Collider3D.hpp>
+#include <Nazara/Physics3D/Components/PhysCharacter3DComponent.hpp>
 #include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
 #include <Nazara/TextRenderer/SimpleTextDrawer.hpp>
 #include <fmt/color.h>
@@ -276,6 +277,13 @@ namespace tsom
 				environment.gravityController = shipComponent->ship.get();
 
 			fmt::print("Created entity {} in environment {} ({})\n", entityData.entityId, entityData.environmentId, entityClassName);
+
+			// Since we make use of parenting for environments, we need to make replication happen in global space
+			if (Nz::RigidBody3DComponent* rigidBody = entity.try_get<Nz::RigidBody3DComponent>())
+			{
+				if (rigidBody->GetReplicationMode() == Nz::PhysicsReplication3D::Local)
+					rigidBody->SetReplicationMode(Nz::PhysicsReplication3D::Global);
+			}
 		}
 	}
 
@@ -309,7 +317,14 @@ namespace tsom
 			if (MovementInterpolationComponent* movementInterpolation = entityData.entity.try_get<MovementInterpolationComponent>())
 				movementInterpolation->PushMovement(stateUpdate.tickIndex, entityStates.newStates.position, entityStates.newStates.rotation);
 			else if (Nz::RigidBody3DComponent* rigidBody = entityData.entity.try_get<Nz::RigidBody3DComponent>())
-				rigidBody->TeleportTo(entityStates.newStates.position, entityStates.newStates.rotation);
+			{
+				// physics is in global space
+				EnvironmentData& envData = *m_environments[entityData.environmentIndex];
+				Nz::Vector3f globalPos = envData.rootNode.ToGlobalPosition(entityStates.newStates.position);
+				Nz::Quaternionf globalRot = envData.rootNode.ToGlobalRotation(entityStates.newStates.rotation);
+
+				rigidBody->TeleportTo(globalPos, globalRot);
+			}
 			else
 			{
 				auto& entityNode = entityData.entity.get<Nz::NodeComponent>();
@@ -387,6 +402,22 @@ namespace tsom
 		auto& environmentData = *m_environments[envUpdate.id];
 		environmentData.transform = envUpdate.transform;
 		environmentData.rootNode.SetTransform(environmentData.transform.translation, environmentData.transform.rotation);
+
+		// Teleport physical entities
+		for (std::size_t entityIndex : environmentData.entities.IterBits())
+		{
+			assert(m_entities[entityIndex]);
+			EntityData& entityData = *m_entities[entityIndex];
+
+			Nz::NodeComponent& entityNode = entityData.entity.get<Nz::NodeComponent>();
+
+			if (Nz::RigidBody3DComponent* rigidBody = entityData.entity.try_get<Nz::RigidBody3DComponent>())
+			{
+				rigidBody->TeleportTo(entityNode.GetGlobalPosition(), entityNode.GetGlobalRotation());
+				if (rigidBody->IsStatic())
+					rigidBody->SetReplicationMode(Nz::PhysicsReplication3D::GlobalOnce);
+			}
+		}
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::GameData&& gameData)
@@ -490,7 +521,7 @@ namespace tsom
 		Nz::RigidBody3D::DynamicSettings physSettings(collider, 0.f);
 		physSettings.objectLayer = Constants::ObjectLayerPlayer;
 
-		entity.emplace<Nz::RigidBody3DComponent>(physSettings);
+		entity.emplace<Nz::RigidBody3DComponent>(physSettings, Nz::PhysicsReplication3D::None);
 
 		// Player model (collider for now)
 		if (!m_playerModel)

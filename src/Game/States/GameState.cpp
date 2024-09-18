@@ -314,23 +314,11 @@ namespace tsom
 
 				case Nz::Keyboard::Scancode::E:
 				{
-					Nz::Vector3f hitPos, hitNormal;
-					entt::handle hitEntity;
-					auto callback = [&](const Nz::Physics3DSystem::RaycastHit& hitInfo)
+					if (auto raycastHit = RaycastQuery())
 					{
-						hitEntity = hitInfo.hitEntity;
-						hitPos = hitInfo.hitPosition;
-						hitNormal = hitInfo.hitNormal;
-					};
-
-					auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
-
-					auto& physSystem = stateData.world->GetSystem<Nz::Physics3DSystem>();
-					if (physSystem.RaycastQueryFirst(cameraNode.GetPosition(), cameraNode.GetPosition() + cameraNode.GetForward() * 10.f, callback))
-					{
-						if (auto* interactible = hitEntity.try_get<ClientInteractibleComponent>(); interactible && interactible->isEnabled)
+						if (auto* interactible = raycastHit->hitEntity.try_get<ClientInteractibleComponent>(); interactible && interactible->isEnabled)
 						{
-							auto& entityNetId = hitEntity.get<ClientEntityNetworkIndex>();
+							auto& entityNetId = raycastHit->hitEntity.get<ClientEntityNetworkIndex>();
 
 							Packets::Interact interact;
 							interact.entityId = entityNetId.networkIndex;
@@ -554,24 +542,12 @@ namespace tsom
 
 			auto& stateData = GetStateData();
 
-			Nz::Vector3f hitPos, hitNormal;
-			entt::handle hitEntity;
-			auto callback = [&](const Nz::Physics3DSystem::RaycastHit& hitInfo)
+			if (auto raycastHit = RaycastQuery())
 			{
-				hitEntity = hitInfo.hitEntity;
-				hitPos = hitInfo.hitPosition;
-				hitNormal = hitInfo.hitNormal;
-			};
-
-			auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
-
-			auto& physSystem = stateData.world->GetSystem<Nz::Physics3DSystem>();
-			if (physSystem.RaycastQueryFirst(cameraNode.GetPosition(), cameraNode.GetPosition() + cameraNode.GetForward() * 10.f, callback))
-			{
-				if (auto* chunkComponent = hitEntity.try_get<ChunkComponent>())
+				if (auto* chunkComponent = raycastHit->hitEntity.try_get<ChunkComponent>())
 				{
 					auto& chunkNetworkMap = chunkComponent->parentEntity.get<ChunkNetworkMapComponent>();
-					auto& chunkNode = hitEntity.get<Nz::NodeComponent>();
+					auto& chunkNode = raycastHit->hitEntity.get<Nz::NodeComponent>();
 
 					const Chunk& hitChunk = *chunkComponent->chunk;
 					const ChunkContainer& chunkContainer = hitChunk.GetContainer();
@@ -579,7 +555,7 @@ namespace tsom
 					if (event.button == Nz::Mouse::Left)
 					{
 						// Mine
-						Nz::Vector3f blockPos = hitPos - hitNormal * chunkContainer.GetTileSize() * 0.25f;
+						Nz::Vector3f blockPos = raycastHit->hitPos - raycastHit->hitNormal * chunkContainer.GetTileSize() * 0.25f;
 						auto coordinates = hitChunk.ComputeCoordinates(chunkNode.ToLocalPosition(blockPos));
 						if (!coordinates)
 							return;
@@ -603,7 +579,7 @@ namespace tsom
 
 						// Place
 						// Don't use hit chunk as it wouldn't work for borders blocks
-						Nz::Vector3f blockPos = environmentNode->ToLocalPosition(hitPos + hitNormal * chunkContainer.GetTileSize() * 0.25f);
+						Nz::Vector3f blockPos = environmentNode->ToLocalPosition(raycastHit->hitPos + raycastHit->hitNormal * chunkContainer.GetTileSize() * 0.25f);
 						ChunkIndices chunkIndices = chunkContainer.GetChunkIndicesByPosition(blockPos);
 						const Chunk* chunk = chunkContainer.GetChunk(chunkIndices);
 						if (!chunk)
@@ -792,31 +768,19 @@ namespace tsom
 		// Raycast
 		if (m_cameraMode != 2)
 		{
-			auto& physSystem = stateData.world->GetSystem<Nz::Physics3DSystem>();
-
-			Nz::Vector3f hitPos, hitNormal;
-			entt::handle hitEntity;
-			auto callback = [&](const Nz::Physics3DSystem::RaycastHit& hitInfo)
-			{
-				hitEntity = hitInfo.hitEntity;
-				hitPos = hitInfo.hitPosition;
-				hitNormal = hitInfo.hitNormal;
-			};
-
 			entt::handle interactibleEntity;
-
-			if (physSystem.RaycastQueryFirst(cameraNode.GetPosition(), cameraNode.GetPosition() + cameraNode.GetForward() * 10.f, callback))
+			if (auto raycastHit = RaycastQuery())
 			{
-				if (auto* chunkComponent = hitEntity.try_get<ChunkComponent>())
+				if (auto* chunkComponent = raycastHit->hitEntity.try_get<ChunkComponent>())
 				{
-					auto& chunkNode = hitEntity.get<Nz::NodeComponent>();
+					auto& chunkNode = raycastHit->hitEntity.get<Nz::NodeComponent>();
 
 					const Chunk& chunk = *chunkComponent->chunk;
 					const ChunkContainer& chunkContainer = chunk.GetContainer();
 
-					debugDrawer.DrawLine(hitPos, hitPos + hitNormal * 0.2f, Nz::Color::Cyan());
+					debugDrawer.DrawLine(raycastHit->hitPos, raycastHit->hitPos + raycastHit->hitNormal * 0.2f, Nz::Color::Cyan());
 
-					Nz::Vector3f blockPos = hitPos - hitNormal * chunkContainer.GetTileSize() * 0.25f;
+					Nz::Vector3f blockPos = raycastHit->hitPos - raycastHit->hitNormal * chunkContainer.GetTileSize() * 0.25f;
 
 					if (m_debugOverlay && m_debugOverlay->mode >= 1)
 					{
@@ -864,7 +828,7 @@ namespace tsom
 							std::array{ Nz::BoxCorner::RightBottomNear, Nz::BoxCorner::LeftBottomNear, Nz::BoxCorner::LeftTopNear, Nz::BoxCorner::RightTopNear },
 						};
 
-						Nz::Vector3f localHitNormal = chunkNode.GetGlobalRotation().GetConjugate() * hitNormal;
+						Nz::Vector3f localHitNormal = chunkNode.GetGlobalRotation().GetConjugate() * raycastHit->hitNormal;
 						auto& corners = directionToCorners[DirectionFromNormal(localHitNormal)];
 
 						debugDrawer.DrawLine(chunkNode.ToGlobalPosition(cornerPos[corners[0]]), chunkNode.ToGlobalPosition(cornerPos[corners[1]]), Nz::Color::Green());
@@ -873,9 +837,9 @@ namespace tsom
 						debugDrawer.DrawLine(chunkNode.ToGlobalPosition(cornerPos[corners[3]]), chunkNode.ToGlobalPosition(cornerPos[corners[0]]), Nz::Color::Green());
 					}
 				}
-				else if (auto* interactible = hitEntity.try_get<ClientInteractibleComponent>(); interactible && interactible->isEnabled)
+				else if (auto* interactible = raycastHit->hitEntity.try_get<ClientInteractibleComponent>(); interactible && interactible->isEnabled)
 				{
-					interactibleEntity = hitEntity;
+					interactibleEntity = raycastHit->hitEntity;
 				}
 			}
 
@@ -913,6 +877,44 @@ namespace tsom
 		m_console->SetPosition({ 0.f, newSize.y - m_console->GetHeight() });
 
 		m_escapeMenu->Center();
+	}
+
+	auto GameState::RaycastQuery() const -> std::optional<RaycastResult>
+	{
+		auto& physSystem = GetStateData().world->GetSystem<Nz::Physics3DSystem>();
+
+		RaycastResult raycastResult;
+		auto callback = [&](const Nz::Physics3DSystem::RaycastHit& hitInfo)
+		{
+			raycastResult.hitEntity = hitInfo.hitEntity;
+			raycastResult.hitPos = hitInfo.hitPosition;
+			raycastResult.hitNormal = hitInfo.hitNormal;
+		};
+
+		struct IgnoreSelf : Nz::PhysBodyFilter3D
+		{
+			bool ShouldCollide(Nz::UInt32 bodyIndex) const override
+			{
+				return playerBodyIndex != bodyIndex;
+			}
+
+			bool ShouldCollideLocked(const Nz::PhysBody3D& body) const override
+			{
+				return body.GetBodyIndex() != playerBodyIndex;
+			}
+
+			Nz::UInt32 playerBodyIndex;
+		};
+
+		IgnoreSelf ignoreSelf;
+		if (m_controlledEntity)
+			ignoreSelf.playerBodyIndex = m_controlledEntity.get<Nz::RigidBody3DComponent>().GetBodyIndex();
+
+		auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
+		if (!physSystem.RaycastQueryFirst(cameraNode.GetPosition(), cameraNode.GetPosition() + cameraNode.GetForward() * 10.f, callback, nullptr, nullptr, (m_controlledEntity) ? &ignoreSelf : nullptr))
+			return {};
+
+		return raycastResult;
 	}
 
 	void GameState::OnTick(Nz::Time elapsedTime, bool lastTick)
