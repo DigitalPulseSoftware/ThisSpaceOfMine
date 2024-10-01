@@ -58,7 +58,7 @@ namespace tsom
 		m_serverInstance.DestroyPlayer(m_playerIndex);
 	}
 
-	void ServerPlayer::MoveEntityToEnvironment(ServerEnvironment* environment)
+	void ServerPlayer::MoveEntityToEnvironment(ServerEnvironment* environment, const Nz::Vector3f& envLinearVelocity)
 	{
 		assert(IsInEnvironment(environment));
 
@@ -91,6 +91,8 @@ namespace tsom
 		rotation = prevToNewTransform.Rotate(rotation);
 		linearVel = prevToNewTransform.Rotate(linearVel);
 		angularVel = prevToNewTransform.Rotate(angularVel);
+
+		linearVel += envLinearVelocity;
 
 		m_controlledEntity = environment->CreateEntity();
 		m_controlledEntity.emplace<Nz::NodeComponent>(position, rotation);

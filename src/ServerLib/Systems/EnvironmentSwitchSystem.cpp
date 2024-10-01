@@ -41,7 +41,7 @@ namespace tsom
 				{
 					localPlayerPos -= enterTrigger.entryTrigger->GetCenterOfMass(); //< https://jrouwe.github.io/JoltPhysics/index.html#center-of-mass
 					if (enterTrigger.entryTrigger->CollisionQuery(localPlayerPos))
-						player.MoveEntityToEnvironment(enterTrigger.targetEnvironment);
+						player.MoveEntityToEnvironment(enterTrigger.targetEnvironment, Nz::Vector3f::Zero());
 				}
 			});
 		}

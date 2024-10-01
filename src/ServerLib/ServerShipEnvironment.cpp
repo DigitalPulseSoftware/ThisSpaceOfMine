@@ -346,7 +346,9 @@ namespace tsom
 				}
 
 				// No longer colliding with the interior
-				player.MoveEntityToEnvironment(m_outsideEnvironment);
+				Nz::Vector3f outsideVelocity = m_proxyEntity.get<Nz::RigidBody3DComponent>().GetLinearVelocity();
+
+				player.MoveEntityToEnvironment(m_outsideEnvironment, outsideVelocity);
 			});
 		}
 

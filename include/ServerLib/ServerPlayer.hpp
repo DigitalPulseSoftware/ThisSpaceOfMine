@@ -64,7 +64,7 @@ namespace tsom
 
 			inline bool IsInEnvironment(const ServerEnvironment* environment);
 
-			void MoveEntityToEnvironment(ServerEnvironment* environment);
+			void MoveEntityToEnvironment(ServerEnvironment* environment, const Nz::Vector3f& envLinearVelocity);
 
 			void PushInputs(const PlayerInputs& inputs);
 
