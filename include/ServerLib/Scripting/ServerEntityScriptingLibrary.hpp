@@ -8,14 +8,14 @@
 #define TSOM_SERVERLIB_SCRIPTING_SERVERENTITYSCRIPTINGLIBRARY_HPP
 
 #include <ServerLib/Export.hpp>
-#include <CommonLib/Scripting/EntityScriptingLibrary.hpp>
+#include <CommonLib/Scripting/SharedEntityScriptingLibrary.hpp>
 
 namespace tsom
 {
-	class TSOM_SERVERLIB_API ServerEntityScriptingLibrary final : public EntityScriptingLibrary
+	class TSOM_SERVERLIB_API ServerEntityScriptingLibrary final : public SharedEntityScriptingLibrary
 	{
 		public:
-			using EntityScriptingLibrary::EntityScriptingLibrary;
+			using SharedEntityScriptingLibrary::SharedEntityScriptingLibrary;
 
 		private:
 			void FillEntityMetatable(sol::state& state, sol::table entityMetatable) override;

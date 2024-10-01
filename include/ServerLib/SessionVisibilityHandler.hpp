@@ -65,7 +65,7 @@ namespace tsom
 			struct CreateEntityData
 			{
 				const ServerEnvironment* environment;
-				const EntityClass* entityClass;
+				std::shared_ptr<const EntityClass> entityClass;
 				Nz::Quaternionf initialRotation;
 				Nz::Vector3f initialPosition;
 				std::optional<Packets::Helper::PlayerControlledData> playerControlledData;

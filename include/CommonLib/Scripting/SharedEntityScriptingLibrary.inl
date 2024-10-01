@@ -4,13 +4,13 @@
 
 namespace tsom
 {
-	inline EntityScriptingLibrary::EntityScriptingLibrary(EntityRegistry& entityRegistry) :
+	inline SharedEntityScriptingLibrary::SharedEntityScriptingLibrary(EntityRegistry& entityRegistry) :
 	m_entityRegistry(entityRegistry)
 	{
 	}
 
 	template<typename T>
-	constexpr auto EntityScriptingLibrary::ComponentEntry::DefaultAdd() -> AddComponentFunc
+	constexpr auto SharedEntityScriptingLibrary::ComponentEntry::DefaultAdd() -> AddComponentFunc
 	{
 		return [](sol::this_state L, entt::handle entity, sol::optional<sol::table> /*parameters*/)
 		{
@@ -19,7 +19,7 @@ namespace tsom
 	}
 
 	template<typename T>
-	constexpr auto EntityScriptingLibrary::ComponentEntry::DefaultGet() -> GetComponentFunc
+	constexpr auto SharedEntityScriptingLibrary::ComponentEntry::DefaultGet() -> GetComponentFunc
 	{
 		return [](sol::this_state L, entt::handle entity)
 		{
@@ -28,7 +28,7 @@ namespace tsom
 	}
 
 	template<typename T>
-	constexpr auto EntityScriptingLibrary::ComponentEntry::Default() -> ComponentEntry
+	constexpr auto SharedEntityScriptingLibrary::ComponentEntry::Default() -> ComponentEntry
 	{
 		return ComponentEntry{
 			.addComponent = DefaultAdd<T>(),

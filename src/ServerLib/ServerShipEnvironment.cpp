@@ -51,7 +51,7 @@ namespace tsom
 		m_shipEntity.emplace<Nz::NodeComponent>();
 		m_shipEntity.emplace<NetworkedComponent>();
 
-		const EntityClass* shipClass = serverInstance.GetEntityRegistry().FindClass("ship");
+		std::shared_ptr<const EntityClass> shipClass = serverInstance.GetEntityRegistry().FindClass("ship");
 
 		auto& entityInstance = m_shipEntity.emplace<ClassInstanceComponent>(shipClass);
 		entityInstance.UpdateProperty<EntityPropertyType::Float>("CellSize", 1.f);

@@ -26,7 +26,7 @@ namespace tsom
 
 	void EntityClass::ActivateEntity(entt::handle entity) const
 	{
-		assert(entity.get<ClassInstanceComponent>().GetClass() == this);
+		assert(entity.get<ClassInstanceComponent>().GetClass().get() == this);
 		if (m_callbacks.onInit)
 			m_callbacks.onInit(entity);
 	}

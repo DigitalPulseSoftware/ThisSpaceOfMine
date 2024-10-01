@@ -16,26 +16,28 @@ namespace tsom
 {
 	class EntityRegistry;
 
-	class TSOM_COMMONLIB_API EntityScriptingLibrary : public ScriptingLibrary
+	class TSOM_COMMONLIB_API SharedEntityScriptingLibrary : public ScriptingLibrary
 	{
 		public:
-			inline EntityScriptingLibrary(EntityRegistry& entityRegistry);
-			EntityScriptingLibrary(const EntityScriptingLibrary&) = delete;
-			EntityScriptingLibrary(EntityScriptingLibrary&&) = delete;
-			virtual ~EntityScriptingLibrary();
+			inline SharedEntityScriptingLibrary(EntityRegistry& entityRegistry);
+			SharedEntityScriptingLibrary(const SharedEntityScriptingLibrary&) = delete;
+			SharedEntityScriptingLibrary(SharedEntityScriptingLibrary&&) = delete;
+			virtual ~SharedEntityScriptingLibrary();
 
 			void Register(sol::state& state) override;
 
-			EntityScriptingLibrary& operator=(const EntityScriptingLibrary&) = delete;
-			EntityScriptingLibrary& operator=(EntityScriptingLibrary&&) = delete;
+			sol::table ToEntityTable(sol::state_view& state, entt::handle entity);
+
+			SharedEntityScriptingLibrary& operator=(const SharedEntityScriptingLibrary&) = delete;
+			SharedEntityScriptingLibrary& operator=(SharedEntityScriptingLibrary&&) = delete;
 
 			using AddComponentFunc = sol::object(*)(sol::this_state L, entt::handle entity, sol::optional<sol::table> parameters);
 			using GetComponentFunc = sol::object(*)(sol::this_state L, entt::handle entity);
 
 			struct ComponentEntry
 			{
-				EntityScriptingLibrary::AddComponentFunc addComponent;
-				EntityScriptingLibrary::GetComponentFunc getComponent;
+				SharedEntityScriptingLibrary::AddComponentFunc addComponent;
+				SharedEntityScriptingLibrary::GetComponentFunc getComponent;
 
 				template<typename T> static constexpr AddComponentFunc DefaultAdd();
 				template<typename T> static constexpr GetComponentFunc DefaultGet();
@@ -65,6 +67,6 @@ namespace tsom
 	};
 }
 
-#include <CommonLib/Scripting/EntityScriptingLibrary.inl>
+#include <CommonLib/Scripting/SharedEntityScriptingLibrary.inl>
 
 #endif // TSOM_COMMONLIB_SCRIPTING_ENTITYSCRIPTINGLIBRARY_HPP

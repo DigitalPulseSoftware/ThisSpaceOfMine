@@ -4,6 +4,7 @@
 
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
 #include <entt/entt.hpp>
+#include <stdexcept>
 
 namespace tsom
 {
@@ -11,7 +12,7 @@ namespace tsom
 	{
 		entt::handle entity = RetrieveScriptEntity(entityTable);
 		if (!entity)
-			TriggerLuaError(entityTable.lua_state(), "invalid entity");
+			throw std::runtime_error("invalid entity");
 
 		return entity;
 	}

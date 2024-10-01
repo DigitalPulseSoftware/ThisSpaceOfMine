@@ -71,13 +71,14 @@ namespace tsom
 		SetupAttributeTable(s_packetAttributes);
 
 		m_scriptingContext.RegisterLibrary<MathScriptingLibrary>();
-		m_scriptingContext.RegisterLibrary<ClientScriptingLibrary>(m_app);
+		m_scriptingContext.RegisterLibrary<ClientScriptingLibrary>(m_app, *this);
 		m_scriptingContext.LoadDirectory("scripts/assets");
 
 		m_entityRegistry.RegisterClassLibrary<ClientChunkClassLibrary>(m_app, m_blockLibrary);
 
 		m_scriptingContext.RegisterLibrary<ClientEntityScriptingLibrary>(m_entityRegistry);
-		m_scriptingContext.LoadDirectory("scripts/entities");
+
+		LoadScripts();
 	}
 
 	ClientSessionHandler::~ClientSessionHandler()
@@ -251,7 +252,7 @@ namespace tsom
 			entityNetId.networkIndex = entityData.entityId;
 
 			std::string entityClassName = GetSession()->GetStringStore().GetString(entityData.entityClass);
-			if (const EntityClass* entityClass = m_entityRegistry.FindClass(entityClassName))
+			if (std::shared_ptr<const EntityClass> entityClass = m_entityRegistry.FindClass(entityClassName))
 			{
 				auto& entityInstance = entity.emplace<ClassInstanceComponent>(entityClass);
 
@@ -512,6 +513,21 @@ namespace tsom
 		}
 
 		m_currentEnvironmentIndex = playerEnv.newRootEnv;
+	}
+
+	void ClientSessionHandler::LoadScripts(bool isReloading)
+	{
+		if (!isReloading)
+		{
+			m_scriptingContext.LoadDirectory("scripts/entities");
+			return;
+		}
+
+		entt::registry* reg = &m_world.GetRegistry();
+		m_entityRegistry.Refresh(std::span(&reg, 1), [this]
+		{
+			LoadScripts(false);
+		});
 	}
 
 	void ClientSessionHandler::SetupEntity(entt::handle entity, Packets::Helper::PlayerControlledData&& entityData)

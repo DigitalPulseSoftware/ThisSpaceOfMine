@@ -4,27 +4,27 @@
 
 namespace tsom
 {
-	inline auto EntityRegistry::FindClass(std::string_view entityClass) const -> const EntityClass*
+	inline std::shared_ptr<const EntityClass> EntityRegistry::FindClass(std::string_view entityClass) const
 	{
 		auto it = m_classes.find(entityClass);
 		if (it == m_classes.end())
 			return nullptr;
 
-		return &it->second;
+		return it->second;
 	}
 
 	template<typename F>
 	void EntityRegistry::ForEachClass(F&& functor)
 	{
 		for (auto it = m_classes.begin(); it != m_classes.end(); ++it)
-			functor(it.key(), it.value());
+			functor(it.key(), *it.value());
 	}
 
 	template<typename F>
 	void EntityRegistry::ForEachClass(F&& functor) const
 	{
 		for (auto&& [className, classData] : m_classes)
-			functor(className, classData);
+			functor(className, std::as_const(*classData));
 	}
 
 	template<typename T, typename... Args>

@@ -22,23 +22,23 @@ namespace tsom
 {
 	namespace
 	{
-		constexpr auto s_clientComponents = frozen::make_unordered_map<frozen::string, EntityScriptingLibrary::ComponentEntry>({
+		constexpr auto s_clientComponents = frozen::make_unordered_map<frozen::string, SharedEntityScriptingLibrary::ComponentEntry>({
 			{
-				"graphics", EntityScriptingLibrary::ComponentEntry::Default<Nz::GraphicsComponent>()
+				"graphics", SharedEntityScriptingLibrary::ComponentEntry::Default<Nz::GraphicsComponent>()
 			}
 		});
 	}
 
 	void ClientEntityScriptingLibrary::Register(sol::state& state)
 	{
-		EntityScriptingLibrary::Register(state);
+		SharedEntityScriptingLibrary::Register(state);
 
 		RegisterClientComponents(state);
 	}
 
 	void ClientEntityScriptingLibrary::FillConstants(sol::state& state, sol::table constants)
 	{
-		EntityScriptingLibrary::FillConstants(state, constants);
+		SharedEntityScriptingLibrary::FillConstants(state, constants);
 
 		constants["RenderMask2D"] = Constants::RenderMask2D;
 		constants["RenderMaskUI"] = Constants::RenderMaskUI;
@@ -49,7 +49,7 @@ namespace tsom
 
 	void ClientEntityScriptingLibrary::FillEntityMetatable(sol::state& state, sol::table entityMetatable)
 	{
-		EntityScriptingLibrary::FillEntityMetatable(state, entityMetatable);
+		SharedEntityScriptingLibrary::FillEntityMetatable(state, entityMetatable);
 
 		entityMetatable["SetInteractible"] = LuaFunction([](sol::table entityTable, bool isInteractible)
 		{
@@ -88,7 +88,7 @@ namespace tsom
 
 	auto ClientEntityScriptingLibrary::RetrieveAddComponentHandler(std::string_view componentType) -> AddComponentFunc
 	{
-		if (AddComponentFunc addComponentHandler = EntityScriptingLibrary::RetrieveAddComponentHandler(componentType))
+		if (AddComponentFunc addComponentHandler = SharedEntityScriptingLibrary::RetrieveAddComponentHandler(componentType))
 			return addComponentHandler;
 
 		auto it = s_clientComponents.find(componentType);
@@ -100,7 +100,7 @@ namespace tsom
 
 	auto ClientEntityScriptingLibrary::RetrieveGetComponentHandler(std::string_view componentType) -> GetComponentFunc
 	{
-		if (GetComponentFunc getComponentHandler = EntityScriptingLibrary::RetrieveGetComponentHandler(componentType))
+		if (GetComponentFunc getComponentHandler = SharedEntityScriptingLibrary::RetrieveGetComponentHandler(componentType))
 			return getComponentHandler;
 
 		auto it = s_clientComponents.find(componentType);

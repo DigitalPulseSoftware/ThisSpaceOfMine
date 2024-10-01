@@ -43,7 +43,7 @@ namespace tsom
 		m_planetEntity.emplace<Nz::NodeComponent>();
 		m_planetEntity.emplace<NetworkedComponent>();
 
-		const EntityClass* planetClass = serverInstance.GetEntityRegistry().FindClass("planet");
+		std::shared_ptr<const EntityClass> planetClass = serverInstance.GetEntityRegistry().FindClass("planet");
 
 		auto& entityInstance = m_planetEntity.emplace<ClassInstanceComponent>(planetClass);
 		entityInstance.UpdateProperty<EntityPropertyType::Float>("CellSize", 1.f);

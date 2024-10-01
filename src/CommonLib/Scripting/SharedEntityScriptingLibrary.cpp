@@ -2,7 +2,7 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
-#include <CommonLib/Scripting/EntityScriptingLibrary.hpp>
+#include <CommonLib/Scripting/SharedEntityScriptingLibrary.hpp>
 #include <CommonLib/EntityClass.hpp>
 #include <CommonLib/EntityProperties.hpp>
 #include <CommonLib/EntityRegistry.hpp>
@@ -38,12 +38,12 @@ namespace tsom
 			EntityClass::Callbacks callbacks;
 		};
 
-		constexpr auto s_components = frozen::make_unordered_map<frozen::string, EntityScriptingLibrary::ComponentEntry>({
+		constexpr auto s_components = frozen::make_unordered_map<frozen::string, SharedEntityScriptingLibrary::ComponentEntry>({
 			{
-				"node", EntityScriptingLibrary::ComponentEntry::Default<Nz::NodeComponent>()
+				"node", SharedEntityScriptingLibrary::ComponentEntry::Default<Nz::NodeComponent>()
 			},
 			{
-				"rigidbody3d", EntityScriptingLibrary::ComponentEntry{
+				"rigidbody3d", SharedEntityScriptingLibrary::ComponentEntry{
 					.addComponent = [](sol::this_state L, entt::handle entity, sol::optional<sol::table> parametersOpt)
 					{
 						if (!parametersOpt)
@@ -89,15 +89,15 @@ namespace tsom
 						else
 							throw std::runtime_error("invalid kind " + kind);
 					},
-					.getComponent = EntityScriptingLibrary::ComponentEntry::DefaultGet<Nz::RigidBody3DComponent>()
+					.getComponent = SharedEntityScriptingLibrary::ComponentEntry::DefaultGet<Nz::RigidBody3DComponent>()
 				}
 			}
 		});
 	}
 
-	EntityScriptingLibrary::~EntityScriptingLibrary() = default;
+	SharedEntityScriptingLibrary::~SharedEntityScriptingLibrary() = default;
 
-	void EntityScriptingLibrary::Register(sol::state& state)
+	void SharedEntityScriptingLibrary::Register(sol::state& state)
 	{
 		RegisterConstants(state);
 
@@ -108,7 +108,21 @@ namespace tsom
 		RegisterPhysics(state);
 	}
 
-	void EntityScriptingLibrary::FillConstants(sol::state& state, sol::table constants)
+	sol::table SharedEntityScriptingLibrary::ToEntityTable(sol::state_view& state, entt::handle entity)
+	{
+		if (ScriptedEntityComponent* scriptedComponent = entity.try_get<ScriptedEntityComponent>())
+			return scriptedComponent->entityTable;
+		else
+		{
+			sol::table entityTable = state.create_table();
+			entityTable["_Entity"] = entity;
+			entityTable[sol::metatable_key] = m_entityMetatable;
+
+			return entityTable;
+		}
+	}
+
+	void SharedEntityScriptingLibrary::FillConstants(sol::state& state, sol::table constants)
 	{
 		// Internal
 		constants["TickDuration"] = Constants::TickDuration;
@@ -125,7 +139,7 @@ namespace tsom
 		constants["ObjectLayerStaticTrigger"] = Constants::ObjectLayerStaticTrigger;
 	}
 
-	void EntityScriptingLibrary::FillEntityMetatable(sol::state& state, sol::table entityMetatable)
+	void SharedEntityScriptingLibrary::FillEntityMetatable(sol::state& state, sol::table entityMetatable)
 	{
 		entityMetatable["AddComponent"] = LuaFunction([this](sol::this_state L, sol::table entityTable, std::string_view componentType, sol::optional<sol::table> parameters)
 		{
@@ -176,16 +190,16 @@ namespace tsom
 		});
 	}
 
-	void EntityScriptingLibrary::HandleInit(sol::table classMetatable, entt::handle entity)
+	void SharedEntityScriptingLibrary::HandleInit(sol::table classMetatable, entt::handle entity)
 	{
 	}
 
-	bool EntityScriptingLibrary::RegisterEvent(sol::table classMetatable, std::string_view eventName, sol::protected_function callback)
+	bool SharedEntityScriptingLibrary::RegisterEvent(sol::table classMetatable, std::string_view eventName, sol::protected_function callback)
 	{
 		return false;
 	}
 
-	auto EntityScriptingLibrary::RetrieveAddComponentHandler(std::string_view componentType) -> AddComponentFunc
+	auto SharedEntityScriptingLibrary::RetrieveAddComponentHandler(std::string_view componentType) -> AddComponentFunc
 	{
 		auto it = s_components.find(componentType);
 		if (it == s_components.end())
@@ -194,7 +208,7 @@ namespace tsom
 		return it->second.addComponent;
 	}
 
-	auto EntityScriptingLibrary::RetrieveGetComponentHandler(std::string_view componentType) -> GetComponentFunc
+	auto SharedEntityScriptingLibrary::RetrieveGetComponentHandler(std::string_view componentType) -> GetComponentFunc
 	{
 		auto it = s_components.find(componentType);
 		if (it == s_components.end())
@@ -203,7 +217,7 @@ namespace tsom
 		return it->second.getComponent;
 	}
 
-	void EntityScriptingLibrary::RegisterConstants(sol::state& state)
+	void SharedEntityScriptingLibrary::RegisterConstants(sol::state& state)
 	{
 		sol::table constantMetatable = state.create_table_with(
 			sol::meta_function::index, [](sol::this_state L) { TriggerLuaError(L, "invalid constant"); },
@@ -216,10 +230,18 @@ namespace tsom
 		constants[sol::metatable_key] = constantMetatable;
 	}
 
-	void EntityScriptingLibrary::RegisterComponents(sol::state& state)
+	void SharedEntityScriptingLibrary::RegisterComponents(sol::state& state)
 	{
 		state.new_usertype<Nz::NodeComponent>("NodeComponent",
 			sol::no_constructor,
+			"GetRotation", LuaFunction([](const Nz::NodeComponent& nodeComponent)
+			{
+				return nodeComponent.GetRotation();
+			}),
+			"GetPosition", LuaFunction([](const Nz::NodeComponent& nodeComponent)
+			{
+				return nodeComponent.GetPosition();
+			}),
 			"Scale", LuaFunction([](Nz::NodeComponent& nodeComponent, const Nz::Vector3f& scale)
 			{
 				return nodeComponent.Scale(scale);
@@ -251,7 +273,7 @@ namespace tsom
 		);
 	}
 
-	void EntityScriptingLibrary::RegisterEntityBuilder(sol::state& state)
+	void SharedEntityScriptingLibrary::RegisterEntityBuilder(sol::state& state)
 	{
 		state.new_usertype<EntityBuilder>("EntityBuilder",
 			sol::no_constructor,
@@ -282,7 +304,6 @@ namespace tsom
 						TriggerLuaError(L, fmt::format("unknown event {}", eventName));
 				}
 			}),
-
 			"OnPropertyUpdate", LuaFunction([this](sol::this_state L, EntityBuilder& entityBuilder, std::string_view propertyName, sol::protected_function callback)
 			{
 				auto propertyIt = std::find_if(entityBuilder.properties.begin(), entityBuilder.properties.end(), [&](const EntityClass::Property& property) { return property.name == propertyName; });
@@ -307,7 +328,7 @@ namespace tsom
 		);
 	}
 
-	void EntityScriptingLibrary::RegisterEntityMetatable(sol::state& state)
+	void SharedEntityScriptingLibrary::RegisterEntityMetatable(sol::state& state)
 	{
 		m_entityMetatable = state.create_table();
 		m_entityMetatable[sol::meta_method::index] = m_entityMetatable;
@@ -315,7 +336,7 @@ namespace tsom
 		FillEntityMetatable(state, m_entityMetatable);
 	}
 
-	void EntityScriptingLibrary::RegisterEntityRegistry(sol::state& state)
+	void SharedEntityScriptingLibrary::RegisterEntityRegistry(sol::state& state)
 	{
 		sol::table entityRegistry = state.create_named_table("EntityRegistry");
 		entityRegistry["ClassBuilder"] = LuaFunction([this](sol::this_state L)
@@ -376,11 +397,11 @@ namespace tsom
 				}
 			};
 
-			m_entityRegistry.RegisterClass(EntityClass{std::move(name), std::move(entityBuilder.properties), std::move(entityBuilder.callbacks)});
+			m_entityRegistry.RegisterClass(EntityClass{ std::move(name), std::move(entityBuilder.properties), std::move(entityBuilder.callbacks) });
 		});
 	}
 
-	void EntityScriptingLibrary::RegisterPhysics(sol::state& state)
+	void SharedEntityScriptingLibrary::RegisterPhysics(sol::state& state)
 	{
 		state.new_usertype<Nz::Collider3D>("Collider3D",
 			sol::no_constructor,

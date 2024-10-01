@@ -270,9 +270,11 @@ namespace tsom
 		return std::exchange(m_printCallback, std::move(printCallback));
 	}
 
-	void ScriptingContext::RegisterLibrary(std::unique_ptr<ScriptingLibrary>&& library)
+	ScriptingLibrary& ScriptingContext::RegisterLibrary(std::unique_ptr<ScriptingLibrary>&& library)
 	{
 		library->Register(m_state);
 		m_libraries.push_back(std::move(library));
+
+		return *m_libraries.back();
 	}
 }

@@ -95,6 +95,7 @@ namespace tsom
 			};
 
 		private:
+			void LoadScripts(bool isReloading = false);
 			void OnNetworkTick();
 			void OnSave();
 			void OnTick(Nz::Time elapsedTime);

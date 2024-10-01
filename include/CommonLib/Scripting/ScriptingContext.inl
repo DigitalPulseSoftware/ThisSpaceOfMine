@@ -5,8 +5,8 @@
 namespace tsom
 {
 	template<typename T, typename... Args>
-	void ScriptingContext::RegisterLibrary(Args&&... args)
+	T& ScriptingContext::RegisterLibrary(Args&&... args)
 	{
-		return RegisterLibrary(std::make_unique<T>(std::forward<Args>(args)...));
+		return static_cast<T&>(RegisterLibrary(std::make_unique<T>(std::forward<Args>(args)...)));
 	}
 }

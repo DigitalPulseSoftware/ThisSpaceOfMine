@@ -6,7 +6,7 @@
 
 namespace tsom
 {
-	inline const EntityClass* ClassInstanceComponent::GetClass() const
+	inline const std::shared_ptr<const EntityClass>& ClassInstanceComponent::GetClass() const
 	{
 		return m_entityClass;
 	}

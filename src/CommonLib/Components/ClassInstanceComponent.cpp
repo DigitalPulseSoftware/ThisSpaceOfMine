@@ -8,14 +8,14 @@
 
 namespace tsom
 {
-	ClassInstanceComponent::ClassInstanceComponent(const EntityClass* entityClass) :
-	m_entityClass(entityClass)
+	ClassInstanceComponent::ClassInstanceComponent(std::shared_ptr<const EntityClass> entityClass) :
+	m_entityClass(std::move(entityClass))
 	{
-		std::size_t propertyCount = entityClass->GetPropertyCount();
+		std::size_t propertyCount = m_entityClass->GetPropertyCount();
 
 		m_properties.reserve(propertyCount);
 		for (std::size_t i = 0; i < propertyCount; ++i)
-			m_properties.emplace_back(entityClass->GetProperty(i).defaultValue);
+			m_properties.emplace_back(m_entityClass->GetProperty(i).defaultValue);
 	}
 
 	Nz::UInt32 ClassInstanceComponent::FindPropertyIndex(std::string_view propertyName) const
@@ -30,5 +30,11 @@ namespace tsom
 			throw std::runtime_error(fmt::format("invalid property {}", propertyName));
 
 		return propertyIndex;
+	}
+	void ClassInstanceComponent::UpdateClass(std::shared_ptr<const EntityClass> entityClass)
+	{
+		m_entityClass = std::move(entityClass);
+
+		// TODO: Handle possible properties changes
 	}
 }

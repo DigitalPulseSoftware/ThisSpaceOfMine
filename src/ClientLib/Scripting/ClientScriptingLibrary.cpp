@@ -4,6 +4,7 @@
 
 #include <ClientLib/Scripting/ClientScriptingLibrary.hpp>
 #include <ClientLib/ClientAssetLibraryAppComponent.hpp>
+#include <ClientLib/ClientSessionHandler.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
@@ -27,6 +28,7 @@ namespace tsom
 		RegisterAssetLibrary(state);
 		RegisterMaterialInstance(state);
 		RegisterRenderables(state);
+		RegisterScripts(state);
 		RegisterTexture(state);
 	}
 
@@ -117,6 +119,16 @@ namespace tsom
 				return model;
 			})
 		);
+	}
+
+	void ClientScriptingLibrary::RegisterScripts(sol::state& state)
+	{
+		sol::table scriptsLibrary = state.create_named_table("Scripts");
+
+		scriptsLibrary["Reload"] = LuaFunction([this]
+		{
+			m_sessionHandler.LoadScripts(true);
+		});
 	}
 
 	void ClientScriptingLibrary::RegisterTexture(sol::state& state)

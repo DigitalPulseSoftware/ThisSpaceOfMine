@@ -9,7 +9,10 @@
 
 #include <CommonLib/Export.hpp>
 #include <CommonLib/EntityClass.hpp>
+#include <NazaraUtils/FunctionRef.hpp>
+#include <entt/fwd.hpp>
 #include <tsl/hopscotch_map.h>
+#include <span>
 #include <string>
 
 namespace tsom
@@ -24,10 +27,12 @@ namespace tsom
 			EntityRegistry(EntityRegistry&&) = delete;
 			~EntityRegistry();
 
-			inline const EntityClass* FindClass(std::string_view entityClass) const;
+			inline std::shared_ptr<const EntityClass> FindClass(std::string_view entityClass) const;
 
 			template<typename F> void ForEachClass(F&& functor);
 			template<typename F> void ForEachClass(F&& functor) const;
+
+			void Refresh(std::span<entt::registry*> registries, Nz::FunctionRef<void()> refreshCallback);
 
 			void RegisterClass(EntityClass entityClass);
 
@@ -39,7 +44,9 @@ namespace tsom
 
 		private:
 			std::vector<std::unique_ptr<EntityClassLibrary>> m_classLibraries;
-			tsl::hopscotch_map<std::string, EntityClass, std::hash<std::string_view>, std::equal_to<>> m_classes;
+			tsl::hopscotch_map<std::string, std::shared_ptr<EntityClass>, std::hash<std::string_view>, std::equal_to<>> m_classes;
+			tsl::hopscotch_map<const EntityClass*, std::shared_ptr<const EntityClass>> m_refreshMap;
+			bool m_isRefreshing;
 	};
 }
 

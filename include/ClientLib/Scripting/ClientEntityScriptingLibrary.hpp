@@ -8,15 +8,15 @@
 #define TSOM_CLIENTLIB_SCRIPTING_CLIENTENTITYSCRIPTINGLIBRARY_HPP
 
 #include <ClientLib/Export.hpp>
-#include <CommonLib/Scripting/EntityScriptingLibrary.hpp>
+#include <CommonLib/Scripting/SharedEntityScriptingLibrary.hpp>
 #include <sol/state.hpp>
 
 namespace tsom
 {
-	class TSOM_CLIENTLIB_API ClientEntityScriptingLibrary final : public EntityScriptingLibrary
+	class TSOM_CLIENTLIB_API ClientEntityScriptingLibrary final : public SharedEntityScriptingLibrary
 	{
 		public:
-			using EntityScriptingLibrary::EntityScriptingLibrary;
+			using SharedEntityScriptingLibrary::SharedEntityScriptingLibrary;
 
 			void Register(sol::state& state) override;
 

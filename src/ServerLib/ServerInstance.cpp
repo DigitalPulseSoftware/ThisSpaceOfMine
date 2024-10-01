@@ -7,6 +7,7 @@
 #include <CommonLib/Planet.hpp>
 #include <CommonLib/Entities/ChunkClassLibrary.hpp>
 #include <CommonLib/Scripting/MathScriptingLibrary.hpp>
+#include <CommonLib/Scripting/SharedScriptingLibrary.hpp>
 #include <ServerLib/ServerPlanetEnvironment.hpp>
 #include <ServerLib/ServerShipEnvironment.hpp>
 #include <ServerLib/Scripting/ServerEntityScriptingLibrary.hpp>
@@ -38,9 +39,11 @@ namespace tsom
 		m_entityRegistry.RegisterClassLibrary<ChunkClassLibrary>(m_application, m_blockLibrary);
 
 		m_scriptingContext.RegisterLibrary<MathScriptingLibrary>();
-		m_scriptingContext.RegisterLibrary<ServerEntityScriptingLibrary>(m_entityRegistry);
-		m_scriptingContext.RegisterLibrary<ServerScriptingLibrary>(m_application);
-		m_scriptingContext.LoadDirectory("scripts/entities");
+		m_scriptingContext.RegisterLibrary<SharedScriptingLibrary>();
+		ServerEntityScriptingLibrary& entityScriptingLibrary = m_scriptingContext.RegisterLibrary<ServerEntityScriptingLibrary>(m_entityRegistry);
+		m_scriptingContext.RegisterLibrary<ServerScriptingLibrary>(m_application, entityScriptingLibrary);
+
+		LoadScripts();
 	}
 
 	ServerInstance::~ServerInstance()
@@ -186,6 +189,24 @@ namespace tsom
 		}
 
 		return m_tickDuration - m_tickAccumulator;
+	}
+
+	void ServerInstance::LoadScripts(bool isReloading)
+	{
+		if (!isReloading)
+		{
+			m_scriptingContext.LoadDirectory("scripts/entities");
+			return;
+		}
+
+		std::vector<entt::registry*> registries;
+		for (ServerEnvironment* environment : m_environments)
+			registries.push_back(&environment->GetWorld().GetRegistry());
+
+		m_entityRegistry.Refresh(registries, [this]
+		{
+			LoadScripts(false);
+		});
 	}
 
 	void ServerInstance::OnNetworkTick()
