@@ -3,10 +3,12 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ServerLib/Scripting/ServerScriptingLibrary.hpp>
+#include <CommonLib/CharacterController.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
 #include <ServerLib/ServerPlanetEnvironment.hpp>
 #include <ServerLib/ServerPlayer.hpp>
 #include <ServerLib/ServerShipEnvironment.hpp>
+#include <ServerLib/Scripting/ServerEntityScriptingLibrary.hpp>
 #include <sol/state.hpp>
 
 SOL_BASE_CLASSES(tsom::ServerPlanetEnvironment, tsom::ServerEnvironment);
@@ -61,6 +63,7 @@ namespace tsom
 	{
 		state.new_usertype<ServerPlayerHandle>("Player",
 			sol::no_constructor,
+			"GetController", LuaFunction(&ServerPlayer::GetCharacterController),
 			"GetName", LuaFunction(&ServerPlayer::GetNickname),
 			"GetPlayerIndex", LuaFunction(&ServerPlayer::GetPlayerIndex),
 			"GetUuid", LuaFunction(&ServerPlayer::GetUuid)

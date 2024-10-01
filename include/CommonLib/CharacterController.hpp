@@ -15,11 +15,13 @@
 #include <Nazara/Math/Vector3.hpp>
 #include <Nazara/Physics3D/PhysCharacter3D.hpp>
 #include <entt/entt.hpp>
+#include <memory>
 #include <optional>
 
 namespace tsom
 {
 	class GravityController;
+	class ShipController;
 
 	class TSOM_COMMONLIB_API CharacterController : public Nz::PhysCharacter3DImpl
 	{
@@ -34,6 +36,7 @@ namespace tsom
 			inline const Nz::EulerAnglesf& GetCameraRotation() const;
 			inline const Nz::Vector3f& GetCharacterPosition() const;
 			inline const Nz::Quaternionf& GetCharacterRotation() const;
+			inline const PlayerInputs& GetInputs() const;
 			inline const Nz::Quaternionf& GetReferenceRotation() const;
 
 			inline bool IsFlying() const;
@@ -46,6 +49,7 @@ namespace tsom
 			inline void SetGravityController(const GravityController* planet);
 
 			void SetInputs(const PlayerInputs& inputs);
+			inline void SetShipController(std::shared_ptr<ShipController> shipController);
 
 			void UpdatePosition(Nz::PhysCharacter3D& character);
 
@@ -53,6 +57,7 @@ namespace tsom
 			CharacterController& operator=(CharacterController&&) = delete;
 
 		private:
+			std::shared_ptr<ShipController> m_shipController;
 			Nz::EulerAnglesf m_cameraRotation;
 			Nz::Quaternionf m_referenceRotation;
 			Nz::Quaternionf m_characterRotation;

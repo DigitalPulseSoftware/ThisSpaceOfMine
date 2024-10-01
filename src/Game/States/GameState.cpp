@@ -63,6 +63,7 @@ namespace tsom
 	m_tickDuration(Constants::TickDuration),
 	m_nextInputIndex(1),
 	m_isMouseLocked(true),
+	m_isPilotingShip(false),
 	m_cameraMode(0)
 	{
 		auto& stateData = GetStateData();
@@ -78,6 +79,17 @@ namespace tsom
 			cameraComponent.UpdateClearColor(Nz::Color::Gray());
 			cameraComponent.UpdateRenderMask(tsom::Constants::RenderMask3D & ~tsom::Constants::RenderMaskLocalPlayer);
 			cameraComponent.UpdateZNear(0.1f);
+		}
+
+		m_crosshairEntity = CreateEntity();
+		{
+			auto sprite = std::make_shared<Nz::Sprite>(filesystem.Load<Nz::MaterialInstance>("assets/crosshair.png"));
+			sprite->SetOrigin({ 0.5f, 0.5f });
+			sprite->SetSize(sprite->GetSize() * 0.15f);
+
+			m_crosshairEntity.emplace<Nz::NodeComponent>();
+			auto& crosshairGfx = m_crosshairEntity.emplace<Nz::GraphicsComponent>(std::move(sprite), tsom::Constants::RenderMask2D);
+			crosshairGfx.Hide();
 		}
 
 		m_sunLightEntity = CreateEntity();
@@ -290,6 +302,12 @@ namespace tsom
 						m_console->Hide();
 					else if (m_chatBox->IsOpen())
 						m_chatBox->Close();
+					else if (m_isPilotingShip)
+					{
+						stateData.networkSession->SendPacket(Packets::ExitShipControl{});
+						m_isPilotingShip = false;
+						m_crosshairEntity.get<Nz::GraphicsComponent>().Hide();
+					}
 					else
 						m_escapeMenu->Show();
 
@@ -485,6 +503,12 @@ namespace tsom
 			fmt::print("{0} renamed to {1}\n", playerInfo.nickname, newNickname);
 		});
 
+		m_onShipControlUpdated.Connect(stateData.sessionHandler->OnShipControlUpdated, [this](bool enable)
+		{
+			m_isPilotingShip = enable;
+			m_crosshairEntity.get<Nz::GraphicsComponent>().Show(enable);
+		});
+
 		m_escapeMenu->OnDisconnect.Connect([this](EscapeMenu* /*menu*/)
 		{
 			GetStateData().networkSession->Disconnect();
@@ -656,9 +680,12 @@ namespace tsom
 			Nz::Quaternionf characterRot = characterNode.GetGlobalRotation();
 
 			Nz::EulerAnglesf predictedCameraRotation = m_predictedCameraRotation;
-			predictedCameraRotation.pitch = Nz::Clamp(predictedCameraRotation.pitch + m_incomingCameraRotation.pitch, -89.f, 89.f);
-			predictedCameraRotation.yaw += m_incomingCameraRotation.yaw;
-			predictedCameraRotation.Normalize();
+			if (!m_isPilotingShip)
+			{
+				predictedCameraRotation.pitch = Nz::Clamp(predictedCameraRotation.pitch + m_incomingCameraRotation.pitch, -89.f, 89.f);
+				predictedCameraRotation.yaw += m_incomingCameraRotation.yaw;
+				predictedCameraRotation.Normalize();
+			}
 
 			switch (m_cameraMode)
 			{
@@ -766,9 +793,9 @@ namespace tsom
 		}
 
 		// Raycast
-		if (m_cameraMode != 2)
+		entt::handle interactibleEntity;
+		if (m_cameraMode != 2 && !m_isPilotingShip)
 		{
-			entt::handle interactibleEntity;
 			if (auto raycastHit = RaycastQuery())
 			{
 				if (auto* chunkComponent = raycastHit->hitEntity.try_get<ChunkComponent>())
@@ -842,18 +869,18 @@ namespace tsom
 					interactibleEntity = raycastHit->hitEntity;
 				}
 			}
-
-			if (interactibleEntity)
-			{
-				auto& interactible = interactibleEntity.get<ClientInteractibleComponent>();
-				m_interactionLabel->SetCharacterSize(36);
-				m_interactionLabel->SetText(fmt::format("{} ({})", (!interactible.interactText.empty()) ? interactible.interactText : "Use", "E"));
-				m_interactionLabel->Center();
-				m_interactionLabel->Show();
-			}
-			else
-				m_interactionLabel->Hide();
 		}
+
+		if (interactibleEntity)
+		{
+			auto& interactible = interactibleEntity.get<ClientInteractibleComponent>();
+			m_interactionLabel->SetCharacterSize(36);
+			m_interactionLabel->SetText(fmt::format("{} ({})", (!interactible.interactText.empty()) ? interactible.interactText : "Use", "E"));
+			m_interactionLabel->Center();
+			m_interactionLabel->Show();
+		}
+		else
+			m_interactionLabel->Hide();
 
 		m_controlledEntity = stateData.sessionHandler->GetControlledEntity();
 
@@ -875,6 +902,8 @@ namespace tsom
 
 		m_console->Resize({ newSize.x, newSize.y / 3.f });
 		m_console->SetPosition({ 0.f, newSize.y - m_console->GetHeight() });
+
+		m_crosshairEntity.get<Nz::NodeComponent>().SetPosition({ newSize.x * 0.5f, newSize.y * 0.5f });
 
 		m_escapeMenu->Center();
 	}
@@ -934,43 +963,62 @@ namespace tsom
 
 		if (m_isMouseLocked)
 		{
-			inputPacket.inputs.crouch = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::LControl);
-			inputPacket.inputs.jump = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::Space);
-			inputPacket.inputs.moveForward = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::W);
-			inputPacket.inputs.moveBackward = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::S);
-			inputPacket.inputs.moveLeft = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::A);
-			inputPacket.inputs.moveRight = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::D);
-			inputPacket.inputs.sprint = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::LShift);
-		}
+			if (m_isPilotingShip && !Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::LAlt))
+			{
+				PlayerInputs::Ship& shipInputs = inputPacket.inputs.data.emplace<PlayerInputs::Ship>();
+				shipInputs.moveForward = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::W);
+				shipInputs.moveBackward = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::S);
+				shipInputs.moveLeft = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::A);
+				shipInputs.moveRight = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::D);
+				shipInputs.rollLeft = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::Q);
+				shipInputs.rollRight = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::E);
+				shipInputs.pitch = m_incomingCameraRotation.pitch;
+				shipInputs.yaw = m_incomingCameraRotation.yaw;
+			}
+			else
+			{
+				PlayerInputs::Character& characterInputs = inputPacket.inputs.data.emplace<PlayerInputs::Character>();
+				if (!m_isPilotingShip)
+				{
+					characterInputs.crouch = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::LControl);
+					characterInputs.jump = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::Space);
+					characterInputs.moveForward = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::W);
+					characterInputs.moveBackward = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::S);
+					characterInputs.moveLeft = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::A);
+					characterInputs.moveRight = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::D);
+					characterInputs.sprint = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::LShift);
+				}
 
-		if (m_controlledEntity)
-		{
-			m_remainingCameraRotation.pitch += m_incomingCameraRotation.pitch;
-			m_remainingCameraRotation.yaw += m_incomingCameraRotation.yaw;
+				if (m_controlledEntity)
+				{
+					m_remainingCameraRotation.pitch += m_incomingCameraRotation.pitch;
+					m_remainingCameraRotation.yaw += m_incomingCameraRotation.yaw;
+
+					if (!m_remainingCameraRotation.pitch.ApproxEqual(Nz::DegreeAnglef::Zero()) || !m_remainingCameraRotation.yaw.ApproxEqual(Nz::DegreeAnglef::Zero()))
+					{
+						Nz::DegreeAnglef inputPitch = Nz::DegreeAnglef::Clamp(m_remainingCameraRotation.pitch, -Constants::PlayerRotationSpeed, Constants::PlayerRotationSpeed);
+						Nz::DegreeAnglef inputYaw = Nz::DegreeAnglef::Clamp(m_remainingCameraRotation.yaw, -Constants::PlayerRotationSpeed, Constants::PlayerRotationSpeed);
+
+						characterInputs.pitch = inputPitch;
+						characterInputs.yaw = inputYaw;
+
+						m_remainingCameraRotation.pitch -= inputPitch;
+						m_remainingCameraRotation.yaw -= inputYaw;
+
+						m_predictedCameraRotation.pitch = Nz::Clamp(m_predictedCameraRotation.pitch + inputPitch, -89.f, 89.f);
+						m_predictedCameraRotation.yaw += inputYaw;
+						m_predictedCameraRotation.Normalize();
+
+						m_predictedInputRotations.push_back({
+							.inputIndex = inputPacket.inputs.index,
+							.inputRotation = Nz::EulerAnglesf(characterInputs.pitch, characterInputs.yaw, Nz::DegreeAnglef::Zero())
+						});
+					}
+				}
+			}
 
 			m_incomingCameraRotation.pitch = Nz::DegreeAnglef::Zero();
 			m_incomingCameraRotation.yaw = Nz::DegreeAnglef::Zero();
-
-			if (!m_remainingCameraRotation.pitch.ApproxEqual(Nz::DegreeAnglef::Zero()) || !m_remainingCameraRotation.yaw.ApproxEqual(Nz::DegreeAnglef::Zero()))
-			{
-				Nz::DegreeAnglef inputPitch = Nz::DegreeAnglef::Clamp(m_remainingCameraRotation.pitch, -Constants::PlayerRotationSpeed, Constants::PlayerRotationSpeed);
-				Nz::DegreeAnglef inputYaw = Nz::DegreeAnglef::Clamp(m_remainingCameraRotation.yaw, -Constants::PlayerRotationSpeed, Constants::PlayerRotationSpeed);
-
-				inputPacket.inputs.pitch = inputPitch;
-				inputPacket.inputs.yaw = inputYaw;
-
-				m_remainingCameraRotation.pitch -= inputPitch;
-				m_remainingCameraRotation.yaw -= inputYaw;
-
-				m_predictedCameraRotation.pitch = Nz::Clamp(m_predictedCameraRotation.pitch + inputPitch, -89.f, 89.f);
-				m_predictedCameraRotation.yaw += inputYaw;
-				m_predictedCameraRotation.Normalize();
-
-				m_predictedInputRotations.push_back({
-					.inputIndex = inputPacket.inputs.index,
-					.inputRotation = Nz::EulerAnglesf(inputPacket.inputs.pitch, inputPacket.inputs.yaw, Nz::DegreeAnglef::Zero())
-				});
-			}
 		}
 
 		GetStateData().networkSession->SendPacket(inputPacket);

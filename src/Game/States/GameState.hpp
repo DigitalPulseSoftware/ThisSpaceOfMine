@@ -76,6 +76,7 @@ namespace tsom
 			NazaraSlot(ClientSessionHandler, OnPlayerJoined, m_onPlayerJoined);
 			NazaraSlot(ClientSessionHandler, OnPlayerLeave, m_onPlayerLeave);
 			NazaraSlot(ClientSessionHandler, OnPlayerNameUpdate, m_onPlayerNameUpdate);
+			NazaraSlot(ClientSessionHandler, OnShipControlUpdated, m_onShipControlUpdated);
 			NazaraSlot(Nz::Canvas, OnUnhandledKeyPressed, m_onUnhandledKeyPressed);
 			NazaraSlot(Nz::Canvas, OnUnhandledKeyReleased, m_onUnhandledKeyReleased);
 			NazaraSlot(Nz::Canvas, OnUnhandledMouseButtonPressed, m_mouseButtonReleasedSlot);
@@ -102,6 +103,7 @@ namespace tsom
 			std::vector<InputRotation> m_predictedInputRotations;
 			entt::handle m_cameraEntity;
 			entt::handle m_controlledEntity;
+			entt::handle m_crosshairEntity;
 			entt::handle m_skyboxEntity;
 			entt::handle m_sunLightEntity;
 			Nz::EulerAnglesf m_incomingCameraRotation;  //< Accumulated rotation from inputs (will be applied on inputs)
@@ -119,6 +121,7 @@ namespace tsom
 			Console* m_console;
 			EscapeMenu* m_escapeMenu;
 			bool m_isMouseLocked;
+			bool m_isPilotingShip;
 			unsigned int m_cameraMode;
 	};
 }

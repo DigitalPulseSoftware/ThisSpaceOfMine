@@ -41,6 +41,8 @@ namespace tsom
 			ClientSessionHandler(NetworkSession* session, Nz::ApplicationBase& app, Nz::EnttWorld& world, ClientBlockLibrary& blockLibrary);
 			~ClientSessionHandler();
 
+			void EnableShipControl(bool enable);
+
 			inline entt::handle GetControlledEntity() const;
 			inline const GravityController* GetGravityController(std::size_t environmentIndex) const;
 			inline ScriptingContext& GetScriptingContext();
@@ -77,6 +79,7 @@ namespace tsom
 			NazaraSignal(OnPlayerJoined, const PlayerInfo& /*playerInfo*/);
 			NazaraSignal(OnPlayerLeave, const PlayerInfo& /*playerInfo*/);
 			NazaraSignal(OnPlayerNameUpdate, const PlayerInfo& /*playerInfo*/, const std::string& /*newNickname*/);
+			NazaraSignal(OnShipControlUpdated, bool /*isControllingShip*/);
 
 			static constexpr Packets::Helper::EntityId InvalidEntity = Nz::MaxValue();
 

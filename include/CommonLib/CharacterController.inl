@@ -24,6 +24,11 @@ namespace tsom
 		return m_characterRotation;
 	}
 
+	inline const PlayerInputs& CharacterController::GetInputs() const
+	{
+		return m_lastInputs;
+	}
+
 	inline const Nz::Quaternionf& CharacterController::GetReferenceRotation() const
 	{
 		return m_referenceRotation;
@@ -43,5 +48,10 @@ namespace tsom
 	{
 		m_lastInputs = inputs;
 		m_allowInputRotation = true;
+	}
+
+	inline void CharacterController::SetShipController(std::shared_ptr<ShipController> shipController)
+	{
+		m_shipController = std::move(shipController);
 	}
 }

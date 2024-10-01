@@ -51,20 +51,42 @@ namespace tsom
 				serializer &= data.controllingPlayerId;
 			}
 
-			void Serialize(PacketSerializer& serializer, PlayerInputs& data)
+			void Serialize(PacketSerializer& serializer, PlayerInputs& inputs)
 			{
-				serializer &= data.index;
+				serializer &= inputs.index;
 
-				serializer &= data.jump;
-				serializer &= data.moveBackward;
-				serializer &= data.moveForward;
-				serializer &= data.moveLeft;
-				serializer &= data.moveRight;
-				serializer &= data.sprint;
-				serializer &= data.crouch;
+				serializer.Serialize(inputs.data, Nz::Overloaded
+				{
+					[](std::monostate)
+					{
+						throw std::runtime_error("invalid inputs");
+					},
+					[&](PlayerInputs::Character& characterInputs)
+					{
+						serializer &= characterInputs.jump;
+						serializer &= characterInputs.moveBackward;
+						serializer &= characterInputs.moveForward;
+						serializer &= characterInputs.moveLeft;
+						serializer &= characterInputs.moveRight;
+						serializer &= characterInputs.sprint;
+						serializer &= characterInputs.crouch;
 
-				serializer &= data.pitch;
-				serializer &= data.yaw;
+						serializer &= characterInputs.pitch;
+						serializer &= characterInputs.yaw;
+					},
+					[&](PlayerInputs::Ship& shipInputs)
+					{
+						serializer &= shipInputs.moveForward;
+						serializer &= shipInputs.moveBackward;
+						serializer &= shipInputs.moveLeft;
+						serializer &= shipInputs.moveRight;
+						serializer &= shipInputs.rollLeft;
+						serializer &= shipInputs.rollRight;
+
+						serializer &= shipInputs.pitch;
+						serializer &= shipInputs.yaw;
+					}
+				});
 			}
 
 			void Serialize(PacketSerializer& serializer, VoxelLocation& data)
@@ -301,6 +323,10 @@ namespace tsom
 			serializer &= data.tickIndex;
 			serializer &= data.id;
 			Helper::Serialize(serializer, data.transform);
+		}
+
+		void Serialize(PacketSerializer& serializer, ExitShipControl& data)
+		{
 		}
 
 		void Serialize(PacketSerializer& serializer, GameData& data)

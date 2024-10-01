@@ -6,6 +6,7 @@
 #include <CommonLib/Direction.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/GravityController.hpp>
+#include <CommonLib/ShipController.hpp>
 #include <Nazara/Physics3D/PhysWorld3D.hpp>
 #include <Nazara/Physics3D/RigidBody3D.hpp>
 #include <fmt/ostream.h>
@@ -27,6 +28,10 @@ namespace tsom
 
 	void CharacterController::PostSimulate(Nz::PhysCharacter3D& character, float elapsedTime)
 	{
+		PlayerInputs::Character characterInputs;
+		if (std::holds_alternative<PlayerInputs::Character>(m_lastInputs.data))
+			characterInputs = std::get<PlayerInputs::Character>(m_lastInputs.data);
+
 		Nz::Vector3f charUp = character.GetUp();
 
 		Nz::Quaternionf newRotation = m_referenceRotation;
@@ -48,14 +53,14 @@ namespace tsom
 		m_referenceRotation = newRotation;
 
 		// Yaw (rotation around up vector)
-		if (m_allowInputRotation && (!m_lastInputs.pitch.ApproxEqual(Nz::RadianAnglef::Zero()) || !m_lastInputs.yaw.ApproxEqual(Nz::RadianAnglef::Zero()))) //< Don't apply the same rotation twice
+		if (m_allowInputRotation && (!characterInputs.pitch.ApproxEqual(Nz::RadianAnglef::Zero()) || !characterInputs.yaw.ApproxEqual(Nz::RadianAnglef::Zero()))) //< Don't apply the same rotation twice
 		{
 #if DEBUG_ROTATION
-			fmt::print("Applying pitch:{0},yaw:{1} from input {2} to {3}", m_lastInputs.pitch.ToDegrees(), m_lastInputs.yaw.ToDegrees(), m_lastInputs.index, fmt::streamed(m_cameraRotation));
+			fmt::print("Applying pitch:{0},yaw:{1} from input {2} to {3}", characterInputs.pitch.ToDegrees(), characterInputs.yaw.ToDegrees(), characterInputs.index, fmt::streamed(m_cameraRotation));
 #endif
 
-			m_cameraRotation.pitch = Nz::Clamp(m_cameraRotation.pitch + m_lastInputs.pitch, -89.f, 89.f);
-			m_cameraRotation.yaw += m_lastInputs.yaw;
+			m_cameraRotation.pitch = Nz::Clamp(m_cameraRotation.pitch + characterInputs.pitch, -89.f, 89.f);
+			m_cameraRotation.yaw += characterInputs.yaw;
 			m_cameraRotation.Normalize();
 
 #if DEBUG_ROTATION
@@ -75,6 +80,9 @@ namespace tsom
 
 			m_characterRotation = newRotation;
 		}
+
+		if (m_shipController)
+			m_shipController->PostSimulate(*this, elapsedTime);
 	}
 
 	void CharacterController::PreSimulate(Nz::PhysCharacter3D& character, float elapsedTime)
@@ -85,6 +93,10 @@ namespace tsom
 		Nz::Vector3f up = character.GetUp();
 
 		m_gravityForce = (m_gravityController) ? m_gravityController->ComputeGravity(m_characterPosition) : GravityForce::Zero();
+
+		PlayerInputs::Character characterInputs;
+		if (std::holds_alternative<PlayerInputs::Character>(m_lastInputs.data))
+			characterInputs = std::get<PlayerInputs::Character>(m_lastInputs.data);
 
 		Nz::Quaternionf movementRotation;
 		if (m_gravityController)
@@ -99,44 +111,47 @@ namespace tsom
 			movementRotation = character.GetRotation();
 		}
 		else
-			movementRotation = character.GetRotation() * Nz::Quaternionf(Nz::EulerAnglesf(m_lastInputs.pitch, 0.f, 0.f));
+			movementRotation = character.GetRotation() * Nz::Quaternionf(Nz::EulerAnglesf(characterInputs.pitch, 0.f, 0.f));
 
 		bool hasGravity = m_gravityForce.acceleration * m_gravityForce.factor > 0.2f;
 
-		if (!m_isFlying && hasGravity)
-		{
-			if (m_lastInputs.jump)
-			{
-				if (character.IsOnGround())
-					velocity += up * Constants::PlayerJumpPower;
-			}
-		}
-
 		Nz::Vector3f desiredVelocity = Nz::Vector3f::Zero();
-		// Handle up/down when flying before making movement rotation relative to pitch
-		if (m_isFlying || !hasGravity)
+		if (!m_shipController)
 		{
-			if (m_lastInputs.jump)
-				desiredVelocity += movementRotation * Nz::Vector3f::Up();
+			if (!m_isFlying && hasGravity)
+			{
+				if (characterInputs.jump)
+				{
+					if (character.IsOnGround())
+						velocity += up * Constants::PlayerJumpPower;
+				}
+			}
 
-			if (m_lastInputs.crouch)
-				desiredVelocity -= movementRotation * Nz::Vector3f::Up();
+			// Handle up/down when flying before making movement rotation relative to pitch
+			if (m_isFlying || !hasGravity)
+			{
+				if (characterInputs.jump)
+					desiredVelocity += movementRotation * Nz::Vector3f::Up();
 
-			movementRotation *= Nz::Quaternionf(m_cameraRotation.pitch, Nz::Vector3f::UnitX());
-			movementRotation.Normalize();
+				if (characterInputs.crouch)
+					desiredVelocity -= movementRotation * Nz::Vector3f::Up();
+
+				movementRotation *= Nz::Quaternionf(m_cameraRotation.pitch, Nz::Vector3f::UnitX());
+				movementRotation.Normalize();
+			}
+
+			if (characterInputs.moveForward)
+				desiredVelocity += movementRotation * Nz::Vector3f::Forward();
+
+			if (characterInputs.moveBackward)
+				desiredVelocity += movementRotation * Nz::Vector3f::Backward();
+
+			if (characterInputs.moveLeft)
+				desiredVelocity += movementRotation * Nz::Vector3f::Left();
+
+			if (characterInputs.moveRight)
+				desiredVelocity += movementRotation * Nz::Vector3f::Right();
 		}
-
-		if (m_lastInputs.moveForward)
-			desiredVelocity += movementRotation * Nz::Vector3f::Forward();
-
-		if (m_lastInputs.moveBackward)
-			desiredVelocity += movementRotation * Nz::Vector3f::Backward();
-
-		if (m_lastInputs.moveLeft)
-			desiredVelocity += movementRotation * Nz::Vector3f::Left();
-
-		if (m_lastInputs.moveRight)
-			desiredVelocity += movementRotation * Nz::Vector3f::Right();
 
 		if (desiredVelocity != Nz::Vector3f::Zero())
 		{
@@ -147,8 +162,8 @@ namespace tsom
 			character.SetFriction(1.f);
 
 		if (m_isFlying)
-			desiredVelocity *= Constants::PlayerFlySpeed * ((m_lastInputs.sprint) ? 2.f : 1.f);
-		else if (m_lastInputs.sprint)
+			desiredVelocity *= Constants::PlayerFlySpeed * ((characterInputs.sprint) ? 2.f : 1.f);
+		else if (characterInputs.sprint)
 			desiredVelocity *= Constants::PlayerSprintSpeed;
 		else
 			desiredVelocity *= Constants::PlayerWalkSpeed;
@@ -168,6 +183,9 @@ namespace tsom
 		}
 
 		character.SetLinearVelocity(Lerp(velocity, desiredVelocity, desiredImpact));
+
+		if (m_shipController)
+			m_shipController->PreSimulate(*this, elapsedTime);
 	}
 
 	void CharacterController::RotateInstantaneously(const Nz::Quaternionf& rotation)

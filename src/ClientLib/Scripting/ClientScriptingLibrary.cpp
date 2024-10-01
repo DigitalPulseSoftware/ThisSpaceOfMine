@@ -26,6 +26,7 @@ namespace tsom
 		state["SERVER"] = false;
 
 		RegisterAssetLibrary(state);
+		RegisterClientSession(state);
 		RegisterMaterialInstance(state);
 		RegisterRenderables(state);
 		RegisterRenderStates(state);
@@ -47,6 +48,16 @@ namespace tsom
 		{
 			auto& clientAsset = m_app.GetComponent<ClientAssetLibraryAppComponent>();
 			clientAsset.RegisterModel(std::move(name), std::move(model));
+		});
+	}
+
+	void ClientScriptingLibrary::RegisterClientSession(sol::state& state)
+	{
+		sol::table sessionLibrary = state.create_named_table("ClientSession");
+
+		sessionLibrary["EnableShipControl"] = LuaFunction([this](bool enable)
+		{
+			m_sessionHandler.EnableShipControl(enable);
 		});
 	}
 

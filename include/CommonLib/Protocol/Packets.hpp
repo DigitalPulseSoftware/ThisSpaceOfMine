@@ -251,6 +251,10 @@ namespace tsom
 			EnvironmentTransform transform;
 		};
 
+		struct ExitShipControl
+		{
+		};
+
 		struct Interact
 		{
 			Helper::EntityId entityId;
@@ -337,6 +341,7 @@ namespace tsom
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EnvironmentCreate& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EnvironmentDestroy& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EnvironmentUpdate& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, ExitShipControl& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, GameData& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, Interact& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, MineBlock& data);

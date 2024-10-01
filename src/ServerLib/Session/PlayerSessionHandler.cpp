@@ -68,6 +68,11 @@ namespace tsom
 		m_player->Destroy();
 	}
 
+	void PlayerSessionHandler::HandlePacket(Packets::ExitShipControl&& exitShipControl)
+	{
+		m_player->GetCharacterController()->SetShipController(nullptr);
+	}
+
 	void PlayerSessionHandler::HandlePacket(Packets::Interact&& interact)
 	{
 		entt::handle entity;

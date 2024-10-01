@@ -9,6 +9,7 @@
 
 #include <CommonLib/InputIndex.hpp>
 #include <Nazara/Math/Angle.hpp>
+#include <variant>
 
 namespace tsom
 {
@@ -16,15 +17,32 @@ namespace tsom
 	{
 		InputIndex index;
 
-		bool crouch = false;
-		bool jump = false;
-		bool moveForward = false;
-		bool moveBackward = false;
-		bool moveLeft = false;
-		bool moveRight = false;
-		bool sprint = false;
-		Nz::RadianAnglef pitch = 0.f;
-		Nz::RadianAnglef yaw = 0.f;
+		struct Character
+		{
+			bool crouch = false;
+			bool jump = false;
+			bool moveForward = false;
+			bool moveBackward = false;
+			bool moveLeft = false;
+			bool moveRight = false;
+			bool sprint = false;
+			Nz::RadianAnglef pitch = 0.f;
+			Nz::RadianAnglef yaw = 0.f;
+		};
+
+		struct Ship
+		{
+			bool moveForward = false;
+			bool moveBackward = false;
+			bool moveLeft = false;
+			bool moveRight = false;
+			bool rollLeft = false;
+			bool rollRight = false;
+			Nz::RadianAnglef pitch = 0.f;
+			Nz::RadianAnglef yaw = 0.f;
+		};
+
+		std::variant<std::monostate, Character, Ship> data;
 	};
 }
 
