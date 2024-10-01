@@ -28,6 +28,7 @@ namespace tsom
 		private:
 			void RegisterBox(sol::state& state);
 			void RegisterEulerAngles(sol::state& state);
+			void RegisterQuaternion(sol::state& state);
 			void RegisterVector2(sol::state& state);
 			void RegisterVector3(sol::state& state);
 	};

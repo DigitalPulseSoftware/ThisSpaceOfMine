@@ -6,6 +6,7 @@
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
 #include <Nazara/Math/Box.hpp>
 #include <Nazara/Math/EulerAngles.hpp>
+#include <Nazara/Math/Quaternion.hpp>
 #include <Nazara/Math/Vector2.hpp>
 #include <Nazara/Math/Vector3.hpp>
 #include <NazaraUtils/FunctionTraits.hpp>
@@ -17,6 +18,7 @@ namespace tsom
 	{
 		RegisterBox(state);
 		RegisterEulerAngles(state);
+		RegisterQuaternion(state);
 		RegisterVector2(state);
 		RegisterVector3(state);
 	}
@@ -44,6 +46,19 @@ namespace tsom
 			"yaw", &Nz::EulerAnglesf::yaw,
 			"roll", &Nz::EulerAnglesf::roll,
 			sol::meta_function::to_string, &Nz::EulerAnglesf::ToString
+		);
+	}
+
+	void MathScriptingLibrary::RegisterQuaternion(sol::state& state)
+	{
+		state.new_usertype<Nz::Quaternionf>("Quaternion",
+			sol::call_constructor, sol::constructors<Nz::Quaternionf(), Nz::Quaternionf(float, float, float, float)>(),
+			"GetConjugate", &Nz::Quaternionf::GetConjugate,
+			"x", &Nz::Quaternionf::x,
+			"y", &Nz::Quaternionf::y,
+			"z", &Nz::Quaternionf::z,
+			"w", &Nz::Quaternionf::w,
+			sol::meta_function::to_string, &Nz::Quaternionf::ToString
 		);
 	}
 
