@@ -28,6 +28,7 @@ namespace tsom
 		RegisterAssetLibrary(state);
 		RegisterMaterialInstance(state);
 		RegisterRenderables(state);
+		RegisterRenderStates(state);
 		RegisterScripts(state);
 		RegisterTexture(state);
 	}
@@ -69,6 +70,36 @@ namespace tsom
 			"MaterialInstance", sol::no_constructor,
 
 			"SetTextureProperty", LuaFunction(Nz::Overload<std::string_view, std::shared_ptr<Nz::TextureAsset>>(&Nz::MaterialInstance::SetTextureProperty)),
+
+			"UpdatePassStates", LuaFunction([](Nz::MaterialInstance& matInstance, std::string_view passName, sol::protected_function callback)
+			{
+				matInstance.UpdatePassStates(passName, [&](Nz::RenderStates& renderStates)
+				{
+					auto result = callback(&renderStates);
+					if (!result.valid())
+					{
+						sol::error err = result;
+						throw std::runtime_error(fmt::format("callback failed: {}", err.what()));
+					}
+
+					return true;
+				});
+			}),
+
+			"UpdatePassesStates", LuaFunction([](Nz::MaterialInstance& matInstance, sol::protected_function callback)
+			{
+				matInstance.UpdatePassesStates([&](Nz::RenderStates& renderStates)
+				{
+					auto result = callback(&renderStates);
+					if (!result.valid())
+					{
+						sol::error err = result;
+						throw std::runtime_error(fmt::format("callback failed: {}", err.what()));
+					}
+
+					return true;
+				});
+			}),
 
 			"Instantiate", LuaFunction([this](Nz::MaterialType matType, std::optional<Nz::MaterialInstancePreset> preset)
 			{
@@ -118,6 +149,34 @@ namespace tsom
 
 				return model;
 			})
+		);
+	}
+
+	void ClientScriptingLibrary::RegisterRenderStates(sol::state& state)
+	{
+		state.new_enum<Nz::FaceCulling>("FaceCulling",
+		{
+			{ "Basic", Nz::FaceCulling::Back },
+			{ "Front", Nz::FaceCulling::Front },
+			{ "FrontAndBack", Nz::FaceCulling::FrontAndBack },
+			{ "None", Nz::FaceCulling::None }
+		});
+
+		state.new_usertype<Nz::RenderStates>("RenderStates",
+			"faceCulling", &Nz::RenderStates::faceCulling,
+
+			"blending",    &Nz::RenderStates::blending,
+			"depthBias",   &Nz::RenderStates::depthBias,
+			"depthBuffer", &Nz::RenderStates::depthBuffer,
+			"depthClamp",  &Nz::RenderStates::depthClamp,
+			"depthWrite",  &Nz::RenderStates::depthWrite,
+			"scissorTest", &Nz::RenderStates::scissorTest,
+			"stencilTest", &Nz::RenderStates::stencilTest,
+
+			"depthBiasConstantFactor", &Nz::RenderStates::depthBiasConstantFactor,
+			"depthBiasSlopeFactor", &Nz::RenderStates::depthBiasSlopeFactor,
+			"lineWidth", &Nz::RenderStates::lineWidth,
+			"pointSize", &Nz::RenderStates::pointSize
 		);
 	}
 
