@@ -18,6 +18,11 @@ namespace tsom
 			m_properties.emplace_back(m_entityClass->GetProperty(i).defaultValue);
 	}
 
+	Nz::UInt32 ClassInstanceComponent::FindClientRpcIndex(std::string_view rpcName) const
+	{
+		return m_entityClass->FindClientRpc(rpcName);
+	}
+
 	Nz::UInt32 ClassInstanceComponent::FindPropertyIndex(std::string_view propertyName) const
 	{
 		return m_entityClass->FindProperty(propertyName);
@@ -31,6 +36,12 @@ namespace tsom
 
 		return propertyIndex;
 	}
+
+	void ClassInstanceComponent::TriggerClientRpc(Nz::UInt32 rpcIndex, ServerPlayer* targetPlayer)
+	{
+		OnClientRpc(this, rpcIndex, targetPlayer);
+	}
+
 	void ClassInstanceComponent::UpdateClass(std::shared_ptr<const EntityClass> entityClass)
 	{
 		m_entityClass = std::move(entityClass);

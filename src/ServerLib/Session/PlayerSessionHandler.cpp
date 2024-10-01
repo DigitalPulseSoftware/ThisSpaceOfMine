@@ -44,6 +44,7 @@ namespace tsom
 		{ PacketIndex<Packets::EntitiesDelete>,          { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::EntitiesStateUpdate>,     { .channel = 1, .flags = Nz::ENetPacketFlag_Unreliable } },
 		{ PacketIndex<Packets::EntityEnvironmentUpdate>, { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::EntityProcedureCall>,     { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::EntityPropertyUpdate>,    { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::EnvironmentCreate>,       { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::EnvironmentDestroy>,      { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },

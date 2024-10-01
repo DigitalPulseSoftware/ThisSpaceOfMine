@@ -33,6 +33,7 @@ namespace tsom
 		struct EntityBuilder
 		{
 			sol::table classMetatable;
+			std::vector<EntityClass::RemoteProcedureCall> clientRpcs;
 			std::vector<EntityClass::Property> properties;
 			std::vector<sol::protected_function> propertyUpdateCallbacks;
 			EntityClass::Callbacks callbacks;
@@ -277,6 +278,12 @@ namespace tsom
 	{
 		state.new_usertype<EntityBuilder>("EntityBuilder",
 			sol::no_constructor,
+			"AddClientRPC", LuaFunction([](EntityBuilder& entityBuilder, std::string rpcName)
+			{
+				entityBuilder.clientRpcs.push_back({
+					.name = std::move(rpcName)
+				});
+			}),
 			"AddProperty", LuaFunction([](EntityBuilder& entityBuilder, std::string propertyName, sol::table propertyData)
 			{
 				std::string_view type = propertyData.get<std::string_view>("type");
@@ -303,6 +310,24 @@ namespace tsom
 					if (!RegisterEvent(entityBuilder.classMetatable, eventName, std::move(callback)))
 						TriggerLuaError(L, fmt::format("unknown event {}", eventName));
 				}
+			}),
+			"OnClientRPC", LuaFunction([this](sol::this_state L, EntityBuilder& entityBuilder, std::string eventName, sol::protected_function callback)
+			{
+				auto rpcIt = std::find_if(entityBuilder.clientRpcs.begin(), entityBuilder.clientRpcs.end(), [&](const EntityClass::RemoteProcedureCall& rpc) { return rpc.name == eventName; });
+				if (rpcIt == entityBuilder.clientRpcs.end())
+					TriggerLuaError(L, fmt::format("unknown client rpc {}", eventName));
+
+				rpcIt->onCalled = [cb = std::move(callback), en = std::move(eventName)](entt::handle entity)
+				{
+					auto& entityScripted = entity.get<ScriptedEntityComponent>();
+
+					auto res = cb(entityScripted.entityTable);
+					if (!res.valid())
+					{
+						sol::error err = res;
+						fmt::print(fg(fmt::color::red), "entity client rpc {} failed: {}\n", en, err.what());
+					}
+				};
 			}),
 			"OnPropertyUpdate", LuaFunction([this](sol::this_state L, EntityBuilder& entityBuilder, std::string_view propertyName, sol::protected_function callback)
 			{
@@ -397,7 +422,7 @@ namespace tsom
 				}
 			};
 
-			m_entityRegistry.RegisterClass(EntityClass{ std::move(name), std::move(entityBuilder.properties), std::move(entityBuilder.callbacks) });
+			m_entityRegistry.RegisterClass(EntityClass{ std::move(name), std::move(entityBuilder.properties), std::move(entityBuilder.callbacks), std::move(entityBuilder.clientRpcs) });
 		});
 	}
 

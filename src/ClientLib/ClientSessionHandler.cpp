@@ -368,6 +368,19 @@ namespace tsom
 			movementInterpolation->UpdateRoot(oldEnvironment.rootNode, newEnvironment.rootNode);
 	}
 
+	void ClientSessionHandler::HandlePacket(Packets::EntityProcedureCall&& procedureCall)
+	{
+		assert(m_entities[procedureCall.entity]);
+		EntityData& entityData = *m_entities[procedureCall.entity];
+
+		auto& classInstance = entityData.entity.get<ClassInstanceComponent>();
+		const auto& clientRpc = classInstance.GetClass()->GetClientRpc(procedureCall.rpcIndex);
+		if (clientRpc.onCalled)
+			clientRpc.onCalled(entityData.entity);
+		else
+			fmt::print(fg(fmt::color::yellow), "client rpc {} has been triggered but has no callback\n", clientRpc.name);
+	}
+
 	void ClientSessionHandler::HandlePacket(Packets::EntityPropertyUpdate&& propertyUpdate)
 	{
 		assert(m_entities[propertyUpdate.entity]);

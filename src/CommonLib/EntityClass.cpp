@@ -10,15 +10,24 @@
 
 namespace tsom
 {
-	EntityClass::EntityClass(std::string name, std::vector<Property> properties, Callbacks callbacks) :
+	EntityClass::EntityClass(std::string name, std::vector<Property> properties, Callbacks callbacks, std::vector<RemoteProcedureCall> clientRpcs) :
 	m_name(std::move(name)),
 	m_properties(std::move(properties)),
+	m_clientRpcs(std::move(clientRpcs)),
 	m_callbacks(std::move(callbacks))
 	{
+		for (const auto& clientRpc : m_clientRpcs)
+		{
+			if (FindClientRpc(clientRpc.name) != InvalidIndex)
+				throw std::runtime_error(fmt::format("client rpc {} already exists", clientRpc.name));
+
+			m_clientRpcIndices.emplace(clientRpc.name, m_clientRpcIndices.size());
+		}
+
 		for (const auto& property : m_properties)
 		{
 			if (FindProperty(property.name) != InvalidIndex)
-				throw std::runtime_error(fmt::format("property {} already exists", name));
+				throw std::runtime_error(fmt::format("property {} already exists", property.name));
 
 			m_propertyIndices.emplace(property.name, m_propertyIndices.size());
 		}

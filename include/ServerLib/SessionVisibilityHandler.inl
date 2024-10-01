@@ -68,6 +68,11 @@ namespace tsom
 		}
 	}
 
+	inline void SessionVisibilityHandler::TriggerEntityRpc(entt::handle entity, Nz::UInt32 rpcIndex)
+	{
+		m_triggeredEntitiesRpc[entity].push_back(rpcIndex);
+	}
+
 	inline void SessionVisibilityHandler::UpdateControlledEntity(entt::handle entity, CharacterController* controller)
 	{
 		if (m_controlledEntity)

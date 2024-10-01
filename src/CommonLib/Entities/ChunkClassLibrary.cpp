@@ -40,7 +40,8 @@ namespace tsom
 
 				InitializeChunkEntity(entity);
 			}
-		}));
+		},
+		{}));
 
 		registry.RegisterClass(EntityClass("ship", {
 			{
@@ -63,7 +64,8 @@ namespace tsom
 
 				InitializeChunkEntity(entity);
 			}
-		}));
+		},
+		{}));
 	}
 
 	void ChunkClassLibrary::InitializeChunkEntity(entt::handle entity)

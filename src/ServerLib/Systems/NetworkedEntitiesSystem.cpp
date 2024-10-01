@@ -55,6 +55,20 @@ namespace tsom
 
 			if (ClassInstanceComponent* entityInstance = m_registry.try_get<ClassInstanceComponent>(entity))
 			{
+				entityData.onClientRpc.Connect(entityInstance->OnClientRpc, [this, entity](ClassInstanceComponent* emitter, Nz::UInt32 rpcIndex, ServerPlayer* targetPlayer)
+				{
+					entt::handle handle(m_registry, entity);
+					if (targetPlayer)
+						targetPlayer->GetVisibilityHandler().TriggerEntityRpc(handle, rpcIndex);
+					else
+					{
+						ForEachVisibility([&](SessionVisibilityHandler& visibility)
+						{
+							visibility.TriggerEntityRpc(handle, rpcIndex);
+						});
+					}
+				});
+
 				entityData.onPropertyUpdate.Connect(entityInstance->OnPropertyUpdate, [this, entity](ClassInstanceComponent* emitter, Nz::UInt32 propertyIndex, const EntityProperty& /*newValue*/)
 				{
 					if (!emitter->GetClass()->GetProperty(propertyIndex).isNetworked)

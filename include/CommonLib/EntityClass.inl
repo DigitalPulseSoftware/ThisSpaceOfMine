@@ -4,6 +4,15 @@
 
 namespace tsom
 {
+	inline Nz::UInt32 EntityClass::FindClientRpc(std::string_view rpcName) const
+	{
+		auto it = m_clientRpcIndices.find(rpcName);
+		if (it == m_clientRpcIndices.end())
+			return InvalidIndex;
+
+		return it->second;
+	}
+
 	inline Nz::UInt32 EntityClass::FindProperty(std::string_view propertyName) const
 	{
 		auto it = m_propertyIndices.find(propertyName);
@@ -11,6 +20,17 @@ namespace tsom
 			return InvalidIndex;
 
 		return it->second;
+	}
+
+	inline auto EntityClass::GetClientRpc(Nz::UInt32 rpcIndex) const -> const RemoteProcedureCall&
+	{
+		assert(rpcIndex < m_clientRpcs.size());
+		return m_clientRpcs[rpcIndex];
+	}
+
+	inline Nz::UInt32 EntityClass::GetClientRpcCount() const
+	{
+		return Nz::UInt32(m_clientRpcs.size());
 	}
 
 	inline const std::string& EntityClass::GetName() const

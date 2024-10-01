@@ -50,6 +50,7 @@ namespace tsom
 
 			struct EntityData
 			{
+				NazaraSlot(ClassInstanceComponent, OnClientRpc, onClientRpc);
 				NazaraSlot(ClassInstanceComponent, OnPropertyUpdate, onPropertyUpdate);
 			};
 

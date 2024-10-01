@@ -481,6 +481,26 @@ namespace tsom
 			m_propertyUpdatedEntities.clear();
 		}
 
+		if (!m_triggeredEntitiesRpc.empty())
+		{
+			for (auto&& [entity, rpcIndices] : m_triggeredEntitiesRpc)
+			{
+				EntityId entityIndex = Nz::Retrieve(m_entityIndices, entity);
+
+				for (Nz::UInt32 rpcIndex : rpcIndices)
+				{
+					Packets::EntityProcedureCall procedureCallPacket;
+					procedureCallPacket.entity = entityIndex;
+					procedureCallPacket.rpcIndex = rpcIndex;
+					procedureCallPacket.tickIndex = tickIndex;
+
+					m_networkSession->SendPacket(procedureCallPacket);
+				}
+			}
+
+			m_triggeredEntitiesRpc.clear();
+		}
+
 		Packets::EntitiesStateUpdate stateUpdate;
 		stateUpdate.tickIndex = tickIndex;
 		stateUpdate.lastInputIndex = m_lastInputIndex;

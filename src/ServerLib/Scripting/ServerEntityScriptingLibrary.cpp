@@ -3,6 +3,7 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ServerLib/Scripting/ServerEntityScriptingLibrary.hpp>
+#include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Components/ScriptedEntityComponent.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
 #include <ServerLib/ServerPlanetEnvironment.hpp>
@@ -17,6 +18,18 @@ namespace tsom
 	void ServerEntityScriptingLibrary::FillEntityMetatable(sol::state& state, sol::table entityMetatable)
 	{
 		SharedEntityScriptingLibrary::FillEntityMetatable(state, entityMetatable);
+
+		entityMetatable["CallClientRPC"] = LuaFunction([](sol::table entityTable, std::string rpcName, std::optional<ServerPlayerHandle> targetPlayer)
+		{
+			entt::handle entity = AssertScriptEntity(entityTable);
+
+			auto& instance = entity.get<ClassInstanceComponent>();
+			Nz::UInt32 rpcIndex = instance.FindClientRpcIndex(rpcName);
+			if (rpcIndex == EntityClass::InvalidIndex)
+				throw std::runtime_error(fmt::format("client rpc {} doesn't exist", rpcName));
+
+			instance.TriggerClientRpc(rpcIndex, targetPlayer.value_or(ServerPlayerHandle{}));
+		});
 
 		entityMetatable["GetEnvironment"] = LuaFunction([](sol::this_state L, sol::table entityTable) -> sol::object
 		{

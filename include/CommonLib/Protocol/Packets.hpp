@@ -223,6 +223,13 @@ namespace tsom
 			Helper::EnvironmentId newEnvironmentId;
 		};
 
+		struct EntityProcedureCall
+		{
+			Nz::UInt16 tickIndex;
+			Helper::EntityId entity;
+			CompressedUnsigned<Nz::UInt32> rpcIndex;
+		};
+
 		struct EntityPropertyUpdate
 		{
 			Nz::UInt16 tickIndex;
@@ -337,6 +344,7 @@ namespace tsom
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntitiesDelete& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntitiesStateUpdate& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntityEnvironmentUpdate& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntityProcedureCall& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntityPropertyUpdate& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EnvironmentCreate& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EnvironmentDestroy& data);
