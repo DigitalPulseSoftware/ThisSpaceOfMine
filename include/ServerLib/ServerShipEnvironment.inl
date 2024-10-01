@@ -4,6 +4,11 @@
 
 namespace tsom
 {
+	inline entt::handle ServerShipEnvironment::GetOutsideShipEntity() const
+	{
+		return m_proxyEntity;
+	}
+
 	inline entt::handle ServerShipEnvironment::GetShipEntity() const
 	{
 		return m_shipEntity;

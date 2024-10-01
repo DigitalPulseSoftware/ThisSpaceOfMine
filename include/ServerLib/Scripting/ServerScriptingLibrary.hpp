@@ -17,10 +17,12 @@ namespace Nz
 
 namespace tsom
 {
+	class ServerEntityScriptingLibrary;
+
 	class TSOM_SERVERLIB_API ServerScriptingLibrary : public ScriptingLibrary
 	{
 		public:
-			inline ServerScriptingLibrary(Nz::ApplicationBase& app);
+			inline ServerScriptingLibrary(Nz::ApplicationBase& app, ServerEntityScriptingLibrary& entityScriptingLibrary);
 			ServerScriptingLibrary(const ServerScriptingLibrary&) = delete;
 			ServerScriptingLibrary(ServerScriptingLibrary&&) = delete;
 			~ServerScriptingLibrary() = default;
@@ -31,9 +33,11 @@ namespace tsom
 			ServerScriptingLibrary& operator=(ServerScriptingLibrary&&) = delete;
 
 		private:
+			void RegisterEnvironment(sol::state& state);
 			void RegisterPlayer(sol::state& state);
 
 			Nz::ApplicationBase& m_app;
+			ServerEntityScriptingLibrary& m_entityScriptingLibrary;
 	};
 }
 

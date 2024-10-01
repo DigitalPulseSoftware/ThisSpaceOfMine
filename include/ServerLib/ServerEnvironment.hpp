@@ -21,10 +21,15 @@ namespace tsom
 	class GravityController;
 	class ServerPlayer;
 
+	enum class ServerEnvironmentType
+	{
+		Planet,
+		Ship
+	};
+
 	class TSOM_SERVERLIB_API ServerEnvironment
 	{
 		public:
-			ServerEnvironment(ServerInstance& serverInstance);
 			ServerEnvironment(const ServerEnvironment&) = delete;
 			ServerEnvironment(ServerEnvironment&&) = delete;
 			virtual ~ServerEnvironment();
@@ -40,6 +45,7 @@ namespace tsom
 
 			inline bool GetEnvironmentTransformation(ServerEnvironment& targetEnv, EnvironmentTransform* transform) const;
 			virtual const GravityController* GetGravityController() const = 0;
+			inline ServerEnvironmentType GetType() const;
 			inline Nz::EnttWorld& GetWorld();
 			inline const Nz::EnttWorld& GetWorld() const;
 
@@ -55,9 +61,12 @@ namespace tsom
 			ServerEnvironment& operator=(ServerEnvironment&&) = delete;
 
 		protected:
+			ServerEnvironment(ServerInstance& serverInstance, ServerEnvironmentType type);
+
 			tsl::hopscotch_map<ServerEnvironment*, EnvironmentTransform> m_connectedEnvironments;
 			Nz::Bitset<Nz::UInt64> m_registeredPlayers;
 			Nz::EnttWorld m_world;
+			ServerEnvironmentType m_type;
 			ServerInstance& m_serverInstance;
 	};
 }

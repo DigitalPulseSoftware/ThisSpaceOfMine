@@ -34,7 +34,7 @@ namespace tsom
 	}
 
 	ServerShipEnvironment::ServerShipEnvironment(ServerInstance& serverInstance, const std::optional<Nz::Uuid>& playerUuid, int saveSlot) :
-	ServerEnvironment(serverInstance),
+	ServerEnvironment(serverInstance, ServerEnvironmentType::Ship),
 	m_playerUuid(playerUuid),
 	m_shouldSave(std::make_shared<bool>(false)),
 	m_outsideEnvironment(nullptr),
@@ -45,6 +45,7 @@ namespace tsom
 		auto& blockLibrary = serverInstance.GetBlockLibrary();
 
 		m_world.AddSystem<ShipSystem>();
+		m_world.GetRegistry().ctx().emplace<ServerShipEnvironment*>(this);
 
 		m_shipEntity = CreateEntity();
 		m_shipEntity.emplace<Nz::NodeComponent>();

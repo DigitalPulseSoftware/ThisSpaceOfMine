@@ -5,7 +5,9 @@
 #include <ServerLib/Scripting/ServerEntityScriptingLibrary.hpp>
 #include <CommonLib/Components/ScriptedEntityComponent.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
+#include <ServerLib/ServerPlanetEnvironment.hpp>
 #include <ServerLib/ServerPlayer.hpp>
+#include <ServerLib/ServerShipEnvironment.hpp>
 #include <ServerLib/Components/ServerInteractibleComponent.hpp>
 #include <fmt/color.h>
 #include <fmt/format.h>
@@ -14,7 +16,20 @@ namespace tsom
 {
 	void ServerEntityScriptingLibrary::FillEntityMetatable(sol::state& state, sol::table entityMetatable)
 	{
-		EntityScriptingLibrary::FillEntityMetatable(state, entityMetatable);
+		SharedEntityScriptingLibrary::FillEntityMetatable(state, entityMetatable);
+
+		entityMetatable["GetEnvironment"] = LuaFunction([](sol::this_state L, sol::table entityTable) -> sol::object
+		{
+			entt::handle entity = AssertScriptEntity(entityTable);
+
+			entt::registry* reg = entity.registry();
+			if (ServerPlanetEnvironment** planetEnv = reg->ctx().find<ServerPlanetEnvironment*>())
+				return sol::make_object(L, *planetEnv);
+			else if (ServerShipEnvironment** shipEnv = reg->ctx().find<ServerShipEnvironment*>())
+				return sol::make_object(L, *shipEnv);
+			else
+				throw std::runtime_error("no environment found");
+		});
 
 		entityMetatable["SetInteractible"] = LuaFunction([](sol::this_state L, sol::table entityTable, bool isInteractible)
 		{

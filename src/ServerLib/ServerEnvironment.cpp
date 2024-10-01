@@ -13,7 +13,8 @@
 
 namespace tsom
 {
-	ServerEnvironment::ServerEnvironment(ServerInstance& serverInstance) :
+	ServerEnvironment::ServerEnvironment(ServerInstance& serverInstance, ServerEnvironmentType type) :
+	m_type(type),
 	m_serverInstance(serverInstance)
 	{
 		m_serverInstance.RegisterEnvironment(this);

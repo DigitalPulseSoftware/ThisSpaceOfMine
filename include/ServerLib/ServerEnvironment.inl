@@ -37,6 +37,11 @@ namespace tsom
 		return true;
 	}
 
+	inline ServerEnvironmentType ServerEnvironment::GetType() const
+	{
+		return m_type;
+	}
+
 	inline Nz::EnttWorld& ServerEnvironment::GetWorld()
 	{
 		return m_world;

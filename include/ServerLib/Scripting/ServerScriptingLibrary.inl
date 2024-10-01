@@ -4,8 +4,9 @@
 
 namespace tsom
 {
-	inline ServerScriptingLibrary::ServerScriptingLibrary(Nz::ApplicationBase& app) :
-	m_app(app)
+	inline ServerScriptingLibrary::ServerScriptingLibrary(Nz::ApplicationBase& app, ServerEntityScriptingLibrary& entityScriptingLibrary) :
+	m_app(app),
+	m_entityScriptingLibrary(entityScriptingLibrary)
 	{
 	}
 }

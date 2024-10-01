@@ -36,6 +36,7 @@ namespace tsom
 			void GenerateShip(bool small);
 
 			const GravityController* GetGravityController() const override;
+			inline entt::handle GetOutsideShipEntity() const;
 			Ship& GetShip();
 			const Ship& GetShip() const;
 			inline entt::handle GetShipEntity() const;

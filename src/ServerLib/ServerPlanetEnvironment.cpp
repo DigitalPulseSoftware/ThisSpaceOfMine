@@ -31,12 +31,11 @@ namespace tsom
 	constexpr unsigned int chunkSaveVersion = 1;
 
 	ServerPlanetEnvironment::ServerPlanetEnvironment(ServerInstance& serverInstance, std::filesystem::path savePath, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount) :
-	ServerEnvironment(serverInstance),
+	ServerEnvironment(serverInstance, ServerEnvironmentType::Planet),
 	m_savePath(std::move(savePath))
 	{
-		auto& app = serverInstance.GetApplication();
-		auto& taskScheduler = app.GetComponent<Nz::TaskSchedulerAppComponent>();
 		m_world.AddSystem<EnvironmentSwitchSystem>(this);
+		m_world.GetRegistry().ctx().emplace<ServerPlanetEnvironment*>(this);
 
 		auto& blockLibrary = serverInstance.GetBlockLibrary();
 
@@ -52,6 +51,9 @@ namespace tsom
 		entityInstance.UpdateProperty<EntityPropertyType::Float>("Gravity", 9.81f);
 
 		planetClass->ActivateEntity(m_planetEntity);
+
+		auto& app = serverInstance.GetApplication();
+		auto& taskScheduler = app.GetComponent<Nz::TaskSchedulerAppComponent>();
 
 		auto& planetComponent = m_planetEntity.get<PlanetComponent>();
 		planetComponent.planet->GenerateChunks(blockLibrary, taskScheduler, seed, chunkCount);
