@@ -77,7 +77,6 @@ target("CommonLib", function ()
 	add_headerfiles("include/(CommonLib/**.hpp)", "include/(CommonLib/**.inl)")
 	add_headerfiles("src/CommonLib/**.hpp", "src/CommonLib/**.inl", { install = false })
 	add_files("src/CommonLib/**.cpp")
-	add_installfiles("(scripts/**.lua)", { prefixdir = "bin" })
 
 	after_load(function (target)
 		target:set("kind", target:dep("commonlib_static") and "static" or "shared")
@@ -255,6 +254,7 @@ target("TSOMGame", function ()
 	add_headerfiles("src/Game/**.hpp", "src/Game/**.inl")
 	add_files("src/Game/**.cpp")
 	add_installfiles("gameconfig.lua.default", { prefixdir = "bin" })
+	add_installfiles("(scripts/**.lua)", { prefixdir = "bin" })
 
 	if is_plat("windows", "mingw") then
 		add_files("src/Game/resources.rc")
@@ -292,6 +292,7 @@ target("TSOMServer", function ()
 	add_headerfiles("src/Server/**.hpp", "src/Server/**.inl")
 	add_files("src/Server/**.cpp")
 	add_installfiles("serverconfig.lua.default", { prefixdir = "bin" })
+	add_installfiles("(scripts/**.lua)", { prefixdir = "bin" })
 
 	add_rpathdirs("@executable_path")
 end)
