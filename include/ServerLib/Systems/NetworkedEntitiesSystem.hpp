@@ -31,7 +31,7 @@ namespace tsom
 			NetworkedEntitiesSystem(entt::registry& registry, ServerEnvironment& environment);
 			NetworkedEntitiesSystem(const NetworkedEntitiesSystem&) = delete;
 			NetworkedEntitiesSystem(NetworkedEntitiesSystem&&) = delete;
-			~NetworkedEntitiesSystem() = default;
+			~NetworkedEntitiesSystem();
 
 			void CreateAllEntities(SessionVisibilityHandler& visibility) const;
 

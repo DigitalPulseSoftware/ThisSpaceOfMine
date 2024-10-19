@@ -34,8 +34,8 @@ namespace tsom
 	ServerEnvironment(serverInstance, ServerEnvironmentType::Planet),
 	m_savePath(std::move(savePath))
 	{
-		m_world.AddSystem<EnvironmentSwitchSystem>(this);
-		m_world.GetRegistry().ctx().emplace<ServerPlanetEnvironment*>(this);
+		m_world->AddSystem<EnvironmentSwitchSystem>(this);
+		m_world->GetRegistry().ctx().emplace<ServerPlanetEnvironment*>(this);
 
 		auto& blockLibrary = serverInstance.GetBlockLibrary();
 
@@ -70,13 +70,15 @@ namespace tsom
 			m_dirtyChunks.insert(chunk->GetIndices());
 		});
 
-		auto& physicsSystem = m_world.GetSystem<Nz::Physics3DSystem>();
-		m_world.AddSystem<GravityPhysicsSystem>(*planetComponent.planet, physicsSystem.GetPhysWorld());
-		m_world.AddSystem<PlanetSystem>();
+		auto& physicsSystem = m_world->GetSystem<Nz::Physics3DSystem>();
+		m_world->AddSystem<GravityPhysicsSystem>(*planetComponent.planet, physicsSystem.GetPhysWorld());
+		m_world->AddSystem<PlanetSystem>();
 	}
 
 	ServerPlanetEnvironment::~ServerPlanetEnvironment()
 	{
+		m_world->GetRegistry().ctx().erase<ServerPlanetEnvironment*>();
+
 		m_planetEntity.destroy();
 	}
 

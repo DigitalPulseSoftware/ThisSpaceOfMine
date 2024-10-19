@@ -4,23 +4,16 @@
 
 #include <ServerLib/ServerInstance.hpp>
 #include <CommonLib/InternalConstants.hpp>
-#include <CommonLib/Planet.hpp>
 #include <CommonLib/Entities/ChunkClassLibrary.hpp>
 #include <CommonLib/Scripting/MathScriptingLibrary.hpp>
 #include <CommonLib/Scripting/SharedScriptingLibrary.hpp>
 #include <ServerLib/ServerPlanetEnvironment.hpp>
-#include <ServerLib/ServerShipEnvironment.hpp>
 #include <ServerLib/Scripting/ServerEntityScriptingLibrary.hpp>
 #include <ServerLib/Scripting/ServerScriptingLibrary.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
-#include <Nazara/Core/File.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
-#include <NazaraUtils/PathUtils.hpp>
 #include <fmt/color.h>
 #include <fmt/format.h>
-#include <fmt/std.h>
-#include <charconv>
-#include <cstdio>
 #include <memory>
 
 namespace tsom
@@ -156,17 +149,29 @@ namespace tsom
 		m_players.Free(playerIndex);
 	}
 
-	void ServerInstance::RegisterEnvironment(ServerEnvironment* environment)
+	std::unique_ptr<Nz::EnttWorld> ServerInstance::RegisterEnvironment(ServerEnvironment* environment)
 	{
 		assert(std::find(m_environments.begin(), m_environments.end(), environment) == m_environments.end());
 		m_environments.push_back(environment);
+
+		if (!m_envWorldPool.empty())
+		{
+			std::unique_ptr<Nz::EnttWorld> world = std::move(m_envWorldPool.back());
+			m_envWorldPool.pop_back();
+
+			return world;
+		}
+		else
+			return std::make_unique<Nz::EnttWorld>();
 	}
 
-	void ServerInstance::UnregisterEnvironment(ServerEnvironment* environment)
+	void ServerInstance::UnregisterEnvironment(ServerEnvironment* environment, std::unique_ptr<Nz::EnttWorld>&& world)
 	{
 		auto it = std::find(m_environments.begin(), m_environments.end(), environment);
 		assert(it != m_environments.end());
 		m_environments.erase(it);
+
+		m_envWorldPool.push_back(std::move(world));
 	}
 
 	Nz::Time ServerInstance::Update(Nz::Time elapsedTime)

@@ -167,25 +167,50 @@ namespace tsom
 		if (m_movingEntities.erase(oldEntity) > 0)
 			m_movingEntities.insert(newEntity);
 
+		// Property update
 		if (auto it = m_propertyUpdatedEntities.find(oldEntity); it != m_propertyUpdatedEntities.end())
 		{
 			m_propertyUpdatedEntities[newEntity] = it->second;
 			m_propertyUpdatedEntities.erase(it);
 		}
 
+		// RPCs
+		if (auto it = m_triggeredEntitiesRpc.find(oldEntity); it != m_triggeredEntitiesRpc.end())
+		{
+			m_triggeredEntitiesRpc[newEntity] = std::move(it.value());
+			m_triggeredEntitiesRpc.erase(it);
+		}
+
+		// Entity indices
 		auto it = m_entityIndices.find(oldEntity);
 		EntityId entityIndex = it.value();
 		m_entityIndices.erase(it);
-		m_entityIndices.emplace(newEntity, it.value());
+		m_entityIndices.emplace(newEntity, entityIndex);
+
+		// Switch entity to new environmenet
+		auto& entityData = m_visibleEntities[entityIndex];
+
+		auto& previousEnv = m_visibleEnvironments[entityData.envIndex];
+		previousEnv.entities.Reset(entityIndex);
+
+		EnvironmentId newEnvIndex = Nz::Retrieve(m_environmentIndices, &newEnvironment);
+
+		// Update entityData to the new handle/environment pair
+		entityData.entity = newEntity;
+		entityData.envIndex = newEnvIndex;
+
+		auto& newEnv = m_visibleEnvironments[newEnvIndex];
+		newEnv.entities.UnboundedSet(entityIndex);
 
 		auto envUpdateIt = std::find_if(m_environmentUpdates.begin(), m_environmentUpdates.end(), [&](const EnvironmentUpdate& envUpdate) { return envUpdate.newEntity == oldEntity; });
 		if (envUpdateIt != m_environmentUpdates.end())
 		{
+			// Don't update envUpdateIt->oldEnvironment as it's used to check if the packet has to be sent immediatly
 			envUpdateIt->newEntity = newEntity;
 			envUpdateIt->newEnvironment = &newEnvironment;
 		}
 		else
-			m_environmentUpdates.push_back({ newEntity, &newEnvironment });
+			m_environmentUpdates.push_back({ newEntity, previousEnv.environment, &newEnvironment });
 	}
 
 	void SessionVisibilityHandler::DispatchChunks(Nz::UInt16 tickIndex)
@@ -556,27 +581,46 @@ namespace tsom
 					entityData.entity = entt::handle{};
 					entityData.envIndex = Nz::MaxValue();
 				}
+				visibleEnvironment.entities.Clear();
 
 				m_environmentIndices.erase(environment);
-
-				Packets::EnvironmentDestroy destroyPacket;
-				destroyPacket.id = envId;
-				destroyPacket.tickIndex = tickIndex;
-				m_networkSession->SendPacket(destroyPacket);
 
 				// Remove environment update packets
 				for (auto it = m_environmentUpdates.begin(); it != m_environmentUpdates.end(); )
 				{
 					EnvironmentUpdate& envUpdate = *it;
-					if (envUpdate.newEnvironment != environment)
+					if (envUpdate.oldEnvironment == environment)
+					{
+						// Send the environment update packet before env destruction packet
+						EntityId entityIndex = Nz::Retrieve(m_entityIndices, envUpdate.newEntity);
+						EnvironmentId envIndex = Nz::Retrieve(m_environmentIndices, envUpdate.newEnvironment);
+
+						Packets::EntityEnvironmentUpdate envUpdatePacket;
+						envUpdatePacket.tickIndex = tickIndex;
+						envUpdatePacket.entity = entityIndex;
+						envUpdatePacket.newEnvironmentId = envIndex;
+
+						m_networkSession->SendPacket(envUpdatePacket);
+
+						it = m_environmentUpdates.erase(it);
+					}
+					else if (envUpdate.newEnvironment != environment)
 					{
 						++it;
 						continue;
 					}
-
-					DestroyEntity(envUpdate.newEntity);
-					it = m_environmentUpdates.erase(it);
+					else
+					{
+						// Entity was moved on a then destroyed environment, destroy it instead
+						DestroyEntity(envUpdate.newEntity);
+						it = m_environmentUpdates.erase(it);
+					}
 				}
+
+				Packets::EnvironmentDestroy destroyPacket;
+				destroyPacket.id = envId;
+				destroyPacket.tickIndex = tickIndex;
+				m_networkSession->SendPacket(destroyPacket);
 			}
 
 			m_destroyedEnvironments.clear();
@@ -599,6 +643,8 @@ namespace tsom
 
 				if (envIndex >= m_visibleEnvironments.size())
 					m_visibleEnvironments.resize(envIndex + 1);
+
+				m_visibleEnvironments[envIndex].environment = environment.environment;
 
 				Packets::EnvironmentCreate createPacket;
 				createPacket.id = Nz::SafeCast<Nz::UInt8>(envIndex);
@@ -643,7 +689,10 @@ namespace tsom
 	void SessionVisibilityHandler::HandleEntityDestruction(entt::handle entity)
 	{
 		m_movingEntities.erase(entity);
+
+		// TODO(?): Trigger property replication and RPC before entity destruction?
 		m_propertyUpdatedEntities.erase(entity);
+		m_triggeredEntitiesRpc.erase(entity);
 
 		// handle chunks owned by this entity if any
 		if (auto it = m_chunkNetworkMaps.find(entity); it != m_chunkNetworkMaps.end())

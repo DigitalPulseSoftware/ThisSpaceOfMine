@@ -13,8 +13,12 @@
 #include <Nazara/Core/EnttWorld.hpp>
 #include <Nazara/Core/Node.hpp>
 #include <tsl/hopscotch_map.h>
-#include <filesystem>
-#include <vector>
+#include <memory>
+
+namespace Nz
+{
+	class EnttWorld;
+}
 
 namespace tsom
 {
@@ -63,9 +67,9 @@ namespace tsom
 		protected:
 			ServerEnvironment(ServerInstance& serverInstance, ServerEnvironmentType type);
 
+			std::unique_ptr<Nz::EnttWorld> m_world;
 			tsl::hopscotch_map<ServerEnvironment*, EnvironmentTransform> m_connectedEnvironments;
 			Nz::Bitset<Nz::UInt64> m_registeredPlayers;
-			Nz::EnttWorld m_world;
 			ServerEnvironmentType m_type;
 			ServerInstance& m_serverInstance;
 	};

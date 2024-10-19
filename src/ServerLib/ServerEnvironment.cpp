@@ -4,12 +4,9 @@
 
 #include <ServerLib/ServerEnvironment.hpp>
 #include <CommonLib/Physics/PhysicsSettings.hpp>
-#include <ServerLib/SessionVisibilityHandler.hpp>
 #include <ServerLib/Systems/EnvironmentProxySystem.hpp>
-#include <ServerLib/Systems/EnvironmentSwitchSystem.hpp>
 #include <ServerLib/Systems/NetworkedEntitiesSystem.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
-#include <cassert>
 
 namespace tsom
 {
@@ -17,23 +14,27 @@ namespace tsom
 	m_type(type),
 	m_serverInstance(serverInstance)
 	{
-		m_serverInstance.RegisterEnvironment(this);
+		m_world = m_serverInstance.RegisterEnvironment(this);
 
-		auto& registry = m_world.GetRegistry();
-		registry.ctx().emplace<ServerEnvironment*>(this);
+		auto& registry = m_world->GetRegistry();
+		registry.ctx().insert_or_assign<ServerEnvironment*>(this);
 
-		m_world.AddSystem<EnvironmentProxySystem>();
-		m_world.AddSystem<NetworkedEntitiesSystem>(*this);
+		m_world->AddSystem<EnvironmentProxySystem>();
+		m_world->AddSystem<NetworkedEntitiesSystem>(*this);
 
 		// Setup physics
 		Nz::Physics3DSystem::Settings physSettings = Physics::BuildSettings();
 		physSettings.stepSize = m_serverInstance.GetTickDuration();
 
-		m_world.AddSystem<Nz::Physics3DSystem>(std::move(physSettings));
+		m_world->AddSystem<Nz::Physics3DSystem>(std::move(physSettings));
 	}
 
 	ServerEnvironment::~ServerEnvironment()
 	{
+		// Destroy all entities first
+		auto& registry = m_world->GetRegistry();
+		registry.clear();
+
 		ForEachPlayer([this](ServerPlayer& player)
 		{
 			player.RemoveFromEnvironment(this);
@@ -42,7 +43,8 @@ namespace tsom
 		for (auto&& [environment, transform] : m_connectedEnvironments)
 			environment->Disconnect(*this);
 
-		m_serverInstance.UnregisterEnvironment(this);
+		m_world->ClearSystems();
+		m_serverInstance.UnregisterEnvironment(this, std::move(m_world));
 	}
 
 	void ServerEnvironment::Connect(ServerEnvironment& environment, const EnvironmentTransform& transform)
@@ -72,12 +74,12 @@ namespace tsom
 
 	entt::handle ServerEnvironment::CreateEntity()
 	{
-		return m_world.CreateEntity();
+		return m_world->CreateEntity();
 	}
 
 	void ServerEnvironment::OnTick(Nz::Time elapsedTime)
 	{
-		m_world.Update(elapsedTime);
+		m_world->Update(elapsedTime);
 	}
 
 	void ServerEnvironment::RegisterPlayer(ServerPlayer* player)

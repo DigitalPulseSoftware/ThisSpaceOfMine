@@ -11,19 +11,15 @@
 #include <CommonLib/Systems/ShipSystem.hpp>
 #include <ServerLib/PlayerTokenAppComponent.hpp>
 #include <ServerLib/ServerInstance.hpp>
-#include <ServerLib/ServerPlanetEnvironment.hpp>
 #include <ServerLib/Components/EnvironmentEnterTriggerComponent.hpp>
 #include <ServerLib/Components/EnvironmentProxyComponent.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
-#include <ServerLib/Components/ServerPlayerControlledComponent.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/TaskSchedulerAppComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
-#include <NazaraUtils/CallOnExit.hpp>
 #include <cppcodec/base64_rfc4648.hpp>
 #include <fmt/color.h>
-#include <fmt/std.h>
 #include <nlohmann/json.hpp>
 
 namespace tsom
@@ -44,8 +40,8 @@ namespace tsom
 		auto& app = serverInstance.GetApplication();
 		auto& blockLibrary = serverInstance.GetBlockLibrary();
 
-		m_world.AddSystem<ShipSystem>();
-		m_world.GetRegistry().ctx().emplace<ServerShipEnvironment*>(this);
+		m_world->AddSystem<ShipSystem>();
+		m_world->GetRegistry().ctx().emplace<ServerShipEnvironment*>(this);
 
 		m_shipEntity = CreateEntity();
 		m_shipEntity.emplace<Nz::NodeComponent>();
@@ -96,10 +92,25 @@ namespace tsom
 	{
 		OnSave();
 
+		if (m_outsideEnvironment)
+		{
+			// Move every player entity out of the ship before destroying it (otherwise the player entities will be destroyed)
+			Nz::Vector3f outsideVelocity = Nz::Vector3f::Zero();
+			if (m_proxyEntity)
+				outsideVelocity = m_proxyEntity.get<Nz::RigidBody3DComponent>().GetLinearVelocity();
+
+			ForEachPlayer([&](ServerPlayer& player)
+			{
+				player.MoveEntityToEnvironment(m_outsideEnvironment, outsideVelocity);
+			});
+		}
+
 		if (m_proxyEntity)
 			m_proxyEntity.destroy();
 
 		m_shipEntity.destroy();
+
+		m_world->GetRegistry().ctx().erase<ServerShipEnvironment*>();
 	}
 
 	entt::handle ServerShipEnvironment::CreateEntity()

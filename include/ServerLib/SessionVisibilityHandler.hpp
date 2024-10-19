@@ -116,6 +116,7 @@ namespace tsom
 
 			struct EnvironmentData
 			{
+				ServerEnvironment* environment;
 				Nz::Bitset<Nz::UInt64> entities;
 			};
 
@@ -128,6 +129,7 @@ namespace tsom
 			struct EnvironmentUpdate
 			{
 				entt::handle newEntity;
+				ServerEnvironment* oldEnvironment;
 				ServerEnvironment* newEnvironment;
 			};
 

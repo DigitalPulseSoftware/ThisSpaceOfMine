@@ -25,6 +25,7 @@
 namespace Nz
 {
 	class ApplicationBase;
+	class EnttWorld;
 }
 
 namespace tsom
@@ -34,6 +35,8 @@ namespace tsom
 
 	class TSOM_SERVERLIB_API ServerInstance
 	{
+		friend class ServerEnvironment;
+
 		public:
 			struct Config;
 			struct Spawnpoint;
@@ -69,11 +72,11 @@ namespace tsom
 			inline const ServerPlayer* GetPlayer(PlayerIndex playerIndex) const;
 			inline Nz::Time GetTickDuration() const;
 
-			void RegisterEnvironment(ServerEnvironment* environment);
+			std::unique_ptr<Nz::EnttWorld> RegisterEnvironment(ServerEnvironment* environment);
 
 			inline void SetDefaultSpawnpoint(ServerEnvironment* environment, Nz::Vector3f position, Nz::Quaternionf rotation);
 
-			void UnregisterEnvironment(ServerEnvironment* environment);
+			void UnregisterEnvironment(ServerEnvironment* environment, std::unique_ptr<Nz::EnttWorld>&& world);
 
 			Nz::Time Update(Nz::Time elapsedTime);
 
@@ -110,6 +113,7 @@ namespace tsom
 			std::vector<std::unique_ptr<NetworkSessionManager>> m_sessionManagers;
 			std::vector<PlayerRename> m_pendingPlayerRename;
 			std::vector<ServerEnvironment*> m_environments;
+			std::vector<std::unique_ptr<Nz::EnttWorld>> m_envWorldPool;
 			Nz::Bitset<> m_disconnectedPlayers;
 			Nz::Bitset<> m_newPlayers;
 			Nz::MemoryPool<ServerPlayer> m_players;

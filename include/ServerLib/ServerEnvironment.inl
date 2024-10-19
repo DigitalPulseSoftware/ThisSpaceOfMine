@@ -44,11 +44,11 @@ namespace tsom
 
 	inline Nz::EnttWorld& ServerEnvironment::GetWorld()
 	{
-		return m_world;
+		return *m_world;
 	}
 
 	inline const Nz::EnttWorld& ServerEnvironment::GetWorld() const
 	{
-		return m_world;
+		return *m_world;
 	}
 }

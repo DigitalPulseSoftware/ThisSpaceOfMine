@@ -27,6 +27,11 @@ namespace tsom
 		m_nodeDestroyConnection = m_registry.on_destroy<Nz::NodeComponent>().connect<&NetworkedEntitiesSystem::OnNetworkedDestroy>(this);
 	}
 
+	NetworkedEntitiesSystem::~NetworkedEntitiesSystem()
+	{
+		m_networkedConstructObserver.disconnect();
+	}
+
 	void NetworkedEntitiesSystem::CreateAllEntities(SessionVisibilityHandler& visibility) const
 	{
 		for (auto it = m_networkedEntities.begin(); it != m_networkedEntities.end(); ++it)
