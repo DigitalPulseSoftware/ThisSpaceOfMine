@@ -174,7 +174,7 @@ namespace tsom
 		filesystem.Mount("scripts", scriptPath);
 
 		Nz::Graphics* graphics = Nz::Graphics::Instance();
-		graphics->GetShaderModuleResolver()->RegisterModuleDirectory(Nz::Utf8Path("assets/shaders"), true);
+		graphics->GetShaderModuleResolver()->RegisterDirectory(Nz::Utf8Path("assets/shaders"), true);
 
 		m_blockLibrary.emplace(app);
 		m_blockLibrary->BuildTexture();
