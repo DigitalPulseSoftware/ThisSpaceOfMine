@@ -59,7 +59,6 @@ namespace tsom
 				{
 					[](std::monostate)
 					{
-						throw std::runtime_error("invalid inputs");
 					},
 					[&](PlayerInputs::Character& characterInputs)
 					{

@@ -958,7 +958,6 @@ namespace tsom
 	void GameState::SendInputs()
 	{
 		Packets::UpdatePlayerInputs inputPacket;
-
 		inputPacket.inputs.index = m_nextInputIndex++;
 
 		if (m_isMouseLocked)
