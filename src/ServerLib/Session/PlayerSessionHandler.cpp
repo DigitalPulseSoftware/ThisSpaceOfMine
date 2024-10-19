@@ -10,6 +10,7 @@
 #include <CommonLib/PhysicsConstants.hpp>
 #include <CommonLib/Planet.hpp>
 #include <CommonLib/Ship.hpp>
+#include <CommonLib/Components/ChunkComponent.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Components/PlanetComponent.hpp>
 #include <CommonLib/Components/ShipComponent.hpp>
