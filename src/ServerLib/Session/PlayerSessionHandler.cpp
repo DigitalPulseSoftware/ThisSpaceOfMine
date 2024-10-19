@@ -10,6 +10,7 @@
 #include <CommonLib/PhysicsConstants.hpp>
 #include <CommonLib/Planet.hpp>
 #include <CommonLib/Ship.hpp>
+#include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Components/PlanetComponent.hpp>
 #include <CommonLib/Components/ShipComponent.hpp>
 #include <ServerLib/PlayerTokenAppComponent.hpp>
@@ -288,6 +289,95 @@ namespace tsom
 				planet.GenerateChunk(blockLibrary, *chunk, 42, Nz::Vector3ui(5));
 				fmt::print("regenerated chunk {};{};{}\n", chunkIndices.x, chunkIndices.y, chunkIndices.z);
 			}
+			return;
+		}
+		else if (message == "/spawncomputer")
+		{
+			entt::handle playerEntity = m_player->GetControlledEntity();
+			if (!playerEntity)
+				return;
+
+			ServerInstance& serverInstance = m_player->GetServerInstance();
+
+			ServerEnvironment* currentEnvironment = m_player->GetControlledEntityEnvironment();
+			if (currentEnvironment->GetType() != ServerEnvironmentType::Ship)
+			{
+				m_player->SendChatMessage("computers can only be spawned in ships");
+				return;
+			}
+
+			std::shared_ptr<const EntityClass> computerClass = serverInstance.GetEntityRegistry().FindClass("computer");
+			if (!computerClass)
+				return;
+
+			// Temporary: Destroy previous computer(s) if existing
+			entt::registry& environmentRegistry = currentEnvironment->GetWorld().GetRegistry();
+			auto classInstanceView = environmentRegistry.view<ClassInstanceComponent>();
+			for (entt::entity entity : classInstanceView)
+			{
+				auto& classInstance = classInstanceView.get<ClassInstanceComponent>(entity);
+				if (classInstance.GetClass() == computerClass)
+				{
+					environmentRegistry.destroy(entity);
+				}
+			}
+
+			const auto& characterController = m_player->GetCharacterController();
+			Nz::Quaternionf cameraRot = characterController->GetCharacterRotation() * Nz::EulerAnglesf(characterController->GetCameraRotation().pitch, 0.f, 0.f);
+			cameraRot.Normalize();
+
+			Nz::Vector3f hitPos, hitNormal;
+			entt::handle hitEntity;
+			auto callback = [&](const Nz::Physics3DSystem::RaycastHit& hitInfo)
+			{
+				hitPos = hitInfo.hitPosition;
+				hitNormal = hitInfo.hitNormal;
+				hitEntity = hitInfo.hitEntity;
+			};
+
+			struct IgnorePlayer : Nz::PhysObjectLayerFilter3D
+			{
+				bool ShouldCollide(Nz::PhysObjectLayer3D layer) const override
+				{
+					return layer != Constants::ObjectLayerPlayer;
+				}
+			};
+			IgnorePlayer objectFilter;
+
+			auto& playerNode = playerEntity.get<Nz::NodeComponent>();
+
+			Nz::Vector3f cameraPos = characterController->GetCharacterPosition() + characterController->GetCharacterRotation() * (Nz::Vector3f::Up() * Constants::PlayerCameraHeight);
+
+			auto& physSystem = currentEnvironment->GetWorld().GetSystem<Nz::Physics3DSystem>();
+			if (physSystem.RaycastQueryFirst(cameraPos, cameraPos + cameraRot * Nz::Vector3f::Forward() * 10.f, callback, nullptr, &objectFilter))
+			{
+				if (auto* chunkComponent = hitEntity.try_get<ChunkComponent>())
+				{
+					auto& chunkNode = hitEntity.get<Nz::NodeComponent>();
+
+					const Chunk& hitChunk = *chunkComponent->chunk;
+					const ChunkContainer& chunkContainer = hitChunk.GetContainer();
+
+					Nz::Vector3f blockPos = hitPos + hitNormal * chunkContainer.GetTileSize() * 0.25f;
+					auto coordinates = hitChunk.ComputeCoordinates(chunkNode.ToLocalPosition(blockPos));
+					if (!coordinates)
+						return;
+
+					auto corners = hitChunk.ComputeVoxelCorners(*coordinates);
+					Nz::Vector3f blockCenter = std::accumulate(corners.begin(), corners.end(), Nz::Vector3f::Zero()) / corners.size();
+					Nz::Vector3f offset = hitChunk.GetContainer().GetChunkOffset(hitChunk.GetIndices());
+
+					Direction dir = DirectionFromNormal(playerNode.GetForward());
+
+					entt::handle entity = currentEnvironment->CreateEntity();
+					entity.emplace<Nz::NodeComponent>(blockCenter + offset, Nz::Quaternionf::RotationBetween(Nz::Vector3f::Forward(), s_dirNormals[dir]));
+					entity.emplace<NetworkedComponent>();
+
+					entity.emplace<ClassInstanceComponent>(computerClass);
+					computerClass->ActivateEntity(entity);
+				}
+			}
+
 			return;
 		}
 		else if (message == "/spawnplatform")
