@@ -2,6 +2,7 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
+#include <CommonLib/HealthCheckerAppComponent.hpp>
 #include <CommonLib/InternalConstants.hpp>
 #include <Server/ServerConfigAppComponent.hpp>
 #include <ServerLib/PlayerTokenAppComponent.hpp>
@@ -42,6 +43,9 @@ int ServerMain(int argc, char* argv[])
 	filesystem.Mount("scripts", scriptPath);
 
 	auto& config = configAppComponent.GetConfig();
+
+	if (Nz::UInt32 maxStuckTime = config.GetIntegerValue<Nz::UInt32>("Server.MaxStuckSeconds"))
+		app.AddComponent<tsom::HealthCheckerAppComponent>(maxStuckTime);
 
 	Nz::UInt16 serverPort = config.GetIntegerValue<Nz::UInt16>("Server.Port");
 	std::filesystem::path saveDirectory = Nz::Utf8Path(config.GetStringValue("Save.Directory"));

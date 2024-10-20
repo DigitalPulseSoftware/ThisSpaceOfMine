@@ -15,6 +15,7 @@ namespace tsom
 		RegisterStringOption("Api.Url");
 		RegisterStringOption("ConnectionToken.EncryptionKey", "");
 		RegisterIntegerOption("Server.Port", 1, 0xFFFF, 29536);
+		RegisterIntegerOption("Server.MaxStuckSeconds", 0, 60, 10);
 		RegisterBoolOption("Server.SleepWhenEmpty", true);
 		RegisterStringOption("Save.Directory", "saves/chunks");
 		RegisterIntegerOption("Save.Interval", 0, 60 * 60, 30);
