@@ -9,4 +9,9 @@ namespace tsom
 	m_rotation(rotation)
 	{
 	}
+
+	inline const Nz::Quaternionf& ShipController::GetReferenceRotation() const
+	{
+		return m_rotation;
+	}
 }

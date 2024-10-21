@@ -194,6 +194,18 @@ namespace tsom
 		m_referenceRotation.Normalize();
 	}
 
+	void CharacterController::SetShipController(std::shared_ptr<ShipController> shipController)
+	{
+		if (shipController)
+		{
+			m_referenceRotation = shipController->GetReferenceRotation();
+			m_cameraRotation.pitch = 0.f;
+			m_cameraRotation.yaw = 0.f;
+		}
+
+		m_shipController = std::move(shipController);
+	}
+
 	void CharacterController::UpdatePosition(Nz::PhysCharacter3D& character)
 	{
 		std::tie(m_characterPosition, m_characterRotation) = character.GetPositionAndRotation();

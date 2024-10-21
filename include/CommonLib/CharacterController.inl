@@ -49,9 +49,4 @@ namespace tsom
 		m_lastInputs = inputs;
 		m_allowInputRotation = true;
 	}
-
-	inline void CharacterController::SetShipController(std::shared_ptr<ShipController> shipController)
-	{
-		m_shipController = std::move(shipController);
-	}
 }

@@ -23,6 +23,8 @@ namespace tsom
 			ShipController(ShipController&&) = delete;
 			~ShipController() = default;
 
+			inline const Nz::Quaternionf& GetReferenceRotation() const;
+
 			void PostSimulate(CharacterController& characterOwner, float elapsedTime);
 			void PreSimulate(CharacterController& character, float elapsedTime);
 

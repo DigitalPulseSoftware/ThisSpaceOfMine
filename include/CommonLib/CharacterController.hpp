@@ -49,7 +49,7 @@ namespace tsom
 			inline void SetGravityController(const GravityController* planet);
 
 			void SetInputs(const PlayerInputs& inputs);
-			inline void SetShipController(std::shared_ptr<ShipController> shipController);
+			void SetShipController(std::shared_ptr<ShipController> shipController);
 
 			void UpdatePosition(Nz::PhysCharacter3D& character);
 
