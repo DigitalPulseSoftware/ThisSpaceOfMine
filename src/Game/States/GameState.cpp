@@ -969,8 +969,11 @@ namespace tsom
 				shipInputs.moveBackward = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::S);
 				shipInputs.moveLeft = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::A);
 				shipInputs.moveRight = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::D);
+				shipInputs.moveUp = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::Space);
+				shipInputs.moveDown = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::LControl);
 				shipInputs.rollLeft = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::Q);
 				shipInputs.rollRight = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::E);
+				shipInputs.stabilize = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::R);
 				shipInputs.pitch = m_incomingCameraRotation.pitch;
 				shipInputs.yaw = m_incomingCameraRotation.yaw;
 			}

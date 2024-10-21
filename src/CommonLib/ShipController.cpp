@@ -35,9 +35,13 @@ namespace tsom
 		if (shipInputs.moveRight)
 			force += m_rotation * Nz::Vector3f::Right();
 
-		force *= rigidBody.GetMass() * 10.f;
+		if (shipInputs.moveUp)
+			force += m_rotation * Nz::Vector3f::Up();
 
-		rigidBody.AddForce(force, Nz::CoordSys::Local);
+		if (shipInputs.moveDown)
+			force += m_rotation * Nz::Vector3f::Down();
+
+		force *= rigidBody.GetMass() * 10.f;
 
 		constexpr float rollForce = 3.f;
 
@@ -53,6 +57,18 @@ namespace tsom
 
 		torque *= rigidBody.GetMass();
 
+		if (shipInputs.stabilize)
+		{
+			rigidBody.SetAngularDamping(0.33f);
+			rigidBody.SetLinearDamping(0.33f);
+		}
+		else
+		{
+			rigidBody.SetAngularDamping(0.005f);
+			rigidBody.SetLinearDamping(0.005f);
+		}
+
+		rigidBody.AddForce(force, Nz::CoordSys::Local);
 		rigidBody.AddTorque(m_rotation * torque, Nz::CoordSys::Local);
 		rigidBody.WakeUp();
 	}

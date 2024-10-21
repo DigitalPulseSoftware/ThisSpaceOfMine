@@ -36,8 +36,11 @@ namespace tsom
 			bool moveBackward = false;
 			bool moveLeft = false;
 			bool moveRight = false;
+			bool moveUp = false;
+			bool moveDown = false;
 			bool rollLeft = false;
 			bool rollRight = false;
+			bool stabilize = false;
 			Nz::RadianAnglef pitch = 0.f;
 			Nz::RadianAnglef yaw = 0.f;
 		};
