@@ -58,6 +58,8 @@ namespace tsom
 {
 	GameState::GameState(std::shared_ptr<StateData> stateDataPtr) :
 	WidgetState(std::move(stateDataPtr)),
+	m_currentShipRotation(Nz::Quaternionf::Identity()),
+	m_targetShipRotation(Nz::Quaternionf::Identity()),
 	m_upCorrection(Nz::Quaternionf::Identity()),
 	m_tickAccumulator(Nz::Time::Zero()),
 	m_tickDuration(Constants::TickDuration),
@@ -79,6 +81,8 @@ namespace tsom
 			cameraComponent.UpdateClearColor(Nz::Color::Gray());
 			cameraComponent.UpdateRenderMask(tsom::Constants::RenderMask3D & ~tsom::Constants::RenderMaskLocalPlayer);
 			cameraComponent.UpdateZNear(0.1f);
+
+			m_targetCameraFOV = cameraComponent.GetFOV();
 		}
 
 		m_crosshairEntity = CreateEntity();
@@ -703,7 +707,21 @@ namespace tsom
 					Nz::Quaternionf cameraRotation = environmentNode->GetRotation() * m_referenceRotation * Nz::Quaternionf(predictedCameraRotation);
 					cameraRotation.Normalize();
 
+					if (m_isPilotingShip)
+						cameraRotation *= m_currentShipRotation;
+
 					cameraNode.SetRotation(cameraRotation);
+
+					auto& cameraComponent = m_cameraEntity.get<Nz::CameraComponent>();
+
+					Nz::DegreeAnglef cameraFov = cameraComponent.GetFOV();
+					if (!cameraFov.ApproxEqual(m_targetCameraFOV))
+					{
+						float C = (m_targetCameraFOV < cameraFov) ? 250.f : 400.f;
+						float factor = std::exp(-elapsedTime.AsSeconds() * C);
+
+						cameraComponent.UpdateFOV(Nz::Lerp(cameraFov, m_targetCameraFOV, factor));
+					}
 					break;
 				}
 
@@ -890,6 +908,14 @@ namespace tsom
 			m_debugOverlay->label->SetPosition({ 0.f, stateData.canvas->GetHeight() - m_debugOverlay->label->GetHeight() });
 		}
 
+		if (m_isPilotingShip)
+		{
+			float C = 300.f;
+			float factor = std::exp(-elapsedTime.AsSeconds() * C);
+
+			m_currentShipRotation = Nz::Quaternionf::Slerp(m_currentShipRotation, m_targetShipRotation, factor);
+		}
+
 		return true;
 	}
 
@@ -976,6 +1002,17 @@ namespace tsom
 				shipInputs.stabilize = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::R);
 				shipInputs.pitch = m_incomingCameraRotation.pitch;
 				shipInputs.yaw = m_incomingCameraRotation.yaw;
+
+				// TODO: Use ship acceleration instead
+				m_targetCameraFOV = Nz::DegreeAnglef((shipInputs.moveForward) ? 110.f : 90.f);
+
+				float roll = 0.f;
+				if (shipInputs.rollLeft)
+					roll += 10.f;
+				if (shipInputs.rollRight)
+					roll -= 10.f;
+
+				m_targetShipRotation = Nz::EulerAnglesf(shipInputs.pitch, shipInputs.yaw, roll);
 			}
 			else
 			{
