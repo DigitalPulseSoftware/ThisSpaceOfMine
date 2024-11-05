@@ -8,6 +8,7 @@
 #define TSOM_CLIENTLIB_CLIENTASSETLIBRARYAPPCOMPONENT_HPP
 
 #include <ClientLib/Export.hpp>
+#include <Nazara/Audio/SoundBuffer.hpp>
 #include <Nazara/Core/ApplicationComponent.hpp>
 #include <Nazara/Core/ObjectLibrary.hpp>
 
@@ -30,11 +31,13 @@ namespace tsom
 
 			inline std::shared_ptr<Nz::Font> GetFont(std::string_view name) const;
 			inline std::shared_ptr<Nz::Model> GetModel(std::string_view name) const;
+			inline std::shared_ptr<Nz::SoundBuffer> GetSoundBuffer(std::string_view name) const;
 			inline std::shared_ptr<Nz::TextureAsset> GetTexture(std::string_view name) const;
 
 			inline void RegisterFont(std::string name, std::shared_ptr<Nz::Font> font);
-			inline void RegisterModel(std::string name, std::shared_ptr<Nz::Model> font);
-			inline void RegisterTexture(std::string name, std::shared_ptr<Nz::TextureAsset> font);
+			inline void RegisterModel(std::string name, std::shared_ptr<Nz::Model> model);
+			inline void RegisterSoundBuffer(std::string name, std::shared_ptr<Nz::SoundBuffer> soundBuffer);
+			inline void RegisterTexture(std::string name, std::shared_ptr<Nz::TextureAsset> textureAsset);
 
 			ClientAssetLibraryAppComponent& operator=(const ClientAssetLibraryAppComponent&) = delete;
 			ClientAssetLibraryAppComponent& operator=(ClientAssetLibraryAppComponent&&) = delete;
@@ -42,6 +45,7 @@ namespace tsom
 		private:
 			Nz::ObjectLibrary<Nz::Font> m_fontLibrary;
 			Nz::ObjectLibrary<Nz::Model> m_modelLibrary;
+			Nz::ObjectLibrary<Nz::SoundBuffer> m_soundBufferLibrary;
 			Nz::ObjectLibrary<Nz::TextureAsset> m_textureLibrary;
 	};
 }

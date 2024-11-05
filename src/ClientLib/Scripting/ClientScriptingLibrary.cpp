@@ -5,8 +5,11 @@
 #include <ClientLib/Scripting/ClientScriptingLibrary.hpp>
 #include <ClientLib/ClientAssetLibraryAppComponent.hpp>
 #include <ClientLib/ClientSessionHandler.hpp>
+#include <ClientLib/Systems/SoundPoolSystem.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
+#include <Nazara/Audio/SoundBuffer.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
+#include <Nazara/Core/EnttWorld.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <Nazara/Graphics/MaterialInstance.hpp>
 #include <Nazara/Graphics/Model.hpp>
@@ -31,6 +34,8 @@ namespace tsom
 		RegisterRenderables(state);
 		RegisterRenderStates(state);
 		RegisterScripts(state);
+		RegisterSound(state);
+		RegisterSoundBuffer(state);
 		RegisterTexture(state);
 	}
 
@@ -43,11 +48,23 @@ namespace tsom
 			auto& clientAsset = m_app.GetComponent<ClientAssetLibraryAppComponent>();
 			return clientAsset.GetModel(name);
 		});
+		
+		assetLibrary["GetSoundBuffer"] = LuaFunction([this](std::string_view name)
+		{
+			auto& clientAsset = m_app.GetComponent<ClientAssetLibraryAppComponent>();
+			return clientAsset.GetSoundBuffer(name);
+		});
 
 		assetLibrary["RegisterModel"] = LuaFunction([this](std::string name, std::shared_ptr<Nz::Model> model)
 		{
 			auto& clientAsset = m_app.GetComponent<ClientAssetLibraryAppComponent>();
 			clientAsset.RegisterModel(std::move(name), std::move(model));
+		});
+		
+		assetLibrary["RegisterSoundBuffer"] = LuaFunction([this](std::string name, std::shared_ptr<Nz::SoundBuffer> soundBuffer)
+		{
+			auto& clientAsset = m_app.GetComponent<ClientAssetLibraryAppComponent>();
+			clientAsset.RegisterSoundBuffer(std::move(name), std::move(soundBuffer));
 		});
 	}
 
@@ -199,6 +216,48 @@ namespace tsom
 		{
 			m_sessionHandler.LoadScripts(true);
 		});
+	}
+
+	void ClientScriptingLibrary::RegisterSound(sol::state& state)
+	{
+		sol::table soundLibrary = state.create_named_table("Sound");
+
+		soundLibrary["PlaySound"] = LuaFunction([this](std::shared_ptr<Nz::SoundBuffer> soundBuffer, const Nz::Vector3f& position, std::optional<sol::stack_table> paramTable)
+		{
+			SoundPoolSystem::SoundParameters soundParams;
+			if (paramTable)
+			{
+				sol::stack_table& soundParamTable = *paramTable;
+				soundParams.pitch = soundParamTable["pitch"];
+				soundParams.volume = soundParamTable["volume"];
+			}
+
+			auto& soundPoolSystem = m_world.GetSystem<SoundPoolSystem>();
+			soundPoolSystem.PlaySound(std::move(soundBuffer), position, soundParams);
+		});
+	}
+
+	void ClientScriptingLibrary::RegisterSoundBuffer(sol::state& state)
+	{
+		state.new_usertype<Nz::SoundBuffer>("SoundBuffer",
+			sol::no_constructor,
+			"Load", LuaFunction([this](std::string assetPath, std::optional<sol::stack_table> paramTable)
+			{
+				Nz::SoundBufferParams soundBufferParams;
+				if (paramTable)
+				{
+					sol::stack_table& soundParamTable = *paramTable;
+					soundBufferParams.forceMono = soundParamTable["forceMono"];
+				}
+
+				auto& fs = m_app.GetComponent<Nz::FilesystemAppComponent>();
+				std::shared_ptr<Nz::SoundBuffer> soundBuffer = fs.Load<Nz::SoundBuffer>(assetPath);
+				if (!soundBuffer)
+					throw std::runtime_error("failed to load " + assetPath);
+
+				return soundBuffer;
+			})
+		);
 	}
 
 	void ClientScriptingLibrary::RegisterTexture(sol::state& state)

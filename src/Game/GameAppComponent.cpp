@@ -9,6 +9,7 @@
 #include <ClientLib/Systems/NetworkMovementInterpolationSystem.hpp>
 #include <ClientLib/Systems/PhysicsInterpolationSystem.hpp>
 #include <ClientLib/Systems/PlayerAnimationSystem.hpp>
+#include <ClientLib/Systems/SoundPoolSystem.hpp>
 #include <ClientLib/Systems/TransformCopySystem.hpp>
 #include <CommonLib/DownloadManager.hpp>
 #include <CommonLib/GameConstants.hpp>
@@ -268,6 +269,7 @@ namespace tsom
 		world.AddSystem<NetworkMovementInterpolationSystem>(Constants::TickDuration);
 		world.AddSystem<PlanetSystem>();
 		world.AddSystem<ShipSystem>();
+		world.AddSystem<SoundPoolSystem>();
 		world.AddSystem<TransformCopySystem>();
 		world.AddSystem<Nz::LifetimeSystem>();
 		world.AddSystem<Nz::RenderSystem>();

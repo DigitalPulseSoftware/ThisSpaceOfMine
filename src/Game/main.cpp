@@ -6,6 +6,7 @@
 #include <CommonLib/UpdaterAppComponent.hpp>
 #include <Game/GameAppComponent.hpp>
 #include <Game/GameConfigAppComponent.hpp>
+#include <Nazara/Audio/Audio.hpp>
 #include <Nazara/Core/Application.hpp>
 #include <Nazara/Core/EntitySystemAppComponent.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
@@ -29,7 +30,7 @@ NAZARA_REQUEST_DEDICATED_GPU()
 int GameMain(int argc, char* argv[])
 {
 	// Engine setup
-	Nz::Application<Nz::Graphics, Nz::Physics3D, Nz::Network, Nz::Widgets> app(argc, argv);
+	Nz::Application<Nz::Audio, Nz::Graphics, Nz::Physics3D, Nz::Network, Nz::Widgets> app(argc, argv);
 
 	Nz::PluginManagerAppComponent& pluginManager = app.AddComponent<Nz::PluginManagerAppComponent>();
 	pluginManager.Load<Nz::AssimpPlugin>();

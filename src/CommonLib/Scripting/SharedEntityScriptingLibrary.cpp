@@ -235,13 +235,21 @@ namespace tsom
 	{
 		state.new_usertype<Nz::NodeComponent>("NodeComponent",
 			sol::no_constructor,
-			"GetRotation", LuaFunction([](const Nz::NodeComponent& nodeComponent)
+			"GetGlobalPosition", LuaFunction([](const Nz::NodeComponent& nodeComponent)
 			{
-				return nodeComponent.GetRotation();
+				return nodeComponent.GetGlobalPosition();
+			}),
+			"GetGlobalRotation", LuaFunction([](const Nz::NodeComponent& nodeComponent)
+			{
+				return nodeComponent.GetGlobalRotation();
 			}),
 			"GetPosition", LuaFunction([](const Nz::NodeComponent& nodeComponent)
 			{
 				return nodeComponent.GetPosition();
+			}),
+			"GetRotation", LuaFunction([](const Nz::NodeComponent& nodeComponent)
+			{
+				return nodeComponent.GetRotation();
 			}),
 			"Scale", LuaFunction([](Nz::NodeComponent& nodeComponent, const Nz::Vector3f& scale)
 			{

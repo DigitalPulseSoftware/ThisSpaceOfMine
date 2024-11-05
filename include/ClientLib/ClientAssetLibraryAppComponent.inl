@@ -1,3 +1,4 @@
+#include "ClientAssetLibraryAppComponent.hpp"
 // Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
@@ -14,6 +15,11 @@ namespace tsom
 		return m_modelLibrary.Get(name);
 	}
 
+	inline std::shared_ptr<Nz::SoundBuffer> ClientAssetLibraryAppComponent::GetSoundBuffer(std::string_view name) const
+	{
+		return m_soundBufferLibrary.Get(name);
+	}
+
 	inline std::shared_ptr<Nz::TextureAsset> ClientAssetLibraryAppComponent::GetTexture(std::string_view name) const
 	{
 		return m_textureLibrary.Get(name);
@@ -27,6 +33,11 @@ namespace tsom
 	inline void ClientAssetLibraryAppComponent::RegisterModel(std::string name, std::shared_ptr<Nz::Model> model)
 	{
 		m_modelLibrary.Register(std::move(name), std::move(model));
+	}
+
+	inline void ClientAssetLibraryAppComponent::RegisterSoundBuffer(std::string name, std::shared_ptr<Nz::SoundBuffer> soundBuffer)
+	{
+		m_soundBufferLibrary.Register(std::move(name), std::move(soundBuffer));
 	}
 
 	inline void ClientAssetLibraryAppComponent::RegisterTexture(std::string name, std::shared_ptr<Nz::TextureAsset> texture)

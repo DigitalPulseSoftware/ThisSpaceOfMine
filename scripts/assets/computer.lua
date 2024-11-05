@@ -27,3 +27,6 @@ computer:SetMaterial(4, metalMat)
 computer:SetMaterial(5, metalMat)
 
 AssetLibrary.RegisterModel("computer", computer)
+
+AssetLibrary.RegisterSoundBuffer("computer_powerup", SoundBuffer.Load("assets/sounds/computer/power_up.wav", { forceMono = true }))
+AssetLibrary.RegisterSoundBuffer("computer_powerdown", SoundBuffer.Load("assets/sounds/computer/power_down.wav", { forceMono = true }))

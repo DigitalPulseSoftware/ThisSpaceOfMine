@@ -8,6 +8,11 @@ classData:AddClientRPC("activate")
 if CLIENT then
 	classData:OnClientRPC("activate", function (self)
 		ClientSession.EnableShipControl(true)
+
+		local computerNode = self:GetComponent("node")
+
+		local powerup = AssetLibrary.GetSoundBuffer("computer_powerup")
+		Sound.PlaySound(powerup, computerNode:GetGlobalPosition())
 	end)
 end
 

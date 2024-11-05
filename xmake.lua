@@ -16,7 +16,7 @@ end)
 add_repositories("nazara-repo https://github.com/NazaraEngine/xmake-repo.git")
 add_requires("nazaraengine >=2023.08.15", { configs = { debug = is_mode("debug"), symbols = true }})
 add_requires("fmt", { configs = { header_only = false }})
-add_requires("libcurl", { configs = { shared = true }, system = false })
+add_requires("openal-soft", "libcurl", { configs = { shared = true }, system = false })
 add_requires(
 	"concurrentqueue",
 	"cppcodec",
@@ -264,7 +264,7 @@ target("TSOMGame", function ()
 	add_rpathdirs("@executable_path")
 
 	add_packages("nazaraengine", { components = { "widgets" }, public = true })
-	add_packages("libcurl", { links = {} })
+	add_packages("libcurl", "openal-soft", { links = {} })
 	if is_plat("macosx") then
 		add_packages("moltenvk", { links = {} })
 	end

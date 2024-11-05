@@ -13,6 +13,7 @@
 namespace Nz
 {
 	class ApplicationBase;
+	class EnttWorld;
 }
 
 namespace tsom
@@ -22,7 +23,7 @@ namespace tsom
 	class TSOM_CLIENTLIB_API ClientScriptingLibrary : public ScriptingLibrary
 	{
 		public:
-			inline ClientScriptingLibrary(Nz::ApplicationBase& app, ClientSessionHandler& sessionHandler);
+			inline ClientScriptingLibrary(Nz::ApplicationBase& app, ClientSessionHandler& sessionHandler, Nz::EnttWorld& world);
 			ClientScriptingLibrary(const ClientScriptingLibrary&) = delete;
 			ClientScriptingLibrary(ClientScriptingLibrary&&) = delete;
 			~ClientScriptingLibrary() = default;
@@ -36,12 +37,18 @@ namespace tsom
 			void RegisterAssetLibrary(sol::state& state);
 			void RegisterClientSession(sol::state& state);
 			void RegisterMaterialInstance(sol::state& state);
+			void RegisterMaterialSettings(sol::state& state);
 			void RegisterRenderables(sol::state& state);
 			void RegisterRenderStates(sol::state& state);
 			void RegisterScripts(sol::state& state);
+			void RegisterSound(sol::state& state);
+			void RegisterSoundBuffer(sol::state& state);
 			void RegisterTexture(sol::state& state);
+			void RegisterUberShader(sol::state& state);
+			void RegisterVertexDeclaration(sol::state& state);
 
 			Nz::ApplicationBase& m_app;
+			Nz::EnttWorld& m_world;
 			ClientSessionHandler& m_sessionHandler;
 	};
 }

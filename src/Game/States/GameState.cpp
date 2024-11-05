@@ -25,6 +25,8 @@
 #include <Game/GameConfigAppComponent.hpp>
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/StateData.hpp>
+#include <Nazara/Audio/Audio.hpp>
+#include <Nazara/Audio/AudioDevice.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <Nazara/Core/PrimitiveList.hpp>
@@ -796,6 +798,10 @@ namespace tsom
 				}*/
 			}
 		}
+
+		const auto& audioDevice = Nz::Audio::Instance()->GetDefaultDevice();
+		audioDevice->SetListenerPosition(cameraNode.GetGlobalPosition());
+		audioDevice->SetListenerRotation(cameraNode.GetGlobalRotation());
 
 		// Network info
 		if (m_debugOverlay && m_debugOverlay->mode >= 2)

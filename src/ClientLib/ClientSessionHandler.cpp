@@ -76,7 +76,7 @@ namespace tsom
 		SetupAttributeTable(s_packetAttributes);
 
 		m_scriptingContext.RegisterLibrary<MathScriptingLibrary>();
-		m_scriptingContext.RegisterLibrary<ClientScriptingLibrary>(m_app, *this);
+		m_scriptingContext.RegisterLibrary<ClientScriptingLibrary>(m_app, *this, m_world);
 		m_scriptingContext.LoadDirectory("scripts/assets");
 
 		m_entityRegistry.RegisterClassLibrary<ClientChunkClassLibrary>(m_app, m_blockLibrary);

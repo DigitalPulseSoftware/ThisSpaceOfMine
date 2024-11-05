@@ -4,10 +4,8 @@
 
 namespace tsom
 {
-	inline ClientScriptingLibrary::ClientScriptingLibrary(Nz::ApplicationBase& app, ClientSessionHandler& sessionHandler, Nz::EnttWorld& world) :
-	m_app(app),
-	m_world(world),
-	m_sessionHandler(sessionHandler)
+	inline SoundPoolSystem::SoundPoolSystem(entt::registry& registry) :
+	m_registry(registry)
 	{
 	}
 }
