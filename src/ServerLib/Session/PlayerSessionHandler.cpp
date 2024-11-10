@@ -329,11 +329,13 @@ namespace tsom
 
 			Nz::Vector3f hitPos, hitNormal;
 			entt::handle hitEntity;
+			std::uint32_t hitSubshapeID;
 			auto callback = [&](const Nz::Physics3DSystem::RaycastHit& hitInfo)
 			{
 				hitPos = hitInfo.hitPosition;
 				hitNormal = hitInfo.hitNormal;
 				hitEntity = hitInfo.hitEntity;
+				hitSubshapeID = hitInfo.subShapeID;
 			};
 
 			struct IgnorePlayer : Nz::PhysObjectLayerFilter3D
@@ -354,17 +356,20 @@ namespace tsom
 			{
 				if (auto* chunkComponent = hitEntity.try_get<ChunkComponent>())
 				{
+					auto& chunkRigidBody = hitEntity.get<Nz::RigidBody3DComponent>();
 					auto& chunkNode = hitEntity.get<Nz::NodeComponent>();
 
 					const Chunk& hitChunk = *chunkComponent->chunk;
 					const ChunkContainer& chunkContainer = hitChunk.GetContainer();
 
-					Nz::Vector3f blockPos = hitPos + hitNormal * chunkContainer.GetTileSize() * 0.25f;
-					auto coordinates = hitChunk.ComputeCoordinates(chunkNode.ToLocalPosition(blockPos));
-					if (!coordinates)
+					Nz::Vector3f localPos = chunkNode.ToLocalPosition(hitPos);
+					Nz::Vector3f localNormal = chunkNode.ToLocalDirection(hitNormal);
+
+					auto hitCoordinates = hitChunk.ComputeHitCoordinates(localPos, localNormal, *chunkRigidBody.GetCollider(), hitSubshapeID);
+					if (!hitCoordinates)
 						return;
 
-					auto corners = hitChunk.ComputeVoxelCorners(*coordinates);
+					auto corners = hitChunk.ComputeVoxelCorners(hitCoordinates->blockIndices);
 					Nz::Vector3f blockCenter = std::accumulate(corners.begin(), corners.end(), Nz::Vector3f::Zero()) / corners.size();
 					Nz::Vector3f offset = hitChunk.GetContainer().GetChunkOffset(hitChunk.GetIndices());
 
@@ -484,11 +489,10 @@ namespace tsom
 			return false;
 
 		// Check that nothing blocks the way
-		Nz::BoxCollider3D boxCollider(Nz::Vector3f(chunk->GetBlockSize() * 0.75f)); // Test a smaller block to allow a bit of overlap
+		auto [blockCollider, colliderOffset] = chunk->BuildBlockCollider(blockIndices, 0.75f); // Test a smaller block to allow a bit of overlap
 
-		auto corners = chunk->ComputeVoxelCorners(blockIndices);
-		Nz::Vector3f blockCenter = std::accumulate(corners.begin(), corners.end(), Nz::Vector3f::Zero()) / corners.size();
 		Nz::Vector3f offset = chunk->GetContainer().GetChunkOffset(chunk->GetIndices());
+		offset += colliderOffset;
 
 		struct IgnoreTrigger : Nz::PhysObjectLayerFilter3D
 		{
@@ -501,10 +505,23 @@ namespace tsom
 		IgnoreTrigger physObjectLayerFilter;
 
 		auto& physicsSystem = environment->GetWorld().GetSystem<Nz::Physics3DSystem>();
-		bool doesCollide = physicsSystem.CollisionQuery(boxCollider, Nz::Matrix4f::Translate(offset + blockCenter), [](const Nz::Physics3DSystem::ShapeCollisionInfo& hitInfo) -> std::optional<float>
+		bool doesCollide = physicsSystem.CollisionQuery(*blockCollider, Nz::Matrix4f::Translate(offset), [](const Nz::Physics3DSystem::ShapeCollisionInfo& hitInfo) -> std::optional<float>
 		{
 			return hitInfo.penetrationDepth;
 		}, nullptr, &physObjectLayerFilter);
+
+
+		Packets::DebugDrawLineList debugDrawLineList;
+		debugDrawLineList.color = (doesCollide) ? Nz::Color::Red() : Nz::Color::Green();
+		debugDrawLineList.duration = 5.f;
+		debugDrawLineList.position = offset;
+		debugDrawLineList.rotation = Nz::Quaternionf::Identity();
+		blockCollider->BuildDebugMesh(debugDrawLineList.vertices, debugDrawLineList.indices, Nz::Matrix4f::Identity());
+
+		auto& visibility = m_player->GetVisibilityHandler();
+
+		debugDrawLineList.environmentId = visibility.GetEnvironmentId(environment);
+		m_player->GetSession()->SendPacket(debugDrawLineList);
 
 		if (doesCollide)
 			return false;

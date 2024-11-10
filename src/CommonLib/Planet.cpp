@@ -8,6 +8,7 @@
 #include <CommonLib/FlatChunk.hpp>
 #include <NazaraUtils/CallOnExit.hpp>
 #include <Nazara/Core/TaskScheduler.hpp>
+#include <Nazara/Math/Box.hpp>
 #include <PerlinNoise.hpp>
 
 namespace tsom
@@ -29,7 +30,7 @@ namespace tsom
 		// Check if chunk has to be deformed (check if it has a deformed corner)
 		auto IsDeformedChunk = [&]()
 		{
-			Nz::Boxf aabb(chunkOffset, Nz::Vector3f(ChunkSize) * m_tileSize);
+			Nz::Boxf aabb(chunkOffset - Nz::Vector3f(ChunkSize) * m_tileSize * 0.5f, Nz::Vector3f(ChunkSize) * m_tileSize);
 
 			for (const Nz::Vector3f& corner : aabb.GetCorners())
 			{

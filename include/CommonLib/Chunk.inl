@@ -2,7 +2,6 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
-#include <Nazara/Math/Box.hpp>
 #include <cassert>
 
 namespace tsom
@@ -12,6 +11,7 @@ namespace tsom
 	m_indices(indices),
 	m_blockLibrary(blockLibrary),
 	m_owner(owner),
+	m_hasPerFaceCollision(false),
 	m_blockSize(cellSize)
 	{
 	}
@@ -94,6 +94,11 @@ namespace tsom
 		return !m_blocks.empty();
 	}
 
+	inline bool Chunk::HasPerFaceCollisions() const
+	{
+		return m_hasPerFaceCollision;
+	}
+
 	inline void Chunk::Reset()
 	{
 		m_blocks.clear();
@@ -140,5 +145,10 @@ namespace tsom
 	inline void Chunk::UnlockWrite()
 	{
 		m_mutex.unlock();
+	}
+
+	inline void Chunk::SetPerFaceCollision()
+	{
+		m_hasPerFaceCollision = true;
 	}
 }

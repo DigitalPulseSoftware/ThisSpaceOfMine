@@ -585,24 +585,27 @@ namespace tsom
 					if (auto* chunkComponent = raycastHit->hitEntity.try_get<ChunkComponent>())
 					{
 						auto& chunkNetworkMap = chunkComponent->parentEntity.get<ChunkNetworkMapComponent>();
+						auto& chunkRigidBody = raycastHit->hitEntity.get<Nz::RigidBody3DComponent>();
 						auto& chunkNode = raycastHit->hitEntity.get<Nz::NodeComponent>();
 
 						const Chunk& hitChunk = *chunkComponent->chunk;
 						const ChunkContainer& chunkContainer = hitChunk.GetContainer();
 
+						Nz::Vector3f localPos = chunkNode.ToLocalPosition(raycastHit->hitPos);
+						Nz::Vector3f localNormal = chunkNode.ToLocalDirection(raycastHit->hitNormal);
+
+						auto hitCoordinates = hitChunk.ComputeHitCoordinates(localPos, localNormal, *chunkRigidBody.GetCollider(), raycastHit->subShapeID);
+						if (!hitCoordinates)
+							return;
+
 						if (event.button == Nz::Mouse::Left)
 						{
 							// Mine
-							Nz::Vector3f blockPos = raycastHit->hitPos - raycastHit->hitNormal * chunkContainer.GetTileSize() * 0.25f;
-							auto coordinates = hitChunk.ComputeCoordinates(chunkNode.ToLocalPosition(blockPos));
-							if (!coordinates)
-								return;
-
 							Packets::MineBlock mineBlock;
 							mineBlock.chunkId = Nz::Retrieve(chunkNetworkMap.chunkNetworkIndices, &hitChunk);
-							mineBlock.voxelLoc.x = coordinates->x;
-							mineBlock.voxelLoc.y = coordinates->y;
-							mineBlock.voxelLoc.z = coordinates->z;
+							mineBlock.voxelLoc.x = hitCoordinates->blockIndices.x;
+							mineBlock.voxelLoc.y = hitCoordinates->blockIndices.y;
+							mineBlock.voxelLoc.z = hitCoordinates->blockIndices.z;
 
 							stateData.networkSession->SendPacket(mineBlock);
 						}
@@ -615,23 +618,23 @@ namespace tsom
 								return;
 							}
 
-							// Place
-							// Don't use hit chunk as it wouldn't work for borders blocks
-							Nz::Vector3f blockPos = environmentNode->ToLocalPosition(raycastHit->hitPos + raycastHit->hitNormal * chunkContainer.GetTileSize() * 0.25f);
-							ChunkIndices chunkIndices = chunkContainer.GetChunkIndicesByPosition(blockPos);
+							BlockIndices blockIndices = chunkContainer.GetBlockIndices(hitChunk.GetIndices(), hitCoordinates->blockIndices);
+
+							const DirectionAxis& dirAxis = s_dirAxis[hitCoordinates->direction];
+
+							blockIndices[dirAxis.upAxis] += dirAxis.upDir;
+
+							Nz::Vector3ui innerCoordinates;
+							ChunkIndices chunkIndices = chunkContainer.GetChunkIndicesByBlockIndices(blockIndices, &innerCoordinates);
 							const Chunk* chunk = chunkContainer.GetChunk(chunkIndices);
 							if (!chunk)
 								return;
 
-							auto coordinates = chunk->ComputeCoordinates(blockPos - chunkContainer.GetChunkOffset(chunkIndices));
-							if (!coordinates)
-								return;
-
 							Packets::PlaceBlock placeBlock;
 							placeBlock.chunkId = Nz::Retrieve(chunkNetworkMap.chunkNetworkIndices, chunk);
-							placeBlock.voxelLoc.x = coordinates->x;
-							placeBlock.voxelLoc.y = coordinates->y;
-							placeBlock.voxelLoc.z = coordinates->z;
+							placeBlock.voxelLoc.x = innerCoordinates.x;
+							placeBlock.voxelLoc.y = innerCoordinates.y;
+							placeBlock.voxelLoc.z = innerCoordinates.z;
 							placeBlock.newContent = Nz::SafeCast<Nz::UInt8>(m_blockSelectionBar->GetSelectedBlock());
 
 							stateData.networkSession->SendPacket(placeBlock);
@@ -847,35 +850,38 @@ namespace tsom
 			{
 				if (auto* chunkComponent = raycastHit->hitEntity.try_get<ChunkComponent>())
 				{
+					auto& chunkRigidBody = raycastHit->hitEntity.get<Nz::RigidBody3DComponent>();
 					auto& chunkNode = raycastHit->hitEntity.get<Nz::NodeComponent>();
 
-					const Chunk& chunk = *chunkComponent->chunk;
-					const ChunkContainer& chunkContainer = chunk.GetContainer();
+					const Chunk& hitChunk = *chunkComponent->chunk;
+					const ChunkContainer& chunkContainer = hitChunk.GetContainer();
 
 					debugDrawer.DrawLine(raycastHit->hitPos, raycastHit->hitPos + raycastHit->hitNormal * 0.2f, Nz::Color::Cyan());
 
-					Nz::Vector3f blockPos = raycastHit->hitPos - raycastHit->hitNormal * chunkContainer.GetTileSize() * 0.25f;
-
 					if (m_debugOverlay && m_debugOverlay->mode >= 1)
 					{
-						const ChunkIndices& chunkIndices = chunk.GetIndices();
+						const ChunkIndices& chunkIndices = hitChunk.GetIndices();
 						m_debugOverlay->textDrawer.AppendText(fmt::format("{0:-^{1}}\n", "Target", 20));
 						m_debugOverlay->textDrawer.AppendText(fmt::format("Target chunk: {0};{1};{2}\n", chunkIndices.x, chunkIndices.y, chunkIndices.z));
 					}
 
-					if (auto coordinates = chunk.ComputeCoordinates(chunkNode.ToLocalPosition(blockPos)))
+					Nz::Vector3f localPos = chunkNode.ToLocalPosition(raycastHit->hitPos);
+					Nz::Vector3f localNormal = chunkNode.ToLocalDirection(raycastHit->hitNormal);
+
+					auto hitCoordinates = hitChunk.ComputeHitCoordinates(localPos, localNormal, *chunkRigidBody.GetCollider(), raycastHit->subShapeID);
+					if (hitCoordinates)
 					{
 						if (m_debugOverlay && m_debugOverlay->mode >= 1)
 						{
-							m_debugOverlay->textDrawer.AppendText(fmt::format("Target chunk block: {0};{1};{2}\n", coordinates->x, coordinates->y, coordinates->z));
+							m_debugOverlay->textDrawer.AppendText(fmt::format("Target chunk block: {0};{1};{2}\n", hitCoordinates->blockIndices.x, hitCoordinates->blockIndices.y, hitCoordinates->blockIndices.z));
 
 							Nz::Vector3ui chunkCount(5);
 
 							Nz::Vector3i maxHeight((Nz::Vector3i(chunkCount) + Nz::Vector3i(1)) / 2);
 							maxHeight *= int(Planet::ChunkSize);
 
-							const ChunkIndices& chunkIndices = chunk.GetIndices();
-							Nz::Vector3i blockIndices = chunkIndices * int(Planet::ChunkSize) + Nz::Vector3i(coordinates->x, coordinates->z, coordinates->y) - Nz::Vector3i(int(Planet::ChunkSize)) / 2;
+							const ChunkIndices& chunkIndices = hitChunk.GetIndices();
+							Nz::Vector3i blockIndices = chunkIndices * int(Planet::ChunkSize) + Nz::Vector3i(hitCoordinates->blockIndices.x, hitCoordinates->blockIndices.z, hitCoordinates->blockIndices.y) - Nz::Vector3i(int(Planet::ChunkSize)) / 2;
 							m_debugOverlay->textDrawer.AppendText(fmt::format("Target block global indices: {0};{1};{2}\n", blockIndices.x, blockIndices.y, blockIndices.z));
 							unsigned int depth = Nz::SafeCaster(std::min({
 								maxHeight.x - std::abs(blockIndices.x),
@@ -885,7 +891,7 @@ namespace tsom
 							m_debugOverlay->textDrawer.AppendText(fmt::format("Target block depth: {0}\n", depth));
 						}
 
-						auto cornerPos = chunk.ComputeVoxelCorners(*coordinates);
+						auto cornerPos = hitChunk.ComputeVoxelCorners(hitCoordinates->blockIndices);
 
 						constexpr Nz::EnumArray<Direction, std::array<Nz::BoxCorner, 4>> directionToCorners = {
 							// Back
@@ -902,8 +908,7 @@ namespace tsom
 							std::array{ Nz::BoxCorner::RightBottomNear, Nz::BoxCorner::LeftBottomNear, Nz::BoxCorner::LeftTopNear, Nz::BoxCorner::RightTopNear },
 						};
 
-						Nz::Vector3f localHitNormal = chunkNode.GetGlobalRotation().GetConjugate() * raycastHit->hitNormal;
-						auto& corners = directionToCorners[DirectionFromNormal(localHitNormal)];
+						auto& corners = directionToCorners[hitCoordinates->direction];
 
 						debugDrawer.DrawLine(chunkNode.ToGlobalPosition(cornerPos[corners[0]]), chunkNode.ToGlobalPosition(cornerPos[corners[1]]), Nz::Color::Green());
 						debugDrawer.DrawLine(chunkNode.ToGlobalPosition(cornerPos[corners[1]]), chunkNode.ToGlobalPosition(cornerPos[corners[2]]), Nz::Color::Green());
@@ -973,6 +978,7 @@ namespace tsom
 			raycastResult.hitEntity = hitInfo.hitEntity;
 			raycastResult.hitPos = hitInfo.hitPosition;
 			raycastResult.hitNormal = hitInfo.hitNormal;
+			raycastResult.subShapeID = hitInfo.subShapeID;
 		};
 
 		struct IgnoreSelf : Nz::PhysBodyFilter3D

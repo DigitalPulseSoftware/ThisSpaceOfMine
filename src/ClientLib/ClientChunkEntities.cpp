@@ -146,12 +146,12 @@ namespace tsom
 		std::vector<Nz::UInt32> indices;
 		std::vector<VertexStruct> vertices;
 
-		auto AddVertices = [&](Nz::UInt32 count)
+		auto AddVertices = [&](const Nz::Vector3ui& blockIndices, Direction direction)
 		{
 			Chunk::VertexAttributes vertexAttributes;
 
 			vertexAttributes.firstIndex = Nz::SafeCast<Nz::UInt32>(vertices.size());
-			vertices.resize(vertices.size() + count);
+			vertices.resize(vertices.size() + 4);
 			vertexAttributes.position = Nz::SparsePtr<Nz::Vector3f>(&vertices[vertexAttributes.firstIndex].position, sizeof(vertices.front()));
 			vertexAttributes.normal = Nz::SparsePtr<Nz::Vector3f>(&vertices[vertexAttributes.firstIndex].normal, sizeof(vertices.front()));
 			vertexAttributes.tangent = Nz::SparsePtr<Nz::Vector3f>(&vertices[vertexAttributes.firstIndex].tangent, sizeof(vertices.front()));
@@ -297,7 +297,7 @@ namespace tsom
 
 			auto& rigidBodyComponent = chunkEntity.get<Nz::RigidBody3DComponent>();
 			const std::shared_ptr<Nz::Collider3D>& collider = rigidBodyComponent.GetCollider();
-			if (!collider)
+			if (collider->GetType() == Nz::ColliderType3D::Empty)
 				return;
 
 			std::shared_ptr<Nz::MaterialInstance> colliderMat = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic);
@@ -308,7 +308,11 @@ namespace tsom
 				return true;
 			});
 
-			std::shared_ptr<Nz::Mesh> colliderMesh = Nz::Mesh::Build(collider->GenerateDebugMesh());
+			std::shared_ptr<Nz::StaticMesh> colliderSubmesh = collider->GenerateDebugMesh();
+			if (!colliderSubmesh)
+				return;
+
+			std::shared_ptr<Nz::Mesh> colliderMesh = Nz::Mesh::Build(std::move(colliderSubmesh));
 			std::shared_ptr<Nz::GraphicalMesh> colliderGraphicalMesh = Nz::GraphicalMesh::BuildFromMesh(*colliderMesh);
 
 			colliderModel = std::make_shared<Nz::Model>(colliderGraphicalMesh);

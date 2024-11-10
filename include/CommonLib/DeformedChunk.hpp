@@ -19,9 +19,10 @@ namespace tsom
 			DeformedChunk(DeformedChunk&&) = delete;
 			~DeformedChunk() = default;
 
+			std::pair<std::shared_ptr<Nz::Collider3D>, Nz::Vector3f> BuildBlockCollider(const Nz::Vector3ui& blockIndices, float scale = 1.f) const override;
 			std::shared_ptr<Nz::Collider3D> BuildCollider() const override;
 
-			std::optional<Nz::Vector3ui> ComputeCoordinates(const Nz::Vector3f& position) const override;
+			std::optional<HitBlock> ComputeHitCoordinates(const Nz::Vector3f& hitPos, const Nz::Vector3f& hitNormal, const Nz::Collider3D& collider, std::uint32_t hitSubshapeId) const override;
 			Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> ComputeVoxelCorners(const Nz::Vector3ui& indices) const override;
 
 			void DeformNormals(Nz::SparsePtr<Nz::Vector3f> normals, const Nz::Vector3f& referenceNormal, Nz::SparsePtr<const Nz::Vector3f> positions, std::size_t vertexCount) const override;

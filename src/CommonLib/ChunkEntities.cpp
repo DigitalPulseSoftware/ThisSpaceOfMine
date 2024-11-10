@@ -12,8 +12,6 @@
 #include <Nazara/Core/TaskSchedulerAppComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
-#include <fmt/color.h>
-#include <fmt/printf.h>
 #include <cassert>
 
 namespace tsom
@@ -165,7 +163,7 @@ namespace tsom
 		});
 	}
 
-	auto ChunkEntities::ProcessChunkUpdate(const Chunk& chunk, DirectionMask /*neighborMask*/) -> UpdateJob*
+	auto ChunkEntities::ProcessChunkUpdate(const Chunk& chunk, DirectionMask neighborMask) -> UpdateJob*
 	{
 		assert(chunk.HasContent());
 
@@ -200,6 +198,23 @@ namespace tsom
 
 			updateJob->jobDone++;
 		});
+
+		// Add neighbor chunks
+		for (Direction neighborDir : neighborMask)
+		{
+			ChunkIndices neighborIndices = chunk.GetIndices() + s_chunkDirOffset[neighborDir];
+			const Chunk* neighborChunk = m_chunkContainer.GetChunk(neighborIndices);
+
+			// We only need to regenerate collisions for neighbor chunks having per-face collisions (like deformed chunks)
+			if (!neighborChunk || !neighborChunk->HasContent() || !neighborChunk->HasPerFaceCollisions())
+				continue;
+
+			updateJob->chunkDependencies.push_back(neighborIndices);
+
+			// Trigger our neighbor update
+			if (!m_updateJobs.contains(neighborIndices))
+				ProcessChunkUpdate(*neighborChunk, 0);
+		}
 
 		UpdateJob* updateJobPtr = updateJob.get();
 		m_updateJobs.insert_or_assign(chunk.GetIndices(), std::move(updateJob));

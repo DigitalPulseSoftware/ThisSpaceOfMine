@@ -40,6 +40,7 @@ namespace tsom
 	class TSOM_COMMONLIB_API Chunk : public std::enable_shared_from_this<Chunk>
 	{
 		public:
+			struct HitBlock;
 			struct VertexAttributes;
 
 			inline Chunk(const BlockLibrary& blockLibrary, ChunkContainer& owner, const ChunkIndices& indices, const Nz::Vector3ui& size, float blockSize);
@@ -47,10 +48,11 @@ namespace tsom
 			Chunk(Chunk&&) = delete;
 			virtual ~Chunk();
 
+			virtual std::pair<std::shared_ptr<Nz::Collider3D>, Nz::Vector3f> BuildBlockCollider(const Nz::Vector3ui& blockIndices, float scale = 1.f) const = 0;
 			virtual std::shared_ptr<Nz::Collider3D> BuildCollider() const = 0;
-			virtual void BuildMesh(std::vector<Nz::UInt32>& indices, const Nz::Vector3f& center, const Nz::FunctionRef<VertexAttributes(Nz::UInt32 count)>& addVertices) const;
+			virtual void BuildMesh(std::vector<Nz::UInt32>& indices, const Nz::Vector3f& center, const Nz::FunctionRef<VertexAttributes(const Nz::Vector3ui& blockIndices, Direction direction)>& addFace) const;
 
-			virtual std::optional<Nz::Vector3ui> ComputeCoordinates(const Nz::Vector3f& position) const = 0;
+			virtual std::optional<HitBlock> ComputeHitCoordinates(const Nz::Vector3f& hitPos, const Nz::Vector3f& hitNormal, const Nz::Collider3D& collider, std::uint32_t hitSubshapeId) const = 0;
 			virtual Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> ComputeVoxelCorners(const Nz::Vector3ui& indices) const;
 
 			virtual void DeformNormals(Nz::SparsePtr<Nz::Vector3f> normals, const Nz::Vector3f& referenceNormal, Nz::SparsePtr<const Nz::Vector3f> positions, std::size_t vertexCount) const;
@@ -73,6 +75,7 @@ namespace tsom
 			inline const Nz::Vector3ui& GetSize() const;
 
 			inline bool HasContent() const;
+			inline bool HasPerFaceCollisions() const;
 
 			inline void LockRead() const;
 			inline void LockWrite();
@@ -93,6 +96,12 @@ namespace tsom
 			NazaraSignal(OnBlockUpdated, Chunk* /*emitter*/, const Nz::Vector3ui& /*indices*/, BlockIndex /*newBlock*/);
 			NazaraSignal(OnReset, Chunk* /*emitter*/);
 
+			struct HitBlock
+			{
+				Direction direction;
+				Nz::Vector3ui blockIndices;
+			};
+
 			struct VertexAttributes
 			{
 				Nz::UInt32 firstIndex;
@@ -105,6 +114,7 @@ namespace tsom
 
 		protected:
 			void OnChunkReset();
+			inline void SetPerFaceCollision();
 
 			mutable std::shared_mutex m_mutex;
 			std::vector<BlockIndex> m_blocks;
@@ -114,6 +124,7 @@ namespace tsom
 			ChunkIndices m_indices;
 			const BlockLibrary& m_blockLibrary;
 			ChunkContainer& m_owner;
+			bool m_hasPerFaceCollision;
 			float m_blockSize;
 	};
 }

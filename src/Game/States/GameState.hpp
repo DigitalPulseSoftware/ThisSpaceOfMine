@@ -61,6 +61,7 @@ namespace tsom
 				entt::handle hitEntity;
 				Nz::Vector3f hitPos;
 				Nz::Vector3f hitNormal;
+				Nz::UInt32 subShapeID;
 			};
 
 			void LayoutWidgets(const Nz::Vector2f& newSize) override;

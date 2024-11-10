@@ -2,6 +2,8 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
+#include <Nazara/Math/Box.hpp>
+
 namespace tsom
 {
 	inline DeformedChunk::DeformedChunk(const BlockLibrary& blockLibrary, ChunkContainer& owner, const ChunkIndices& indices, const Nz::Vector3ui& size, float cellSize, const Nz::Vector3f& deformationCenter, float deformationRadius) :
@@ -9,6 +11,7 @@ namespace tsom
 	m_deformationCenter(deformationCenter),
 	m_deformationRadius(deformationRadius)
 	{
+		SetPerFaceCollision();
 	}
 
 	inline void DeformedChunk::UpdateDeformationRadius(float deformationRadius)
