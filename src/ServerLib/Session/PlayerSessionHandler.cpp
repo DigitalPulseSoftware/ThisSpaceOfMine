@@ -510,8 +510,7 @@ namespace tsom
 			return hitInfo.penetrationDepth;
 		}, nullptr, &physObjectLayerFilter);
 
-
-		Packets::DebugDrawLineList debugDrawLineList;
+		/*Packets::DebugDrawLineList debugDrawLineList;
 		debugDrawLineList.color = (doesCollide) ? Nz::Color::Red() : Nz::Color::Green();
 		debugDrawLineList.duration = 5.f;
 		debugDrawLineList.position = offset;
@@ -521,7 +520,7 @@ namespace tsom
 		auto& visibility = m_player->GetVisibilityHandler();
 
 		debugDrawLineList.environmentId = visibility.GetEnvironmentId(environment);
-		m_player->GetSession()->SendPacket(debugDrawLineList);
+		m_player->GetSession()->SendPacket(debugDrawLineList);*/
 
 		if (doesCollide)
 			return false;
