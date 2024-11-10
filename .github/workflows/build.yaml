@@ -177,12 +177,11 @@ jobs:
     runs-on: macos-latest
     needs: build
     steps:
-      - name: Download x86_64 binaries
+      - name: Download binaries
         uses: actions/download-artifact@v4
         with:
           pattern: artifact-${{ matrix.os }}_*_${{ matrix.mode }}
           path: output
-          run-id: build
           merge-multiple: true
 
       - run: ls -R output
