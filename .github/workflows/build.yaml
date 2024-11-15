@@ -167,21 +167,25 @@ jobs:
         tag: ${{ github.ref }}
         overwrite: true
 
-  build-universal:
+  build-macos-universal:
     strategy:
       fail-fast: false
       matrix:
-        os: [macOS]
         mode: [debug, releasedbg]
 
     runs-on: macos-latest
     needs: build
     steps:
-      - name: Download binaries
+      - name: Download x86_64 binaries
         uses: actions/download-artifact@v4
         with:
-          pattern: artifact-${{ matrix.os }}_*_${{ matrix.mode }}
-          path: output
-          merge-multiple: true
+          name: artifact-macOS_x86_64_${{ matrix.mode }}
+          path: output/x86_64
+
+      - name: Download arm64 binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: artifact-macOS_arm64_${{ matrix.mode }}
+          path: output/arm64
 
       - run: ls -R output
