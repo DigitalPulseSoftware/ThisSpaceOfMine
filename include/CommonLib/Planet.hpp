@@ -62,7 +62,7 @@ namespace tsom
 			Planet& operator=(const Planet&) = delete;
 			Planet& operator=(Planet&&) = delete;
 
-			static constexpr unsigned int ChunkSize = 32;
+			static constexpr unsigned int ChunkSize = 30;
 
 		protected:
 			struct ChunkData

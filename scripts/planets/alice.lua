@@ -1,5 +1,5 @@
 local perlin = PerlinNoise()
-local chunksize = 32
+local chunksize = 30
 local scale = 0.02
 local freespace = 30
 

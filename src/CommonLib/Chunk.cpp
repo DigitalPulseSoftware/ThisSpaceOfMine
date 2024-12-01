@@ -10,124 +10,45 @@
 #include <Nazara/Math/Box.hpp>
 #include <NazaraUtils/CallOnExit.hpp>
 #include <NazaraUtils/EnumArray.hpp>
+#include <NazaraUtils/MathUtils.hpp>
 #include <cassert>
 #include <numeric>
 
 namespace tsom
 {
+	Chunk::Chunk(const BlockLibrary& blockLibrary, ChunkContainer& owner, const ChunkIndices& indices, const Nz::Vector3ui& size, float cellSize) :
+	m_size(size),
+	m_indices(indices),
+	m_blockLibrary(blockLibrary),
+	m_owner(owner),
+	m_hasPerFaceCollision(false),
+	m_blockSize(cellSize)
+	{
+		assert(m_size.x <= Constants::MaxChunkSize);
+		assert(m_size.y <= Constants::MaxChunkSize);
+		assert(m_size.z <= Constants::MaxChunkSize);
+	}
+
 	Chunk::~Chunk() = default;
 
-	void Chunk::BuildMesh(std::size_t layerIndex, std::vector<Nz::UInt32>& indices, const Nz::Vector3f& gravityCenter, const Nz::FunctionRef<VertexAttributes(const Nz::Vector3ui& blockIndices, Direction direction)>& addFace) const
+	void Chunk::BuildFaces(std::size_t layerIndex, const Nz::FunctionRef<void(BlockIndex blockContent, const Nz::Vector3ui& blockIndices, Direction direction)>& addFace, bool ignoreDoubleSided, bool debugClipFace /*= false*/) const
 	{
-		auto DrawFace = [&](BlockIndex blockContent, const Nz::Vector3ui& blockIndices, Direction direction, const Nz::Vector3f& blockCenter, const std::array<Nz::Vector3f, 4>& pos)
-		{
-			VertexAttributes vertexAttributes = addFace(blockIndices, direction);
-			assert(vertexAttributes.position);
-
-			indices.push_back(vertexAttributes.firstIndex);
-			indices.push_back(vertexAttributes.firstIndex + 2);
-			indices.push_back(vertexAttributes.firstIndex + 1);
-
-			indices.push_back(vertexAttributes.firstIndex + 1);
-			indices.push_back(vertexAttributes.firstIndex + 2);
-			indices.push_back(vertexAttributes.firstIndex + 3);
-
-			for (std::size_t i = 0; i < pos.size(); ++i)
-				vertexAttributes.position[i] = pos[i];
-
-			Nz::Vector3f faceCenter = std::accumulate(pos.begin(), pos.end(), Nz::Vector3f::Zero()) / pos.size();
-			Nz::Vector3f faceDirection = Nz::Vector3f::Normalize(faceCenter - blockCenter);
-
-			if (vertexAttributes.normal)
-			{
-				for (std::size_t i = 0; i < pos.size(); ++i)
-					vertexAttributes.normal[i] = faceDirection;
-			}
-
-			if (vertexAttributes.tangent)
-			{
-				Nz::Vector3f edgeCenter = (pos[0] + pos[1]) * 0.5f;
-				Nz::Vector3f tangent = Nz::Vector3f::Normalize(edgeCenter - faceCenter);
-
-				for (std::size_t i = 0; i < pos.size(); ++i)
-					vertexAttributes.tangent[i] = tangent;
-			}
-
-			if (vertexAttributes.uv)
-			{
-				Nz::Vector3f faceUp = s_dirNormals[DirectionFromNormal(Nz::Vector3f::Normalize(faceCenter - gravityCenter))];
-
-				// Make up the rotation from the face up to the regular up
-				Nz::Quaternionf upRotation = Nz::Quaternionf::RotationBetween(faceUp, Nz::Vector3f::Up());
-
-				// Compute texture direction based on face direction in regular orientation
-				Direction texDirection = DirectionFromNormal(upRotation * faceDirection);
-
-				const auto& blockData = m_blockLibrary.GetBlockData(blockContent);
-				std::size_t textureIndex = blockData.texIndices[texDirection];
-
-				// Compute UV
-				float sliceIndex = textureIndex;
-				for (std::size_t i = 0; i < pos.size(); ++i)
-				{
-					// Get vector from center to corner (no need to normalize) and use it to compute UV
-					// This is similar to the way a GPU compute UV when sampling a cubemap: https://www.gamedev.net/forums/topic/687535-implementing-a-cube-map-lookup-function/5337472/
-					Nz::Vector3f dir = upRotation * (pos[i] - blockCenter);
-					Nz::Vector3f dirAbs = dir.GetAbs();
-
-					float mag = 0.f;
-					Nz::Vector2f uv;
-					switch (texDirection) //< TODO: texture direction should be defined by dir to handle corners
-					{
-						case Direction::Back:
-						case Direction::Front:
-						{
-							mag = 0.5f / dirAbs.x;
-							uv = { dir.x < 0.f ? -dir.z : dir.z, -dir.y };
-							break;
-						}
-
-						case Direction::Down:
-						case Direction::Up:
-						{
-							mag = 0.5f / dirAbs.y;
-							uv = { dir.x, dir.y < 0.f ? -dir.z : dir.z };
-							break;
-						}
-
-						case Direction::Left:
-						case Direction::Right:
-						{
-							mag = 0.5f / dirAbs.z;
-							uv = { dir.z < 0.f ? dir.x : -dir.x, -dir.y };
-							break;
-						}
-					}
-
-					vertexAttributes.uv[i] = Nz::Vector3f(uv * mag + Nz::Vector2f(0.5f), sliceIndex);
-				}
-			}
-
-			// deform positions after generating UV
-			if (DeformPositions(vertexAttributes.position, pos.size()))
-			{
-				if (vertexAttributes.normal && vertexAttributes.tangent)
-					DeformNormalsAndTangents(vertexAttributes.normal, vertexAttributes.tangent, faceDirection, vertexAttributes.position, pos.size());
-				else if (vertexAttributes.normal)
-					DeformNormals(vertexAttributes.normal, faceDirection, vertexAttributes.position, pos.size());
-			}
-		};
-
 		// Find and lock all neighbor chunks to avoid discrepancies between chunks
 		Nz::EnumArray<Direction, const Chunk*> neighborChunks;
-		for (auto&& [dir, chunk] : neighborChunks.iter_kv())
-		{
-			chunk = m_owner.GetChunk(m_indices + s_chunkDirOffset[dir]);
-			if (!chunk)
-				continue;
 
-			chunk->LockRead();
+		if (!debugClipFace)
+		{
+			for (auto&& [dir, chunk] : neighborChunks.iter_kv())
+			{
+				chunk = m_owner.GetChunk(m_indices + s_chunkDirOffset[dir]);
+				if (!chunk)
+					continue;
+
+				chunk->LockRead();
+			}
 		}
+		else
+			neighborChunks.fill(nullptr);
 
 		NAZARA_DEFER(
 		{
@@ -138,133 +59,117 @@ namespace tsom
 			}
 		});
 
-		auto GetNeighborBlock = [&](Nz::Vector3ui indices, Direction direction) -> std::optional<BlockIndex>
-		{
-			ChunkIndices chunkIndices = m_indices;
-			std::swap(chunkIndices.y, chunkIndices.z);
+		assert(m_size.x == m_size.y && m_size.x == m_size.z);
+		unsigned int chunkSize = m_size.x;
+		unsigned int chunkSizeSquared = chunkSize * chunkSize;
+		std::vector<Nz::UInt32> opaqueBlockMask(chunkSizeSquared * 3, 0); // X | Y | Z
 
-			for (unsigned int axis : { 0, 1, 2 })
-			{
-				unsigned int& index = indices[axis];
-				int offset = s_blockDirOffset[direction][axis];
-				assert(offset >= -1 && offset <= 1);
-
-				if (offset > 0)
-				{
-					index += offset;
-					if (index >= m_size[axis])
-					{
-						index -= m_size[axis];
-						chunkIndices[axis]++;
-					}
-				}
-				else if (offset < 0)
-				{
-					unsigned int posOffset = std::abs(offset);
-					if (posOffset > index)
-					{
-						index += m_size[axis];
-						chunkIndices[axis]--;
-					}
-
-					index -= posOffset;
-				}
-			}
-
-			std::swap(chunkIndices.y, chunkIndices.z);
-
-			if (chunkIndices != m_indices)
-			{
-				const Chunk* chunk = neighborChunks[direction];
-				if (!chunk)
-					return {};
-
-				if (!chunk->HasContent())
-					return {};
-
-				return chunk->GetBlockContent(indices);
-			}
-			else
-				return GetBlockContent(indices);
+		constexpr std::array<Direction, 6> axisDir = {
+			Direction::Left,  Direction::Right,
+			Direction::Front, Direction::Back,
+			Direction::Down,  Direction::Up
 		};
 
-		for (unsigned int z = 0; z < m_size.z; ++z)
+		for (unsigned int z = 0; z < chunkSize; ++z)
 		{
-			for (unsigned int y = 0; y < m_size.y; ++y)
+			for (unsigned int y = 0; y < chunkSize; ++y)
 			{
-				for (unsigned int x = 0; x < m_size.x; ++x)
+				for (unsigned int x = 0; x < chunkSize; ++x)
 				{
 					Nz::Vector3ui blockIndices(x, y, z);
 
 					BlockIndex blockIndex = GetBlockContent(blockIndices);
-					if (blockIndex == EmptyBlockIndex)
-						continue;
-
+					//unsigned int l = blockIndices.z % 2;
+					//BlockIndex blockIndex = (blockIndices.x % 2 == l || blockIndices.y % 2 != l) ? EmptyBlockIndex : 1;
 					const auto& blockData = m_blockLibrary.GetBlockData(blockIndex);
 					if (blockData.layerIndex != layerIndex)
 						continue;
 
-					// Get unaltered voxel corners and deform them next
-					Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> corners = Chunk::ComputeVoxelCorners(blockIndices);
+					opaqueBlockMask[z * chunkSize + y] |= ((!blockData.isTransparent) ? 1u : 0u) << (x + 1);
+					opaqueBlockMask[chunkSizeSquared + z * chunkSize + x] |= ((!blockData.isTransparent) ? 1u : 0u) << (y + 1);
+					opaqueBlockMask[2 * chunkSizeSquared + y * chunkSize + x] |= ((!blockData.isTransparent) ? 1u : 0u) << (z + 1);
+				}
+			}
+		}
 
-					Nz::Vector3f blockCenter = std::accumulate(corners.begin(), corners.end(), Nz::Vector3f::Zero()) / corners.size();
+		auto GetBlockIndices = [](unsigned int axis, unsigned int i, unsigned int j, unsigned int k)
+		{
+			std::array axisIndices = {
+				Nz::Vector3ui{ k, j, i },
+				Nz::Vector3ui{ j, k, i },
+				Nz::Vector3ui{ j, i, k }
+			};
 
-					auto IsTransparent = [&](BlockIndex neighborBlockIndex)
+			return axisIndices[axis];
+		};
+
+		// Fill with neighbor chunks
+#if 0
+		for (unsigned int axis : { 0, 1, 2 })
+		{
+			const Chunk* leftChunk = neighborChunks[axisDir[axis * 2]];
+			if (leftChunk && leftChunk->HasContent())
+			{
+				Nz::UInt32* opaqueVoxelMaskPtr = &opaqueBlockMask[axis * chunkSizeSquared];
+				for (unsigned int i = 0; i < chunkSize; ++i)
+				{
+					for (unsigned int j = 0; j < chunkSize; ++j)
 					{
-						// don't render faces between blocks of the same type even if transparent
-						if (blockIndex == neighborBlockIndex)
-							return false;
+						BlockIndex blockIndex = leftChunk->GetBlockContent(GetBlockIndices(axis, i, j, chunkSize - 1));
+						const auto& blockData = m_blockLibrary.GetBlockData(blockIndex);
 
-						const auto& neighborBlockData = m_blockLibrary.GetBlockData(neighborBlockIndex);
-						return neighborBlockData.isTransparent;
-					};
+						opaqueVoxelMaskPtr[i * chunkSize + j] |= ((!blockData.isTransparent) ? 1u : 0u) << (chunkSize - 1);
+					}
+				}
+			}
 
-					// Up
-					if (auto neighborOpt = GetNeighborBlock(blockIndices, Direction::Up); !neighborOpt || IsTransparent(*neighborOpt))
+			const Chunk* rightChunk = neighborChunks[axisDir[axis * 2 + 1]];
+			if (rightChunk && rightChunk->HasContent())
+			{
+				Nz::UInt32* opaqueVoxelMaskPtr = &opaqueBlockMask[axis * chunkSizeSquared];
+				for (unsigned int i = 0; i < chunkSize; ++i)
+				{
+					for (unsigned int j = 0; j < chunkSize; ++j)
 					{
-						DrawFace(blockIndex, blockIndices, Direction::Up, blockCenter, { corners[Nz::BoxCorner::RightTopNear], corners[Nz::BoxCorner::LeftTopNear], corners[Nz::BoxCorner::RightBottomNear], corners[Nz::BoxCorner::LeftBottomNear] });
-						if (blockData.isDoubleSided)
-							DrawFace(blockIndex, blockIndices, Direction::Up, blockCenter, { corners[Nz::BoxCorner::LeftTopNear], corners[Nz::BoxCorner::RightTopNear], corners[Nz::BoxCorner::LeftBottomNear], corners[Nz::BoxCorner::RightBottomNear] });
+						BlockIndex blockIndex = rightChunk->GetBlockContent(GetBlockIndices(axis, i, j, 0));
+						const auto& blockData = m_blockLibrary.GetBlockData(blockIndex);
+
+						opaqueVoxelMaskPtr[i * chunkSize + j] |= ((!blockData.isTransparent) ? 1u : 0u) << 0;
+					}
+				}
+			}
+		}
+#endif
+
+		auto AddFace = [&](const Nz::Vector3ui& blockIndices, Direction direction)
+		{
+			BlockIndex blockIndex = GetBlockContent(blockIndices);
+			addFace(blockIndex, blockIndices, direction);
+		};
+
+		const Nz::UInt32* opaqueVoxelMaskPtr = &opaqueBlockMask[0];
+		constexpr Nz::UInt32 innerMask = 0b0111'1111'1111'1111'1111'1111'1111'1110u;
+		for (unsigned int axis : { 0, 1, 2 })
+		{
+			for (unsigned int i = 0; i < chunkSize; ++i)
+			{
+				for (unsigned int j = 0; j < chunkSize; ++j)
+				{
+					Nz::UInt32 opaqueVoxelMask = *opaqueVoxelMaskPtr++;
+					Nz::UInt32 leftFaceMask = ((~opaqueVoxelMask << 1) & opaqueVoxelMask) & innerMask;
+					while (Nz::UInt32 k = Nz::FindFirstBit(leftFaceMask))
+					{
+						k--; // Nz::FindFirstBit returns the active bit + 1 or 0
+						AddFace(GetBlockIndices(axis, i, j, k - 1), axisDir[axis * 2]);
+						leftFaceMask = Nz::ClearBit(leftFaceMask, k);
 					}
 
-					// Down
-					if (auto neighborOpt = GetNeighborBlock(blockIndices, Direction::Down); !neighborOpt || IsTransparent(*neighborOpt))
+					Nz::UInt32 rightFaceMask = ((~opaqueVoxelMask >> 1) & opaqueVoxelMask) & innerMask;
+					while (Nz::UInt32 k = Nz::FindFirstBit(rightFaceMask))
 					{
-						DrawFace(blockIndex, blockIndices, Direction::Down, blockCenter, { corners[Nz::BoxCorner::LeftTopFar], corners[Nz::BoxCorner::RightTopFar], corners[Nz::BoxCorner::LeftBottomFar], corners[Nz::BoxCorner::RightBottomFar] });
-						if (blockData.isDoubleSided)
-							DrawFace(blockIndex, blockIndices, Direction::Down, blockCenter, { corners[Nz::BoxCorner::RightTopFar], corners[Nz::BoxCorner::LeftTopFar], corners[Nz::BoxCorner::RightBottomFar], corners[Nz::BoxCorner::LeftBottomFar] });
-					}
-
-					// Front
-					if (auto neighborOpt = GetNeighborBlock(blockIndices, Direction::Front); !neighborOpt || IsTransparent(*neighborOpt))
-					{
-						DrawFace(blockIndex, blockIndices, Direction::Front, blockCenter, { corners[Nz::BoxCorner::RightTopFar], corners[Nz::BoxCorner::RightTopNear], corners[Nz::BoxCorner::RightBottomFar], corners[Nz::BoxCorner::RightBottomNear] });
-						if (blockData.isDoubleSided)
-							DrawFace(blockIndex, blockIndices, Direction::Front, blockCenter, { corners[Nz::BoxCorner::RightTopNear], corners[Nz::BoxCorner::RightTopFar], corners[Nz::BoxCorner::RightBottomNear], corners[Nz::BoxCorner::RightBottomFar] });
-					}
-
-					// Back
-					if (auto neighborOpt = GetNeighborBlock(blockIndices, Direction::Back); !neighborOpt || IsTransparent(*neighborOpt))
-					{
-						DrawFace(blockIndex, blockIndices, Direction::Back, blockCenter, { corners[Nz::BoxCorner::LeftTopNear], corners[Nz::BoxCorner::LeftTopFar], corners[Nz::BoxCorner::LeftBottomNear], corners[Nz::BoxCorner::LeftBottomFar] });
-						if (blockData.isDoubleSided)
-							DrawFace(blockIndex, blockIndices, Direction::Back, blockCenter, { corners[Nz::BoxCorner::LeftTopFar], corners[Nz::BoxCorner::LeftTopNear], corners[Nz::BoxCorner::LeftBottomFar], corners[Nz::BoxCorner::LeftBottomNear] });
-					}
-
-					// Left
-					if (auto neighborOpt = GetNeighborBlock(blockIndices, Direction::Left); !neighborOpt || IsTransparent(*neighborOpt))
-					{
-						DrawFace(blockIndex, blockIndices, Direction::Left, blockCenter, { corners[Nz::BoxCorner::RightBottomNear], corners[Nz::BoxCorner::LeftBottomNear], corners[Nz::BoxCorner::RightBottomFar], corners[Nz::BoxCorner::LeftBottomFar] });
-						if (blockData.isDoubleSided)
-							DrawFace(blockIndex, blockIndices, Direction::Left, blockCenter, { corners[Nz::BoxCorner::LeftBottomNear], corners[Nz::BoxCorner::RightBottomNear], corners[Nz::BoxCorner::LeftBottomFar], corners[Nz::BoxCorner::RightBottomFar] });
-					}
-
-					// Right
-					if (auto neighborOpt = GetNeighborBlock(blockIndices, Direction::Right); !neighborOpt || IsTransparent(*neighborOpt))
-					{
-						DrawFace(blockIndex, blockIndices, Direction::Right, blockCenter, { corners[Nz::BoxCorner::LeftTopNear], corners[Nz::BoxCorner::RightTopNear], corners[Nz::BoxCorner::LeftTopFar], corners[Nz::BoxCorner::RightTopFar] });
-						if (blockData.isDoubleSided)
-							DrawFace(blockIndex, blockIndices, Direction::Right, blockCenter, { corners[Nz::BoxCorner::RightTopNear], corners[Nz::BoxCorner::LeftTopNear], corners[Nz::BoxCorner::RightTopFar], corners[Nz::BoxCorner::LeftTopFar] });
+						k--; // Nz::FindFirstBit returns the active bit + 1 or 0
+						AddFace(GetBlockIndices(axis, i, j, k - 1), axisDir[axis * 2 + 1]);
+						rightFaceMask = Nz::ClearBit(rightFaceMask, k);
 					}
 				}
 			}

@@ -42,6 +42,15 @@ namespace tsom
 		Nz::Vector3f::Up()
 	};
 
+	constexpr Nz::EnumArray<Direction, Nz::Vector3f> s_dirTangents = {
+		Nz::Vector3f::Up(),
+		Nz::Vector3f::Backward(),
+		Nz::Vector3f::Up(),
+		Nz::Vector3f::Up(),
+		Nz::Vector3f::Up(),
+		Nz::Vector3f::Forward()
+	};
+
 	// Debug colors
 	constexpr Nz::EnumArray<Direction, Nz::Color> s_dirColors = {
 		Nz::Color::Green(), //< Back

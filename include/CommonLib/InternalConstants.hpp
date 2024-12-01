@@ -16,6 +16,7 @@ namespace tsom::Constants
 {
 	// Chunk constants
 	constexpr std::size_t MaxChunkLayerCount = 4;
+	constexpr Nz::UInt32 MaxChunkSize = 30; //< Max expected chunk size (is used to create the worst-case index buffer on client)
 
 	// Network constants
 	constexpr Nz::UInt32 NetworkChannelCount = 3;

@@ -16,10 +16,8 @@ namespace Nz
 {
 	class ApplicationBase;
 	class EnttWorld;
+	class GraphicalMesh;
 	class MaterialInstance;
-	class Mesh;
-	class TaskScheduler;
-	class VertexDeclaration;
 }
 
 namespace tsom
@@ -46,19 +44,26 @@ namespace tsom
 			ClientChunkEntities& operator=(ClientChunkEntities&&) = delete;
 
 		private:
+			struct VoxelBuffer
+			{
+				std::size_t faceCount;
+				std::vector<std::uint8_t> bufferData;
+			};
+
 			struct ColliderModelUpdateJob : UpdateJob
 			{
 				std::shared_ptr<Nz::Collider3D> collider;
-				std::shared_ptr<Nz::Mesh> mesh;
+				VoxelBuffer voxelData;
 			};
 
-			std::shared_ptr<Nz::Mesh> BuildMesh(const Chunk& chunk);
+			VoxelBuffer BuildMeshData(const Chunk& chunk);
 			ColliderModelUpdateJob* ProcessChunkUpdate(const Chunk& chunk, DirectionMask neighborMask) override;
 			void UpdateChunkDebugCollider(const ChunkIndices& chunkIndices);
 
-			std::shared_ptr<Nz::MaterialInstance> m_chunkMaterial;
-			std::shared_ptr<Nz::VertexDeclaration> m_chunkVertexDeclaration;
-			bool m_isCollisionGenerationEnabled;;
+			std::shared_ptr<Nz::GraphicalMesh> m_chunkGraphicalMesh;
+			std::shared_ptr<Nz::MaterialInstance> m_chunkReferenceMaterial;
+			bool m_isCollisionGenerationEnabled;
+			bool m_shouldDrawDebugColliders;
 	};
 }
 

@@ -54,7 +54,7 @@ namespace tsom
 			Ship& operator=(const Ship&) = delete;
 			Ship& operator=(Ship&&) = delete;
 
-			static constexpr unsigned int ChunkSize = 32;
+			static constexpr unsigned int ChunkSize = 30;
 
 		private:
 			struct ChunkData

@@ -25,22 +25,27 @@ namespace tsom
 		std::vector<Nz::Vector3f> positions;
 		std::vector<Nz::UInt32> triangleUserdata;
 
-		auto AddVertices = [&](const Nz::Vector3ui& blockIndices, Direction direction)
+		auto AddFace = [&](BlockIndex blockContent, const Nz::Vector3ui& blockIndices, Direction direction)
 		{
-			VertexAttributes vertexAttributes;
+			Nz::UInt32 firstIndex = Nz::SafeCaster(positions.size());
+			throw std::runtime_error("todo");
+			/*for (const Nz::Vector3f& corner : faceCorners)
+				positions.push_back(corner);*/
 
-			vertexAttributes.firstIndex = Nz::SafeCast<Nz::UInt32>(positions.size());
-			positions.resize(positions.size() + 4);
-			vertexAttributes.position = Nz::SparsePtr<Nz::Vector3f>(&positions[vertexAttributes.firstIndex]);
+			indices.push_back(firstIndex);
+			indices.push_back(firstIndex + 2);
+			indices.push_back(firstIndex + 1);
+
+			indices.push_back(firstIndex + 1);
+			indices.push_back(firstIndex + 2);
+			indices.push_back(firstIndex + 3);
 
 			Nz::UInt32 localBlockIndex = GetBlockLocalIndex(blockIndices) * 6 + static_cast<Nz::UInt32>(direction);
 			triangleUserdata.push_back(localBlockIndex);
 			triangleUserdata.push_back(localBlockIndex);
-
-			return vertexAttributes;
 		};
 
-		BuildMesh(layerIndex, indices, m_deformationCenter, AddVertices);
+		BuildFaces(layerIndex, AddFace, true);
 		if (indices.empty())
 			return nullptr;
 

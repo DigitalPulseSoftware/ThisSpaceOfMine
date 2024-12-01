@@ -1,6 +1,6 @@
 -- Do not touch to this 2 variables
 local perlin = PerlinNoise()
-local chunksize = 32
+local chunksize = 30
 
 local minGrenerationFreeHeight = 0 -- Generation height limit used to make generation faster if we want empty chunks to allow players to build tall things
 local baseFreeHeight = 30 -- Should be greater than minFreeHeight, difference between both will define max generation height from baseFreeHeight

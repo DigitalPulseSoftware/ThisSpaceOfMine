@@ -43,7 +43,7 @@ namespace tsom
 			ChunkContainer& operator=(const ChunkContainer&) = delete;
 			ChunkContainer& operator=(ChunkContainer&&) noexcept = default;
 
-			static constexpr unsigned int ChunkSize = 32;
+			static constexpr unsigned int ChunkSize = 30;
 
 			NazaraSignal(OnChunkLayerAdded, ChunkContainer* /*planet*/, Chunk* /*chunk*/, std::size_t /*layerIndex*/);
 			NazaraSignal(OnChunkLayerRemove, ChunkContainer* /*planet*/, Chunk* /*chunk*/, std::size_t /*layerIndex*/);

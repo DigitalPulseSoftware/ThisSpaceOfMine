@@ -5,8 +5,10 @@
 #include <ClientLib/ClientChunkEntities.hpp>
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Components/VisualEntityComponent.hpp>
+#include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/Components/EntityOwnerComponent.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
+#include <Nazara/Core/Clock.hpp>
 #include <Nazara/Core/EnttWorld.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <Nazara/Core/IndexBuffer.hpp>
@@ -18,17 +20,32 @@
 #include <Nazara/Graphics/MaterialInstance.hpp>
 #include <Nazara/Graphics/Model.hpp>
 #include <Nazara/Graphics/Components/GraphicsComponent.hpp>
+#include <Nazara/Graphics/PropertyHandler/BufferPropertyHandler.hpp>
 #include <Nazara/Graphics/PropertyHandler/OptionValuePropertyHandler.hpp>
 #include <Nazara/Graphics/PropertyHandler/TexturePropertyHandler.hpp>
 #include <Nazara/Graphics/PropertyHandler/UniformValuePropertyHandler.hpp>
 #include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
+#include <NazaraUtils/CallOnExit.hpp>
+#include <fmt/format.h>
+#include <numeric>
 
 namespace tsom
 {
+	namespace
+	{
+		struct ClientChunkDataComponent
+		{
+			std::shared_ptr<Nz::MaterialInstance> material;
+			std::shared_ptr<Nz::Model> model;
+		};
+	}
+
 	ClientChunkEntities::ClientChunkEntities(Nz::ApplicationBase& app, Nz::EnttWorld& world, ChunkContainer& chunkContainer, const ClientBlockLibrary& blockLibrary, std::size_t layerIndex) :
 	ChunkEntities(app, world, chunkContainer, blockLibrary, layerIndex, NoInit{}),
-	m_isCollisionGenerationEnabled(true)
+	m_isCollisionGenerationEnabled(true),
+	m_shouldDrawDebugColliders(false)
 	{
+		// FIXME: A lot of data can be shared between client chunk instances
 		auto& filesystem = app.GetComponent<Nz::FilesystemAppComponent>();
 
 		Nz::TextureSamplerInfo blockSampler;
@@ -74,10 +91,17 @@ namespace tsom
 		settings.AddPropertyHandler(std::make_unique<Nz::TexturePropertyHandler>("RoughnessMap", "HasRoughnessTexture"));
 		settings.AddPropertyHandler(std::make_unique<Nz::TexturePropertyHandler>("SpecularMap", "HasSpecularTexture"));
 
+		settings.AddValueProperty<float>("ChunkBlockSize", 1.f);
+		settings.AddValueProperty<Nz::Vector3f>("ChunkSize", 32.f); // TODO: Put as Vector3ui and cast in property handler
+		settings.AddPropertyHandler(std::make_unique<Nz::UniformValuePropertyHandler>("ChunkBlockSize"));
+		settings.AddPropertyHandler(std::make_unique<Nz::UniformValuePropertyHandler>("ChunkSize"));
+		settings.AddBufferProperty("VoxelData");
+		settings.AddPropertyHandler(std::make_unique<Nz::BufferPropertyHandler>("VoxelData"));
+
 		Nz::MaterialPass forwardPass;
 		forwardPass.states.depthBuffer = true;
 		forwardPass.states.depthCompare = Nz::RendererComparison::GreaterOrEqual;
-		forwardPass.shaders.push_back(std::make_shared<Nz::UberShader>(nzsl::ShaderStageType::Fragment | nzsl::ShaderStageType::Vertex, "TSOM.BlockPBR"));
+		forwardPass.shaders.push_back(std::make_shared<Nz::UberShader>(nzsl::ShaderStageType::Fragment | nzsl::ShaderStageType::Vertex, "TSOM.ChunkPBR"));
 		settings.AddPass(forwardPassIndex, forwardPass);
 
 		Nz::MaterialPass depthPass = forwardPass;
@@ -95,15 +119,15 @@ namespace tsom
 		distanceShadowPass.options[nzsl::Ast::HashOption("DistanceDepth")] = true;
 		settings.AddPass(distanceShadowPassIndex, distanceShadowPass);
 
-		auto chunkMaterial = std::make_shared<Nz::Material>(std::move(settings), "TSOM.BlockPBR");
+		auto chunkMaterial = std::make_shared<Nz::Material>(std::move(settings), "TSOM.ChunkPBR");
 
-		m_chunkMaterial = chunkMaterial->Instantiate();
-		m_chunkMaterial->SetTextureProperty("BaseColorMap", blockLibrary.GetBaseColorTexture(), blockSampler);
-		m_chunkMaterial->SetTextureProperty("NormalMap", blockLibrary.GetNormalTexture(), blockSampler);
-		m_chunkMaterial->SetTextureProperty("DetailMap", blockLibrary.GetDetailTexture(), blockSampler);
-		m_chunkMaterial->SetValueProperty("ShadowPosScale", 1.f);
-		m_chunkMaterial->SetValueProperty("AlphaTest", true);
-		m_chunkMaterial->UpdatePassesStates({ "ShadowPass", "DistanceShadowPass" }, [](Nz::RenderStates& states)
+		m_chunkReferenceMaterial = chunkMaterial->Instantiate();
+		m_chunkReferenceMaterial->SetTextureProperty("BaseColorMap", blockLibrary.GetBaseColorTexture(), blockSampler);
+		m_chunkReferenceMaterial->SetTextureProperty("NormalMap", blockLibrary.GetNormalTexture(), blockSampler);
+		m_chunkReferenceMaterial->SetTextureProperty("DetailMap", blockLibrary.GetDetailTexture(), blockSampler);
+		m_chunkReferenceMaterial->SetValueProperty("ShadowPosScale", 1.f);
+		m_chunkReferenceMaterial->SetValueProperty("AlphaTest", true);
+		m_chunkReferenceMaterial->UpdatePassesStates({ "ShadowPass", "DistanceShadowPass" }, [](Nz::RenderStates& states)
 		{
 			states.frontFace = Nz::FrontFace::CounterClockwise;
 			states.depthBias = true;
@@ -113,75 +137,90 @@ namespace tsom
 		});
 
 		if (blockLibrary.GetLayerData(layerIndex).isBlended)
-			m_chunkMaterial->ApplyPreset(Nz::MaterialInstancePreset::AdditiveBlended);
+			m_chunkReferenceMaterial->ApplyPreset(Nz::MaterialInstancePreset::AdditiveBlended);
 
-		// VertexDeclaration
-		auto NewDeclaration = [](Nz::VertexInputRate inputRate, std::initializer_list<Nz::VertexDeclaration::ComponentEntry> components)
+		// Create worst case index buffer (alternating checkered voxels)
+		constexpr Nz::UInt32 WorstFaceCount = 6 * (Constants::MaxChunkSize / 2) * (Constants::MaxChunkSize / 2) * Constants::MaxChunkSize;
+		constexpr Nz::UInt32 WorstIndexCount = 6 * WorstFaceCount;
+
+		std::vector<Nz::UInt32> indices(WorstIndexCount);
+		Nz::UInt32* indexPtr = indices.data();
+		for (std::size_t i = 0; i < WorstFaceCount; ++i)
 		{
-			return std::make_shared<Nz::VertexDeclaration>(inputRate, std::move(components));
-		};
+			*indexPtr++ = i * 4 + 0;
+			*indexPtr++ = i * 4 + 2;
+			*indexPtr++ = i * 4 + 1;
 
-		m_chunkVertexDeclaration = NewDeclaration(Nz::VertexInputRate::Vertex, {
-			{
-				Nz::VertexComponent::Position,
-				Nz::ComponentType::Float3,
-				0
-			},
-			{
-				Nz::VertexComponent::Normal,
-				Nz::ComponentType::Float3,
-				0
-			},
-			{
-				Nz::VertexComponent::TexCoord,
-				Nz::ComponentType::Float3,
-				0
-			},
-			{
-				Nz::VertexComponent::Tangent,
-				Nz::ComponentType::Float3,
-				0
-			}
+			*indexPtr++ = i * 4 + 1;
+			*indexPtr++ = i * 4 + 2;
+			*indexPtr++ = i * 4 + 3;
+		}
+
+		auto& renderDevice = Nz::Graphics::Instance()->GetRenderDevice();
+		std::shared_ptr<Nz::RenderBuffer> worstIndexBuffer = renderDevice->InstantiateBuffer(Nz::BufferType::Index, WorstIndexCount * sizeof(Nz::UInt32), Nz::BufferUsage::DeviceLocal | Nz::BufferUsage::Read, indices.data());
+
+		m_chunkGraphicalMesh = std::make_shared<Nz::GraphicalMesh>();
+		m_chunkGraphicalMesh->AddSubMesh({
+			.indexBuffer = std::move(worstIndexBuffer),
+			.indexType = Nz::IndexType::U32,
+			.indexCount = WorstIndexCount
 		});
+
+		// TODO: Configure with chunk settings
+		m_chunkGraphicalMesh->UpdateAABB(Nz::Boxf(-16.f, -16.f, -16.f, 32.f, 32.f, 32.f));
 
 		FillChunks();
 	}
 
-	std::shared_ptr<Nz::Mesh> ClientChunkEntities::BuildMesh(const Chunk& chunk)
+	auto ClientChunkEntities::BuildMeshData(const Chunk& chunk) -> VoxelBuffer
 	{
-		std::vector<Nz::UInt32> indices;
-		std::vector<VertexStruct> vertices;
+		nzsl::FieldOffsets faceDataOffsets(nzsl::StructLayout::Std430);
+		std::size_t data1Offset = faceDataOffsets.AddField(nzsl::StructFieldType::UInt1);
+		std::size_t textureSliceOffset = faceDataOffsets.AddField(nzsl::StructFieldType::Float1);
 
-		auto AddVertices = [&](const Nz::Vector3ui& blockIndices, Direction direction)
+		std::size_t alignedSize = faceDataOffsets.GetAlignedSize();
+
+		std::vector<std::uint8_t> faceData;
+		std::size_t faceCount = 0;
+
+		Nz::Vector3f chunkOffset = chunk.GetContainer().GetChunkOffset(chunk.GetIndices());
+		Nz::Vector3f chunkHalfSize = Nz::Vector3f(chunk.GetSize()) * 0.5f;
+
+		auto AddFaces = [&](BlockIndex blockContent, const Nz::Vector3ui& blockIndices, Direction direction)
 		{
-			Chunk::VertexAttributes vertexAttributes;
+			const auto& blockData = m_blockLibrary.GetBlockData(blockContent);
 
-			vertexAttributes.firstIndex = Nz::SafeCast<Nz::UInt32>(vertices.size());
-			vertices.resize(vertices.size() + 4);
-			vertexAttributes.position = Nz::SparsePtr<Nz::Vector3f>(&vertices[vertexAttributes.firstIndex].position, sizeof(vertices.front()));
-			vertexAttributes.normal = Nz::SparsePtr<Nz::Vector3f>(&vertices[vertexAttributes.firstIndex].normal, sizeof(vertices.front()));
-			vertexAttributes.tangent = Nz::SparsePtr<Nz::Vector3f>(&vertices[vertexAttributes.firstIndex].tangent, sizeof(vertices.front()));
-			vertexAttributes.uv = Nz::SparsePtr<Nz::Vector3f>(&vertices[vertexAttributes.firstIndex].uvw, sizeof(vertices.front()));
+			assert(blockIndices.x <= 30 && blockIndices.y <= 30 && blockIndices.z <= 30);
+			Nz::Vector3f blockOffset = (Nz::Vector3f(blockIndices.x, blockIndices.z, blockIndices.y) - chunkHalfSize + Nz::Vector3f(0.5f)) * chunk.GetBlockSize();
 
-			return vertexAttributes;
+			Nz::Vector3f blockCenter = chunkOffset + blockOffset;
+
+			/*Nz::Vector3f faceCenter = std::accumulate(faceCorners.begin(), faceCorners.end(), Nz::Vector3f::Zero()) / faceCorners.size();
+
+			Nz::Vector3f edgeCenter = (faceCorners[0] + faceCorners[1]) * 0.5f;
+			Nz::Vector3f tangent = Nz::Vector3f::Normalize(edgeCenter - faceCenter);*/
+
+			Direction faceDirection = DirectionFromNormal(Nz::Vector3f::Normalize(blockCenter));
+			Nz::Vector3f faceUp = s_dirNormals[faceDirection];
+
+			// Make up the rotation from the face up to the regular up
+			Nz::Quaternionf upRotation = Nz::Quaternionf::RotationBetween(faceUp, Nz::Vector3f::Up());
+
+			// Compute texture direction based on face direction in regular orientation
+			Direction texDirection = DirectionFromNormal(upRotation * s_dirNormals[direction]);
+			std::size_t textureIndex = blockData.texIndices[texDirection];
+
+			faceData.resize(faceData.size() + alignedSize);
+			void* faceBaseAddr = &faceData[faceCount * alignedSize];
+			Nz::AccessByOffset<Nz::UInt32&>(faceBaseAddr, data1Offset) = (static_cast<Nz::UInt32>(faceDirection) << 18) | (static_cast<Nz::UInt32>(direction) << 15) | (blockIndices.z << 10) | (blockIndices.y << 5) | blockIndices.x;
+			Nz::AccessByOffset<float&>(faceBaseAddr, textureSliceOffset) = textureIndex;
+
+			faceCount++;
 		};
 
-		chunk.BuildMesh(m_layerIndex, indices, m_chunkContainer.GetCenter() - m_chunkContainer.GetChunkOffset(chunk.GetIndices()), AddVertices);
-		if (indices.empty())
-			return nullptr;
+		chunk.BuildFaces(m_layerIndex, AddFaces, true, true);
 
-		std::shared_ptr<Nz::IndexBuffer> indexBuffer = std::make_shared<Nz::IndexBuffer>(Nz::IndexType::U32, Nz::SafeCast<Nz::UInt32>(indices.size()), Nz::BufferUsage::Read, Nz::SoftwareBufferFactory, indices.data());
-		std::shared_ptr<Nz::VertexBuffer> vertexBuffer = std::make_shared<Nz::VertexBuffer>(m_chunkVertexDeclaration, Nz::SafeCast<Nz::UInt32>(vertices.size()), Nz::BufferUsage::Read, Nz::SoftwareBufferFactory, vertices.data());
-
-		std::shared_ptr<Nz::StaticMesh> staticMesh = std::make_shared<Nz::StaticMesh>(std::move(vertexBuffer), std::move(indexBuffer));
-		staticMesh->GenerateAABB();
-		staticMesh->GenerateTangents(); //< FIXME: Tangent generation should be fixed
-
-		std::shared_ptr<Nz::Mesh> chunkMesh = std::make_shared<Nz::Mesh>();
-		chunkMesh->CreateStatic();
-		chunkMesh->AddSubMesh(std::move(staticMesh));
-
-		return chunkMesh;
+		return { faceCount, std::move(faceData) };
 	}
 
 	auto ClientChunkEntities::ProcessChunkUpdate(const Chunk& chunk, DirectionMask neighborMask) -> ColliderModelUpdateJob*
@@ -200,15 +239,21 @@ namespace tsom
 
 		updateJob->applyFunc = [this](const ChunkIndices& chunkIndices, UpdateJob&& job)
 		{
-			ColliderModelUpdateJob&& colliderUpdateJob = static_cast<ColliderModelUpdateJob&&>(job);
+			const Chunk* chunk = m_chunkContainer.GetChunk(chunkIndices);
+			assert(chunk);
+
+			ColliderModelUpdateJob&& colliderModelUpdateJob = static_cast<ColliderModelUpdateJob&&>(job);
 
 			entt::handle chunkEntity = Nz::Retrieve(m_chunkEntities, chunkIndices);
 
 			if (m_isCollisionGenerationEnabled)
 			{
 				auto& rigidBody = chunkEntity.get<Nz::RigidBody3DComponent>();
-				rigidBody.SetCollider(std::move(colliderUpdateJob.collider), false);
+				rigidBody.SetCollider(std::move(colliderModelUpdateJob.collider), false);
 			}
+
+			if (colliderModelUpdateJob.voxelData.faceCount == 0 && !m_shouldDrawDebugColliders)
+				return; // chunk has no rendering
 
 			entt::handle visualEntity;
 			if (VisualEntityComponent* visualEntityComponent = chunkEntity.try_get<VisualEntityComponent>())
@@ -235,21 +280,46 @@ namespace tsom
 			}
 
 			auto& gfxComponent = visualEntity.get_or_emplace<Nz::GraphicsComponent>();
-			gfxComponent.Clear();
-
-			if (colliderUpdateJob.mesh)
 			{
-				// TODO: Move GPU upload to async task (should almost already work on Vulkan, problem is OpenGL)
-				std::shared_ptr<Nz::GraphicalMesh> gfxMesh = Nz::GraphicalMesh::BuildFromMesh(*colliderUpdateJob.mesh);
+				ClientChunkDataComponent* clientChunkData = visualEntity.try_get<ClientChunkDataComponent>();
+				if (colliderModelUpdateJob.voxelData.faceCount > 0)
+				{
+					// TODO: Pool storage buffers (in a smart way to avoid memory cost)
+					if (!clientChunkData)
+					{
+						clientChunkData = &visualEntity.emplace<ClientChunkDataComponent>();
+						clientChunkData->material = m_chunkReferenceMaterial->Clone();
+						clientChunkData->model = std::make_shared<Nz::Model>(m_chunkGraphicalMesh);
+						clientChunkData->model->SetMaterial(0, clientChunkData->material);
+						clientChunkData->model->UpdateRenderLayer(m_blockLibrary.GetLayerData(m_layerIndex).renderLayer);
 
-				std::shared_ptr<Nz::Model> model = std::make_shared<Nz::Model>(std::move(gfxMesh));
-				model->SetMaterial(0, m_chunkMaterial);
-				model->UpdateRenderLayer(m_blockLibrary.GetLayerData(m_layerIndex).renderLayer);
+						clientChunkData->material->SetValueProperty("ChunkBlockSize", chunk->GetBlockSize());
+						clientChunkData->material->SetValueProperty("ChunkSize", Nz::Vector3f(chunk->GetSize()));
 
-				gfxComponent.AttachRenderable(std::move(model), tsom::Constants::RenderMask3D);
+						gfxComponent.AttachRenderable(clientChunkData->model, tsom::Constants::RenderMask3D);
+					}
+
+					// Create storage buffer
+					// TODO: Move GPU upload to async task (should almost already work on Vulkan, problem is OpenGL)
+
+					auto& renderDevice = Nz::Graphics::Instance()->GetRenderDevice();
+
+					std::shared_ptr<Nz::RenderBuffer> chunkStorage = renderDevice->InstantiateBuffer(Nz::BufferType::Storage, colliderModelUpdateJob.voxelData.bufferData.size(), Nz::BufferUsage::DeviceLocal | Nz::BufferUsage::Read, colliderModelUpdateJob.voxelData.bufferData.data());
+					clientChunkData->material->SetBufferProperty("VoxelData", chunkStorage);
+					clientChunkData->model->SetIndexCount(0, colliderModelUpdateJob.voxelData.faceCount * 6);
+				}
+				else
+				{
+					if (clientChunkData)
+					{
+						gfxComponent.DetachRenderable(clientChunkData->model);
+						visualEntity.erase<ClientChunkDataComponent>();
+					}
+				}
 			}
 
-			UpdateChunkDebugCollider(chunkIndices);
+			if (m_shouldDrawDebugColliders)
+				UpdateChunkDebugCollider(chunkIndices);
 		};
 
 		auto& taskScheduler = m_application.GetComponent<Nz::TaskSchedulerAppComponent>();
@@ -261,7 +331,9 @@ namespace tsom
 					return;
 
 				chunkPtr->LockRead();
+				//Nz::HighPrecisionClock c;
 				updateJob->collider = chunkPtr->BuildCollider(m_layerIndex);
+				//fmt::print("chunk physics update took {}us\n", c.GetElapsedTime().AsMicroseconds());
 				chunkPtr->UnlockRead();
 
 				updateJob->jobDone++;
@@ -274,7 +346,9 @@ namespace tsom
 				return;
 
 			chunkPtr->LockRead();
-			updateJob->mesh = BuildMesh(*chunkPtr);
+			//Nz::HighPrecisionClock c;
+			updateJob->voxelData = BuildMeshData(*chunkPtr);
+			//fmt::print("chunk graphics update took {}us\n", c.GetElapsedTime().AsMicroseconds());
 			chunkPtr->UnlockRead();
 
 			updateJob->jobDone++;
@@ -303,38 +377,36 @@ namespace tsom
 
 	void ClientChunkEntities::UpdateChunkDebugCollider(const ChunkIndices& chunkIndices)
 	{
-#if 0
-		std::shared_ptr<Nz::Model> colliderModel;
+		entt::handle chunkEntity = Nz::Retrieve(m_chunkEntities, chunkIndices);
+
+		// Remember the chunkEntity is the logical one, so it has no GraphicsComponent when not debugging
+		auto& gfxComponent = chunkEntity.get_or_emplace<Nz::GraphicsComponent>();
+		gfxComponent.Clear();
+
+		auto& rigidBodyComponent = chunkEntity.get<Nz::RigidBody3DComponent>();
+		const std::shared_ptr<Nz::Collider3D>& collider = rigidBodyComponent.GetCollider();
+		if (collider->GetType() == Nz::ColliderType3D::Empty)
+			return;
+
+		std::shared_ptr<Nz::MaterialInstance> colliderMat = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic);
+		colliderMat->SetValueProperty("BaseColor", Nz::Color::Green());
+		colliderMat->UpdatePassesStates([](Nz::RenderStates& states)
 		{
-			entt::handle chunkEntity = Nz::Retrieve(m_chunkEntities, chunkIndices);
+			states.primitiveMode = Nz::PrimitiveMode::LineList;
+			return true;
+		});
 
-			auto& rigidBodyComponent = chunkEntity.get<Nz::RigidBody3DComponent>();
-			const std::shared_ptr<Nz::Collider3D>& collider = rigidBodyComponent.GetCollider();
-			if (collider->GetType() == Nz::ColliderType3D::Empty)
-				return;
+		std::shared_ptr<Nz::StaticMesh> colliderSubmesh = collider->GenerateDebugMesh();
+		if (!colliderSubmesh)
+			return;
 
-			std::shared_ptr<Nz::MaterialInstance> colliderMat = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic);
-			colliderMat->SetValueProperty("BaseColor", Nz::Color::Green());
-			colliderMat->UpdatePassesStates([](Nz::RenderStates& states)
-			{
-				states.primitiveMode = Nz::PrimitiveMode::LineList;
-				return true;
-			});
+		std::shared_ptr<Nz::Mesh> colliderMesh = Nz::Mesh::Build(std::move(colliderSubmesh));
+		std::shared_ptr<Nz::GraphicalMesh> colliderGraphicalMesh = Nz::GraphicalMesh::BuildFromMesh(*colliderMesh);
 
-			std::shared_ptr<Nz::StaticMesh> colliderSubmesh = collider->GenerateDebugMesh();
-			if (!colliderSubmesh)
-				return;
+		std::shared_ptr<Nz::Model> colliderModel = std::make_shared<Nz::Model>(colliderGraphicalMesh);
+		for (std::size_t i = 0; i < colliderModel->GetSubMeshCount(); ++i)
+			colliderModel->SetMaterial(i, colliderMat);
 
-			std::shared_ptr<Nz::Mesh> colliderMesh = Nz::Mesh::Build(std::move(colliderSubmesh));
-			std::shared_ptr<Nz::GraphicalMesh> colliderGraphicalMesh = Nz::GraphicalMesh::BuildFromMesh(*colliderMesh);
-
-			colliderModel = std::make_shared<Nz::Model>(colliderGraphicalMesh);
-			for (std::size_t i = 0; i < colliderModel->GetSubMeshCount(); ++i)
-				colliderModel->SetMaterial(i, colliderMat);
-
-			auto& gfxComponent = chunkEntity.get_or_emplace<Nz::GraphicsComponent>();
-			gfxComponent.AttachRenderable(std::move(colliderModel), tsom::Constants::RenderMask3D);
-	}
-#endif
+		gfxComponent.AttachRenderable(colliderModel, tsom::Constants::RenderMask3D);
 	}
 }
