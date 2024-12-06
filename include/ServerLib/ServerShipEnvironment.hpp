@@ -9,6 +9,7 @@
 
 #include <ServerLib/Export.hpp>
 #include <ServerLib/ServerEnvironment.hpp>
+#include <NazaraUtils/Signal.hpp>
 #include <tsl/hopscotch_map.h>
 #include <tsl/hopscotch_set.h>
 
@@ -36,12 +37,13 @@ namespace tsom
 			void GenerateShip(bool small);
 
 			const GravityController* GetGravityController() const override;
-			inline entt::handle GetOutsideShipEntity() const;
+			inline entt::handle GetExteriorShipEntity() const;
+			inline const std::shared_ptr<Nz::Collider3D>& GetInteriorAreaCollider() const;
 			Ship& GetShip();
 			const Ship& GetShip() const;
 			inline entt::handle GetShipEntity() const;
 
-			entt::handle LinkOutsideEnvironment(ServerEnvironment* environment, const EnvironmentTransform& transform);
+			entt::handle LinkOutsideEnvironment(ServerEnvironment* environment, const EnvironmentTransform& transform, bool destroyPreviousEntity = true);
 
 			Nz::Result<void, std::string> Load(const nlohmann::json& data);
 
@@ -51,6 +53,8 @@ namespace tsom
 			ServerShipEnvironment& operator=(const ServerShipEnvironment&) = delete;
 			ServerShipEnvironment& operator=(ServerShipEnvironment&&) = delete;
 
+			NazaraSignal(OnInteriorColliderUpdated);
+
 		private:
 			struct Area;
 			struct AreaList;
@@ -58,8 +62,8 @@ namespace tsom
 			void StartAreaUpdate(const Chunk& chunk);
 			void StartTriggerUpdate(const Chunk& chunk, std::shared_ptr<AreaList> areaList);
 
-			std::shared_ptr<Nz::Collider3D> BuildCombinedAreaCollider();
-			void UpdateProxyCollider();
+			std::shared_ptr<Nz::Collider3D> BuildInteriorAreaCollider();
+			void UpdateExteriorCollider();
 
 			static Area BuildArea(const Chunk& chunk, std::size_t firstBlockIndex, Nz::Bitset<Nz::UInt64>& remainingBlocks);
 			static std::shared_ptr<Nz::Collider3D> BuildTriggerCollider(const Chunk& chunk, const AreaList& areaList, const Nz::Vector3f& sizeMargin, std::atomic_bool& isCancelled);
@@ -102,17 +106,17 @@ namespace tsom
 				std::shared_ptr<Nz::Collider3D> expandedCollider;
 			};
 
-			entt::handle m_proxyEntity;
+			entt::handle m_exteriorEntity;
 			entt::handle m_shipEntity;
 			std::optional<Nz::Uuid> m_playerUuid;
-			std::shared_ptr<Nz::Collider3D> m_combinedAreaColliders;
+			std::shared_ptr<Nz::Collider3D> m_interiorAreaColliders;
 			std::shared_ptr<bool> m_shouldSave;
 			tsl::hopscotch_map<ChunkIndices, std::shared_ptr<AreaUpdateJob>> m_areaUpdateJobs;
 			tsl::hopscotch_map<ChunkIndices, std::shared_ptr<TriggerUpdateJob>> m_triggerUpdateJobs;
 			tsl::hopscotch_map<ChunkIndices, ChunkData> m_chunkData;
 			tsl::hopscotch_set<Chunk*> m_invalidatedChunks;
 			ServerEnvironment* m_outsideEnvironment;
-			bool m_isCombinedAreaColliderInvalidated;
+			bool m_isInteriorAreaColliderInvalidated;
 			int m_saveSlot;
 	};
 }

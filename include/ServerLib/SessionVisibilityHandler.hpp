@@ -39,7 +39,7 @@ namespace tsom
 
 			bool CreateChunk(entt::handle entity, Chunk& chunk);
 			void CreateEntity(entt::handle entity, CreateEntityData entityData);
-			bool CreateEnvironment(ServerEnvironment& environment, const EnvironmentTransform& transform);
+			bool CreateEnvironment(ServerEnvironment& environment, entt::handle environmentOwner = {});
 
 			void DestroyChunk(entt::handle entity, Chunk& chunk);
 			void DestroyEntity(entt::handle entity);
@@ -51,15 +51,12 @@ namespace tsom
 			inline bool GetEntityByNetworkId(Packets::Helper::EntityId networkId, entt::handle* entity) const;
 			inline Packets::Helper::EnvironmentId GetEnvironmentId(ServerEnvironment* environment) const;
 
-			inline void MoveEnvironment(ServerEnvironment& environment, const EnvironmentTransform& transform);
-
 			inline void TriggerEntityRpc(entt::handle entity, Nz::UInt32 rpcIndex);
 
 			inline void UpdateControlledEntity(entt::handle entity, CharacterController* controller);
 			inline void UpdateEntityProperty(entt::handle entity, Nz::UInt32 propertyIndex);
 			void UpdateEntityEnvironment(ServerEnvironment& newEnvironment, entt::handle oldEntity, entt::handle newEntity);
 			inline void UpdateLastInputIndex(InputIndex inputIndex);
-			inline void UpdateRootEnvironment(ServerEnvironment& environment);
 
 			SessionVisibilityHandler& operator=(const SessionVisibilityHandler&) = delete;
 			SessionVisibilityHandler& operator=(SessionVisibilityHandler&&) = delete;
@@ -81,6 +78,7 @@ namespace tsom
 			void DispatchChunkReset(Nz::UInt16 tickIndex);
 			void DispatchEntities(Nz::UInt16 tickIndex);
 			void DispatchEnvironments(Nz::UInt16 tickIndex);
+			void HandleEntityCreation(std::vector<Packets::Helper::EntityData>& entities, entt::handle entity, CreateEntityData&& createEntityData);
 			void HandleEntityDestruction(entt::handle entity);
 
 			static constexpr std::size_t MaxConcurrentChunkUpdate = 3;
@@ -91,6 +89,11 @@ namespace tsom
 			using ChunkId = Packets::Helper::ChunkId;
 			using EntityId = Packets::Helper::EntityId;
 			using EnvironmentId = Packets::Helper::EnvironmentId;
+
+			struct HandlerHasher
+			{
+				inline std::size_t operator()(const entt::handle& handle) const;
+			};
 
 			struct ChunkData
 			{
@@ -116,14 +119,22 @@ namespace tsom
 
 			struct EnvironmentData
 			{
-				ServerEnvironment* environment;
+				ServerEnvironment* environment = nullptr;
+				entt::handle owner;
 				Nz::Bitset<Nz::UInt64> entities;
 			};
 
-			struct EnvironmentTransformation
+			struct EnvironmentCreationData
 			{
 				ServerEnvironment* environment;
-				EnvironmentTransform transform;
+				entt::handle owner;
+				tsl::hopscotch_map<entt::handle, CreateEntityData, HandlerHasher> createdEntities;
+			};
+
+			struct EnvironmentOwnerUpdate
+			{
+				ServerEnvironment* environment;
+				entt::handle newOwner;
 			};
 
 			struct EnvironmentUpdate
@@ -133,17 +144,12 @@ namespace tsom
 				ServerEnvironment* newEnvironment;
 			};
 
-			struct HandlerHasher
-			{
-				inline std::size_t operator()(const entt::handle& handle) const;
-			};
-
 			using ChunkNetworkMap = tsl::hopscotch_map<ChunkIndices, ChunkId>;
 
 			tsl::hopscotch_map<entt::handle, EntityId, HandlerHasher> m_entityIndices;
 			tsl::hopscotch_map<entt::handle, CreateEntityData, HandlerHasher> m_createdEntities;
 			tsl::hopscotch_map<entt::handle, Nz::UInt32, HandlerHasher> m_propertyUpdatedEntities;
-			tsl::hopscotch_map<entt::handle, std::vector<Nz::UInt32>, HandlerHasher> m_triggeredEntitiesRpc;
+			tsl::hopscotch_map<entt::handle, Nz::HybridVector<Nz::UInt32, 3>, HandlerHasher> m_triggeredEntitiesRpc;
 			tsl::hopscotch_map<entt::handle, ChunkNetworkMap, HandlerHasher> m_chunkNetworkMaps;
 			tsl::hopscotch_map<const ServerEnvironment*, EnvironmentId> m_environmentIndices;
 			tsl::hopscotch_set<entt::handle, HandlerHasher> m_deletedEntities;
@@ -154,8 +160,8 @@ namespace tsom
 			std::vector<ChunkWithPos> m_orderedChunkList;
 			std::vector<EntityData> m_visibleEntities;
 			std::vector<EnvironmentData> m_visibleEnvironments;
-			std::vector<EnvironmentTransformation> m_createdEnvironments;
-			std::vector<EnvironmentTransformation> m_environmentTransformations;
+			std::vector<EnvironmentCreationData> m_createdEnvironments;
+			std::vector<EnvironmentOwnerUpdate> m_environmentOwnerUpdates;
 			std::vector<EnvironmentUpdate> m_environmentUpdates;
 			Nz::Bitset<Nz::UInt64> m_freeChunkIds;
 			Nz::Bitset<Nz::UInt64> m_freeEntityIds;
@@ -169,7 +175,6 @@ namespace tsom
 			InputIndex m_lastInputIndex;
 			CharacterController* m_controlledCharacter;
 			NetworkSession* m_networkSession;
-			ServerEnvironment* m_nextRootEnvironment;
 	};
 }
 

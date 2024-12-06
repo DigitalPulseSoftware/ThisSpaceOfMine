@@ -4,7 +4,6 @@
 
 #include <ServerLib/ServerShipEnvironment.hpp>
 #include <CommonLib/ChunkEntities.hpp>
-#include <CommonLib/PhysicsConstants.hpp>
 #include <CommonLib/Ship.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Components/ShipComponent.hpp>
@@ -14,6 +13,7 @@
 #include <ServerLib/Components/EnvironmentEnterTriggerComponent.hpp>
 #include <ServerLib/Components/EnvironmentProxyComponent.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
+#include <ServerLib/Components/ShipExteriorComponent.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/TaskSchedulerAppComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
@@ -34,7 +34,7 @@ namespace tsom
 	m_playerUuid(playerUuid),
 	m_shouldSave(std::make_shared<bool>(false)),
 	m_outsideEnvironment(nullptr),
-	m_isCombinedAreaColliderInvalidated(false),
+	m_isInteriorAreaColliderInvalidated(false),
 	m_saveSlot(saveSlot)
 	{
 		auto& app = serverInstance.GetApplication();
@@ -95,18 +95,24 @@ namespace tsom
 		if (m_outsideEnvironment)
 		{
 			// Move every player entity out of the ship before destroying it (otherwise the player entities will be destroyed)
+			EnvironmentTransform outsideTransform(Nz::Vector3f::Zero(), Nz::Quaternionf::Identity());
 			Nz::Vector3f outsideVelocity = Nz::Vector3f::Zero();
-			if (m_proxyEntity)
-				outsideVelocity = m_proxyEntity.get<Nz::RigidBody3DComponent>().GetLinearVelocity();
+			if (m_exteriorEntity)
+			{
+				auto& outsideNode = m_exteriorEntity.get<Nz::NodeComponent>();
+
+				outsideTransform = EnvironmentTransform(outsideNode.GetPosition(), outsideNode.GetRotation());
+				outsideVelocity = m_exteriorEntity.get<Nz::RigidBody3DComponent>().GetLinearVelocity();
+			}
 
 			ForEachPlayer([&](ServerPlayer& player)
 			{
-				player.MoveEntityToEnvironment(m_outsideEnvironment, outsideVelocity);
+				player.MoveEntityToEnvironment(m_outsideEnvironment, outsideTransform, outsideVelocity, true);
 			});
 		}
 
-		if (m_proxyEntity)
-			m_proxyEntity.destroy();
+		if (m_exteriorEntity)
+			m_exteriorEntity.destroy();
 
 		m_shipEntity.destroy();
 
@@ -139,35 +145,34 @@ namespace tsom
 		return *m_shipEntity.get<ShipComponent>().ship;
 	}
 
-	entt::handle ServerShipEnvironment::LinkOutsideEnvironment(ServerEnvironment* outsideEnvironment, const EnvironmentTransform& transform)
+	entt::handle ServerShipEnvironment::LinkOutsideEnvironment(ServerEnvironment* outsideEnvironment, const EnvironmentTransform& transform, bool destroyPreviousEntity)
 	{
+		/*if (m_outsideEnvironment)
+		{
+			m_outsideEnvironment->Disconnect(*this);
+			Disconnect(*m_outsideEnvironment);
+		}*/
+
+		if (m_exteriorEntity && destroyPreviousEntity)
+			m_exteriorEntity.destroy();
+
 		assert(outsideEnvironment);
 		m_outsideEnvironment = outsideEnvironment;
 
-		outsideEnvironment->Connect(*this, transform);
-		Connect(*outsideEnvironment, -transform);
+		std::shared_ptr<const EntityClass> shipExteriorClass = m_serverInstance.GetEntityRegistry().FindClass("ship_exterior");
+		NazaraAssert(shipExteriorClass);
 
-		m_proxyEntity = outsideEnvironment->CreateEntity();
-		auto& proxyNode = m_proxyEntity.emplace<Nz::NodeComponent>(transform.translation, transform.rotation);
+		m_exteriorEntity = outsideEnvironment->CreateEntity();
+		m_exteriorEntity.emplace<Nz::NodeComponent>(transform.translation, transform.rotation);
+		m_exteriorEntity.emplace<ClassInstanceComponent>(shipExteriorClass);
+		m_exteriorEntity.emplace<NetworkedComponent>();
+		m_exteriorEntity.emplace<ShipExteriorComponent>().ownerShip = this;
 
-		Nz::RigidBody3D::DynamicSettings physSettings(GetShip().BuildHullCollider(), 100.f);
-		physSettings.objectLayer = Constants::ObjectLayerDynamic;
-		physSettings.linearDamping = 0.f;
+		shipExteriorClass->ActivateEntity(m_exteriorEntity);
 
-		m_proxyEntity.emplace<Nz::RigidBody3DComponent>(physSettings);
+		UpdateExteriorCollider();
 
-		auto& envProxy = m_proxyEntity.emplace<EnvironmentProxyComponent>();
-		envProxy.fromEnv = outsideEnvironment;
-		envProxy.toEnv = this;
-
-		auto& shipEntry = m_proxyEntity.emplace<EnvironmentEnterTriggerComponent>();
-		shipEntry.entryTrigger = m_combinedAreaColliders;
-		if (m_combinedAreaColliders)
-			shipEntry.aabb = m_combinedAreaColliders->GetBoundingBox();
-
-		shipEntry.targetEnvironment = this;
-
-		return m_proxyEntity;
+		return m_exteriorEntity;
 	}
 
 	Nz::Result<void, std::string> ServerShipEnvironment::Load(const nlohmann::json& data)
@@ -302,28 +307,19 @@ namespace tsom
 
 		if (!m_invalidatedChunks.empty())
 		{
-			UpdateProxyCollider();
+			UpdateExteriorCollider();
 			for (Chunk* chunk : m_invalidatedChunks)
 				StartAreaUpdate(*chunk);
 
 			m_invalidatedChunks.clear();
 		}
 
-		if (m_isCombinedAreaColliderInvalidated)
+		if (m_isInteriorAreaColliderInvalidated)
 		{
-			m_combinedAreaColliders = BuildCombinedAreaCollider();
-			m_isCombinedAreaColliderInvalidated = false;
+			m_interiorAreaColliders = BuildInteriorAreaCollider();
+			m_isInteriorAreaColliderInvalidated = false;
 
-			if (m_proxyEntity)
-			{
-				auto& shipEntry = m_proxyEntity.get<EnvironmentEnterTriggerComponent>();
-				shipEntry.entryTrigger = m_combinedAreaColliders;
-				if (shipEntry.entryTrigger)
-				{
-					shipEntry.aabb = m_combinedAreaColliders->GetBoundingBox();
-					shipEntry.aabb.Translate(m_combinedAreaColliders->GetCenterOfMass());
-				}
-			}
+			OnInteriorColliderUpdated();
 		}
 
 		if (m_outsideEnvironment)
@@ -358,9 +354,11 @@ namespace tsom
 				}
 
 				// No longer colliding with the interior
-				Nz::Vector3f outsideVelocity = m_proxyEntity.get<Nz::RigidBody3DComponent>().GetLinearVelocity();
+				auto& outsideNode = m_exteriorEntity.get<Nz::NodeComponent>();
+				EnvironmentTransform outsideTransform(outsideNode.GetPosition(), outsideNode.GetRotation());
+				Nz::Vector3f outsideVelocity = m_exteriorEntity.get<Nz::RigidBody3DComponent>().GetLinearVelocity();
 
-				player.MoveEntityToEnvironment(m_outsideEnvironment, outsideVelocity);
+				player.MoveEntityToEnvironment(m_outsideEnvironment, outsideTransform, outsideVelocity, true);
 			});
 		}
 
@@ -424,7 +422,7 @@ namespace tsom
 			auto& chunkData = m_chunkData[chunkIndices];
 			chunkData.areaCollider = std::move(updateJob.collider);
 			chunkData.expandedAreaCollider = std::move(updateJob.expandedCollider);
-			m_isCombinedAreaColliderInvalidated = true;
+			m_isInteriorAreaColliderInvalidated = true;
 
 			if (!chunkData.areaCollider)
 				return;
@@ -462,7 +460,7 @@ namespace tsom
 		m_triggerUpdateJobs.insert_or_assign(chunk.GetIndices(), std::move(updateJob));
 	}
 
-	std::shared_ptr<Nz::Collider3D> ServerShipEnvironment::BuildCombinedAreaCollider()
+	std::shared_ptr<Nz::Collider3D> ServerShipEnvironment::BuildInteriorAreaCollider()
 	{
 		if (m_chunkData.empty())
 			return nullptr;
@@ -490,21 +488,23 @@ namespace tsom
 		return std::make_shared<Nz::CompoundCollider3D>(std::move(childColliders));
 	}
 
-	void ServerShipEnvironment::UpdateProxyCollider()
+	void ServerShipEnvironment::UpdateExteriorCollider()
 	{
-		if (!m_proxyEntity)
+		// TODO: Move to ship_exterior class
+
+		if (!m_exteriorEntity)
 			return;
 
 		auto& ship = GetShip();
-		std::shared_ptr<Nz::Collider3D> hullCollider = ship.BuildHullCollider();
+
 		std::size_t fullBlockCount = 0;
 		ship.ForEachChunk([&](const ChunkIndices& chunkIndices, const Chunk& chunk)
 		{
 			fullBlockCount += chunk.GetCollisionCellMask().Count();
 		});
 
-		auto& rigidBody = m_proxyEntity.get<Nz::RigidBody3DComponent>();
-		rigidBody.SetCollider(std::move(hullCollider));
+		auto& rigidBody = m_exteriorEntity.get<Nz::RigidBody3DComponent>();
+		rigidBody.SetCollider(ship.BuildHullCollider());
 		rigidBody.SetMass(fullBlockCount);
 	}
 

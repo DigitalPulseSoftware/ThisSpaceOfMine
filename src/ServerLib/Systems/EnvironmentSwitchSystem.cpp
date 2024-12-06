@@ -6,8 +6,8 @@
 #include <ServerLib/ServerEnvironment.hpp>
 #include <ServerLib/ServerInstance.hpp>
 #include <ServerLib/ServerPlayer.hpp>
-#include <ServerLib/ServerShipEnvironment.hpp>
 #include <ServerLib/Components/EnvironmentEnterTriggerComponent.hpp>
+#include <ServerLib/Components/ServerEnvironmentSwitchComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Collider3D.hpp>
 
@@ -16,14 +16,35 @@ namespace tsom
 	void EnvironmentSwitchSystem::Update(Nz::Time elapsedTime)
 	{
 		auto view = m_registry.view<Nz::NodeComponent, EnvironmentEnterTriggerComponent>();
+		auto switchView = m_registry.view<Nz::NodeComponent, ServerEnvironmentSwitchComponent>();
 
-		for (entt::entity entity : view)
+		for (auto&& [triggerEntity, triggerNode, enterTrigger] : view.each())
 		{
-			auto& enterTrigger = view.get<EnvironmentEnterTriggerComponent>(entity);
-			if (!enterTrigger.entryTrigger)
-				continue;
+			EnvironmentTransform transform(triggerNode.GetPosition(), triggerNode.GetRotation());
+			transform = -transform;
 
-			auto& triggerNode = view.get<Nz::NodeComponent>(entity);
+			for (auto&& [entity, entityNode, envSwitch] : switchView.each())
+			{
+				if (entity == triggerEntity)
+					continue;
+
+				Nz::Vector3f entityPosition = entityNode.GetPosition();
+
+				Nz::Vector3f localPlayerPos = triggerNode.ToLocalPosition(entityPosition);
+				// Use AABB as a cheap test
+				if (enterTrigger.aabb.Contains(localPlayerPos))
+				{
+					if (enterTrigger.entryTrigger)
+					{
+						localPlayerPos -= enterTrigger.entryTrigger->GetCenterOfMass(); //< https://jrouwe.github.io/JoltPhysics/index.html#center-of-mass
+						if (enterTrigger.entryTrigger->CollisionQuery(localPlayerPos))
+							envSwitch.handleEnvironmentSwitch(entt::handle(m_registry, entity), enterTrigger.targetEnvironment, transform);
+					}
+					else
+						envSwitch.handleEnvironmentSwitch(entt::handle(m_registry, entity), enterTrigger.targetEnvironment, transform);
+				}
+			}
+
 			m_ownerEnvironment->ForEachPlayer([&](ServerPlayer& player)
 			{
 				if (player.GetControlledEntityEnvironment() != m_ownerEnvironment)
@@ -39,9 +60,14 @@ namespace tsom
 				// Use AABB as a cheap test
 				if (enterTrigger.aabb.Contains(localPlayerPos))
 				{
-					localPlayerPos -= enterTrigger.entryTrigger->GetCenterOfMass(); //< https://jrouwe.github.io/JoltPhysics/index.html#center-of-mass
-					if (enterTrigger.entryTrigger->CollisionQuery(localPlayerPos))
-						player.MoveEntityToEnvironment(enterTrigger.targetEnvironment, Nz::Vector3f::Zero());
+					if (enterTrigger.entryTrigger)
+					{
+						localPlayerPos -= enterTrigger.entryTrigger->GetCenterOfMass(); //< https://jrouwe.github.io/JoltPhysics/index.html#center-of-mass
+						if (enterTrigger.entryTrigger->CollisionQuery(localPlayerPos))
+							player.MoveEntityToEnvironment(enterTrigger.targetEnvironment, transform, Nz::Vector3f::Zero(), enterTrigger.updateRoot);
+					}
+					else
+						player.MoveEntityToEnvironment(enterTrigger.targetEnvironment, transform, Nz::Vector3f::Zero(), enterTrigger.updateRoot);
 				}
 			});
 		}

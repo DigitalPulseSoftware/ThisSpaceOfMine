@@ -24,9 +24,12 @@ namespace tsom
 			~ShipController() = default;
 
 			inline const Nz::Quaternionf& GetReferenceRotation() const;
+			inline entt::handle GetShipEntity() const;
 
-			void PostSimulate(CharacterController& characterOwner, float elapsedTime);
+			void PostSimulate(CharacterController& character, float elapsedTime);
 			void PreSimulate(CharacterController& character, float elapsedTime);
+
+			inline void UpdateShipEntity(entt::handle entity);
 
 			ShipController& operator=(const ShipController&) = delete;
 			ShipController& operator=(ShipController&&) = delete;

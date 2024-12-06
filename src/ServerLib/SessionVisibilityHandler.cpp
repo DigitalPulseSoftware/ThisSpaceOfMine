@@ -71,23 +71,48 @@ namespace tsom
 			m_chunkNetworkMaps.emplace(entity, ChunkNetworkMap{});
 		}
 
-		m_createdEntities.emplace(entity, std::move(entityData));
+		// If the environment is still pending creation, add it to the creation packet
+		auto envIt = m_environmentIndices.find(entityData.environment);
+		if (envIt == m_environmentIndices.end())
+		{
+			auto it = std::find_if(m_createdEnvironments.begin(), m_createdEnvironments.end(), [&](const EnvironmentCreationData& envCreation) { return envCreation.environment == entityData.environment; });
+			NazaraAssert(it != m_createdEnvironments.end());
+			EnvironmentCreationData& creationData = *it;
+			creationData.createdEntities.emplace(entity, std::move(entityData));
+		}
+		else
+			m_createdEntities.emplace(entity, std::move(entityData));
 	}
 
-	bool SessionVisibilityHandler::CreateEnvironment(ServerEnvironment& environment, const EnvironmentTransform& transform)
+	bool SessionVisibilityHandler::CreateEnvironment(ServerEnvironment& environment, entt::handle environmentOwner)
 	{
 		if (auto it = std::find(m_destroyedEnvironments.begin(), m_destroyedEnvironments.end(), &environment); it != m_destroyedEnvironments.end())
 		{
+			// Environment exists but its owner may have changed
+			EnvironmentId envId = Nz::Retrieve(m_environmentIndices, &environment);
+			EnvironmentData& envData = m_visibleEnvironments[envId];
+			if (envData.owner != environmentOwner)
+			{
+				if (auto it = std::find_if(m_environmentOwnerUpdates.begin(), m_environmentOwnerUpdates.end(), [&](const auto& update) { return update.environment == &environment; }); it != m_environmentOwnerUpdates.end())
+					it->newOwner = environmentOwner;
+				else
+				{
+					m_environmentOwnerUpdates.push_back({
+						.environment = &environment,
+						.newOwner = environmentOwner
+					});
+				}
+			}
+
 			m_destroyedEnvironments.erase(it);
-			MoveEnvironment(environment, transform);
 			return false;
 		}
 		else
 		{
-			assert(std::find_if(m_createdEnvironments.begin(), m_createdEnvironments.end(), [&](const EnvironmentTransformation& transform) { return transform.environment == &environment; }) == m_createdEnvironments.end());
+			assert(std::find_if(m_createdEnvironments.begin(), m_createdEnvironments.end(), [&](const EnvironmentCreationData& envCreation) { return envCreation.environment == &environment; }) == m_createdEnvironments.end());
 			m_createdEnvironments.push_back({
 				.environment = &environment,
-				.transform = transform
+				.owner = environmentOwner
 			});
 
 			return true;
@@ -133,34 +158,50 @@ namespace tsom
 		}
 		else
 		{
-			// Schedule deletion
-			m_deletedEntities.emplace(entity);
+			bool found = false;
+			for (EnvironmentCreationData& creationData : m_createdEnvironments)
+			{
+				entityIt = creationData.createdEntities.find(entity);
+				if (entityIt != creationData.createdEntities.end())
+				{
+					creationData.createdEntities.erase(entityIt);
+					found = true;
+					break;
+				}
+			}
+
+			if (!found)
+			{
+				// Schedule deletion
+				m_deletedEntities.emplace(entity);
+			}
 		}
 	}
 
 	void SessionVisibilityHandler::DestroyEnvironment(ServerEnvironment& environment)
 	{
-		if (auto it = std::find_if(m_createdEnvironments.begin(), m_createdEnvironments.end(), [&](const EnvironmentTransformation& transform) { return transform.environment == &environment; }); it != m_createdEnvironments.end())
+		if (auto it = std::find_if(m_createdEnvironments.begin(), m_createdEnvironments.end(), [&](const EnvironmentCreationData& transform) { return transform.environment == &environment; }); it != m_createdEnvironments.end())
 			m_createdEnvironments.erase(it);
 		else
 		{
 			assert(std::find(m_destroyedEnvironments.begin(), m_destroyedEnvironments.end(), &environment) == m_destroyedEnvironments.end());
 			m_destroyedEnvironments.push_back(&environment);
 		}
-
-		if (auto it = std::find_if(m_environmentTransformations.begin(), m_environmentTransformations.end(), [&](const EnvironmentTransformation& transform) { return transform.environment == &environment; }); it != m_environmentTransformations.end())
-			m_environmentTransformations.erase(it);
 	}
 
 	void SessionVisibilityHandler::Dispatch(Nz::UInt16 tickIndex)
 	{
-		DispatchEnvironments(tickIndex);
 		DispatchEntities(tickIndex);
+		DispatchEnvironments(tickIndex);
 		DispatchChunks(tickIndex);
 	}
 
 	void SessionVisibilityHandler::UpdateEntityEnvironment(ServerEnvironment& newEnvironment, entt::handle oldEntity, entt::handle newEntity)
 	{
+		auto it = m_entityIndices.find(oldEntity);
+		if (it == m_entityIndices.end())
+			return;
+
 		// Don't remove from created entities as client will need it to update its environment
 		// TODO: Create entity directly in the right environment if it wasn't send yet
 		m_deletedEntities.erase(oldEntity);
@@ -182,7 +223,6 @@ namespace tsom
 		}
 
 		// Entity indices
-		auto it = m_entityIndices.find(oldEntity);
 		EntityId entityIndex = it.value();
 		m_entityIndices.erase(it);
 		m_entityIndices.emplace(newEntity, entityIndex);
@@ -426,43 +466,10 @@ namespace tsom
 			creationPacket.tickIndex = tickIndex;
 
 			for (auto it = m_createdEntities.begin(); it != m_createdEntities.end(); ++it)
-			{
-				entt::handle handle = it.key();
-				auto& data = it.value();
-
-				std::size_t entityIndex = m_freeEntityIds.FindFirst();
-				if (entityIndex == m_freeEntityIds.npos)
-				{
-					entityIndex = m_freeEntityIds.GetSize();
-					m_freeEntityIds.Resize(entityIndex + FreeEntityIdGrowRate, true);
-				}
-
-				m_freeEntityIds.Set(entityIndex, false);
-
-				if (entityIndex >= m_visibleEntities.size())
-					m_visibleEntities.resize(entityIndex + 1);
-
-				EnvironmentId envIndex = Nz::Retrieve(m_environmentIndices, data.environment);
-
-				m_visibleEntities[entityIndex].entity = handle;
-				m_visibleEntities[entityIndex].envIndex = envIndex;
-				m_visibleEnvironments[envIndex].entities.UnboundedSet(entityIndex);
-
-				m_entityIndices[handle] = entityIndex;
-
-				auto& entityData = creationPacket.entities.emplace_back();
-				if (data.entityClass)
-					entityData.entityClass = m_networkSession->GetStringStore().CheckStringIndex(data.entityClass->GetName());
-				entityData.entityId = Nz::SafeCast<EntityId>(entityIndex);
-				entityData.environmentId = envIndex;
-				entityData.initialStates.position = data.initialPosition;
-				entityData.initialStates.rotation = data.initialRotation;
-				entityData.playerControlled = std::move(data.playerControlledData);
-				entityData.properties = std::move(data.entityProperties);
-			}
+				HandleEntityCreation(creationPacket.entities, it.key(), std::move(it.value()));
+			m_createdEntities.clear();
 
 			m_networkSession->SendPacket(creationPacket);
-			m_createdEntities.clear();
 		}
 
 		if (!m_environmentUpdates.empty())
@@ -584,7 +591,12 @@ namespace tsom
 					entityData.entity = entt::handle{};
 					entityData.envIndex = Nz::MaxValue();
 				}
+				visibleEnvironment.environment = nullptr;
+				visibleEnvironment.owner = {};
 				visibleEnvironment.entities.Clear();
+
+				if (auto it = std::find_if(m_environmentOwnerUpdates.begin(), m_environmentOwnerUpdates.end(), [&](const auto& update) { return update.environment == environment; }); it != m_environmentOwnerUpdates.end())
+					m_environmentOwnerUpdates.erase(it);
 
 				m_environmentIndices.erase(environment);
 
@@ -631,7 +643,7 @@ namespace tsom
 
 		if (!m_createdEnvironments.empty())
 		{
-			for (EnvironmentTransformation& environment : m_createdEnvironments)
+			for (EnvironmentCreationData& environment : m_createdEnvironments)
 			{
 				std::size_t envIndex = m_freeEnvironmentIds.FindFirst();
 				if (envIndex == m_freeEnvironmentIds.npos)
@@ -648,45 +660,87 @@ namespace tsom
 					m_visibleEnvironments.resize(envIndex + 1);
 
 				m_visibleEnvironments[envIndex].environment = environment.environment;
+				m_visibleEnvironments[envIndex].owner = environment.owner;
+
+				EntityId ownerEntityIndex = Nz::MaxValue();
+				if (environment.owner)
+					ownerEntityIndex = Nz::Retrieve(m_entityIndices, environment.owner);
 
 				Packets::EnvironmentCreate createPacket;
 				createPacket.id = Nz::SafeCast<Nz::UInt8>(envIndex);
 				createPacket.tickIndex = tickIndex;
-				createPacket.transform = environment.transform;
+				createPacket.ownerEntity = ownerEntityIndex;
+
+				for (auto it = environment.createdEntities.begin(); it != environment.createdEntities.end(); ++it)
+					HandleEntityCreation(createPacket.entities, it.key(), std::move(it.value()));
 
 				m_networkSession->SendPacket(createPacket);
 			}
-
 			m_createdEnvironments.clear();
 		}
 
-		if (!m_environmentTransformations.empty())
+		if (!m_environmentOwnerUpdates.empty())
 		{
-			for (auto& envTransformation : m_environmentTransformations)
+			Packets::EnvironmentsUpdateOwner updateOwnerPacket;
+			updateOwnerPacket.tickIndex = tickIndex;
+
+			for (EnvironmentOwnerUpdate& ownerUpdate : m_environmentOwnerUpdates)
 			{
-				EnvironmentId envId = Nz::Retrieve(m_environmentIndices, envTransformation.environment);
+				EnvironmentId envIndex = Nz::Retrieve(m_environmentIndices, ownerUpdate.environment);
+				// It's possible (with two root environment switches at the "same time") that the owner updates to the current owner, dismiss it
+				if (m_visibleEnvironments[envIndex].owner == ownerUpdate.newOwner)
+					continue;
 
-				Packets::EnvironmentUpdate envMovementPacket;
-				envMovementPacket.tickIndex = tickIndex;
-				envMovementPacket.id = envId;
-				envMovementPacket.transform = envTransformation.transform;
+				m_visibleEnvironments[envIndex].owner = ownerUpdate.newOwner;
 
-				m_networkSession->SendPacket(envMovementPacket);
+				EntityId entityIndex = Nz::MaxValue();
+				if (ownerUpdate.newOwner)
+					entityIndex = Nz::Retrieve(m_entityIndices, ownerUpdate.newOwner);
+
+				updateOwnerPacket.ownerUpdates.push_back({
+					.environment = envIndex,
+					.newOwner = entityIndex
+				});
 			}
-			m_environmentTransformations.clear();
-		}
 
-		if (m_nextRootEnvironment)
+			if (!updateOwnerPacket.ownerUpdates.empty())
+				m_networkSession->SendPacket(updateOwnerPacket);
+
+			m_environmentOwnerUpdates.clear();
+		}
+	}
+
+	void SessionVisibilityHandler::HandleEntityCreation(std::vector<Packets::Helper::EntityData>& entities, entt::handle entity, CreateEntityData&& createEntityData)
+	{
+		std::size_t entityIndex = m_freeEntityIds.FindFirst();
+		if (entityIndex == m_freeEntityIds.npos)
 		{
-			m_currentEnvironmentId = Nz::Retrieve(m_environmentIndices, m_nextRootEnvironment);
-
-			Packets::UpdateRootEnvironment rootUpdatePacket;
-			rootUpdatePacket.newRootEnv = m_currentEnvironmentId;
-
-			m_networkSession->SendPacket(rootUpdatePacket);
-
-			m_nextRootEnvironment = nullptr;
+			entityIndex = m_freeEntityIds.GetSize();
+			m_freeEntityIds.Resize(entityIndex + FreeEntityIdGrowRate, true);
 		}
+
+		m_freeEntityIds.Set(entityIndex, false);
+
+		if (entityIndex >= m_visibleEntities.size())
+			m_visibleEntities.resize(entityIndex + 1);
+
+		EnvironmentId envIndex = Nz::Retrieve(m_environmentIndices, createEntityData.environment);
+
+		m_visibleEntities[entityIndex].entity = entity;
+		m_visibleEntities[entityIndex].envIndex = envIndex;
+		m_visibleEnvironments[envIndex].entities.UnboundedSet(entityIndex);
+
+		m_entityIndices[entity] = entityIndex;
+
+		auto& entityData = entities.emplace_back();
+		if (createEntityData.entityClass)
+			entityData.entityClass = m_networkSession->GetStringStore().CheckStringIndex(createEntityData.entityClass->GetName());
+		entityData.entityId = Nz::SafeCast<EntityId>(entityIndex);
+		entityData.environmentId = envIndex;
+		entityData.initialStates.position = createEntityData.initialPosition;
+		entityData.initialStates.rotation = createEntityData.initialRotation;
+		entityData.playerControlled = createEntityData.playerControlledData;
+		entityData.properties = std::move(createEntityData.entityProperties);
 	}
 
 	void SessionVisibilityHandler::HandleEntityDestruction(entt::handle entity)

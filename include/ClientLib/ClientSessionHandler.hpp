@@ -62,13 +62,12 @@ namespace tsom
 			void HandlePacket(Packets::EntityPropertyUpdate&& propertyUpdate);
 			void HandlePacket(Packets::EnvironmentCreate&& envCreate);
 			void HandlePacket(Packets::EnvironmentDestroy&& envDestroy);
-			void HandlePacket(Packets::EnvironmentUpdate&& envUpdate);
+			void HandlePacket(Packets::EnvironmentsUpdateOwner&& envOwnerUpdate);
 			void HandlePacket(Packets::GameData&& gameData);
 			void HandlePacket(Packets::NetworkStrings&& networkStrings);
 			void HandlePacket(Packets::PlayerJoin&& playerJoin);
 			void HandlePacket(Packets::PlayerLeave&& playerLeave);
 			void HandlePacket(Packets::PlayerNameUpdate&& playerNameUpdate);
-			void HandlePacket(Packets::UpdateRootEnvironment&& playerEnv);
 
 			void LoadScripts(bool isReloading = false);
 
@@ -94,6 +93,7 @@ namespace tsom
 		private:
 			inline PlayerInfo* FetchPlayerInfo(PlayerIndex playerIndex);
 			inline const PlayerInfo* FetchPlayerInfo(PlayerIndex playerIndex) const;
+			void HandleEntityCreation(Packets::Helper::EntityData&& entityData);
 			void SetupEntity(entt::handle entity, Packets::Helper::PlayerControlledData&& entityData);
 
 			struct EnvironmentData
@@ -101,7 +101,6 @@ namespace tsom
 				Nz::Bitset<Nz::UInt64> entities;
 				entt::handle rootEntity;
 				entt::handle visualRootEntity;
-				EnvironmentTransform transform;
 				GravityController* gravityController;
 			};
 
@@ -127,7 +126,6 @@ namespace tsom
 			ClientBlockLibrary& m_blockLibrary;
 			Nz::UInt16 m_lastTickIndex;
 			Nz::UInt16 m_ownPlayerIndex;
-			Packets::Helper::EnvironmentId m_currentEnvironmentIndex;
 			ScriptingContext m_scriptingContext;
 			EntityRegistry m_entityRegistry;
 			InputIndex m_lastInputIndex;

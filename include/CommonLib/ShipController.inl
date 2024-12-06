@@ -14,4 +14,14 @@ namespace tsom
 	{
 		return m_rotation;
 	}
+
+	inline entt::handle tsom::ShipController::GetShipEntity() const
+	{
+		return m_entity;
+	}
+
+	inline void ShipController::UpdateShipEntity(entt::handle entity)
+	{
+		m_entity = entity;
+	}
 }

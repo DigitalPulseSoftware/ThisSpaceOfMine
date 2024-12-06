@@ -10,7 +10,7 @@
 #include <ServerLib/Export.hpp>
 #include <Nazara/Core/Time.hpp>
 #include <NazaraUtils/TypeList.hpp>
-#include <entt/fwd.hpp>
+#include <entt/entt.hpp>
 
 namespace Nz
 {
@@ -19,17 +19,22 @@ namespace Nz
 
 namespace tsom
 {
+	class ServerEnvironment;
+	class ServerPlayer;
+
 	class TSOM_SERVERLIB_API EnvironmentProxySystem
 	{
 		public:
 			static constexpr bool AllowConcurrent = false;
-			static constexpr Nz::Int64 ExecutionOrder = 1'000'000;
+			static constexpr Nz::Int64 ExecutionOrder = -1'000'000;
 			using Components = Nz::TypeList<class EnvironmentProxyComponent, Nz::NodeComponent>;
 
-			inline EnvironmentProxySystem(entt::registry& registry);
+			EnvironmentProxySystem(entt::registry& registry);
 			EnvironmentProxySystem(const EnvironmentProxySystem&) = delete;
 			EnvironmentProxySystem(EnvironmentProxySystem&&) = delete;
 			~EnvironmentProxySystem() = default;
+
+			void AddEnvironmentRecursively(ServerPlayer* player);
 
 			void Update(Nz::Time elapsedTime);
 
@@ -37,6 +42,7 @@ namespace tsom
 			EnvironmentProxySystem& operator=(EnvironmentProxySystem&&) = delete;
 
 		private:
+			entt::observer m_observer;
 			entt::registry& m_registry;
 	};
 }

@@ -15,8 +15,7 @@ namespace tsom
 
 	struct EnvironmentProxyComponent
 	{
-		ServerEnvironment* fromEnv;
-		ServerEnvironment* toEnv;
+		ServerEnvironment* targetEnvironment;
 	};
 }
 

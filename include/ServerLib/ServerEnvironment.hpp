@@ -38,17 +38,13 @@ namespace tsom
 			ServerEnvironment(ServerEnvironment&&) = delete;
 			virtual ~ServerEnvironment();
 
-			inline bool CompareAndUpdateConnectedTransform(ServerEnvironment& environment, const EnvironmentTransform& transform);
-			void Connect(ServerEnvironment& environment, const EnvironmentTransform& transform);
 			virtual entt::handle CreateEntity() = 0;
-			void Disconnect(ServerEnvironment& environment);
 
-			template<typename F> void ForEachConnectedEnvironment(F&& callback) const;
 			template<typename F> void ForEachPlayer(F&& callback);
 			template<typename F> void ForEachPlayer(F&& callback) const;
 
-			inline bool GetEnvironmentTransformation(ServerEnvironment& targetEnv, EnvironmentTransform* transform) const;
 			virtual const GravityController* GetGravityController() const = 0;
+			inline ServerInstance& GetServerInstance();
 			inline ServerEnvironmentType GetType() const;
 			inline Nz::EnttWorld& GetWorld();
 			inline const Nz::EnttWorld& GetWorld() const;
@@ -59,8 +55,6 @@ namespace tsom
 			void RegisterPlayer(ServerPlayer* player);
 			void UnregisterPlayer(ServerPlayer* player);
 
-			inline void UpdateConnectedTransform(ServerEnvironment& environment, const EnvironmentTransform& transform);
-
 			ServerEnvironment& operator=(const ServerEnvironment&) = delete;
 			ServerEnvironment& operator=(ServerEnvironment&&) = delete;
 
@@ -68,7 +62,6 @@ namespace tsom
 			ServerEnvironment(ServerInstance& serverInstance, ServerEnvironmentType type);
 
 			std::unique_ptr<Nz::EnttWorld> m_world;
-			tsl::hopscotch_map<ServerEnvironment*, EnvironmentTransform> m_connectedEnvironments;
 			Nz::Bitset<Nz::UInt64> m_registeredPlayers;
 			ServerEnvironmentType m_type;
 			ServerInstance& m_serverInstance;

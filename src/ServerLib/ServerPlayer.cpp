@@ -12,6 +12,7 @@
 #include <ServerLib/ServerShipEnvironment.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
 #include <ServerLib/Components/ServerPlayerControlledComponent.hpp>
+#include <ServerLib/Systems/EnvironmentProxySystem.hpp>
 #include <ServerLib/Systems/NetworkedEntitiesSystem.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
@@ -41,16 +42,28 @@ namespace tsom
 			environment->UnregisterPlayer(this);
 	}
 
-	void ServerPlayer::AddToEnvironment(ServerEnvironment* environment)
+	void ServerPlayer::AddToEnvironment(ServerEnvironment* environment, entt::handle environmentOwner)
 	{
 		assert(m_rootEnvironment);
 		assert(!IsInEnvironment(environment));
+		m_registeredEnvironments.push_back(environment);
+		environment->RegisterPlayer(this);
 
-		EnvironmentTransform transform;
-		if (!m_rootEnvironment->GetEnvironmentTransformation(*environment, &transform))
-			assert(false && "environment is not linked to root environment");
+		if (m_visibilityHandler.CreateEnvironment(*environment, environmentOwner))
+		{
+			auto& networkedEntities = environment->GetWorld().GetSystem<NetworkedEntitiesSystem>();
+			networkedEntities.CreateAllEntities(m_visibilityHandler);
+		}
+	}
 
-		HandleNewEnvironment(environment, transform);
+	void ServerPlayer::ClearEnvironments()
+	{
+		for (ServerEnvironment* environment : m_registeredEnvironments)
+		{
+			environment->UnregisterPlayer(this);
+			m_visibilityHandler.DestroyEnvironment(*environment);
+		}
+		m_registeredEnvironments.clear();
 	}
 
 	void ServerPlayer::Destroy()
@@ -58,7 +71,7 @@ namespace tsom
 		m_serverInstance.DestroyPlayer(m_playerIndex);
 	}
 
-	void ServerPlayer::MoveEntityToEnvironment(ServerEnvironment* environment, const Nz::Vector3f& envLinearVelocity)
+	void ServerPlayer::MoveEntityToEnvironment(ServerEnvironment* environment, const EnvironmentTransform& transform, const Nz::Vector3f& envLinearVelocity, bool isRoot)
 	{
 		assert(IsInEnvironment(environment));
 
@@ -80,17 +93,13 @@ namespace tsom
 		auto& networkedSystem = m_controlledEntityEnvironment->GetWorld().GetSystem<NetworkedEntitiesSystem>();
 		networkedSystem.ForgetEntity(previousEntity);
 
-		EnvironmentTransform prevToNewTransform;
-		if (!environment->GetEnvironmentTransformation(*m_controlledEntityEnvironment, &prevToNewTransform))
-			assert(false && "old environment is not linked to the new");
-
 		Nz::Vector3f prevEnvironmentUp = -m_controlledEntityEnvironment->GetGravityController()->ComputeGravity(position).direction;
 		Nz::Quaternionf environmentRotationCorrection = Nz::Quaternionf::RotationBetween(prevEnvironmentUp, Nz::Vector3f::Up());
 
-		position = prevToNewTransform.Translate(position);
-		rotation = prevToNewTransform.Rotate(rotation);
-		linearVel = prevToNewTransform.Rotate(linearVel);
-		angularVel = prevToNewTransform.Rotate(angularVel);
+		position = transform.Translate(position);
+		rotation = transform.Rotate(rotation);
+		linearVel = transform.Rotate(linearVel);
+		angularVel = transform.Rotate(angularVel);
 
 		linearVel += envLinearVelocity;
 
@@ -99,7 +108,7 @@ namespace tsom
 		m_controlledEntity.emplace<NetworkedComponent>(false); //< Don't create entity
 
 		m_controller->SetGravityController(environment->GetGravityController());
-		m_controller->RotateInstantaneously(prevToNewTransform.rotation);
+		m_controller->RotateInstantaneously(transform.rotation);
 
 		Nz::PhysCharacter3DComponent::Settings characterSettings;
 		characterSettings.collider = previousCharacter.GetCollider();
@@ -123,6 +132,9 @@ namespace tsom
 			auto& visibilityHandler = serverPlayer.GetVisibilityHandler();
 			visibilityHandler.UpdateEntityEnvironment(*environment, previousEntity, m_controlledEntity);
 		});
+
+		if (isRoot)
+			UpdateRootEnvironment(environment);
 
 		// Destroy previous entity before updating controlled entity, as entity destruction will not be forwarded to visibility handler
 		// we need it to not add back entity to its moving entity list (FIXME: maybe the visibility handler should be the only one to handle that)
@@ -216,48 +228,16 @@ namespace tsom
 	void ServerPlayer::UpdateRootEnvironment(ServerEnvironment* environment)
 	{
 		assert(environment);
+		if (m_rootEnvironment == environment)
+			return;
 
-		EnvironmentTransform oldToNewEnv(Nz::Vector3f::Zero(), Nz::Quaternionf::Identity());
-		if (m_rootEnvironment)
-		{
-			m_rootEnvironment->GetEnvironmentTransformation(*environment, &oldToNewEnv);
-			ClearEnvironments();
-		}
-
+		ClearEnvironments();
 		m_rootEnvironment = environment;
-		HandleNewEnvironment(m_rootEnvironment, oldToNewEnv);
 
-		m_rootEnvironment->ForEachConnectedEnvironment([&](ServerEnvironment& connectedEnvironment, const EnvironmentTransform& transform)
-		{
-			// avoid cycles
-			EnvironmentTransform globalTransform = oldToNewEnv + transform;
-			HandleNewEnvironment(&connectedEnvironment, oldToNewEnv + transform);
-		});
+		AddToEnvironment(environment, entt::handle{});
 
-		m_visibilityHandler.UpdateRootEnvironment(*m_rootEnvironment);
-	}
-
-	void ServerPlayer::ClearEnvironments()
-	{
-		for (ServerEnvironment* environment : m_registeredEnvironments)
-		{
-			environment->UnregisterPlayer(this);
-			m_visibilityHandler.DestroyEnvironment(*environment);
-		}
-		m_registeredEnvironments.clear();
-	}
-
-	void ServerPlayer::HandleNewEnvironment(ServerEnvironment* environment, const EnvironmentTransform& transform)
-	{
-		assert(!IsInEnvironment(environment));
-		m_registeredEnvironments.push_back(environment);
-		environment->RegisterPlayer(this);
-
-		if (m_visibilityHandler.CreateEnvironment(*environment, transform))
-		{
-			auto& networkedEntities = environment->GetWorld().GetSystem<NetworkedEntitiesSystem>();
-			networkedEntities.CreateAllEntities(m_visibilityHandler);
-		}
+		auto& envProxySystem = m_rootEnvironment->GetWorld().GetSystem<EnvironmentProxySystem>();
+		envProxySystem.AddEnvironmentRecursively(this);
 	}
 
 	void ServerPlayer::UpdateNickname(std::string nickname)

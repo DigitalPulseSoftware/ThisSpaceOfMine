@@ -34,6 +34,24 @@ namespace tsom
 	{
 		namespace Helper
 		{
+			void Serialize(PacketSerializer& serializer, EntityData& data)
+			{
+				serializer &= data.environmentId;
+				serializer &= data.entityId;
+				Serialize(serializer, data.initialStates);
+
+				serializer.SerializePresence(data.playerControlled);
+
+				serializer.Serialize(data.entityClass);
+
+				if (data.playerControlled)
+					Helper::Serialize(serializer, *data.playerControlled);
+
+				serializer.SerializeArraySize(data.properties);
+				for (auto& property : data.properties)
+					serializer &= property;
+			}
+
 			void Serialize(PacketSerializer& serializer, EntityState& data)
 			{
 				serializer &= data.position;
@@ -246,22 +264,7 @@ namespace tsom
 
 			serializer.SerializeArraySize(data.entities);
 			for (auto& entity : data.entities)
-			{
-				serializer &= entity.environmentId;
-				serializer &= entity.entityId;
-				Helper::Serialize(serializer, entity.initialStates);
-
-				serializer.SerializePresence(entity.playerControlled);
-
-				serializer.Serialize(entity.entityClass);
-
-				if (entity.playerControlled)
-					Helper::Serialize(serializer, *entity.playerControlled);
-
-				serializer.SerializeArraySize(entity.properties);
-				for (auto& property : entity.properties)
-					serializer &= property;
-			}
+				Helper::Serialize(serializer, entity);
 		}
 
 		void Serialize(PacketSerializer& serializer, EntitiesDelete& data)
@@ -322,7 +325,11 @@ namespace tsom
 		{
 			serializer &= data.tickIndex;
 			serializer &= data.id;
-			Helper::Serialize(serializer, data.transform);
+			serializer &= data.ownerEntity;
+
+			serializer.SerializeArraySize(data.entities);
+			for (auto& entity : data.entities)
+				Helper::Serialize(serializer, entity);
 		}
 
 		void Serialize(PacketSerializer& serializer, EnvironmentDestroy& data)
@@ -331,11 +338,15 @@ namespace tsom
 			serializer &= data.id;
 		}
 
-		void Serialize(PacketSerializer& serializer, EnvironmentUpdate& data)
+		void Serialize(PacketSerializer& serializer, EnvironmentsUpdateOwner& data)
 		{
 			serializer &= data.tickIndex;
-			serializer &= data.id;
-			Helper::Serialize(serializer, data.transform);
+			serializer.SerializeArraySize(data.ownerUpdates);
+			for (auto& ownerUpdate : data.ownerUpdates)
+			{
+				serializer &= ownerUpdate.environment;
+				serializer &= ownerUpdate.newOwner;
+			}
 		}
 
 		void Serialize(PacketSerializer& serializer, ExitShipControl& data)
@@ -403,11 +414,6 @@ namespace tsom
 		void Serialize(PacketSerializer& serializer, SendChatMessage& data)
 		{
 			serializer &= data.message;
-		}
-
-		void Serialize(PacketSerializer& serializer, UpdateRootEnvironment& data)
-		{
-			serializer &= data.newRootEnv;
 		}
 
 		void Serialize(PacketSerializer& serializer, UpdatePlayerInputs& data)

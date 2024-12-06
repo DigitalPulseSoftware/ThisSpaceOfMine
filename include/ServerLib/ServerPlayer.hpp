@@ -37,7 +37,9 @@ namespace tsom
 			ServerPlayer(ServerPlayer&&) = delete;
 			~ServerPlayer();
 
-			void AddToEnvironment(ServerEnvironment* environment);
+			void AddToEnvironment(ServerEnvironment* environment, entt::handle environmentOwner);
+
+			void ClearEnvironments();
 
 			void Destroy();
 
@@ -64,7 +66,7 @@ namespace tsom
 
 			inline bool IsInEnvironment(const ServerEnvironment* environment);
 
-			void MoveEntityToEnvironment(ServerEnvironment* environment, const Nz::Vector3f& envLinearVelocity);
+			void MoveEntityToEnvironment(ServerEnvironment* environment, const EnvironmentTransform& transform, const Nz::Vector3f& envLinearVelocity, bool isRoot);
 
 			void PushInputs(const PlayerInputs& inputs);
 
@@ -87,9 +89,6 @@ namespace tsom
 			ServerPlayer& operator=(ServerPlayer&&) = delete;
 
 		private:
-			void ClearEnvironments();
-			void HandleNewEnvironment(ServerEnvironment* environment, const EnvironmentTransform& transform);
-
 			std::optional<Nz::Uuid> m_uuid;
 			std::shared_ptr<CharacterController> m_controller;
 			std::string m_nickname;

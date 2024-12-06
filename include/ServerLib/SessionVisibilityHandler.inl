@@ -51,23 +51,6 @@ namespace tsom
 		return Nz::Retrieve(m_environmentIndices, environment);
 	}
 
-	inline void SessionVisibilityHandler::MoveEnvironment(ServerEnvironment& environment, const EnvironmentTransform& transform)
-	{
-		auto it = std::find_if(m_environmentTransformations.begin(), m_environmentTransformations.end(), [&](const EnvironmentTransformation& transform) { return transform.environment == &environment; });
-		if (it == m_environmentTransformations.end())
-		{
-			m_environmentTransformations.push_back({
-				.environment = &environment,
-				.transform = transform
-			});
-		}
-		else
-		{
-			EnvironmentTransformation& transformation = *it;
-			transformation.transform = transform;
-		}
-	}
-
 	inline void SessionVisibilityHandler::TriggerEntityRpc(entt::handle entity, Nz::UInt32 rpcIndex)
 	{
 		m_triggeredEntitiesRpc[entity].push_back(rpcIndex);
@@ -91,11 +74,6 @@ namespace tsom
 	inline void SessionVisibilityHandler::UpdateLastInputIndex(InputIndex inputIndex)
 	{
 		m_lastInputIndex = inputIndex;
-	}
-
-	inline void SessionVisibilityHandler::UpdateRootEnvironment(ServerEnvironment& environment)
-	{
-		m_nextRootEnvironment = &environment;
 	}
 
 	inline std::size_t SessionVisibilityHandler::HandlerHasher::operator()(const entt::handle& handle) const

@@ -3,34 +3,55 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ServerLib/Systems/EnvironmentProxySystem.hpp>
-#include <CommonLib/EnvironmentTransform.hpp>
-#include <CommonLib/Components/ShipComponent.hpp>
 #include <ServerLib/ServerEnvironment.hpp>
 #include <ServerLib/ServerPlayer.hpp>
-#include <ServerLib/SessionVisibilityHandler.hpp>
 #include <ServerLib/Components/EnvironmentProxyComponent.hpp>
+#include <Nazara/Core/Components/DisabledComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 
 namespace tsom
 {
-	void EnvironmentProxySystem::Update(Nz::Time elapsedTime)
+	EnvironmentProxySystem::EnvironmentProxySystem(entt::registry& registry) :
+	m_observer(registry, entt::collector.group<Nz::NodeComponent, EnvironmentProxyComponent>(entt::exclude<Nz::DisabledComponent>)),
+	m_registry(registry)
 	{
-		auto view = m_registry.view<Nz::NodeComponent, EnvironmentProxyComponent>();
+	}
+
+	void EnvironmentProxySystem::AddEnvironmentRecursively(ServerPlayer* player)
+	{
+		auto& visibilityHandler = player->GetVisibilityHandler();
+
+		auto view = m_registry.view<Nz::NodeComponent, EnvironmentProxyComponent>(entt::exclude<Nz::DisabledComponent>);
 		for (entt::entity entity : view)
 		{
-			auto& nodeComponent = view.get<Nz::NodeComponent>(entity);
-			auto& proxyComponent = view.get<EnvironmentProxyComponent>(entity);
+			auto& envProxy = view.get<EnvironmentProxyComponent>(entity);
+			if (player->IsInEnvironment(envProxy.targetEnvironment))
+				continue; // break recursion
 
-			EnvironmentTransform relativeTransform(nodeComponent.GetPosition(), nodeComponent.GetRotation());
-			if (proxyComponent.fromEnv->CompareAndUpdateConnectedTransform(*proxyComponent.toEnv, relativeTransform))
-			{
-				proxyComponent.toEnv->UpdateConnectedTransform(*proxyComponent.fromEnv, -relativeTransform);
+			player->AddToEnvironment(envProxy.targetEnvironment, entt::handle(m_registry, entity));
 
-				proxyComponent.fromEnv->ForEachPlayer([&](ServerPlayer& player)
-				{
-					player.GetVisibilityHandler().MoveEnvironment(*proxyComponent.toEnv, relativeTransform);
-				});
-			}
+			auto& envProxySystem = envProxy.targetEnvironment->GetWorld().GetSystem<EnvironmentProxySystem>();
+			envProxySystem.AddEnvironmentRecursively(player);
 		}
+	}
+
+	void EnvironmentProxySystem::Update(Nz::Time /*elapsedTime*/)
+	{
+		ServerEnvironment* environment = m_registry.ctx().get<ServerEnvironment*>();
+
+		m_observer.each([&](entt::entity entity)
+		{
+			auto& envProxy = m_registry.get<EnvironmentProxyComponent>(entity);
+			environment->ForEachPlayer([&](ServerPlayer& player)
+			{
+				if (player.IsInEnvironment(envProxy.targetEnvironment))
+					return;
+
+				player.AddToEnvironment(envProxy.targetEnvironment, entt::handle(m_registry, entity));
+
+				auto& envProxySystem = envProxy.targetEnvironment->GetWorld().GetSystem<EnvironmentProxySystem>();
+				envProxySystem.AddEnvironmentRecursively(&player);
+			});
+		});
 	}
 }

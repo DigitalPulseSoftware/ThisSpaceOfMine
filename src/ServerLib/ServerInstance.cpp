@@ -8,6 +8,7 @@
 #include <CommonLib/Scripting/MathScriptingLibrary.hpp>
 #include <CommonLib/Scripting/SharedScriptingLibrary.hpp>
 #include <ServerLib/ServerPlanetEnvironment.hpp>
+#include <ServerLib/Entities/ServerClassLibrary.hpp>
 #include <ServerLib/Scripting/ServerEntityScriptingLibrary.hpp>
 #include <ServerLib/Scripting/ServerScriptingLibrary.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
@@ -30,6 +31,7 @@ namespace tsom
 	m_pauseWhenEmpty(config.pauseWhenEmpty)
 	{
 		m_entityRegistry.RegisterClassLibrary<ChunkClassLibrary>(m_application, m_blockLibrary);
+		m_entityRegistry.RegisterClassLibrary<ServerClassLibrary>(m_application);
 
 		m_scriptingContext.RegisterLibrary<MathScriptingLibrary>();
 		m_scriptingContext.RegisterLibrary<SharedScriptingLibrary>();

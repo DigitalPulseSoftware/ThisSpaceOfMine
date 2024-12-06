@@ -9,6 +9,11 @@ namespace tsom
 	{
 	}
 
+	inline void NetworkedComponent::DontSendCreationSignal()
+	{
+		m_shouldSignalCreation = false;
+	}
+
 	inline bool NetworkedComponent::ShouldSignalCreation() const
 	{
 		return m_shouldSignalCreation;

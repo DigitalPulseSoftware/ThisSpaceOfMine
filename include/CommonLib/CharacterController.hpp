@@ -38,6 +38,7 @@ namespace tsom
 			inline const Nz::Quaternionf& GetCharacterRotation() const;
 			inline const PlayerInputs& GetInputs() const;
 			inline const Nz::Quaternionf& GetReferenceRotation() const;
+			inline const std::shared_ptr<ShipController>& GetShipController() const;
 
 			inline bool IsFlying() const;
 

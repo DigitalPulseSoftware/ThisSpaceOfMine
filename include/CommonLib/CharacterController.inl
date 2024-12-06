@@ -34,6 +34,11 @@ namespace tsom
 		return m_referenceRotation;
 	}
 
+	inline const std::shared_ptr<ShipController>& CharacterController::GetShipController() const
+	{
+		return m_shipController;
+	}
+
 	inline bool CharacterController::IsFlying() const
 	{
 		return m_isFlying;

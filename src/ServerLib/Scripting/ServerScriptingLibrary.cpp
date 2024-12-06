@@ -46,10 +46,10 @@ namespace tsom
 		state.new_usertype<ServerShipEnvironment>("ShipEnvironment",
 			sol::no_constructor,
 			sol::base_classes, sol::bases<ServerEnvironment>(),
-			"GetOutsideShipEntity", LuaFunction([this](sol::this_state L, ServerShipEnvironment& shipEnvironment)
+			"GetExteriorShipEntity", LuaFunction([this](sol::this_state L, ServerShipEnvironment& shipEnvironment)
 			{
 				sol::state_view stateView(L);
-				return m_entityScriptingLibrary.ToEntityTable(stateView, shipEnvironment.GetOutsideShipEntity());
+				return m_entityScriptingLibrary.ToEntityTable(stateView, shipEnvironment.GetExteriorShipEntity());
 			}),
 			"GetShipEntity", LuaFunction([this](sol::this_state L, ServerShipEnvironment& shipEnvironment)
 			{

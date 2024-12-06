@@ -40,36 +40,8 @@ namespace tsom
 			player.RemoveFromEnvironment(this);
 		});
 
-		for (auto&& [environment, transform] : m_connectedEnvironments)
-			environment->Disconnect(*this);
-
 		m_world->ClearSystems();
 		m_serverInstance.UnregisterEnvironment(this, std::move(m_world));
-	}
-
-	void ServerEnvironment::Connect(ServerEnvironment& environment, const EnvironmentTransform& transform)
-	{
-		NazaraAssertMsg(!m_connectedEnvironments.contains(&environment), "environment is already connected");
-		m_connectedEnvironments.emplace(&environment, transform);
-
-		environment.ForEachPlayer([&](ServerPlayer& player)
-		{
-			if (player.GetRootEnvironment() == &environment)
-				player.AddToEnvironment(this);
-		});
-	}
-
-	void ServerEnvironment::Disconnect(ServerEnvironment& environment)
-	{
-		auto it = m_connectedEnvironments.find(&environment);
-		NazaraAssertMsg(it != m_connectedEnvironments.end(), "environment is not connected");
-		m_connectedEnvironments.erase(it);
-
-		environment.ForEachPlayer([&](ServerPlayer& player)
-		{
-			if (player.GetRootEnvironment() == &environment)
-				player.RemoveFromEnvironment(this);
-		});
 	}
 
 	entt::handle ServerEnvironment::CreateEntity()

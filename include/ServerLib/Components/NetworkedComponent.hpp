@@ -17,6 +17,8 @@ namespace tsom
 			NetworkedComponent(NetworkedComponent&&) = default;
 			~NetworkedComponent() = default;
 
+			inline void DontSendCreationSignal();
+
 			inline bool ShouldSignalCreation() const;
 
 			NetworkedComponent& operator=(const NetworkedComponent&) = delete;

@@ -20,6 +20,7 @@
 #include <CommonLib/Protocol/SecuredString.hpp>
 #include <Nazara/Math/Quaternion.hpp>
 #include <Nazara/Math/Vector3.hpp>
+#include <NazaraUtils/FixedVector.hpp>
 #include <NazaraUtils/Result.hpp>
 #include <NazaraUtils/TypeList.hpp>
 
@@ -73,6 +74,16 @@ namespace tsom
 				PlayerIndex controllingPlayerId;
 			};
 
+			struct EntityData
+			{
+				EnvironmentId environmentId;
+				EntityId entityId;
+				EntityState initialStates;
+				std::optional<PlayerControlledData> playerControlled;
+				std::vector<EntityProperty> properties;
+				CompressedUnsigned<Nz::UInt32> entityClass;
+			};
+
 			struct VoxelLocation
 			{
 				Nz::UInt8 x;
@@ -80,6 +91,7 @@ namespace tsom
 				Nz::UInt8 z;
 			};
 
+			TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntityData& data);
 			TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntityState& data);
 			TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EnvironmentTransform& data);
 			TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, PlayerControlledData& data);
@@ -174,18 +186,8 @@ namespace tsom
 
 		struct EntitiesCreation
 		{
-			struct EntityData
-			{
-				Helper::EnvironmentId environmentId;
-				Helper::EntityId entityId;
-				Helper::EntityState initialStates;
-				std::optional<Helper::PlayerControlledData> playerControlled;
-				std::vector<EntityProperty> properties;
-				CompressedUnsigned<Nz::UInt32> entityClass;
-			};
-
 			Nz::UInt16 tickIndex;
-			std::vector<EntityData> entities;
+			std::vector<Helper::EntityData> entities;
 		};
 
 		struct EntitiesDelete
@@ -242,7 +244,8 @@ namespace tsom
 		{
 			Nz::UInt16 tickIndex;
 			Helper::EnvironmentId id;
-			EnvironmentTransform transform;
+			Helper::EntityId ownerEntity;
+			std::vector<Helper::EntityData> entities;
 		};
 
 		struct EnvironmentDestroy
@@ -251,11 +254,16 @@ namespace tsom
 			Helper::EnvironmentId id;
 		};
 
-		struct EnvironmentUpdate
+		struct EnvironmentsUpdateOwner
 		{
+			struct OwnerUpdate
+			{
+				Helper::EnvironmentId environment;
+				Helper::EntityId newOwner;
+			};
+
 			Nz::UInt16 tickIndex;
-			Helper::EnvironmentId id;
-			EnvironmentTransform transform;
+			Nz::HybridVector<OwnerUpdate, 3> ownerUpdates;
 		};
 
 		struct ExitShipControl
@@ -322,11 +330,6 @@ namespace tsom
 			SecuredString<Constants::ChatMaxPlayerMessageLength> message;
 		};
 
-		struct UpdateRootEnvironment
-		{
-			Helper::EnvironmentId newRootEnv;
-		};
-
 		struct UpdatePlayerInputs
 		{
 			PlayerInputs inputs;
@@ -348,7 +351,7 @@ namespace tsom
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntityPropertyUpdate& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EnvironmentCreate& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EnvironmentDestroy& data);
-		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EnvironmentUpdate& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EnvironmentsUpdateOwner& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, ExitShipControl& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, GameData& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, Interact& data);
@@ -359,7 +362,6 @@ namespace tsom
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, PlayerJoin& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, PlayerNameUpdate& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, SendChatMessage& data);
-		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, UpdateRootEnvironment& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, UpdatePlayerInputs& data);
 	}
 }

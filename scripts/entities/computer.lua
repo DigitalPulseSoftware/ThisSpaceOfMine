@@ -36,9 +36,9 @@ end)
 if SERVER then
 	classData:On("interact", function (self, player)
 		local computerNode = self:GetComponent("node")
-		local outsideEntity = self:GetEnvironment():GetOutsideShipEntity()
+		local exteriorEntity = self:GetEnvironment():GetExteriorShipEntity()
 
-		player:GetController():SetShipController(ShipController.new(outsideEntity, computerNode:GetRotation()))
+		player:GetController():SetShipController(ShipController.new(exteriorEntity, computerNode:GetRotation()))
 		self:CallClientRPC("activate", player)
 	end)
 end
