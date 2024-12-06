@@ -731,7 +731,7 @@ namespace tsom
 
 					cameraNode.SetPosition(characterPos + characterRot * (Nz::Vector3f::Up() * Constants::PlayerCameraHeight));
 
-					Nz::Quaternionf cameraRotation = environmentNode->GetRotation() * m_referenceRotation * Nz::Quaternionf(predictedCameraRotation);
+					Nz::Quaternionf cameraRotation = environmentNode->GetGlobalRotation() * m_referenceRotation * Nz::Quaternionf(predictedCameraRotation);
 					cameraRotation.Normalize();
 
 					if (m_isPilotingShip)
