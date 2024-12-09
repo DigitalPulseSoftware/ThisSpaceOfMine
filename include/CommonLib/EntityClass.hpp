@@ -42,11 +42,15 @@ namespace tsom
 			inline const Property& GetProperty(Nz::UInt32 propertyIndex) const;
 			inline Nz::UInt32 GetPropertyCount() const;
 
+			void InitAndActivateEntity(entt::handle entity) const;
+			void InitEntity(entt::handle entity) const;
+
 			EntityClass& operator=(const EntityClass&) = delete;
 			EntityClass& operator=(EntityClass&&) noexcept = default;
 
 			struct Callbacks
 			{
+				std::function<void(entt::handle)> onActivate;
 				std::function<void(entt::handle)> onInit;
 			};
 

@@ -10,9 +10,8 @@
 #include <CommonLib/Systems/ShipSystem.hpp>
 #include <ServerLib/PlayerTokenAppComponent.hpp>
 #include <ServerLib/ServerInstance.hpp>
-#include <ServerLib/Components/EnvironmentEnterTriggerComponent.hpp>
-#include <ServerLib/Components/EnvironmentProxyComponent.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
+#include <ServerLib/Components/ServerEnvironmentSwitchComponent.hpp>
 #include <ServerLib/Components/ShipExteriorComponent.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/TaskSchedulerAppComponent.hpp>
@@ -30,10 +29,10 @@ namespace tsom
 	}
 
 	ServerShipEnvironment::ServerShipEnvironment(ServerInstance& serverInstance, const std::optional<Nz::Uuid>& playerUuid, int saveSlot) :
-	ServerEnvironment(serverInstance, ServerEnvironmentType::Ship),
+	ServerEnvironment(serverInstance, ServerEnvironmentType::Ship, false),
 	m_playerUuid(playerUuid),
 	m_shouldSave(std::make_shared<bool>(false)),
-	m_outsideEnvironment(nullptr),
+	m_exteriorEnvironment(nullptr),
 	m_isInteriorAreaColliderInvalidated(false),
 	m_saveSlot(saveSlot)
 	{
@@ -48,11 +47,12 @@ namespace tsom
 		m_shipEntity.emplace<NetworkedComponent>();
 
 		std::shared_ptr<const EntityClass> shipClass = serverInstance.GetEntityRegistry().FindClass("ship");
+		NazaraAssert(shipClass);
 
 		auto& entityInstance = m_shipEntity.emplace<ClassInstanceComponent>(shipClass);
 		entityInstance.UpdateProperty<EntityPropertyType::Float>("CellSize", 1.f);
 
-		shipClass->ActivateEntity(m_shipEntity);
+		shipClass->InitAndActivateEntity(m_shipEntity);
 
 		auto& shipComponent = m_shipEntity.get<ShipComponent>();
 		shipComponent.ship->OnChunkAdded.Connect([this](ChunkContainer*, Chunk* chunk)
@@ -92,9 +92,9 @@ namespace tsom
 	{
 		OnSave();
 
-		if (m_outsideEnvironment)
+		if (m_exteriorEnvironment)
 		{
-			// Move every player entity out of the ship before destroying it (otherwise the player entities will be destroyed)
+			// Move every switchable entity out of the ship before destroying it (otherwise the entities will be destroyed)
 			EnvironmentTransform outsideTransform(Nz::Vector3f::Zero(), Nz::Quaternionf::Identity());
 			Nz::Vector3f outsideVelocity = Nz::Vector3f::Zero();
 			if (m_exteriorEntity)
@@ -105,10 +105,13 @@ namespace tsom
 				outsideVelocity = m_exteriorEntity.get<Nz::RigidBody3DComponent>().GetLinearVelocity();
 			}
 
-			ForEachPlayer([&](ServerPlayer& player)
+			entt::registry& registry = m_world->GetRegistry();
+			auto switchView = registry.view<Nz::NodeComponent, ClassInstanceComponent, ServerEnvironmentSwitchComponent>();
+			for (entt::entity entity : switchView)
 			{
-				player.MoveEntityToEnvironment(m_outsideEnvironment, outsideTransform, outsideVelocity, true);
-			});
+				auto& envSwitch = switchView.get<ServerEnvironmentSwitchComponent>(entity);
+				envSwitch.Switch(entt::handle(registry, entity), this, m_exteriorEnvironment, outsideTransform);
+			}
 		}
 
 		if (m_exteriorEntity)
@@ -145,30 +148,21 @@ namespace tsom
 		return *m_shipEntity.get<ShipComponent>().ship;
 	}
 
-	entt::handle ServerShipEnvironment::LinkOutsideEnvironment(ServerEnvironment* outsideEnvironment, const EnvironmentTransform& transform, bool destroyPreviousEntity)
+	entt::handle ServerShipEnvironment::LinkOutsideEnvironment(ServerEnvironment* exteriorEnvironment, const EnvironmentTransform& transform)
 	{
-		/*if (m_outsideEnvironment)
-		{
-			m_outsideEnvironment->Disconnect(*this);
-			Disconnect(*m_outsideEnvironment);
-		}*/
-
-		if (m_exteriorEntity && destroyPreviousEntity)
-			m_exteriorEntity.destroy();
-
-		assert(outsideEnvironment);
-		m_outsideEnvironment = outsideEnvironment;
+		assert(exteriorEnvironment);
+		m_exteriorEnvironment = exteriorEnvironment;
 
 		std::shared_ptr<const EntityClass> shipExteriorClass = m_serverInstance.GetEntityRegistry().FindClass("ship_exterior");
 		NazaraAssert(shipExteriorClass);
 
-		m_exteriorEntity = outsideEnvironment->CreateEntity();
+		m_exteriorEntity = exteriorEnvironment->CreateEntity();
 		m_exteriorEntity.emplace<Nz::NodeComponent>(transform.translation, transform.rotation);
 		m_exteriorEntity.emplace<ClassInstanceComponent>(shipExteriorClass);
 		m_exteriorEntity.emplace<NetworkedComponent>();
 		m_exteriorEntity.emplace<ShipExteriorComponent>().ownerShip = this;
 
-		shipExteriorClass->ActivateEntity(m_exteriorEntity);
+		shipExteriorClass->InitAndActivateEntity(m_exteriorEntity);
 
 		UpdateExteriorCollider();
 
@@ -322,14 +316,14 @@ namespace tsom
 			OnInteriorColliderUpdated();
 		}
 
-		if (m_outsideEnvironment)
+		if (m_exteriorEnvironment)
 		{
 			ForEachPlayer([this](ServerPlayer& player)
 			{
 				if (player.GetControlledEntityEnvironment() != this)
 					return;
 
-				entt::handle controlledEntity = player.GetControlledEntity();
+				entt::handle controlledEntity = player.GetControlledEntityReference();
 				if (!controlledEntity)
 					return;
 
@@ -341,16 +335,10 @@ namespace tsom
 					if (!chunkData.expandedAreaCollider)
 						continue;
 
-					for (const auto& [chunkIndices, chunkData] : m_chunkData)
-					{
-						if (!chunkData.expandedAreaCollider)
-							continue;
-
-						Nz::Vector3f relativePos = playerPos - ship.GetChunkOffset(chunkIndices);
-						relativePos -= chunkData.expandedAreaCollider->GetCenterOfMass(); //< https://jrouwe.github.io/JoltPhysics/index.html#center-of-mass
-						if (chunkData.expandedAreaCollider->CollisionQuery(relativePos))
-							return;
-					}
+					Nz::Vector3f relativePos = playerPos - ship.GetChunkOffset(chunkIndices);
+					relativePos -= chunkData.expandedAreaCollider->GetCenterOfMass(); //< https://jrouwe.github.io/JoltPhysics/index.html#center-of-mass
+					if (chunkData.expandedAreaCollider->CollisionQuery(relativePos))
+						return;
 				}
 
 				// No longer colliding with the interior
@@ -358,11 +346,17 @@ namespace tsom
 				EnvironmentTransform outsideTransform(outsideNode.GetPosition(), outsideNode.GetRotation());
 				Nz::Vector3f outsideVelocity = m_exteriorEntity.get<Nz::RigidBody3DComponent>().GetLinearVelocity();
 
-				player.MoveEntityToEnvironment(m_outsideEnvironment, outsideTransform, outsideVelocity, true);
+				controlledEntity.get<ServerEnvironmentSwitchComponent>().Switch(controlledEntity, this, m_exteriorEnvironment, outsideTransform);
 			});
 		}
 
 		ServerEnvironment::OnTick(elapsedTime);
+	}
+
+	void ServerShipEnvironment::UpdateExterior(ServerEnvironment* exteriorEnvironment, entt::handle exteriorEntity)
+	{
+		m_exteriorEnvironment = exteriorEnvironment;
+		m_exteriorEntity = exteriorEntity;
 	}
 
 	void ServerShipEnvironment::StartAreaUpdate(const Chunk& chunk)

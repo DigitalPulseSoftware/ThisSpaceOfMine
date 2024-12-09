@@ -35,7 +35,24 @@ namespace tsom
 
 	void EntityClass::ActivateEntity(entt::handle entity) const
 	{
-		assert(entity.get<ClassInstanceComponent>().GetClass().get() == this);
+		NazaraAssert(entity.get<ClassInstanceComponent>().GetClass().get() == this);
+		if (m_callbacks.onActivate)
+			m_callbacks.onActivate(entity);
+	}
+
+	void EntityClass::InitAndActivateEntity(entt::handle entity) const
+	{
+		NazaraAssert(entity.get<ClassInstanceComponent>().GetClass().get() == this);
+		if (m_callbacks.onInit)
+			m_callbacks.onInit(entity);
+
+		if (m_callbacks.onActivate)
+			m_callbacks.onActivate(entity);
+	}
+
+	void EntityClass::InitEntity(entt::handle entity) const
+	{
+		NazaraAssert(entity.get<ClassInstanceComponent>().GetClass().get() == this);
 		if (m_callbacks.onInit)
 			m_callbacks.onInit(entity);
 	}

@@ -8,11 +8,8 @@
 #define TSOM_SERVERLIB_SERVERENVIRONMENT_HPP
 
 #include <ServerLib/Export.hpp>
-#include <CommonLib/EnvironmentTransform.hpp>
 #include <ServerLib/ServerInstance.hpp>
 #include <Nazara/Core/EnttWorld.hpp>
-#include <Nazara/Core/Node.hpp>
-#include <tsl/hopscotch_map.h>
 #include <memory>
 
 namespace Nz
@@ -49,6 +46,8 @@ namespace tsom
 			inline Nz::EnttWorld& GetWorld();
 			inline const Nz::EnttWorld& GetWorld() const;
 
+			inline bool IsRoot() const;
+
 			virtual void OnSave() = 0;
 			virtual void OnTick(Nz::Time elapsedTime);
 
@@ -58,13 +57,17 @@ namespace tsom
 			ServerEnvironment& operator=(const ServerEnvironment&) = delete;
 			ServerEnvironment& operator=(ServerEnvironment&&) = delete;
 
+			static inline ServerEnvironment* GetEnvironment(entt::handle entity);
+			static inline ServerEnvironment* GetEnvironment(entt::registry& registry);
+
 		protected:
-			ServerEnvironment(ServerInstance& serverInstance, ServerEnvironmentType type);
+			ServerEnvironment(ServerInstance& serverInstance, ServerEnvironmentType type, bool isRoot);
 
 			std::unique_ptr<Nz::EnttWorld> m_world;
 			Nz::Bitset<Nz::UInt64> m_registeredPlayers;
 			ServerEnvironmentType m_type;
 			ServerInstance& m_serverInstance;
+			bool m_isRoot;
 	};
 }
 

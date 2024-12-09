@@ -8,6 +8,7 @@
 #define TSOM_SERVERLIB_SERVERPLAYER_HPP
 
 #include <ServerLib/Export.hpp>
+#include <CommonLib/EntityReference.hpp>
 #include <CommonLib/PlayerIndex.hpp>
 #include <CommonLib/PlayerPermission.hpp>
 #include <ServerLib/SessionVisibilityHandler.hpp>
@@ -44,9 +45,10 @@ namespace tsom
 			void Destroy();
 
 			inline const std::shared_ptr<CharacterController>& GetCharacterController();
-			inline entt::handle GetControlledEntity() const;
-			inline ServerEnvironment* GetControlledEntityEnvironment();
-			inline const ServerEnvironment* GetControlledEntityEnvironment() const;
+			inline EntityReference& GetControlledEntityReference();
+			inline const EntityReference& GetControlledEntityReference() const;
+			ServerEnvironment* GetControlledEntityEnvironment();
+			const ServerEnvironment* GetControlledEntityEnvironment() const;
 			inline ServerEnvironment* GetRootEnvironment();
 			inline const ServerEnvironment* GetRootEnvironment() const;
 			inline const std::string& GetNickname() const;
@@ -65,8 +67,6 @@ namespace tsom
 			inline bool IsAuthenticated() const;
 
 			inline bool IsInEnvironment(const ServerEnvironment* environment);
-
-			void MoveEntityToEnvironment(ServerEnvironment* environment, const EnvironmentTransform& transform, const Nz::Vector3f& envLinearVelocity, bool isRoot);
 
 			void PushInputs(const PlayerInputs& inputs);
 
@@ -95,12 +95,11 @@ namespace tsom
 			std::unique_ptr<ServerShipEnvironment> m_ship;
 			std::vector<PlayerInputs> m_inputQueue;
 			std::vector<ServerEnvironment*> m_registeredEnvironments;
-			entt::handle m_controlledEntity;
 			NetworkSession* m_session;
-			ServerEnvironment* m_controlledEntityEnvironment;
 			ServerEnvironment* m_rootEnvironment;
 			SessionVisibilityHandler m_visibilityHandler;
 			ServerInstance& m_serverInstance;
+			EntityReference m_controlledEntity;
 			PlayerIndex m_playerIndex;
 			PlayerPermissionFlags m_permissions;
 	};

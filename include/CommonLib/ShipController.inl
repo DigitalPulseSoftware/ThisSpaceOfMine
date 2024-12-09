@@ -4,8 +4,8 @@
 
 namespace tsom
 {
-	inline ShipController::ShipController(entt::handle entity, const Nz::Quaternionf& rotation) :
-	m_entity(entity),
+	inline ShipController::ShipController(EntityReference entity, const Nz::Quaternionf& rotation) :
+	m_entity(std::move(entity)),
 	m_rotation(rotation)
 	{
 	}
@@ -18,10 +18,5 @@ namespace tsom
 	inline entt::handle tsom::ShipController::GetShipEntity() const
 	{
 		return m_entity;
-	}
-
-	inline void ShipController::UpdateShipEntity(entt::handle entity)
-	{
-		m_entity = entity;
 	}
 }

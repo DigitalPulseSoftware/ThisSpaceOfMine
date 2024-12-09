@@ -43,12 +43,14 @@ namespace tsom
 			const Ship& GetShip() const;
 			inline entt::handle GetShipEntity() const;
 
-			entt::handle LinkOutsideEnvironment(ServerEnvironment* environment, const EnvironmentTransform& transform, bool destroyPreviousEntity = true);
+			entt::handle LinkOutsideEnvironment(ServerEnvironment* environment, const EnvironmentTransform& transform);
 
 			Nz::Result<void, std::string> Load(const nlohmann::json& data);
 
 			void OnSave() override;
 			void OnTick(Nz::Time elapsedTime) override;
+
+			void UpdateExterior(ServerEnvironment* exteriorEnvironment, entt::handle exteriorEntity);
 
 			ServerShipEnvironment& operator=(const ServerShipEnvironment&) = delete;
 			ServerShipEnvironment& operator=(ServerShipEnvironment&&) = delete;
@@ -115,7 +117,7 @@ namespace tsom
 			tsl::hopscotch_map<ChunkIndices, std::shared_ptr<TriggerUpdateJob>> m_triggerUpdateJobs;
 			tsl::hopscotch_map<ChunkIndices, ChunkData> m_chunkData;
 			tsl::hopscotch_set<Chunk*> m_invalidatedChunks;
-			ServerEnvironment* m_outsideEnvironment;
+			ServerEnvironment* m_exteriorEnvironment;
 			bool m_isInteriorAreaColliderInvalidated;
 			int m_saveSlot;
 	};

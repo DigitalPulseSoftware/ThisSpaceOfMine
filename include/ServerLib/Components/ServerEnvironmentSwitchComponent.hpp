@@ -8,6 +8,7 @@
 #define TSOM_SERVERLIB_COMPONENTS_SERVERENVIRONMENTSWITCHCOMPONENT_HPP
 
 #include <CommonLib/EnvironmentTransform.hpp>
+#include <NazaraUtils/Signal.hpp>
 #include <entt/fwd.hpp>
 #include <functional>
 
@@ -17,9 +18,11 @@ namespace tsom
 
 	struct ServerEnvironmentSwitchComponent
 	{
-		std::function<void(entt::handle entity, ServerEnvironment* newEnvironment, const EnvironmentTransform& /*environmentTransform*/)> handleEnvironmentSwitch;
+		void Switch(entt::handle entity, ServerEnvironment* previousEnvironment, ServerEnvironment* newEnvironment, const EnvironmentTransform& relativeTransform);
 
-		NazaraSignal(OnEntitySwitchedEnvironment, entt::handle /*previousEntity*/, entt::handle /*newEntity*/, ServerEnvironment* /*newEnvironment*/, const EnvironmentTransform& /*environmentTransform*/);
+		std::function<void(entt::handle previousEntity, entt::handle newEntity, const EnvironmentTransform& /*relativeTransform*/)> handleEnvironmentSwitch;
+
+		NazaraSignal(OnEntitySwitchedEnvironment, entt::handle /*previousEntity*/, entt::handle /*newEntity*/, ServerEnvironment* /*newEnvironment*/, const EnvironmentTransform& /*relativeTransform*/);
 	};
 }
 

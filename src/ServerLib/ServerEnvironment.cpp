@@ -10,9 +10,10 @@
 
 namespace tsom
 {
-	ServerEnvironment::ServerEnvironment(ServerInstance& serverInstance, ServerEnvironmentType type) :
+	ServerEnvironment::ServerEnvironment(ServerInstance& serverInstance, ServerEnvironmentType type, bool isRoot) :
 	m_type(type),
-	m_serverInstance(serverInstance)
+	m_serverInstance(serverInstance),
+	m_isRoot(isRoot)
 	{
 		m_world = m_serverInstance.RegisterEnvironment(this);
 

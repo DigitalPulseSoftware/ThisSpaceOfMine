@@ -20,7 +20,7 @@ namespace tsom
 
 		auto& shipInputs = std::get<PlayerInputs::Ship>(inputs.data);
 
-		auto& rigidBody = m_entity.get<Nz::RigidBody3DComponent>();
+		auto& rigidBody = m_entity->get<Nz::RigidBody3DComponent>();
 
 		Nz::Vector3f force = Nz::Vector3f::Zero();
 		if (shipInputs.moveForward)

@@ -39,4 +39,20 @@ namespace tsom
 	{
 		return *m_world;
 	}
+
+	inline bool ServerEnvironment::IsRoot() const
+	{
+		return m_isRoot;
+	}
+
+	inline ServerEnvironment* ServerEnvironment::GetEnvironment(entt::handle entity)
+	{
+		NazaraAssert(entity.registry());
+		return GetEnvironment(*entity.registry());
+	}
+
+	inline ServerEnvironment* ServerEnvironment::GetEnvironment(entt::registry& registry)
+	{
+		return registry.ctx().get<ServerEnvironment*>();
+	}
 }

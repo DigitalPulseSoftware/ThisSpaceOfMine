@@ -532,7 +532,7 @@ namespace tsom
 					entityInstance.UpdateProperty(i, std::move(entityData.properties[networkedPropertyIndex++]));
 			}
 
-			entityClass->ActivateEntity(entity);
+			entityClass->InitAndActivateEntity(entity);
 		}
 		else
 			fmt::print(fg(fmt::color::red), "unknown entity class {}\n", entityClassName);

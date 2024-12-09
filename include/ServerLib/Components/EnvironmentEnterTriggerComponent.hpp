@@ -25,6 +25,7 @@ namespace tsom
 		std::shared_ptr<Nz::Collider3D> entryTrigger;
 		Nz::Boxf aabb; //< in trigger space, serves as a cheap test before testing entryTrigger
 		ServerEnvironment* targetEnvironment;
+		bool enabled = true;
 		bool updateRoot = false;
 	};
 }

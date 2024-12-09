@@ -37,7 +37,7 @@ namespace tsom
 
 	void EnvironmentProxySystem::Update(Nz::Time /*elapsedTime*/)
 	{
-		ServerEnvironment* environment = m_registry.ctx().get<ServerEnvironment*>();
+		ServerEnvironment* environment = ServerEnvironment::GetEnvironment(m_registry);
 
 		m_observer.each([&](entt::entity entity)
 		{

@@ -9,24 +9,19 @@
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/PhysicsConstants.hpp>
 #include <CommonLib/Planet.hpp>
-#include <CommonLib/Ship.hpp>
 #include <CommonLib/Components/ChunkComponent.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Components/PlanetComponent.hpp>
-#include <CommonLib/Components/ShipComponent.hpp>
 #include <ServerLib/PlayerTokenAppComponent.hpp>
 #include <ServerLib/ServerEnvironment.hpp>
 #include <ServerLib/ServerInstance.hpp>
 #include <ServerLib/ServerPlanetEnvironment.hpp>
 #include <ServerLib/ServerShipEnvironment.hpp>
-#include <ServerLib/Components/EnvironmentEnterTriggerComponent.hpp>
-#include <ServerLib/Components/EnvironmentProxyComponent.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
 #include <ServerLib/Components/ServerInteractibleComponent.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/TaskSchedulerAppComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
-#include <Nazara/Physics3D/Collider3D.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <fmt/color.h>
 #include <nlohmann/json.hpp>
@@ -124,7 +119,7 @@ namespace tsom
 		assert(chunk);
 		assert(entityOwner);
 
-		ServerEnvironment* environment = entityOwner.registry()->ctx().get<ServerEnvironment*>();
+		ServerEnvironment* environment = ServerEnvironment::GetEnvironment(entityOwner);
 
 		Nz::Vector3ui voxelLoc(placeBlock.voxelLoc.x, placeBlock.voxelLoc.y, placeBlock.voxelLoc.z);
 		if (!CheckCanPlaceBlock(environment, chunk, voxelLoc))
@@ -177,7 +172,7 @@ namespace tsom
 				}
 			}
 
-			entt::handle playerEntity = m_player->GetControlledEntity();
+			entt::handle playerEntity = m_player->GetControlledEntityReference();
 			if (!playerEntity)
 				return;
 
@@ -265,12 +260,12 @@ namespace tsom
 		}
 		else if (message == "/regenchunk" && m_player->HasPermission(PlayerPermission::Admin))
 		{
-			entt::handle playerEntity = m_player->GetControlledEntity();
+			entt::handle playerEntity = m_player->GetControlledEntityReference();
 			if (!playerEntity)
 				return;
 
 			ServerInstance& serverInstance = m_player->GetServerInstance();
-			ServerEnvironment* currentEnvironment = m_player->GetControlledEntityEnvironment();
+			ServerEnvironment* currentEnvironment = ServerEnvironment::GetEnvironment(playerEntity);
 
 			// Bad temporary code
 			ServerPlanetEnvironment* planetEnvironment = dynamic_cast<ServerPlanetEnvironment*>(currentEnvironment);
@@ -293,13 +288,13 @@ namespace tsom
 		}
 		else if (message == "/spawncomputer")
 		{
-			entt::handle playerEntity = m_player->GetControlledEntity();
+			entt::handle playerEntity = m_player->GetControlledEntityReference();
 			if (!playerEntity)
 				return;
 
 			ServerInstance& serverInstance = m_player->GetServerInstance();
 
-			ServerEnvironment* currentEnvironment = m_player->GetControlledEntityEnvironment();
+			ServerEnvironment* currentEnvironment = ServerEnvironment::GetEnvironment(playerEntity);
 			if (currentEnvironment->GetType() != ServerEnvironmentType::Ship)
 			{
 				m_player->SendChatMessage("computers can only be spawned in ships");
@@ -390,7 +385,7 @@ namespace tsom
 					entity.emplace<NetworkedComponent>();
 
 					entity.emplace<ClassInstanceComponent>(computerClass);
-					computerClass->ActivateEntity(entity);
+					computerClass->InitAndActivateEntity(entity);
 				}
 			}
 
@@ -426,7 +421,7 @@ namespace tsom
 		}
 		else if (message == "/spawnplanet" && m_player->HasPermission(PlayerPermission::Admin))
 		{
-			entt::handle playerEntity = m_player->GetControlledEntity();
+			entt::handle playerEntity = m_player->GetControlledEntityReference();
 			if (!playerEntity)
 				return;
 

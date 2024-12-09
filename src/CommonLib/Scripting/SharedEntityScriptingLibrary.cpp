@@ -305,6 +305,8 @@ namespace tsom
 			{
 				if (eventName == "init")
 					entityBuilder.classMetatable["_Init"] = std::move(callback);
+				else if (eventName == "activate")
+					entityBuilder.classMetatable["_Activate"] = std::move(callback);
 				else
 				{
 					if (!RegisterEvent(entityBuilder.classMetatable, eventName, std::move(callback)))
@@ -381,6 +383,22 @@ namespace tsom
 			sol::state_view state(L);
 
 			std::shared_ptr sharedCallbacks = std::make_shared<std::vector<sol::protected_function>>(std::move(entityBuilder.propertyUpdateCallbacks));
+
+			if (sol::optional<sol::protected_function> activateCallback = entityBuilder.classMetatable["_Activate"])
+			{
+				entityBuilder.callbacks.onActivate = [this, callback = std::move(activateCallback)](entt::handle entity) mutable
+				{
+					auto& entityScripted = entity.get<ScriptedEntityComponent>();
+
+					auto res = (*callback)(entityScripted.entityTable);
+					if (!res.valid())
+					{
+						sol::error err = res;
+						fmt::print(fg(fmt::color::red), "entity activate event failed: {}\n", err.what());
+					}
+				};
+			}
+
 			entityBuilder.callbacks.onInit = [this, state, metatable = std::move(entityBuilder.classMetatable), sharedCallbacks](entt::handle entity) mutable
 			{
 				auto& entityInstance = entity.get<ClassInstanceComponent>();

@@ -9,19 +9,14 @@ namespace tsom
 		return m_controller;
 	}
 
-	inline entt::handle ServerPlayer::GetControlledEntity() const
+	inline EntityReference& ServerPlayer::GetControlledEntityReference()
 	{
 		return m_controlledEntity;
 	}
 
-	inline ServerEnvironment* ServerPlayer::GetControlledEntityEnvironment()
+	inline const EntityReference& ServerPlayer::GetControlledEntityReference() const
 	{
-		return m_controlledEntityEnvironment;
-	}
-
-	inline const ServerEnvironment* ServerPlayer::GetControlledEntityEnvironment() const
-	{
-		return m_controlledEntityEnvironment;
+		return m_controlledEntity;
 	}
 
 	inline ServerEnvironment* ServerPlayer::GetRootEnvironment()
