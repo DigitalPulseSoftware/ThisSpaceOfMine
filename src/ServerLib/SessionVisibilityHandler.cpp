@@ -62,8 +62,6 @@ namespace tsom
 		assert(!m_entityIndices.contains(entity));
 
 		assert(!m_deletedEntities.contains(entity)); //< resurrecting entities shouldn't be possible
-		if (entityData.isMoving && entity != m_controlledEntity)
-			m_movingEntities.emplace(entity);
 
 		if (entity.try_get<PlanetComponent>() || entity.try_get<ShipComponent>())
 		{
@@ -741,6 +739,9 @@ namespace tsom
 		entityData.initialStates.rotation = createEntityData.initialRotation;
 		entityData.playerControlled = createEntityData.playerControlledData;
 		entityData.properties = std::move(createEntityData.entityProperties);
+
+		if (createEntityData.isMoving && entity != m_controlledEntity)
+			m_movingEntities.emplace(entity);
 	}
 
 	void SessionVisibilityHandler::HandleEntityDestruction(entt::handle entity)
