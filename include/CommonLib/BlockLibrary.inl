@@ -17,4 +17,9 @@ namespace tsom
 
 		return it->second;
 	}
+
+	inline bool tsom::BlockLibrary::IsValidBlock(BlockIndex blockIndex) const
+	{
+		return blockIndex < m_blocks.size();
+	}
 }

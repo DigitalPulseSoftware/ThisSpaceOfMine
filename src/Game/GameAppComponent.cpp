@@ -8,7 +8,6 @@
 #include <ClientLib/Systems/CameraFollowerSystem.hpp>
 #include <ClientLib/Systems/NetworkMovementInterpolationSystem.hpp>
 #include <ClientLib/Systems/PhysicsInterpolationSystem.hpp>
-#include <ClientLib/Systems/PlayerAnimationSystem.hpp>
 #include <ClientLib/Systems/TransformCopySystem.hpp>
 #include <CommonLib/DownloadManager.hpp>
 #include <CommonLib/GameConstants.hpp>
@@ -22,6 +21,7 @@
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/DebugInfoState.hpp>
 #include <Game/States/MenuState.hpp>
+#include <Game/States/PlanetEditorState.hpp>
 #include <Game/States/VersionCheckState.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/Clock.hpp>
@@ -67,14 +67,23 @@ namespace tsom
 			stateData->window = &window;
 			stateData->world = &world;
 
-			std::shared_ptr<tsom::ConnectionState> connectionState = std::make_shared<tsom::ConnectionState>(stateData);
-			stateData->connectionState = connectionState.get();
+			auto& commandLineParams = GetApp().GetCommandLineParameters();
+			if (commandLineParams.HasFlag("planet-editor"))
+			{
+				m_stateMachine.PushState(std::make_shared<tsom::DebugInfoState>(stateData));
+				m_stateMachine.PushState(std::make_shared<tsom::PlanetEditorState>(stateData));
+			}
+			else
+			{
+				std::shared_ptr<tsom::ConnectionState> connectionState = std::make_shared<tsom::ConnectionState>(stateData);
+				stateData->connectionState = connectionState.get();
 
-			m_stateMachine.PushState(std::make_shared<tsom::DebugInfoState>(stateData));
-			m_stateMachine.PushState(std::move(connectionState));
-			m_stateMachine.PushState(std::make_shared<tsom::BackgroundState>(stateData));
-			m_stateMachine.PushState(std::make_shared<tsom::VersionCheckState>(stateData));
-			m_stateMachine.PushState(std::make_shared<tsom::MenuState>(stateData));
+				m_stateMachine.PushState(std::make_shared<tsom::DebugInfoState>(stateData));
+				m_stateMachine.PushState(std::move(connectionState));
+				m_stateMachine.PushState(std::make_shared<tsom::BackgroundState>(stateData));
+				m_stateMachine.PushState(std::make_shared<tsom::VersionCheckState>(stateData));
+				m_stateMachine.PushState(std::make_shared<tsom::MenuState>(stateData));
+			}
 		}
 	}
 

@@ -35,6 +35,8 @@ namespace tsom
 
 			GravityForce ComputeGravity(const Nz::Vector3f& position) const override;
 
+			void ClearChunks() override;
+
 			void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, Chunk& chunk)> callback) override;
 			void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, const Chunk& chunk)> callback) const override;
 

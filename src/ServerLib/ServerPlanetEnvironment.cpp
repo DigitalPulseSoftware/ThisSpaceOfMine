@@ -56,7 +56,7 @@ namespace tsom
 		auto& taskScheduler = app.GetComponent<Nz::TaskSchedulerAppComponent>();
 
 		auto& planetComponent = m_planetEntity.get<PlanetComponent>();
-		planetComponent.planet->GenerateChunks(blockLibrary, taskScheduler, seed, chunkCount);
+		planetComponent.planet->GenerateChunks(blockLibrary, taskScheduler, seed, chunkCount, "alice");
 		planetComponent.planet->GeneratePlatform(blockLibrary, tsom::Direction::Right, { 65, -18, -39 });
 		planetComponent.planet->GeneratePlatform(blockLibrary, tsom::Direction::Back, { -34, 2, 53 });
 		planetComponent.planet->GeneratePlatform(blockLibrary, tsom::Direction::Front, { 22, -35, -59 });

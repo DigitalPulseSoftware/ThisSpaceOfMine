@@ -19,6 +19,7 @@
 
 namespace Nz
 {
+	class ApplicationBase;
 	class TaskScheduler;
 }
 
@@ -27,7 +28,7 @@ namespace tsom
 	class TSOM_COMMONLIB_API Planet : public ChunkContainer, public GravityController
 	{
 		public:
-			Planet(float tileSize, float cornerRadius, float gravity);
+			Planet(Nz::ApplicationBase& app, float tileSize, float cornerRadius, float gravity);
 			Planet(const Planet&) = delete;
 			Planet(Planet&&) = delete;
 			~Planet() = default;
@@ -37,11 +38,13 @@ namespace tsom
 			GravityForce ComputeGravity(const Nz::Vector3f& position) const override;
 			Nz::Vector3f ComputeUpDirection(const Nz::Vector3f& position) const;
 
+			void ClearChunks() override;
+
 			void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, Chunk& chunk)> callback) override;
 			void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, const Chunk& chunk)> callback) const override;
 
 			void GenerateChunk(const BlockLibrary& blockLibrary, Chunk& chunk, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount);
-			void GenerateChunks(const BlockLibrary& blockLibrary, Nz::TaskScheduler& taskScheduler, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount);
+			void GenerateChunks(const BlockLibrary& blockLibrary, Nz::TaskScheduler& taskScheduler, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, std::string_view scriptName);
 			void GeneratePlatform(const BlockLibrary& blockLibrary, Direction upDirection, const BlockIndices& platformCenter);
 
 			inline Nz::Vector3f GetCenter() const override;
@@ -71,6 +74,7 @@ namespace tsom
 
 			std::mutex m_chunkUpdatedSignalMutex;
 			tsl::hopscotch_map<ChunkIndices, ChunkData> m_chunks;
+			Nz::ApplicationBase& m_app;
 			float m_cornerRadius;
 			float m_gravity;
 	};

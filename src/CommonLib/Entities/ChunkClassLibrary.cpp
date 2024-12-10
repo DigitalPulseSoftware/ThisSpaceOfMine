@@ -34,7 +34,7 @@ namespace tsom
 				Nz::EnttWorld* world = entity.registry()->ctx().get<Nz::EnttWorld*>();
 
 				auto& planetComponent = entity.emplace<PlanetComponent>();
-				planetComponent.planet = std::make_unique<Planet>(cellSize, cornerRadius, gravity);
+				planetComponent.planet = std::make_unique<Planet>(m_app, cellSize, cornerRadius, gravity);
 				planetComponent.planetEntities = SetupChunkEntities(*world, *planetComponent.planet);
 				planetComponent.planetEntities->SetParentEntity(entity);
 

@@ -22,6 +22,11 @@ namespace tsom
 		return m_collisionCellMask;
 	}
 
+	inline const BlockLibrary& Chunk::GetBlockLibrary() const
+	{
+		return m_blockLibrary;
+	}
+
 	inline unsigned int Chunk::GetBlockLocalIndex(const Nz::Vector3ui& indices) const
 	{
 		assert(indices.x < m_size.x);
@@ -54,8 +59,7 @@ namespace tsom
 
 	inline std::size_t Chunk::GetBlockCount() const
 	{
-		NazaraAssertMsg(!m_blocks.empty(), "chunk has not been reset");
-		return m_blocks.size();
+		return m_size.x * m_size.y * m_size.z;
 	}
 
 	inline float Chunk::GetBlockSize() const

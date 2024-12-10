@@ -6,15 +6,21 @@
 #include <CommonLib/BlockLibrary.hpp>
 #include <CommonLib/DeformedChunk.hpp>
 #include <CommonLib/FlatChunk.hpp>
+#include <CommonLib/Scripting/ChunkScriptingLibrary.hpp>
+#include <CommonLib/Scripting/MathScriptingLibrary.hpp>
+#include <CommonLib/Scripting/ScriptingContext.hpp>
 #include <Nazara/Core/TaskScheduler.hpp>
 #include <Nazara/Math/Box.hpp>
 #include <NazaraUtils/CallOnExit.hpp>
 #include <PerlinNoise.hpp>
+#include <fmt/core.h>
+#include <thread>
 
 namespace tsom
 {
-	Planet::Planet(float tileSize, float cornerRadius, float gravity) :
+	Planet::Planet(Nz::ApplicationBase& app, float tileSize, float cornerRadius, float gravity) :
 	ChunkContainer(tileSize),
+	m_app(app),
 	m_cornerRadius(cornerRadius),
 	m_gravity(gravity)
 	{
@@ -41,7 +47,7 @@ namespace tsom
 			return false;
 		};
 
-		if (IsDeformedChunk())
+		if (m_cornerRadius > 0.f && IsDeformedChunk())
 			chunkData.chunk = std::make_unique<DeformedChunk>(blockLibrary, *this, indices, Nz::Vector3ui{ ChunkSize }, m_tileSize, GetCenter() - chunkOffset, m_cornerRadius);
 		else
 			chunkData.chunk = std::make_unique<FlatChunk>(blockLibrary, *this, indices, Nz::Vector3ui{ ChunkSize }, m_tileSize);
@@ -164,6 +170,14 @@ namespace tsom
 		return Nz::Vector3f::Normalize(position - innerPos);
 	}
 
+	void Planet::ClearChunks()
+	{
+		for (auto&& [chunkIndices, chunkData] : m_chunks)
+			OnChunkRemove(this, chunkData.chunk.get());
+
+		m_chunks.clear();
+	}
+
 	void Planet::ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, Chunk& chunk)> callback)
 	{
 		for (auto&& [chunkIndices, chunkData] : m_chunks)
@@ -195,10 +209,6 @@ namespace tsom
 		Nz::Vector3i maxHeight((Nz::Vector3i(chunkCount) + Nz::Vector3i(1)) / 2);
 		maxHeight *= int(Planet::ChunkSize);
 
-		Nz::EnumArray<Direction, siv::PerlinNoise> perlin;
-		for (auto&& [dir, noise] : perlin.iter_kv())
-			noise.reseed(seed + static_cast<unsigned int>(dir));
-
 		chunk.LockWrite();
 		NAZARA_DEFER({ chunk.UnlockWrite(); });
 
@@ -207,7 +217,32 @@ namespace tsom
 			// Fill all blocks based on their depth
 			ChunkIndices chunkIndices = chunk.GetIndices();
 
+			double heightScale = 1.5f * m_tileSize;
+			double scale = 0.02f * m_tileSize;
+
+			siv::PerlinNoise perlin;
+
 			BlockIndex* blockIndexPtr = blockIndices;
+#if 0
+			for (unsigned int z = 0; z < Planet::ChunkSize; ++z)
+			{
+				for (unsigned int y = 0; y < Planet::ChunkSize; ++y)
+				{
+					for (unsigned int x = 0; x < Planet::ChunkSize; ++x)
+					{
+						Nz::Vector3i blockPos = GetBlockIndices(chunkIndices, { x, y, z });
+						float distToSurface = sdRoundBox(Nz::Vector3f(blockPos), Nz::Vector3f(80.f, 80.f, 80.f), m_cornerRadius);
+
+						if (distToSurface <= 0.f)
+							*blockIndexPtr++ = dirtBlockIndex;
+						else
+							*blockIndexPtr++ = EmptyBlockIndex;
+					}
+				}
+			}
+			#endif
+
+			#if 1
 			for (unsigned int z = 0; z < Planet::ChunkSize; ++z)
 			{
 				for (unsigned int y = 0; y < Planet::ChunkSize; ++y)
@@ -229,10 +264,41 @@ namespace tsom
 
 						depth -= freeSpace;
 
+						BlockIndices mapPos = GetBlockIndices(chunkIndices, { x, y, z });
+						double presence = perlin.normalizedOctave3D_01(mapPos.x * scale, mapPos.y * scale, mapPos.z * scale, 4);
+
+						if (depth < 20)
+							presence *= std::max(double(depth) / 20.0, 1.0);
+
+						presence += double(depth) / std::max({ maxHeight.x, maxHeight.y, maxHeight.z });
+
 						BlockIndex blockIndex;
-						if (depth <= 6)
+						if (presence > 0.6)
+						{
+							if (depth <= 6 * 2)
+								blockIndex = snowBlockIndex;
+							else if (depth <= 18 * 2)
+								blockIndex = dirtBlockIndex;
+							else
+								blockIndex = (dis(rand)) ? stoneBlockIndex : stoneMossyBlockIndex;
+						}
+						else
+							blockIndex = EmptyBlockIndex;
+
+						if (std::abs(blockPos.x) <= 2 && std::abs(blockPos.z) <= 2)
+							blockIndex = EmptyBlockIndex;
+
+						if (blockIndex != InvalidBlockIndex)
+							*blockIndexPtr++ = blockIndex;
+
+						#if 0
+
+						depth -= freeSpace;
+
+						BlockIndex blockIndex;
+						if (depth <= 6 * 2)
 							blockIndex = snowBlockIndex;
-						else if (depth <= 18)
+						else if (depth <= 18 * 2)
 							blockIndex = dirtBlockIndex;
 						else
 							blockIndex = (dis(rand)) ? stoneBlockIndex : stoneMossyBlockIndex;
@@ -242,12 +308,19 @@ namespace tsom
 
 						if (blockIndex != InvalidBlockIndex)
 							*blockIndexPtr++ = blockIndex;
+						#endif
 					}
 				}
 			}
+			#endif
 
-			constexpr double heightScale = 1.5f;
-			constexpr double scale = 0.02f;
+			#if 0
+			Nz::EnumArray<Direction, siv::PerlinNoise> perlin;
+			for (auto&& [dir, noise] : perlin.iter_kv())
+				noise.reseed(seed + static_cast<unsigned int>(dir));
+
+			double heightScale = 1.5f * m_tileSize;
+			double scale = 0.02f * m_tileSize;
 
 			// +X
 			for (unsigned int y = 0; y < Planet::ChunkSize; ++y)
@@ -398,11 +471,26 @@ namespace tsom
 						blockIndices[chunk.GetBlockLocalIndex({ x, Planet::ChunkSize - height - 1, y })] = EmptyBlockIndex;
 				}
 			}
+			#endif
 		});
 	}
 
-	void Planet::GenerateChunks(const BlockLibrary& blockLibrary, Nz::TaskScheduler& taskScheduler, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount)
+	void Planet::GenerateChunks(const BlockLibrary& blockLibrary, Nz::TaskScheduler& taskScheduler, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, std::string_view scriptName)
 	{
+		struct ThreadState
+		{
+			ThreadState(Nz::ApplicationBase& app) :
+			scriptingContext(app)
+			{
+			}
+
+			ScriptingContext scriptingContext;
+			sol::protected_function generationFunction;
+		};
+
+		std::mutex threadMutex;
+		std::unordered_map<std::thread::id, std::unique_ptr<ThreadState>> threadStates;
+
 		for (int chunkZ = 0; chunkZ < chunkCount.z; ++chunkZ)
 		{
 			for (int chunkY = 0; chunkY < chunkCount.y; ++chunkY)
@@ -412,7 +500,44 @@ namespace tsom
 					auto& chunk = AddChunk(blockLibrary, { chunkX - int(chunkCount.x / 2), chunkY - int(chunkCount.y / 2), chunkZ - int(chunkCount.z / 2) });
 					taskScheduler.AddTask([&]
 					{
-						GenerateChunk(blockLibrary, chunk, seed, chunkCount);
+						ThreadState* currentThreadState = nullptr;
+						{
+							std::unique_lock lock(threadMutex);
+							auto id = std::this_thread::get_id();
+							auto it = threadStates.find(id);
+							if (it == threadStates.end())
+							{
+								lock.unlock();
+
+								std::unique_ptr<ThreadState> threadState = std::make_unique<ThreadState>(m_app);
+								threadState->scriptingContext.RegisterLibrary<MathScriptingLibrary>();
+								threadState->scriptingContext.RegisterLibrary<ChunkScriptingLibrary>();
+
+								Nz::Result execResult = threadState->scriptingContext.LoadFile(fmt::format("scripts/planets/{}.lua", scriptName));
+								if (!execResult)
+									return;
+
+								threadState->generationFunction = execResult.GetValue();
+
+								currentThreadState = threadState.get();
+
+								lock.lock();
+								threadStates.emplace(id, std::move(threadState));
+							}
+							else
+								currentThreadState = it->second.get();
+						}
+
+						chunk.LockWrite();
+						NAZARA_DEFER({ chunk.UnlockWrite(); });
+
+						auto result = currentThreadState->generationFunction(chunk, seed, chunkCount);
+						if (!result.valid())
+						{
+							sol::error err = result;
+							fmt::print("chunk {};{};{} failed to generate: {}", chunkX, chunkY, chunkZ, err.what());
+							return;
+						}
 					});
 				}
 			}

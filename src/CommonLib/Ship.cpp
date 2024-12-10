@@ -97,6 +97,14 @@ namespace tsom
 		};
 	}
 
+	void Ship::ClearChunks()
+	{
+		for (auto&& [chunkIndices, chunkData] : m_chunks)
+			OnChunkRemove(this, chunkData.chunk.get());
+
+		m_chunks.clear();
+	}
+
 	void Ship::ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, Chunk& chunk)> callback)
 	{
 		for (auto&& [chunkIndices, chunkData] : m_chunks)

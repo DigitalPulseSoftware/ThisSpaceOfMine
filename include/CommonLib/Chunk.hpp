@@ -62,6 +62,7 @@ namespace tsom
 			virtual void Deserialize(Nz::ByteStream& byteStream);
 
 			inline const Nz::Bitset<Nz::UInt64>& GetCollisionCellMask() const;
+			inline const BlockLibrary& GetBlockLibrary() const;
 			inline unsigned int GetBlockLocalIndex(const Nz::Vector3ui& indices) const;
 			inline Nz::Vector3ui GetBlockLocalIndices(unsigned int blockIndex) const;
 			inline BlockIndex GetBlockContent(unsigned int blockIndex) const;

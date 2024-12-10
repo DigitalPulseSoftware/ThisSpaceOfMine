@@ -23,6 +23,8 @@ namespace tsom
 			ChunkContainer(ChunkContainer&&) noexcept = default;
 			virtual ~ChunkContainer();
 
+			virtual void ClearChunks() = 0;
+
 			virtual void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, Chunk& chunk)> callback) = 0;
 			virtual void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, const Chunk& chunk)> callback) const = 0;
 

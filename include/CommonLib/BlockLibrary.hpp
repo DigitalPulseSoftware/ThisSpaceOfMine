@@ -30,6 +30,7 @@ namespace tsom
 
 			inline const BlockData& GetBlockData(BlockIndex blockIndex) const;
 			inline BlockIndex GetBlockIndex(std::string_view blockName) const;
+			inline bool IsValidBlock(BlockIndex blockIndex) const;
 
 			BlockIndex RegisterBlock(std::string name, BlockInfo blockInfo);
 
