@@ -100,7 +100,6 @@ namespace tsom
 
 			std::optional<ConsoleExecutor> m_consoleExecutor;
 			std::shared_ptr<DebugOverlay> m_debugOverlay;
-			std::unique_ptr<ClientChunkEntities> m_planetEntities;
 			std::vector<InputRotation> m_predictedInputRotations;
 			entt::handle m_cameraEntity;
 			entt::handle m_controlledEntity;
