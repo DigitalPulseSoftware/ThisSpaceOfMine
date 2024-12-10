@@ -40,6 +40,8 @@ namespace tsom
 			ClientChunkEntities(ClientChunkEntities&&) = delete;
 			~ClientChunkEntities() = default;
 
+			inline void EnableCollisionGeneration(bool enable);
+
 			ClientChunkEntities& operator=(const ClientChunkEntities&) = delete;
 			ClientChunkEntities& operator=(ClientChunkEntities&&) = delete;
 
@@ -56,6 +58,7 @@ namespace tsom
 
 			std::shared_ptr<Nz::MaterialInstance> m_chunkMaterial;
 			std::shared_ptr<Nz::VertexDeclaration> m_chunkVertexDeclaration;
+			bool m_isCollisionGenerationEnabled;;
 	};
 }
 

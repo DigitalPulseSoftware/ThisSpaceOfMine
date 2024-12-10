@@ -4,4 +4,8 @@
 
 namespace tsom
 {
+	inline void ClientChunkEntities::EnableCollisionGeneration(bool enable)
+	{
+		m_isCollisionGenerationEnabled = enable;
+	}
 }

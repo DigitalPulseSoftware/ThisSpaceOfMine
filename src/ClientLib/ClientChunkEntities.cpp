@@ -26,7 +26,8 @@
 namespace tsom
 {
 	ClientChunkEntities::ClientChunkEntities(Nz::ApplicationBase& app, Nz::EnttWorld& world, ChunkContainer& chunkContainer, const ClientBlockLibrary& blockLibrary) :
-	ChunkEntities(app, world, chunkContainer, blockLibrary, NoInit{})
+	ChunkEntities(app, world, chunkContainer, blockLibrary, NoInit{}),
+	m_isCollisionGenerationEnabled(true)
 	{
 		auto& filesystem = app.GetComponent<Nz::FilesystemAppComponent>();
 
@@ -190,7 +191,7 @@ namespace tsom
 		}
 
 		std::shared_ptr<ColliderModelUpdateJob> updateJob = std::make_shared<ColliderModelUpdateJob>();
-		updateJob->taskCount = 2;
+		updateJob->taskCount = (m_isCollisionGenerationEnabled) ? 2 : 1;
 
 		updateJob->applyFunc = [this](const ChunkIndices& chunkIndices, UpdateJob&& job)
 		{
@@ -198,8 +199,11 @@ namespace tsom
 
 			entt::handle chunkEntity = Nz::Retrieve(m_chunkEntities, chunkIndices);
 
-			auto& rigidBody = chunkEntity.get<Nz::RigidBody3DComponent>();
-			rigidBody.SetCollider(std::move(colliderUpdateJob.collider), false);
+			if (m_isCollisionGenerationEnabled)
+			{
+				auto& rigidBody = chunkEntity.get<Nz::RigidBody3DComponent>();
+				rigidBody.SetCollider(std::move(colliderUpdateJob.collider), false);
+			}
 
 			entt::handle visualEntity;
 			if (VisualEntityComponent* visualEntityComponent = chunkEntity.try_get<VisualEntityComponent>())
@@ -243,17 +247,20 @@ namespace tsom
 		};
 
 		auto& taskScheduler = m_application.GetComponent<Nz::TaskSchedulerAppComponent>();
-		taskScheduler.AddTask([this, updateJob, chunkPtr = chunk.shared_from_this()]
+		if (m_isCollisionGenerationEnabled)
 		{
-			if (updateJob->cancelled)
-				return;
+			taskScheduler.AddTask([this, updateJob, chunkPtr = chunk.shared_from_this()]
+			{
+				if (updateJob->cancelled)
+					return;
 
-			chunkPtr->LockRead();
-			updateJob->collider = chunkPtr->BuildCollider();
-			chunkPtr->UnlockRead();
+				chunkPtr->LockRead();
+				updateJob->collider = chunkPtr->BuildCollider();
+				chunkPtr->UnlockRead();
 
-			updateJob->jobDone++;
-		});
+				updateJob->jobDone++;
+			});
+		}
 
 		taskScheduler.AddTask([this, updateJob, chunkPtr = chunk.shared_from_this()]
 		{
