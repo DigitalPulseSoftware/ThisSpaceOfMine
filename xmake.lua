@@ -84,6 +84,7 @@ target("CommonLib", function ()
 	end)
 
 	add_defines("TSOM_COMMONLIB_BUILD")
+	add_defines("SOL_SAFE_USERTYPE", { public = true })
 	add_options("commonlib_static")
 
 	add_packages("nazaraengine", { components = { "physics3d", "network" }, public = true })
