@@ -119,7 +119,7 @@ namespace tsom
 			sol::call_constructor, sol::constructors<Nz::Vector2<T>(), Nz::Vector2<T>(T), Nz::Vector2<T>(T, T)>(),
 			"GetLength", [](const Nz::Vector2<T>& vec)
 			{
-				return vec.GetLength<double>();
+				return vec.template GetLength<double>();
 			},
 			"GetNormal", [](const Nz::Vector2<T>& vec)
 			{
@@ -155,7 +155,7 @@ namespace tsom
 			sol::call_constructor, sol::constructors<Nz::Vector3<T>(), Nz::Vector3<T>(T), Nz::Vector3<T>(T, T, T)>(),
 			"GetLength", [](const Nz::Vector3<T>& vec)
 			{
-				return vec.GetLength<double>();
+				return vec.template GetLength<double>();
 			},
 			"GetNormal", [](const Nz::Vector3<T>& vec)
 			{
