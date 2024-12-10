@@ -10,86 +10,178 @@
 #include <Nazara/Math/Vector2.hpp>
 #include <Nazara/Math/Vector3.hpp>
 #include <NazaraUtils/FunctionTraits.hpp>
+#include <PerlinNoise.hpp>
 #include <sol/state.hpp>
 
 namespace tsom
 {
 	void MathScriptingLibrary::Register(sol::state& state)
 	{
-		RegisterBox(state);
-		RegisterEulerAngles(state);
-		RegisterQuaternion(state);
-		RegisterVector2(state);
-		RegisterVector3(state);
+		RegisterBox<float>(state, "Boxf");
+		RegisterBox<int>(state, "Boxi");
+		RegisterBox<unsigned int>(state, "Boxui");
+		RegisterEulerAngles<float>(state, "EulerAnglesf");
+		RegisterPerlinNoise(state);
+		RegisterQuaternion<float>(state, "Quaternionf");
+		RegisterVector2<float>(state, "Vec2f");
+		RegisterVector2<int>(state, "Vec2i");
+		RegisterVector2<unsigned int>(state, "Vec2ui");
+		RegisterVector3<float>(state, "Vec3f");
+		RegisterVector3<int>(state, "Vec3i");
+		RegisterVector3<unsigned int>(state, "Vec3ui");
 	}
 
-	void MathScriptingLibrary::RegisterBox(sol::state& state)
+	template<typename T>
+	void MathScriptingLibrary::RegisterBox(sol::state& state, const char* name)
 	{
-		state.new_usertype<Nz::Boxf>("Box",
-			sol::call_constructor, sol::constructors<Nz::Boxf(), Nz::Boxf(float, float, float), Nz::Boxf(const Nz::Vector3f& pos, const Nz::Vector3f& lengths)>(),
-			"GetLengths", &Nz::Boxf::GetLengths,
-			"x", &Nz::Boxf::x,
-			"y", &Nz::Boxf::y,
-			"z", &Nz::Boxf::z,
-			"width", &Nz::Boxf::width,
-			"height", &Nz::Boxf::height,
-			"depth", &Nz::Boxf::depth,
-			sol::meta_function::to_string, &Nz::Boxf::ToString
+		state.new_usertype<Nz::Box<T>>(name,
+			sol::call_constructor, sol::constructors<Nz::Box<T>(), Nz::Box<T>(T, T, T), Nz::Box<T>(const Nz::Vector3<T>& pos, const Nz::Vector3<T>& lengths)>(),
+			"GetLengths", &Nz::Box<T>::GetLengths,
+			"x", &Nz::Box<T>::x,
+			"y", &Nz::Box<T>::y,
+			"z", &Nz::Box<T>::z,
+			"width", &Nz::Box<T>::width,
+			"height", &Nz::Box<T>::height,
+			"depth", &Nz::Box<T>::depth,
+			sol::meta_function::to_string, &Nz::Box<T>::ToString
 		);
 	}
 
-	void MathScriptingLibrary::RegisterEulerAngles(sol::state& state)
+	template<typename T>
+	void MathScriptingLibrary::RegisterEulerAngles(sol::state& state, const char* name)
 	{
-		state.new_usertype<Nz::EulerAnglesf>("EulerAngles",
-			sol::call_constructor, sol::constructors<Nz::EulerAnglesf(), Nz::EulerAnglesf(float, float, float)>(),
-			"pitch", &Nz::EulerAnglesf::pitch,
-			"yaw", &Nz::EulerAnglesf::yaw,
-			"roll", &Nz::EulerAnglesf::roll,
-			sol::meta_function::to_string, &Nz::EulerAnglesf::ToString
+		state.new_usertype<Nz::EulerAngles<T>>(name,
+			sol::call_constructor, sol::constructors<Nz::EulerAngles<T>(), Nz::EulerAngles<T>(T, T, T)>(),
+			"pitch", &Nz::EulerAngles<T>::pitch,
+			"yaw", &Nz::EulerAngles<T>::yaw,
+			"roll", &Nz::EulerAngles<T>::roll,
+			sol::meta_function::to_string, &Nz::EulerAngles<T>::ToString
 		);
 	}
 
-	void MathScriptingLibrary::RegisterQuaternion(sol::state& state)
+	void MathScriptingLibrary::RegisterPerlinNoise(sol::state& state)
 	{
-		state.new_usertype<Nz::Quaternionf>("Quaternion",
-			sol::call_constructor, sol::constructors<Nz::Quaternionf(), Nz::Quaternionf(float, float, float, float)>(),
-			"GetConjugate", &Nz::Quaternionf::GetConjugate,
-			"x", &Nz::Quaternionf::x,
-			"y", &Nz::Quaternionf::y,
-			"z", &Nz::Quaternionf::z,
-			"w", &Nz::Quaternionf::w,
-			sol::meta_function::to_string, &Nz::Quaternionf::ToString
+		state.new_usertype<siv::PerlinNoise>("PerlinNoise",
+			sol::call_constructor, sol::constructors<siv::PerlinNoise(), siv::PerlinNoise(std::uint32_t)>(),
+			"noise1D", LuaFunction(&siv::PerlinNoise::noise1D),
+			"noise1D_01", LuaFunction(&siv::PerlinNoise::noise1D_01),
+			"noise2D", LuaFunction(&siv::PerlinNoise::noise2D),
+			"noise2D_01", LuaFunction(&siv::PerlinNoise::noise2D_01),
+			"noise3D", LuaFunction(&siv::PerlinNoise::noise3D),
+			"noise3D_01", LuaFunction(&siv::PerlinNoise::noise3D_01),
+
+			"octave1D", LuaFunction(&siv::PerlinNoise::octave1D),
+			"octave2D", LuaFunction(&siv::PerlinNoise::octave2D),
+			"octave3D", LuaFunction(&siv::PerlinNoise::octave3D),
+
+			"octave1D_11", LuaFunction(&siv::PerlinNoise::octave1D_11),
+			"octave2D_11", LuaFunction(&siv::PerlinNoise::octave2D_11),
+			"octave3D_11", LuaFunction(&siv::PerlinNoise::octave3D_11),
+
+			"octave1D_01", LuaFunction(&siv::PerlinNoise::octave1D_01),
+			"octave2D_01", LuaFunction(&siv::PerlinNoise::octave2D_01),
+			"octave3D_01", LuaFunction(&siv::PerlinNoise::octave3D_01),
+
+			"reseed", LuaFunction([](siv::PerlinNoise& noise, unsigned int seed)
+			{
+				return noise.reseed(seed);
+			}),//LuaFunction(Nz::Overload<unsigned int>(&siv::PerlinNoise::reseed)),
+
+			"normalizedOctave1D", LuaFunction(&siv::PerlinNoise::normalizedOctave1D),
+			"normalizedOctave2D", LuaFunction(&siv::PerlinNoise::normalizedOctave2D),
+			"normalizedOctave3D", LuaFunction(&siv::PerlinNoise::normalizedOctave3D),
+
+			"normalizedOctave1D_01", LuaFunction(&siv::PerlinNoise::normalizedOctave1D_01),
+			"normalizedOctave2D_01", LuaFunction(&siv::PerlinNoise::normalizedOctave2D_01),
+			"normalizedOctave3D_01", LuaFunction(&siv::PerlinNoise::normalizedOctave3D_01)
+		);
+
+	}
+
+	template<typename T>
+	void MathScriptingLibrary::RegisterQuaternion(sol::state& state, const char* name)
+	{
+		state.new_usertype<Nz::Quaternion<T>>(name,
+			sol::call_constructor, sol::constructors<Nz::Quaternion<T>(), Nz::Quaternion<T>(T, T, T, T)>(),
+			"GetConjugate", &Nz::Quaternion<T>::GetConjugate,
+			"x", &Nz::Quaternion<T>::x,
+			"y", &Nz::Quaternion<T>::y,
+			"z", &Nz::Quaternion<T>::z,
+			"w", &Nz::Quaternion<T>::w,
+			sol::meta_function::to_string, &Nz::Quaternion<T>::ToString
 		);
 	}
 
-	void MathScriptingLibrary::RegisterVector2(sol::state& state)
+	template<typename T>
+	void MathScriptingLibrary::RegisterVector2(sol::state& state, const char* name)
 	{
-		state.new_usertype<Nz::Vector2f>("Vec2",
-			sol::call_constructor, sol::constructors<Nz::Vector2f(), Nz::Vector2f(float), Nz::Vector2f(float, float)>(),
-			"x", &Nz::Vector2f::x,
-			"y", &Nz::Vector2f::y,
-			sol::meta_function::addition, Nz::Overload<const Nz::Vector2f&>(&Nz::Vector2f::operator+),
-			sol::meta_function::division, sol::overload(Nz::Overload<float>(&Nz::Vector2f::operator/), Nz::Overload<const Nz::Vector2f&>(&Nz::Vector2f::operator/)),
-			sol::meta_function::multiplication, sol::overload(Nz::Overload<float>(&Nz::Vector2f::operator*), Nz::Overload<const Nz::Vector2f&>(&Nz::Vector2f::operator*)),
-			sol::meta_function::subtraction, Nz::Overload<const Nz::Vector2f&>(&Nz::Vector2f::operator-),
-			sol::meta_function::to_string, &Nz::Vector2f::ToString,
-			sol::meta_function::unary_minus, Nz::Overload<>(&Nz::Vector2f::operator-)
+		state.new_usertype<Nz::Vector2<T>>(name,
+			sol::call_constructor, sol::constructors<Nz::Vector2<T>(), Nz::Vector2<T>(T), Nz::Vector2<T>(T, T)>(),
+			"GetLength", [](const Nz::Vector2<T>& vec)
+			{
+				return vec.GetLength<double>();
+			},
+			"GetNormal", [](const Nz::Vector2<T>& vec)
+			{
+				T length;
+				Nz::Vector2<T> normalizedVec = vec.GetNormal(&length);
+
+				return std::make_pair(normalizedVec, length);
+			},
+			"GetSquaredLength", &Nz::Vector2<T>::GetSquaredLength,
+			"Distance", [](const Nz::Vector2<T>& vec1, const Nz::Vector2<T>& vec2)
+			{
+				return vec1.Distance(vec2);
+			},
+			"SquaredDistance", [](const Nz::Vector2<T>& vec1, const Nz::Vector2<T>& vec2)
+			{
+				return vec1.SquaredDistance(vec2);
+			},
+			"x", &Nz::Vector2<T>::x,
+			"y", &Nz::Vector2<T>::y,
+			sol::meta_function::addition, Nz::Overload<const Nz::Vector2<T>&>(&Nz::Vector2<T>::operator+),
+			sol::meta_function::division, sol::overload(Nz::Overload<T>(&Nz::Vector2<T>::operator/), Nz::Overload<const Nz::Vector2<T>&>(&Nz::Vector2<T>::operator/)),
+			sol::meta_function::multiplication, sol::overload(Nz::Overload<T>(&Nz::Vector2<T>::operator*), Nz::Overload<const Nz::Vector2<T>&>(&Nz::Vector2<T>::operator*)),
+			sol::meta_function::subtraction, Nz::Overload<const Nz::Vector2<T>&>(&Nz::Vector2<T>::operator-),
+			sol::meta_function::to_string, &Nz::Vector2<T>::ToString,
+			sol::meta_function::unary_minus, Nz::Overload<>(&Nz::Vector2<T>::operator-)
 		);
 	}
 
-	void MathScriptingLibrary::RegisterVector3(sol::state& state)
+	template<typename T>
+	void MathScriptingLibrary::RegisterVector3(sol::state& state, const char* name)
 	{
-		state.new_usertype<Nz::Vector3f>("Vec3",
-			sol::call_constructor, sol::constructors<Nz::Vector3f(), Nz::Vector3f(float), Nz::Vector3f(float, float, float)>(),
-			"x", &Nz::Vector3f::x,
-			"y", &Nz::Vector3f::y,
-			"z", &Nz::Vector3f::z,
-			sol::meta_function::addition, Nz::Overload<const Nz::Vector3f&>(&Nz::Vector3f::operator+),
-			sol::meta_function::division, sol::overload(Nz::Overload<float>(&Nz::Vector3f::operator/), Nz::Overload<const Nz::Vector3f&>(&Nz::Vector3f::operator/)),
-			sol::meta_function::multiplication, sol::overload(Nz::Overload<float>(&Nz::Vector3f::operator*), Nz::Overload<const Nz::Vector3f&>(&Nz::Vector3f::operator*)),
-			sol::meta_function::subtraction, Nz::Overload<const Nz::Vector3f&>(&Nz::Vector3f::operator-),
-			sol::meta_function::to_string, &Nz::Vector3f::ToString,
-			sol::meta_function::unary_minus, Nz::Overload<>(&Nz::Vector3f::operator-)
+		state.new_usertype<Nz::Vector3<T>>(name,
+			sol::call_constructor, sol::constructors<Nz::Vector3<T>(), Nz::Vector3<T>(T), Nz::Vector3<T>(T, T, T)>(),
+			"GetLength", [](const Nz::Vector3<T>& vec)
+			{
+				return vec.GetLength<double>();
+			},
+			"GetNormal", [](const Nz::Vector3<T>& vec)
+			{
+				T length;
+				Nz::Vector3<T> normalizedVec = vec.GetNormal(&length);
+
+				return std::make_pair(normalizedVec, length);
+			},
+			"GetSquaredLength", &Nz::Vector3<T>::GetSquaredLength,
+			"Distance", [](const Nz::Vector3<T>& vec1, const Nz::Vector3<T>& vec2)
+			{
+				return vec1.Distance(vec2);
+			},
+			"SquaredDistance", [](const Nz::Vector3<T>& vec1, const Nz::Vector3<T>& vec2)
+			{
+				return vec1.SquaredDistance(vec2);
+			},
+			"x", &Nz::Vector3<T>::x,
+			"y", &Nz::Vector3<T>::y,
+			"z", &Nz::Vector3<T>::z,
+			sol::meta_function::addition, Nz::Overload<const Nz::Vector3<T>&>(&Nz::Vector3<T>::operator+),
+			sol::meta_function::division, sol::overload(Nz::Overload<T>(&Nz::Vector3<T>::operator/), Nz::Overload<const Nz::Vector3<T>&>(&Nz::Vector3<T>::operator/)),
+			sol::meta_function::multiplication, sol::overload(Nz::Overload<T>(&Nz::Vector3<T>::operator*), Nz::Overload<const Nz::Vector3<T>&>(&Nz::Vector3<T>::operator*)),
+			sol::meta_function::subtraction, Nz::Overload<const Nz::Vector3<T>&>(&Nz::Vector3<T>::operator-),
+			sol::meta_function::to_string, &Nz::Vector3<T>::ToString,
+			sol::meta_function::unary_minus, Nz::Overload<>(&Nz::Vector3<T>::operator-)
 		);
 	}
 }

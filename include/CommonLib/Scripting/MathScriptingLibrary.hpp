@@ -26,11 +26,12 @@ namespace tsom
 			MathScriptingLibrary& operator=(MathScriptingLibrary&&) = delete;
 
 		private:
-			void RegisterBox(sol::state& state);
-			void RegisterEulerAngles(sol::state& state);
-			void RegisterQuaternion(sol::state& state);
-			void RegisterVector2(sol::state& state);
-			void RegisterVector3(sol::state& state);
+			template<typename T> void RegisterBox(sol::state& state, const char* name);
+			template<typename T> void RegisterEulerAngles(sol::state& state, const char* name);
+			void RegisterPerlinNoise(sol::state& state);
+			template<typename T> void RegisterQuaternion(sol::state& state, const char* name);
+			template<typename T> void RegisterVector2(sol::state& state, const char* name);
+			template<typename T> void RegisterVector3(sol::state& state, const char* name);
 	};
 }
 
