@@ -71,6 +71,8 @@ namespace tsom
 
 					newEntity.emplace<ServerPlayerControlledComponent>(player->CreateHandle());
 
+					newEntity.get<ClassInstanceComponent>().GetClass()->ActivateEntity(newEntity);
+
 					if (newEnvironment->IsRoot())
 						player->UpdateRootEnvironment(newEnvironment);
 				};
@@ -147,6 +149,8 @@ namespace tsom
 
 					newEntity.emplace<Nz::RigidBody3DComponent>(physicsSettings);
 					newEntity.emplace<ShipExteriorComponent>().ownerShip = shipEnvironment;
+
+					newEntity.get<ClassInstanceComponent>().GetClass()->ActivateEntity(newEntity);
 
 					// Change the root environment of players in the ship as well
 					if (newEnvironment->IsRoot())

@@ -51,8 +51,6 @@ namespace tsom
 		}
 
 		handleEnvironmentSwitch(oldEntity, newEntity, relativeTransform);
-		newEntity.get<ClassInstanceComponent>().GetClass()->ActivateEntity(newEntity);
-
 		OnEntitySwitchedEnvironment(oldEntity, newEntity, newEnvironment, relativeTransform);
 		oldEntity.destroy();
 	}
