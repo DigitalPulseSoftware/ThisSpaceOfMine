@@ -13,6 +13,7 @@
 #include <Nazara/Core/StateMachine.hpp>
 #include <Nazara/Widgets/Canvas.hpp>
 #include <NazaraUtils/Prerequisites.hpp>
+#include <entt/entt.hpp>
 #include <optional>
 
 namespace Nz
@@ -42,7 +43,7 @@ namespace tsom
 
 		private:
 			bool CheckAssets();
-			void SetupCamera(std::shared_ptr<const Nz::RenderTarget> renderTarget, Nz::EnttWorld& world);
+			entt::handle SetupCamera(std::shared_ptr<const Nz::RenderTarget> renderTarget, Nz::EnttWorld& world);
 			void SetupCanvas(Nz::EnttWorld& world, Nz::Window& window);
 			std::shared_ptr<Nz::RenderTarget> SetupRenderTarget(Nz::EnttWorld& world, Nz::Window& window);
 			Nz::Window& SetupWindow();

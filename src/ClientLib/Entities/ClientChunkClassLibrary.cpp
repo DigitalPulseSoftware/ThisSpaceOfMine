@@ -6,6 +6,7 @@
 #include <ClientLib/ClientBlockLibrary.hpp>
 #include <ClientLib/ClientChunkEntities.hpp>
 #include <ClientLib/Components/ChunkNetworkMapComponent.hpp>
+#include <ClientLib/Components/ClientPointOfInterestComponent.hpp>
 
 namespace tsom
 {
@@ -14,9 +15,16 @@ namespace tsom
 	{
 	}
 
-	void ClientChunkClassLibrary::InitializeChunkEntity(entt::handle entity)
+	void ClientChunkClassLibrary::OnPlanetInit(entt::handle entity)
 	{
 		entity.emplace<ChunkNetworkMapComponent>();
+		entity.emplace<ClientPointOfInterestComponent>();
+	}
+
+	void ClientChunkClassLibrary::OnShipInit(entt::handle entity)
+	{
+		entity.emplace<ChunkNetworkMapComponent>();
+		entity.emplace<ClientPointOfInterestComponent>();
 	}
 
 	std::unique_ptr<ChunkEntities> ClientChunkClassLibrary::SetupChunkEntities(Nz::EnttWorld& world, ChunkContainer& chunkContainer)

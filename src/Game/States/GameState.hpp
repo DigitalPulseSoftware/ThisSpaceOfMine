@@ -68,6 +68,7 @@ namespace tsom
 			std::optional<RaycastResult> RaycastQuery() const;
 			void OnTick(Nz::Time elapsedTime, bool lastTick);
 			void SendInputs();
+			void UpdateInterface();
 			void UpdateMouseLock();
 
 			NazaraSlot(ClientSessionHandler, OnChatMessage, m_onChatMessage);

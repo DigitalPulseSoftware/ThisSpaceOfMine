@@ -38,7 +38,12 @@ namespace tsom
 			ChunkClassLibrary& operator=(ChunkClassLibrary&&) = delete;
 
 		protected:
-			virtual void InitializeChunkEntity(entt::handle entity);
+			virtual void OnPlanetInit(entt::handle entity);
+			virtual void OnPlanetDestruction(entt::handle entity);
+
+			virtual void OnShipInit(entt::handle entity);
+			virtual void OnShipDestruction(entt::handle entity);
+
 			virtual std::unique_ptr<ChunkEntities> SetupChunkEntities(Nz::EnttWorld& world, ChunkContainer& chunkContainer);
 
 			Nz::ApplicationBase& m_app;

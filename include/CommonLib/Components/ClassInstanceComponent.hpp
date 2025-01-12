@@ -9,6 +9,7 @@
 
 #include <CommonLib/EntityProperties.hpp>
 #include <NazaraUtils/Signal.hpp>
+#include <entt/fwd.hpp>
 #include <string_view>
 #include <vector>
 
@@ -46,6 +47,9 @@ namespace tsom
 
 			ClassInstanceComponent& operator=(const ClassInstanceComponent&) = delete;
 			ClassInstanceComponent& operator=(ClassInstanceComponent&&) noexcept = default;
+
+			static void ActivateEntity(entt::handle entity);
+			static void DestroyEntity(entt::handle entity);
 
 			NazaraSignal(OnClientRpc, ClassInstanceComponent* /*classInstance*/, Nz::UInt32 /*rpcIndex*/, ServerPlayer* /*targetPlayer*/);
 			NazaraSignal(OnPropertyUpdate, ClassInstanceComponent* /*classInstance*/, Nz::UInt32 /*propertyIndex*/, const EntityProperty& /*newValue*/);

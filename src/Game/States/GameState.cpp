@@ -11,11 +11,11 @@
 #include <ClientLib/Components/ChunkNetworkMapComponent.hpp>
 #include <ClientLib/Components/ClientEntityNetworkIndex.hpp>
 #include <ClientLib/Components/ClientInteractibleComponent.hpp>
+#include <ClientLib/Components/ClientPointOfInterestComponent.hpp>
 #include <ClientLib/Components/EnvironmentComponent.hpp>
 #include <ClientLib/Components/VisualEntityComponent.hpp>
 #include <ClientLib/Systems/AnimationSystem.hpp>
 #include <ClientLib/Systems/CameraFollowerSystem.hpp>
-#include <CommonLib/DeformedChunk.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/NetworkSession.hpp>
@@ -952,6 +952,8 @@ namespace tsom
 
 		GetStateData().world->GetSystem<CameraFollowerSystem>().SetCameraPosition(m_cameraEntity.get<Nz::NodeComponent>().GetGlobalPosition());
 
+		UpdateInterface();
+
 		return true;
 	}
 
@@ -1102,6 +1104,36 @@ namespace tsom
 		}
 
 		GetStateData().networkSession->SendPacket(inputPacket);
+	}
+
+	void GameState::UpdateInterface()
+	{
+		Nz::DebugDrawer* debugDrawer = GetStateData().camera2D.get<Nz::CameraComponent>().AccessDebugDrawer();
+
+		auto& camera3D = m_cameraEntity.get<Nz::CameraComponent>();
+		auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
+
+		// Build the viewProj matrix ourselves because the ViewerInstance matrix is one frame late
+		Nz::Matrix4f projMatrix = camera3D.GetViewerInstance().GetProjectionMatrix();
+		Nz::Matrix4f viewMatrix = Nz::Matrix4f::TransformInverse(cameraNode.GetGlobalPosition(), cameraNode.GetGlobalRotation());
+		Nz::Matrix4f viewProjMatrix = viewMatrix * projMatrix;
+
+		Nz::Vector2f screenSize = Nz::Vector2f(camera3D.GetRenderTarget().GetSize());
+		if (screenSize.x < 0.f || screenSize.y < 0.f)
+			return;
+
+		auto view = GetStateData().world->GetRegistry().view<Nz::NodeComponent, ClientPointOfInterestComponent>();
+		for (auto&& [entity, node] : view.each())
+		{
+			Nz::Vector3f screenPos = camera3D.ProjectToScreen(viewProjMatrix, node.GetGlobalPosition());
+			if (screenPos.z < 0.f)
+				continue; // behind us
+
+			screenPos.x = std::clamp(screenPos.x, 50.f, screenSize.x - 50.f);
+			screenPos.y = std::clamp(screenPos.y, 50.f, screenSize.y - 50.f);
+
+			debugDrawer->DrawBox(Nz::Boxf::FromExtents(screenPos - Nz::Vector3f(50.f, 50.f, 0.f), screenPos + Nz::Vector3f(50.f, 50.f, 0.f)), Nz::Color::Red());
+		}
 	}
 
 	void GameState::UpdateMouseLock()

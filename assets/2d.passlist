@@ -40,5 +40,17 @@ passlist "2D"
         output "Output" "Gamma corrected"
     }
 
-    output "Gamma corrected"
+    attachmentproxy "Debug draw output" "Gamma corrected"
+    attachmentproxy "DebugDraw depth output" "DepthBuffer"
+
+    pass "Debug Draw"
+    {
+        impl "DebugDraw"
+        input "Input" "Gamma corrected"
+        output "Output" "Debug draw output"
+        depthstencilinput "DepthBuffer"
+        depthstenciloutput "DebugDraw depth output"
+    }
+
+    output "Debug draw output"
 }

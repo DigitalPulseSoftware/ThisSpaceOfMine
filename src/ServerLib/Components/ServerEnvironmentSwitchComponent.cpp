@@ -52,7 +52,7 @@ namespace tsom
 
 		handleEnvironmentSwitch(oldEntity, newEntity, relativeTransform);
 		OnEntitySwitchedEnvironment(oldEntity, newEntity, newEnvironment, relativeTransform);
-		oldEntity.destroy();
+		oldEntity.destroy(); //< don't use ClassInstance::DestroyEntity because we don't want to trigger the destruction callback on environment switch
 
 		return newEntity;
 	}

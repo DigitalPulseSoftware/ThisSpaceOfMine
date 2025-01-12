@@ -23,6 +23,10 @@ namespace tsom
 			}
 		},
 		{
+			.onDestroy = [this](entt::handle entity)
+			{
+				OnPlanetDestruction(entity);
+			},
 			.onInit = [this](entt::handle entity)
 			{
 				auto& entityInstance = entity.get<ClassInstanceComponent>();
@@ -38,7 +42,7 @@ namespace tsom
 				planetComponent.planetEntities = SetupChunkEntities(*world, *planetComponent.planet);
 				planetComponent.planetEntities->SetParentEntity(entity);
 
-				InitializeChunkEntity(entity);
+				OnPlanetInit(entity);
 			}
 		},
 		{}));
@@ -49,6 +53,10 @@ namespace tsom
 			}
 		},
 		{
+			.onDestroy = [this](entt::handle entity)
+			{
+				OnShipDestruction(entity);
+			},
 			.onInit = [this](entt::handle entity)
 			{
 				auto& entityInstance = entity.get<ClassInstanceComponent>();
@@ -62,13 +70,26 @@ namespace tsom
 				shipComponent.shipEntities = SetupChunkEntities(*world, *shipComponent.ship);
 				shipComponent.shipEntities->SetParentEntity(entity);
 
-				InitializeChunkEntity(entity);
+				OnShipInit(entity);
 			}
 		},
 		{}));
 	}
 
-	void ChunkClassLibrary::InitializeChunkEntity(entt::handle entity)
+	void ChunkClassLibrary::OnPlanetInit(entt::handle entity)
+	{
+	}
+
+	void ChunkClassLibrary::OnPlanetDestruction(entt::handle entity)
+	{
+	}
+
+	void ChunkClassLibrary::OnShipInit(entt::handle entity)
+	{
+
+	}
+
+	void ChunkClassLibrary::OnShipDestruction(entt::handle entity)
 	{
 	}
 

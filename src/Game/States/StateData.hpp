@@ -7,6 +7,7 @@
 #ifndef TSOM_GAME_STATES_STATEDATA_HPP
 #define TSOM_GAME_STATES_STATEDATA_HPP
 
+#include <entt/entt.hpp>
 #include <memory>
 
 namespace Nz
@@ -30,6 +31,7 @@ namespace tsom
 	struct StateData : std::enable_shared_from_this<StateData>
 	{
 		std::shared_ptr<Nz::RenderTarget> renderTarget;
+		entt::handle camera2D;
 		Nz::ApplicationBase* app;
 		Nz::Canvas* canvas;
 		Nz::EnttWorld* world;

@@ -4,6 +4,7 @@
 
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/EntityClass.hpp>
+#include <entt/entt.hpp>
 #include <fmt/format.h>
 
 namespace tsom
@@ -47,5 +48,15 @@ namespace tsom
 		m_entityClass = std::move(entityClass);
 
 		// TODO: Handle possible properties changes
+	}
+
+	void ClassInstanceComponent::ActivateEntity(entt::handle entity)
+	{
+		entity.get<ClassInstanceComponent>().GetClass()->ActivateEntity(entity);
+	}
+
+	void ClassInstanceComponent::DestroyEntity(entt::handle entity)
+	{
+		entity.get<ClassInstanceComponent>().GetClass()->DestroyEntity(entity);
 	}
 }

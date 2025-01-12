@@ -83,7 +83,7 @@ namespace tsom
 	{
 		m_world->GetRegistry().ctx().erase<ServerPlanetEnvironment*>();
 
-		m_planetEntity.destroy();
+		m_planetEntity.get<ClassInstanceComponent>().DestroyEntity(m_planetEntity);
 	}
 
 	entt::handle ServerPlanetEnvironment::CreateEntity()

@@ -78,11 +78,11 @@ namespace tsom
 			auto renderTarget = SetupRenderTarget(world, window);
 
 			SetupCanvas(world, window);
-			SetupCamera(renderTarget, world);
 
 			std::shared_ptr<tsom::StateData> stateData = std::make_shared<tsom::StateData>();
 			stateData->app = &GetApp();
 			stateData->blockLibrary = &m_blockLibrary.value();
+			stateData->camera2D = SetupCamera(renderTarget, world);
 			stateData->canvas = &m_canvas.value();
 			stateData->renderTarget = std::move(renderTarget);
 			stateData->window = &window;
@@ -214,7 +214,7 @@ namespace tsom
 		return true;
 	}
 
-	void GameAppComponent::SetupCamera(std::shared_ptr<const Nz::RenderTarget> renderTarget, Nz::EnttWorld& world)
+	entt::handle GameAppComponent::SetupCamera(std::shared_ptr<const Nz::RenderTarget> renderTarget, Nz::EnttWorld& world)
 	{
 		entt::handle camera2D = world.CreateEntity();
 		camera2D.emplace<Nz::NodeComponent>();
@@ -226,6 +226,8 @@ namespace tsom
 		cameraComponent.UpdateClearColor(Nz::Color(0.f, 0.f, 0.f, 0.f));
 		cameraComponent.UpdateRenderMask(Constants::RenderMask2D);
 		cameraComponent.UpdateRenderOrder(1);
+
+		return camera2D;
 	}
 
 	void GameAppComponent::SetupCanvas(Nz::EnttWorld& world, Nz::Window& window)
