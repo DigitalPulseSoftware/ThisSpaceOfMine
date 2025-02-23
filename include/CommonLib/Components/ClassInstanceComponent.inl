@@ -30,6 +30,16 @@ namespace tsom
 		return GetProperty<Property>(GetPropertyIndex(propertyName));
 	}
 
+	inline const std::vector<EntityProperty>& ClassInstanceComponent::GetProperties() const&
+	{
+		return m_properties;
+	}
+
+	inline std::vector<EntityProperty>&& ClassInstanceComponent::GetProperties()&&
+	{
+		return std::move(m_properties);
+	}
+
 	inline void ClassInstanceComponent::UpdateProperty(Nz::UInt32 propertyIndex, EntityProperty&& value)
 	{
 		assert(propertyIndex < m_properties.size());

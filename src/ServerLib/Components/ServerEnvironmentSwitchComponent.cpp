@@ -27,7 +27,7 @@ namespace tsom
 
 		entt::handle newEntity = newEnvironment->CreateEntity();
 		newEntity.emplace<Nz::NodeComponent>(relativeTransform.Translate(entityPosition), relativeTransform.Rotate(entityRotation));
-		newEntity.emplace<ClassInstanceComponent>(previousClassInstance.GetClass());
+		newEntity.emplace<ClassInstanceComponent>(previousClassInstance.GetClass(), std::move(previousClassInstance).GetProperties());
 
 		if (NetworkedComponent* networkComponent = oldEntity.try_get<NetworkedComponent>())
 		{

@@ -23,6 +23,7 @@ namespace tsom
 			using PropertyUpdateSignal = Nz::Signal<Nz::UInt32, const EntityProperty&>;
 
 			ClassInstanceComponent(std::shared_ptr<const EntityClass> entityClass);
+			ClassInstanceComponent(std::shared_ptr<const EntityClass> entityClass, std::vector<EntityProperty>&& properties);
 			ClassInstanceComponent(const ClassInstanceComponent&) = delete;
 			ClassInstanceComponent(ClassInstanceComponent&&) noexcept = default;
 			~ClassInstanceComponent() = default;
@@ -34,6 +35,8 @@ namespace tsom
 			inline const EntityProperty& GetProperty(Nz::UInt32 propertyIndex) const;
 			template<EntityPropertyType Property> auto GetProperty(Nz::UInt32 propertyIndex) const;
 			template<EntityPropertyType Property> auto GetProperty(std::string_view propertyName) const;
+			inline const std::vector<EntityProperty>& GetProperties() const&;
+			inline std::vector<EntityProperty>&& GetProperties() &&;
 
 			Nz::UInt32 GetPropertyIndex(std::string_view propertyName) const;
 
