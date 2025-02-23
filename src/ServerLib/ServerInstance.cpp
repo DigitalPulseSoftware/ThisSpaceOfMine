@@ -11,7 +11,7 @@
 #include <ServerLib/Components/EnvironmentEnterTriggerComponent.hpp>
 #include <ServerLib/Components/EnvironmentProxyComponent.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
-#include <ServerLib/Entities/ServerClassLibrary.hpp>
+#include <ServerLib/Entities/ServerEntityClassLibrary.hpp>
 #include <ServerLib/Scripting/ServerEntityScriptingLibrary.hpp>
 #include <ServerLib/Scripting/ServerScriptingLibrary.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
@@ -34,7 +34,7 @@ namespace tsom
 	m_serverDatabase(application, m_config.databaseFile)
 	{
 		m_entityRegistry.RegisterClassLibrary<ChunkClassLibrary>(m_application, m_blockLibrary);
-		m_entityRegistry.RegisterClassLibrary<ServerClassLibrary>(m_application);
+		m_entityRegistry.RegisterClassLibrary<ServerEntityClassLibrary>(m_application);
 
 		m_scriptingContext.RegisterLibrary<MathScriptingLibrary>();
 		auto& entityScriptingLibrary = m_scriptingContext.RegisterLibrary<ServerEntityScriptingLibrary>(m_entityRegistry);

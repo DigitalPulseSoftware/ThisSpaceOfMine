@@ -34,7 +34,7 @@ namespace tsom
 
 			void Refresh(std::span<entt::registry*> registries, Nz::FunctionRef<void()> refreshCallback);
 
-			void RegisterClass(EntityClass entityClass);
+			std::shared_ptr<const EntityClass> RegisterClass(EntityClass entityClass);
 
 			template<typename T, typename... Args> void RegisterClassLibrary(Args&&... args);
 			void RegisterClassLibrary(std::unique_ptr<EntityClassLibrary>&& library);

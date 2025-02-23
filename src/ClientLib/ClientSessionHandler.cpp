@@ -17,6 +17,7 @@
 #include <ClientLib/Components/TransformCopyComponent.hpp>
 #include <ClientLib/Components/VisualEntityComponent.hpp>
 #include <ClientLib/Entities/ClientChunkClassLibrary.hpp>
+#include <ClientLib/Entities/ClientEntityClassLibrary.hpp>
 #include <ClientLib/Scripting/ClientEntityScriptingLibrary.hpp>
 #include <ClientLib/Scripting/ClientScriptingLibrary.hpp>
 #include <CommonLib/GameConstants.hpp>
@@ -80,6 +81,7 @@ namespace tsom
 		m_scriptingContext.LoadDirectory("scripts/assets");
 
 		m_entityRegistry.RegisterClassLibrary<ClientChunkClassLibrary>(m_app, m_blockLibrary);
+		m_entityRegistry.RegisterClassLibrary<ClientEntityClassLibrary>(m_app);
 
 		m_scriptingContext.RegisterLibrary<ClientEntityScriptingLibrary>(m_entityRegistry);
 

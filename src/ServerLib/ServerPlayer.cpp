@@ -5,7 +5,6 @@
 #include <ServerLib/ServerPlayer.hpp>
 #include <CommonLib/CharacterController.hpp>
 #include <CommonLib/ConsoleExecutor.hpp>
-#include <CommonLib/Components/BuoyancyComponent.hpp>
 #include <CommonLib/Scripting/ChunkScriptingLibrary.hpp>
 #include <CommonLib/Scripting/MathScriptingLibrary.hpp>
 #include <CommonLib/Scripting/ScriptingContext.hpp>
@@ -177,7 +176,6 @@ namespace tsom
 		playerEntity.emplace<ClassInstanceComponent>(playerClass);
 		playerEntity.emplace<NetworkedComponent>();
 		playerEntity.emplace<ServerPlayerControlledComponent>(CreateHandle());
-		playerEntity.emplace<BuoyancyComponent>();
 
 		m_controller = std::make_shared<CharacterController>();
 		m_controller->SetGravityController(environment->GetGravityController());

@@ -4,8 +4,4 @@
 
 namespace tsom
 {
-	inline ServerClassLibrary::ServerClassLibrary(Nz::ApplicationBase& app) :
-	m_app(app)
-	{
-	}
 }
