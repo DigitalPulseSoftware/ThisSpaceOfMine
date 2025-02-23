@@ -102,6 +102,7 @@ namespace tsom
 			std::vector<ServerEnvironment*> m_registeredEnvironments;
 			Nz::FixedVector<PlayerInputs, 10> m_inputBuffer;
 			Nz::PrivateImpl<Console> m_console;
+			Nz::Time m_respawnTimer;
 			Nz::UInt32 m_inputQueueAdvancement;
 			NetworkSession* m_session;
 			ServerEnvironment* m_rootEnvironment;

@@ -35,6 +35,7 @@ namespace tsom::Constants
 	constexpr float PlayerWalkSpeed = 5.f;
 	constexpr Nz::DegreeAnglef GravityMaxRotationSpeed = 180.f;
 	constexpr Nz::DegreeAnglef PlayerRotationSpeed = 90.f;
+	constexpr Nz::Time PlayerRespawnTime = Nz::Time::Seconds(5);
 
 	// Ship constants
 	constexpr float ShipGravityAcceleration = 9.81f;

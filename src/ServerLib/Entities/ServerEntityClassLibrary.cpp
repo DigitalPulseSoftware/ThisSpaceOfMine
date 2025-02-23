@@ -11,6 +11,8 @@
 #include <CommonLib/Components/BuoyancyComponent.hpp>
 #include <ServerLib/ServerPlayer.hpp>
 #include <ServerLib/ServerShipEnvironment.hpp>
+#include <ServerLib/Components/AtmosphereExchanger.hpp>
+#include <ServerLib/Components/AtmosphereMonitor.hpp>
 #include <ServerLib/Components/EnvironmentEnterTriggerComponent.hpp>
 #include <ServerLib/Components/EnvironmentProxyComponent.hpp>
 #include <ServerLib/Components/ServerEnvironmentSwitchComponent.hpp>
@@ -27,6 +29,51 @@ namespace tsom
 	void ServerEntityClassLibrary::OnPlayerActivate(entt::handle entity)
 	{
 		SharedEntityClassLibrary::OnPlayerActivate(entity);
+
+		entity.emplace<AtmosphereMonitor>();
+
+		// TODO: Cache those
+		Nz::UInt32 healthIndex = m_playerClass->FindProperty("health");
+		Nz::UInt32 oxygenIndex = m_playerClass->FindProperty("oxygen");
+		Nz::UInt32 deathRpc = m_playerClass->FindClientRpc("death");
+
+		auto& atmosphereExchanger = entity.emplace<AtmosphereExchanger>();
+		atmosphereExchanger.gasModifier[GasType::Oxygen] = -1000;
+		atmosphereExchanger.OnExchangeFailed.Connect([healthIndex, oxygenIndex, deathRpc](entt::handle playerEntity, AtmosphereExchanger*)
+		{
+			auto& playerInstance = playerEntity.get<ClassInstanceComponent>();
+
+			auto oxygenValue = std::get<EntityPropertySingleValue<EntityPropertyType::Integer>>(playerInstance.GetProperty(oxygenIndex));
+			if (*oxygenValue > 0)
+			{
+				*oxygenValue = std::max<Nz::Int64>(*oxygenValue - 10, 0);
+				playerInstance.UpdateProperty(oxygenIndex, oxygenValue);
+			}
+			else
+			{
+				auto healthValue = std::get<EntityPropertySingleValue<EntityPropertyType::Integer>>(playerInstance.GetProperty(healthIndex));
+				*healthValue = std::max<Nz::Int64>(*healthValue - 10, 0);
+
+				playerInstance.UpdateProperty(healthIndex, healthValue);
+				if (*healthValue == 0)
+				{
+					playerInstance.TriggerClientRpc(deathRpc, nullptr);
+					playerEntity.destroy();
+				}
+			}
+		});
+
+		atmosphereExchanger.OnExchange.Connect([oxygenIndex](entt::handle playerEntity, AtmosphereExchanger*)
+		{
+			auto& playerInstance = playerEntity.get<ClassInstanceComponent>();
+
+			auto oxygenValue = std::get<EntityPropertySingleValue<EntityPropertyType::Integer>>(playerInstance.GetProperty(oxygenIndex));
+			if (*oxygenValue < 100)
+			{
+				*oxygenValue = std::min<Nz::Int64>(*oxygenValue + 10, 100);
+				playerInstance.UpdateProperty(oxygenIndex, oxygenValue);
+			}
+		});
 
 		auto& envSwitchComponent = entity.emplace<ServerEnvironmentSwitchComponent>();
 		envSwitchComponent.handleEnvironmentSwitch = [](entt::handle previousEntity, entt::handle newEntity, const EnvironmentTransform& envTransform)

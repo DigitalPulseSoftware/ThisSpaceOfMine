@@ -23,7 +23,6 @@
 
 namespace tsom
 {
-
 	struct ServerPlayer::Console
 	{
 		Console(Nz::ApplicationBase& app) :
@@ -40,6 +39,7 @@ namespace tsom
 	m_uuid(uuid),
 	m_nickname(std::move(nickname)),
 	m_console(nullptr),
+	m_respawnTimer(Nz::Time::Zero()),
 	m_inputQueueAdvancement(0),
 	m_session(session),
 	m_rootEnvironment(nullptr),
@@ -200,10 +200,26 @@ namespace tsom
 
 	void ServerPlayer::Tick()
 	{
+		// Handle auto-respawn
+		if (!m_controlledEntity)
+		{
+			if (m_respawnTimer > Nz::Time::Zero())
+			{
+				m_respawnTimer -= Constants::TickDuration;
+				if (m_respawnTimer <= Nz::Time::Zero())
+				{
+					const auto& spawnpoint = m_serverInstance.GetDefaultSpawnpoint();
+					Respawn(spawnpoint.env, spawnpoint.position, spawnpoint.rotation);
+				}
+			}
+			else
+				m_respawnTimer = Constants::PlayerRespawnTime;
+		}
+
 		if (m_inputBuffer.empty())
 			return;
 
-		// Downstream throttle jitter buffer (TODO: Convert to downstream throttle)
+		// Downstream throttle jitter buffer (TODO: Convert to upstream throttle)
 		// Adjust input consumption depending on how many inputs are sitting in the input queue
 		Nz::UInt32 advancement = 1000;
 		if (m_inputBuffer.size() > Constants::TargetInputBufferSize)
