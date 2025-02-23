@@ -8,6 +8,7 @@
 #define TSOM_SERVERLIB_SERVERSHIPENVIRONMENT_HPP
 
 #include <ServerLib/Export.hpp>
+#include <ServerLib/ServerAtmosphere.hpp>
 #include <ServerLib/ServerEnvironment.hpp>
 #include <NazaraUtils/Signal.hpp>
 #include <tsl/hopscotch_map.h>
@@ -38,6 +39,7 @@ namespace tsom
 
 			void GenerateShip(bool small);
 
+			ServerAtmosphere* GetAtmosphereAtPosition(const Nz::Vector3f& position) override;
 			const GravityController* GetGravityController() const override;
 			inline entt::handle GetExteriorShipEntity() const;
 			inline const std::shared_ptr<Nz::Collider3D>& GetInteriorAreaCollider() const;
@@ -70,12 +72,17 @@ namespace tsom
 			void UpdateExteriorCollider();
 
 			static Area BuildArea(const Chunk& chunk, std::size_t firstBlockIndex, Nz::Bitset<Nz::UInt64>& remainingBlocks);
+			static void BuildAreaCollider(Area& area, const Chunk& chunk);
 			static std::shared_ptr<Nz::Collider3D> BuildTriggerCollider(const Chunk& chunk, const AreaList& areaList, const Nz::Vector3f& sizeMargin, std::atomic_bool& isCancelled);
 			static std::shared_ptr<AreaList> GenerateChunkAreas(const Chunk& chunk, std::atomic_bool& isCancelled);
 
 			struct Area
 			{
+				std::shared_ptr<Nz::Collider3D> collider;
+				std::vector<Nz::Boxf> boundingBoxes;
+				entt::handle atmosphereEntity;
 				Nz::Bitset<Nz::UInt64> blocks;
+				ServerAtmosphere atmosphere;
 			};
 
 			struct AreaList
@@ -86,7 +93,7 @@ namespace tsom
 			struct ChunkData
 			{
 				std::shared_ptr<Nz::Collider3D> areaCollider;
-				std::shared_ptr<Nz::Collider3D> expandedAreaCollider;
+				std::shared_ptr<Nz::Collider3D> hullCollider;
 				std::shared_ptr<AreaList> areas;
 				float blockSize;
 			};
@@ -106,8 +113,8 @@ namespace tsom
 			struct TriggerUpdateJob : UpdateJob
 			{
 				std::function<void(ChunkIndices chunkIndices, TriggerUpdateJob&& updateJob)> applyFunc;
-				std::shared_ptr<Nz::Collider3D> collider;
-				std::shared_ptr<Nz::Collider3D> expandedCollider;
+				std::shared_ptr<Nz::Collider3D> interiorCollider;
+				std::shared_ptr<Nz::Collider3D> hullCollider;
 			};
 
 			entt::handle m_exteriorEntity;

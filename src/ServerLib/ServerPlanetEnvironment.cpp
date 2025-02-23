@@ -104,6 +104,15 @@ namespace tsom
 		return ServerEnvironment::CreateEntity();
 	}
 
+	ServerAtmosphere* ServerPlanetEnvironment::GetAtmosphereAtPosition(const Nz::Vector3f& position)
+	{
+		Planet& planet = GetPlanet();
+		if (position.SquaredDistance(planet.GetCenter()) > Nz::IntegralPow(100, 2))
+			return nullptr; //< too far away
+
+		return &m_atmosphere;
+	}
+
 	const GravityController* ServerPlanetEnvironment::GetGravityController() const
 	{
 		return m_planetEntity.get<PlanetComponent>().planet.get();

@@ -5,6 +5,7 @@
 #include <ServerLib/ServerEnvironment.hpp>
 #include <CommonLib/Physics/PhysicsSettings.hpp>
 #include <ServerLib/Debug/DebugDrawBroadcaster.hpp>
+#include <ServerLib/Systems/AtmosphereSystem.hpp>
 #include <ServerLib/Systems/EnvironmentProxySystem.hpp>
 #include <ServerLib/Systems/NetworkedEntitiesSystem.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
@@ -24,6 +25,7 @@ namespace tsom
 		auto& registry = m_world->GetRegistry();
 		registry.ctx().insert_or_assign<ServerEnvironment*>(this);
 
+		m_world->AddSystem<AtmosphereSystem>();
 		m_world->AddSystem<EnvironmentProxySystem>();
 		m_world->AddSystem<NetworkedEntitiesSystem>(*this);
 

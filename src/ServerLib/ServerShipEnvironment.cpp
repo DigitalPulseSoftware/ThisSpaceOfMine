@@ -10,6 +10,7 @@
 #include <CommonLib/Systems/ShipSystem.hpp>
 #include <ServerLib/PlayerTokenAppComponent.hpp>
 #include <ServerLib/ServerInstance.hpp>
+#include <ServerLib/Components/AtmosphereCarrier.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
 #include <ServerLib/Components/ServerEnvironmentSwitchComponent.hpp>
 #include <ServerLib/Components/ShipExteriorComponent.hpp>
@@ -149,6 +150,13 @@ namespace tsom
 	{
 		auto& blockLibrary = m_serverInstance.GetBlockLibrary();
 		GetShip().Generate(blockLibrary, small);
+	}
+
+	ServerAtmosphere* ServerShipEnvironment::GetAtmosphereAtPosition(const Nz::Vector3f& position)
+	{
+		// Should (almost) never be called since entities exit the ship when exiting atmosphere
+		// Atmosphere is handled by multiple entities AtmosphereCarrier
+		return nullptr;
 	}
 
 	const GravityController* ServerShipEnvironment::GetGravityController() const
@@ -350,12 +358,12 @@ namespace tsom
 
 				for (const auto& [chunkIndices, chunkData] : m_chunkData)
 				{
-					if (!chunkData.expandedAreaCollider)
+					if (!chunkData.hullCollider)
 						continue;
 
 					Nz::Vector3f relativePos = playerPos - ship.GetChunkOffset(chunkIndices);
-					relativePos -= chunkData.expandedAreaCollider->GetCenterOfMass(); //< https://jrouwe.github.io/JoltPhysics/index.html#center-of-mass
-					if (chunkData.expandedAreaCollider->CollisionQuery(relativePos))
+					relativePos -= chunkData.hullCollider->GetCenterOfMass(); //< https://jrouwe.github.io/JoltPhysics/index.html#center-of-mass
+					if (chunkData.hullCollider->CollisionQuery(relativePos))
 						return;
 				}
 
@@ -399,6 +407,16 @@ namespace tsom
 		{
 			assert(m_chunkData.contains(chunkIndices));
 			auto& chunkData = m_chunkData[chunkIndices];
+
+			if (chunkData.areas)
+			{
+				for (Area& area : chunkData.areas->areas)
+				{
+					if (area.atmosphereEntity)
+						area.atmosphereEntity.destroy();
+				}
+			}
+
 			chunkData.areas = std::move(updateJob.chunkArea);
 			StartTriggerUpdate(*chunkPtr, chunkData.areas);
 		};
@@ -436,28 +454,62 @@ namespace tsom
 		{
 			assert(m_chunkData.contains(chunkIndices));
 			auto& chunkData = m_chunkData[chunkIndices];
-			chunkData.areaCollider = std::move(updateJob.collider);
-			chunkData.expandedAreaCollider = std::move(updateJob.expandedCollider);
+			chunkData.areaCollider = std::move(updateJob.interiorCollider);
+			chunkData.hullCollider = std::move(updateJob.hullCollider);
 			m_isInteriorAreaColliderInvalidated = true;
 
 			if (!chunkData.areaCollider)
 				return;
 
+			for (Area& area : chunkData.areas->areas)
+			{
+				if (area.boundingBoxes.empty())
+					continue;
+
+				area.atmosphereEntity = CreateEntity();
+				area.atmosphereEntity.emplace<Nz::NodeComponent>();
+				auto& atmosphereCarrier = area.atmosphereEntity.emplace<AtmosphereCarrier>();
+				atmosphereCarrier.atmosphere = &area.atmosphere;
+				atmosphereCarrier.collider = area.collider;
+				atmosphereCarrier.aabb = area.boundingBoxes[0];
+				for (std::size_t i = 1; i < area.boundingBoxes.size(); ++i)
+					atmosphereCarrier.aabb.ExtendTo(area.boundingBoxes[i]);
+			}
+
 			if (m_debugDrawer)
 			{
-				std::vector<Nz::UInt16> indices;
-				std::vector<Nz::Vector3f> positions;
-				chunkData.areaCollider->BuildDebugMesh(positions, indices, Nz::Matrix4f::Translate(GetShip().GetChunkOffset(chunkIndices)));
+				std::size_t areaIndex = 0;
+				std::size_t seed = std::hash<void*>{}(this);
+				std::minstd_rand colorGen(seed);
+				std::uniform_real_distribution<float> dis(0.f, 360.f);
+				for (const Area& area : chunkData.areas->areas)
+				{
+					std::vector<Nz::UInt16> indices;
+					std::vector<Nz::Vector3f> positions;
+					area.collider->BuildDebugMesh(positions, indices, Nz::Matrix4f::Translate(GetShip().GetChunkOffset(chunkIndices)));
 
-				m_debugDrawer->DrawLines(std::hash<void*>{}(this), 5.f, indices, positions, Nz::Color::Blue());
+					m_debugDrawer->DrawLines(seed + areaIndex, 5.f, indices, positions, Nz::Color::FromHSV(dis(colorGen), 1.f, 1.f));
+					areaIndex++;
+				}
 			}
 		};
 
 		taskScheduler.AddTask([areaList, updateJob, chunkPtr = chunk.shared_from_this()]
 		{
 			chunkPtr->LockRead();
-			updateJob->collider = BuildTriggerCollider(*chunkPtr, *areaList, Nz::Vector3f::Zero(), updateJob->isCancelled);
-			updateJob->expandedCollider = BuildTriggerCollider(*chunkPtr, *areaList, Nz::Vector3f(chunkPtr->GetBlockSize() * 2.f), updateJob->isCancelled);
+			for (Area& area : areaList->areas)
+			{
+				if (updateJob->isCancelled)
+				{
+					chunkPtr->UnlockRead(); // TODO: lock guards
+					return;
+				}
+
+				BuildAreaCollider(area, *chunkPtr);
+			}
+
+			updateJob->interiorCollider = BuildTriggerCollider(*chunkPtr, *areaList, Nz::Vector3f::Zero(), updateJob->isCancelled);
+			updateJob->hullCollider = BuildTriggerCollider(*chunkPtr, *areaList, Nz::Vector3f(chunkPtr->GetBlockSize() * 2.f), updateJob->isCancelled);
 			chunkPtr->UnlockRead();
 
 			updateJob->isFinished = true;
@@ -580,22 +632,39 @@ namespace tsom
 		return area;
 	}
 
+	void ServerShipEnvironment::BuildAreaCollider(Area& area, const Chunk& chunk)
+	{
+		area.boundingBoxes.clear();
+		FlatChunk::BuildCollider(chunk.GetSize(), area.blocks, [&](const Nz::Boxf& box)
+		{
+			area.boundingBoxes.push_back(box);
+		});
+
+		if (area.boundingBoxes.empty())
+			return;
+
+		std::vector<Nz::CompoundCollider3D::ChildCollider> childColliders;
+		for (const Nz::Boxf& box : area.boundingBoxes)
+		{
+			auto& childCollider = childColliders.emplace_back();
+			childCollider.offset = box.GetCenter() * chunk.GetBlockSize();
+			childCollider.collider = std::make_shared<Nz::BoxCollider3D>(box.GetLengths() * chunk.GetBlockSize());
+		}
+
+		area.collider = std::make_shared<Nz::CompoundCollider3D>(std::move(childColliders));
+	}
+
 	std::shared_ptr<Nz::Collider3D> ServerShipEnvironment::BuildTriggerCollider(const Chunk& chunk, const AreaList& areaList, const Nz::Vector3f& sizeMargin, std::atomic_bool& isCancelled)
 	{
 		std::vector<Nz::CompoundCollider3D::ChildCollider> childColliders;
 		for (const Area& area : areaList.areas)
 		{
-			if (isCancelled)
-				return nullptr;
-
-			auto AddBox = [&](const Nz::Boxf& box)
+			for (const Nz::Boxf& box : area.boundingBoxes)
 			{
 				auto& childCollider = childColliders.emplace_back();
 				childCollider.offset = box.GetCenter() * chunk.GetBlockSize();
 				childCollider.collider = std::make_shared<Nz::BoxCollider3D>(box.GetLengths() * chunk.GetBlockSize() + sizeMargin);
-			};
-
-			FlatChunk::BuildCollider(chunk.GetSize(), area.blocks, AddBox);
+			}
 		}
 
 		if (childColliders.empty())

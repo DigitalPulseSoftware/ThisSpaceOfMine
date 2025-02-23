@@ -21,6 +21,7 @@ namespace Nz
 namespace tsom
 {
 	class GravityController;
+	class ServerAtmosphere;
 	class ServerPlayer;
 
 	enum class ServerEnvironmentType
@@ -43,6 +44,7 @@ namespace tsom
 			template<typename F> void ForEachPlayer(F&& callback);
 			template<typename F> void ForEachPlayer(F&& callback) const;
 
+			virtual ServerAtmosphere* GetAtmosphereAtPosition(const Nz::Vector3f& position) = 0;
 			virtual const GravityController* GetGravityController() const = 0;
 			inline ServerInstance& GetServerInstance();
 			inline ServerEnvironmentType GetType() const;

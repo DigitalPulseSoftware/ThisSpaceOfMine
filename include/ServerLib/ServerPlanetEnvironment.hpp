@@ -9,6 +9,7 @@
 
 #include <ServerLib/Export.hpp>
 #include <CommonLib/Chunk.hpp>
+#include <ServerLib/ServerAtmosphere.hpp>
 #include <ServerLib/ServerEnvironment.hpp>
 #include <filesystem>
 #include <optional>
@@ -30,6 +31,7 @@ namespace tsom
 
 			entt::handle CreateEntity() override;
 
+			ServerAtmosphere* GetAtmosphereAtPosition(const Nz::Vector3f& position) override;
 			const GravityController* GetGravityController() const override;
 			Planet& GetPlanet();
 			const Planet& GetPlanet() const;
@@ -43,6 +45,8 @@ namespace tsom
 		private:
 			void LoadFromDatabase();
 
+			ServerAtmosphere m_atmosphere;
+			std::filesystem::path m_savePath;
 			std::optional<Nz::UInt32> m_databaseId;
 			std::unordered_set<ChunkIndices /*chunkIndex*/> m_dirtyChunks;
 			entt::handle m_planetEntity;
