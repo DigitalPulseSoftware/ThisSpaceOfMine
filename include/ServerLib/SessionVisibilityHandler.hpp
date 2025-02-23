@@ -54,7 +54,7 @@ namespace tsom
 			inline void TriggerEntityRpc(entt::handle entity, Nz::UInt32 rpcIndex);
 
 			inline void UpdateControlledEntity(entt::handle entity, CharacterController* controller);
-			inline void UpdateEntityProperty(entt::handle entity, Nz::UInt32 propertyIndex);
+			inline void UpdateEntityProperty(entt::handle entity, Nz::UInt32 propertyIndex, const EntityProperty& newValue);
 			void UpdateEntityEnvironment(ServerEnvironment& newEnvironment, entt::handle oldEntity, entt::handle newEntity);
 			inline void UpdateLastInputIndex(InputIndex inputIndex);
 
@@ -77,6 +77,14 @@ namespace tsom
 			void DispatchChunkCreation(Nz::UInt16 tickIndex);
 			void DispatchChunkReset(Nz::UInt16 tickIndex);
 			void DispatchEntities(Nz::UInt16 tickIndex);
+
+			void DispatchEntitiesCreation(Nz::UInt16 tickIndex);
+			void DispatchEntitiesDeletion(Nz::UInt16 tickIndex);
+			void DispatchEntitiesEnvironmentUpdate(Nz::UInt16 tickIndex);
+			void DispatchEntitiesProperties(Nz::UInt16 tickIndex);
+			void DispatchEntitiesRpcs(Nz::UInt16 tickIndex);
+			void DispatchEntitiesStates(Nz::UInt16 tickIndex);
+
 			void DispatchEnvironments(Nz::UInt16 tickIndex);
 			void HandleEntityCreation(std::vector<Packets::Helper::EntityData>& entities, entt::handle entity, CreateEntityData&& createEntityData);
 			void HandleEntityDestruction(entt::handle entity);
@@ -117,6 +125,12 @@ namespace tsom
 				EnvironmentId envIndex;
 			};
 
+			struct EntityPropertyData
+			{
+				Nz::UInt32 propertiesMask;
+				Nz::HybridVector<EntityProperty, 3> values;
+			};
+
 			struct EnvironmentData
 			{
 				ServerEnvironment* environment = nullptr;
@@ -148,7 +162,7 @@ namespace tsom
 
 			tsl::hopscotch_map<entt::handle, EntityId, HandlerHasher> m_entityIndices;
 			tsl::hopscotch_map<entt::handle, CreateEntityData, HandlerHasher> m_createdEntities;
-			tsl::hopscotch_map<entt::handle, Nz::UInt32, HandlerHasher> m_propertyUpdatedEntities;
+			tsl::hopscotch_map<entt::handle, EntityPropertyData, HandlerHasher> m_propertyUpdatedEntities;
 			tsl::hopscotch_map<entt::handle, Nz::HybridVector<Nz::UInt32, 3>, HandlerHasher> m_triggeredEntitiesRpc;
 			tsl::hopscotch_map<entt::handle, ChunkNetworkMap, HandlerHasher> m_chunkNetworkMaps;
 			tsl::hopscotch_map<const ServerEnvironment*, EnvironmentId> m_environmentIndices;

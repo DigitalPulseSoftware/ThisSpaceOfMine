@@ -74,7 +74,7 @@ namespace tsom
 					}
 				});
 
-				entityData.onPropertyUpdate.Connect(entityInstance->OnPropertyUpdate, [this, entity](ClassInstanceComponent* emitter, Nz::UInt32 propertyIndex, const EntityProperty& /*newValue*/)
+				entityData.onPropertyUpdate.Connect(entityInstance->OnPropertyUpdate, [this, entity](ClassInstanceComponent* emitter, Nz::UInt32 propertyIndex, const EntityProperty& newValue)
 				{
 					if (!emitter->GetClass()->GetProperty(propertyIndex).isNetworked)
 						return;
@@ -82,7 +82,7 @@ namespace tsom
 					entt::handle handle(m_registry, entity);
 					ForEachVisibility([&](SessionVisibilityHandler& visibility)
 					{
-						visibility.UpdateEntityProperty(handle, propertyIndex);
+						visibility.UpdateEntityProperty(handle, propertyIndex, newValue);
 					});
 				});
 			}

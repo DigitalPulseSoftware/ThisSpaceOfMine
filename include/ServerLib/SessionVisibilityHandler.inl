@@ -66,9 +66,23 @@ namespace tsom
 		m_movingEntities.erase(m_controlledEntity);
 	}
 
-	inline void SessionVisibilityHandler::UpdateEntityProperty(entt::handle entity, Nz::UInt32 propertyIndex)
+	inline void SessionVisibilityHandler::UpdateEntityProperty(entt::handle entity, Nz::UInt32 propertyIndex, const EntityProperty& newValue)
 	{
-		m_propertyUpdatedEntities[entity] |= 1u << propertyIndex;
+		Nz::UInt32 propertyMask = 1u << propertyIndex;
+
+		auto& propertUpdateData = m_propertyUpdatedEntities[entity];
+		std::size_t propertyValueIndex = Nz::CountBits(propertUpdateData.propertiesMask & (propertyMask - 1));
+
+		if ((propertUpdateData.propertiesMask & propertyMask) != 0)
+		{
+			// Update value (find value index and then update it)
+			propertUpdateData.values[propertyValueIndex] = newValue;
+		}
+		else
+		{
+			propertUpdateData.propertiesMask |= propertyMask;
+			propertUpdateData.values.insert(propertUpdateData.values.begin() + propertyValueIndex, newValue);
+		}
 	}
 
 	inline void SessionVisibilityHandler::UpdateLastInputIndex(InputIndex inputIndex)

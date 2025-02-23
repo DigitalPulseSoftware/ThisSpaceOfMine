@@ -425,6 +425,31 @@ namespace tsom
 
 	void SessionVisibilityHandler::DispatchEntities(Nz::UInt16 tickIndex)
 	{
+		DispatchEntitiesEnvironmentUpdate(tickIndex);
+		DispatchEntitiesProperties(tickIndex);
+		DispatchEntitiesRpcs(tickIndex);
+		DispatchEntitiesDeletion(tickIndex);
+		DispatchEntitiesCreation(tickIndex);
+		DispatchEntitiesStates(tickIndex);
+	}
+
+	void SessionVisibilityHandler::DispatchEntitiesCreation(Nz::UInt16 tickIndex)
+	{
+		if (!m_createdEntities.empty())
+		{
+			Packets::EntitiesCreation creationPacket;
+			creationPacket.tickIndex = tickIndex;
+
+			for (auto it = m_createdEntities.begin(); it != m_createdEntities.end(); ++it)
+				HandleEntityCreation(creationPacket.entities, it.key(), std::move(it.value()));
+			m_createdEntities.clear();
+
+			m_networkSession->SendPacket(creationPacket);
+		}
+	}
+
+	void SessionVisibilityHandler::DispatchEntitiesDeletion(Nz::UInt16 tickIndex)
+	{
 		if (!m_deletedEntities.empty())
 		{
 			Packets::EntitiesDelete deletePacket;
@@ -457,19 +482,10 @@ namespace tsom
 			m_networkSession->SendPacket(deletePacket);
 			m_deletedEntities.clear();
 		}
+	}
 
-		if (!m_createdEntities.empty())
-		{
-			Packets::EntitiesCreation creationPacket;
-			creationPacket.tickIndex = tickIndex;
-
-			for (auto it = m_createdEntities.begin(); it != m_createdEntities.end(); ++it)
-				HandleEntityCreation(creationPacket.entities, it.key(), std::move(it.value()));
-			m_createdEntities.clear();
-
-			m_networkSession->SendPacket(creationPacket);
-		}
-
+	void SessionVisibilityHandler::DispatchEntitiesEnvironmentUpdate(Nz::UInt16 tickIndex)
+	{
 		if (!m_environmentUpdates.empty())
 		{
 			for (const EnvironmentUpdate& envUpdate : m_environmentUpdates)
@@ -486,16 +502,18 @@ namespace tsom
 			}
 			m_environmentUpdates.clear();
 		}
+	}
 
+	void SessionVisibilityHandler::DispatchEntitiesProperties(Nz::UInt16 tickIndex)
+	{
 		if (!m_propertyUpdatedEntities.empty())
 		{
-			for (auto&& [entity, propertyFlags] : m_propertyUpdatedEntities)
+			for (auto&& [entity, propertyData] : m_propertyUpdatedEntities)
 			{
 				EntityId entityIndex = Nz::Retrieve(m_entityIndices, entity);
 
-				auto& entityInstance = entity.get<ClassInstanceComponent>();
-
-				Nz::UInt32 propertyBits = propertyFlags;
+				std::size_t valueIndex = 0;
+				Nz::UInt32 propertyBits = propertyData.propertiesMask;
 				while (Nz::UInt32 propertyIndex = Nz::FindFirstBit(propertyBits))
 				{
 					propertyIndex--; //< FFB returns 0 if no bit was found
@@ -503,7 +521,7 @@ namespace tsom
 					Packets::EntityPropertyUpdate propertyUpdatePacket;
 					propertyUpdatePacket.entity = entityIndex;
 					propertyUpdatePacket.propertyIndex = propertyIndex;
-					propertyUpdatePacket.propertyValue = entityInstance.GetProperty(propertyIndex);
+					propertyUpdatePacket.propertyValue = std::move(propertyData.values[valueIndex]);
 					propertyUpdatePacket.tickIndex = tickIndex;
 
 					m_networkSession->SendPacket(propertyUpdatePacket);
@@ -513,7 +531,10 @@ namespace tsom
 			}
 			m_propertyUpdatedEntities.clear();
 		}
+	}
 
+	void SessionVisibilityHandler::DispatchEntitiesRpcs(Nz::UInt16 tickIndex)
+	{
 		if (!m_triggeredEntitiesRpc.empty())
 		{
 			for (auto&& [entity, rpcIndices] : m_triggeredEntitiesRpc)
@@ -533,7 +554,10 @@ namespace tsom
 
 			m_triggeredEntitiesRpc.clear();
 		}
+	}
 
+	void SessionVisibilityHandler::DispatchEntitiesStates(Nz::UInt16 tickIndex)
+	{
 		Packets::EntitiesStateUpdate stateUpdate;
 		stateUpdate.tickIndex = tickIndex;
 		stateUpdate.lastInputIndex = m_lastInputIndex;
@@ -748,7 +772,6 @@ namespace tsom
 	{
 		m_movingEntities.erase(entity);
 
-		// TODO(?): Trigger property replication and RPC before entity destruction?
 		m_propertyUpdatedEntities.erase(entity);
 		m_triggeredEntitiesRpc.erase(entity);
 
