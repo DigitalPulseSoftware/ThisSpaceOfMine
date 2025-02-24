@@ -22,6 +22,7 @@
 #include <CommonLib/PlayerInputs.hpp>
 #include <CommonLib/Utils.hpp>
 #include <CommonLib/Components/ChunkComponent.hpp>
+#include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Components/PlanetComponent.hpp>
 #include <Game/GameConfigAppComponent.hpp>
 #include <Game/States/ConnectionState.hpp>
@@ -49,6 +50,7 @@
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <Nazara/Platform/Window.hpp>
 #include <Nazara/Platform/WindowEventHandler.hpp>
+#include <Nazara/TextRenderer/RichTextBuilder.hpp>
 #include <Nazara/Widgets/LabelWidget.hpp>
 #include <Nazara/Widgets/SimpleLabelWidget.hpp>
 #include <fmt/color.h>
@@ -101,6 +103,14 @@ namespace tsom
 			m_crosshairEntity.emplace<Nz::NodeComponent>();
 			auto& crosshairGfx = m_crosshairEntity.emplace<Nz::GraphicsComponent>(std::move(sprite), tsom::Constants::RenderMask2D);
 			crosshairGfx.Hide();
+		}
+
+		m_healthOxygen.entity = CreateEntity();
+		{
+			m_healthOxygen.textSprite = std::make_shared<Nz::TextSprite>();
+
+			m_healthOxygen.entity.emplace<Nz::NodeComponent>();
+			m_healthOxygen.entity.emplace<Nz::GraphicsComponent>(m_healthOxygen.textSprite, tsom::Constants::RenderMask2D);
 		}
 
 		m_sunLightEntity = CreateEntity();
@@ -165,12 +175,6 @@ namespace tsom
 			skyboxNode.SetInheritRotation(false);
 			skyboxNode.SetParent(m_cameraEntity);
 		}
-
-		m_controlledEntity = stateData.sessionHandler->GetControlledEntity();
-		m_onControlledEntityChanged.Connect(stateData.sessionHandler->OnControlledEntityChanged, [&](entt::handle entity)
-		{
-			m_controlledEntity = entity;
-		});
 
 		m_onControlledEntityStateUpdate.Connect(stateData.sessionHandler->OnControlledEntityStateUpdate, [&](InputIndex inputIndex, const Packets::EntitiesStateUpdate::ControlledCharacter& characterStates)
 		{
@@ -239,6 +243,21 @@ namespace tsom
 		});
 
 		m_blockSelectionBar = CreateWidget<BlockSelectionBar>(*stateData.blockLibrary);
+
+		m_controlledEntity = stateData.sessionHandler->GetControlledEntity();
+		m_onControlledEntityChanged.Connect(stateData.sessionHandler->OnControlledEntityChanged, [&](entt::handle entity)
+		{
+			m_controlledEntity = entity;
+			if (m_controlledEntity)
+				BindControlledEntitySignals();
+			else
+				UpdateHealthAndOxygenText();
+		});
+
+		if (m_controlledEntity)
+			BindControlledEntitySignals();
+		else
+			UpdateHealthAndOxygenText();
 
 		m_mouseWheelMovedSlot.Connect(stateData.window->GetEventHandler().OnMouseWheelMoved, [&](const Nz::WindowEventHandler* /*eventHandler*/, const Nz::WindowEvent::MouseWheelEvent& event)
 		{
@@ -1032,6 +1051,26 @@ namespace tsom
 		return true;
 	}
 
+	void GameState::BindControlledEntitySignals()
+	{
+		auto& entityInstance = m_controlledEntity.get<ClassInstanceComponent>();
+
+		// TODO: Cache those
+		Nz::UInt32 healthIndex = entityInstance.GetClass()->FindProperty("health");
+		Nz::UInt32 oxygenIndex = entityInstance.GetClass()->FindProperty("oxygen");
+
+		m_controlledEntityPropertyUpdate.Connect(entityInstance.OnPropertyUpdate, [this, healthIndex, oxygenIndex](ClassInstanceComponent* /*classInstance*/, Nz::UInt32 propertyIndex, const EntityProperty& /*newValue*/)
+		{
+			if (propertyIndex == healthIndex || propertyIndex == oxygenIndex)
+			{
+				// Update next tick when property value has been updated
+				m_timerManager.AddImmediateTimer([this] { UpdateHealthAndOxygenText(); });
+			}
+		});
+
+		UpdateHealthAndOxygenText();
+	}
+
 	void GameState::LayoutWidgets(const Nz::Vector2f& newSize)
 	{
 		m_blockSelectionBar->Resize({ newSize.x, BlockSelectionBar::InventoryTileSize });
@@ -1046,6 +1085,7 @@ namespace tsom
 		}
 
 		m_crosshairEntity.get<Nz::NodeComponent>().SetPosition({ newSize.x * 0.5f, newSize.y * 0.5f });
+		m_healthOxygen.entity.get<Nz::NodeComponent>().SetPosition({ newSize.x * 0.5f - m_healthOxygen.entity.get<Nz::GraphicsComponent>().GetAABB().x / 2.f, m_blockSelectionBar->GetPosition().y + m_blockSelectionBar->GetHeight() });
 
 		m_escapeMenu->Center();
 	}
@@ -1182,6 +1222,40 @@ namespace tsom
 		}
 
 		GetStateData().networkSession->SendPacket(inputPacket);
+	}
+
+	void GameState::UpdateHealthAndOxygenText()
+	{
+		Nz::Vector2f size = Nz::Vector2f(GetStateData().renderTarget->GetSize());
+
+		m_healthOxygen.textDrawer.Clear();
+		Nz::RichTextBuilder richTextBuilder(m_healthOxygen.textDrawer);
+		richTextBuilder << richTextBuilder.CharacterSize(18);
+
+		if (m_controlledEntity)
+		{
+			auto& playerInstance = m_controlledEntity.get<ClassInstanceComponent>();
+
+			// TODO: cache those
+			Nz::UInt32 healthPropertyIndex = playerInstance.FindPropertyIndex("health");
+			Nz::UInt32 oxygenPropertyIndex = playerInstance.FindPropertyIndex("oxygen");
+
+			auto healthValue = std::get<EntityPropertySingleValue<EntityPropertyType::Integer>>(playerInstance.GetProperty(healthPropertyIndex));
+			auto oxygenValue = std::get<EntityPropertySingleValue<EntityPropertyType::Integer>>(playerInstance.GetProperty(oxygenPropertyIndex));
+
+			richTextBuilder << Nz::Color::Yellow() << "Status: " << Nz::Color::White() << fmt::format("{}%", *healthValue);
+			richTextBuilder << Nz::Color::White() << " - ";
+			richTextBuilder << Nz::Color::Cyan() << "Oxygen: " << Nz::Color::White() << fmt::format("{}%", *oxygenValue);
+		}
+		else
+		{
+			richTextBuilder << Nz::Color::Yellow() << "Status: ";
+			richTextBuilder << Nz::Color::Red() << "Dead";
+		}
+
+		m_healthOxygen.textSprite->Update(m_healthOxygen.textDrawer);
+
+		m_healthOxygen.entity.get<Nz::NodeComponent>().SetPosition({ size.x * 0.5f - m_healthOxygen.entity.get<Nz::GraphicsComponent>().GetAABB().x / 2.f, m_blockSelectionBar->GetPosition().y + m_blockSelectionBar->GetHeight() });
 	}
 
 	void GameState::UpdateMouseLock()

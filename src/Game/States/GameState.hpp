@@ -11,12 +11,14 @@
 #include <ClientLib/ClientSessionHandler.hpp>
 #include <CommonLib/ConsoleExecutor.hpp>
 #include <CommonLib/NetworkReactor.hpp>
+#include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <Game/States/WidgetState.hpp>
 #include <Nazara/Core/State.hpp>
 #include <Nazara/Core/Time.hpp>
 #include <Nazara/Core/TimerManager.hpp>
 #include <Nazara/Math/EulerAngles.hpp>
 #include <Nazara/Platform/WindowEventHandler.hpp>
+#include <Nazara/TextRenderer/RichTextDrawer.hpp>
 #include <Nazara/TextRenderer/SimpleTextDrawer.hpp>
 #include <Nazara/Widgets/Canvas.hpp>
 #include <entt/entt.hpp>
@@ -64,12 +66,15 @@ namespace tsom
 				Nz::UInt32 subShapeID;
 			};
 
+			void BindControlledEntitySignals();
 			void LayoutWidgets(const Nz::Vector2f& newSize) override;
 			std::optional<RaycastResult> RaycastQuery() const;
 			void OnTick(Nz::Time elapsedTime, bool lastTick);
 			void SendInputs();
+			void UpdateHealthAndOxygenText();
 			void UpdateMouseLock();
 
+			NazaraSlot(ClassInstanceComponent, OnPropertyUpdate, m_controlledEntityPropertyUpdate);
 			NazaraSlot(ClientSessionHandler, OnChatMessage, m_onChatMessage);
 			NazaraSlot(ClientSessionHandler, OnConsoleOutput, m_onConsoleOutput);
 			NazaraSlot(ClientSessionHandler, OnControlledEntityChanged, m_onControlledEntityChanged);
@@ -103,6 +108,13 @@ namespace tsom
 				unsigned int mode = 0;
 			};
 
+			struct HealthOxygen
+			{
+				Nz::RichTextDrawer textDrawer;
+				std::shared_ptr<Nz::TextSprite> textSprite;
+				entt::handle entity;
+			};
+
 			struct InputRotation
 			{
 				InputIndex inputIndex;
@@ -130,6 +142,7 @@ namespace tsom
 			Nz::Time m_tickDuration;
 			Nz::TimerManager m_timerManager;
 			Nz::UInt8 m_nextInputIndex;
+			HealthOxygen m_healthOxygen;
 			Nz::SimpleLabelWidget* m_interactionLabel;
 			BlockSelectionBar* m_blockSelectionBar;
 			Chatbox* m_chatBox;
