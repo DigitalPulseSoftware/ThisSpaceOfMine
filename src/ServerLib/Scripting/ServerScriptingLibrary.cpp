@@ -5,6 +5,7 @@
 #include <ServerLib/Scripting/ServerScriptingLibrary.hpp>
 #include <CommonLib/CharacterController.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
+#include <ServerLib/ServerAtmosphere.hpp>
 #include <ServerLib/ServerInstance.hpp>
 #include <ServerLib/ServerPlanetEnvironment.hpp>
 #include <ServerLib/ServerPlayer.hpp>
@@ -29,9 +30,25 @@ namespace tsom
 		state["CLIENT"] = false;
 		state["SERVER"] = true;
 
+		RegisterAtmosphere(state);
 		RegisterEnvironment(state);
 		RegisterPlayer(state);
 		RegisterServer(state);
+	}
+
+	void ServerScriptingLibrary::RegisterAtmosphere(sol::state& state)
+	{
+		state.new_enum<GasType>("GasType", {
+			{ "CarbonDioxyde", GasType::CarbonDioxyde },
+			{ "Nitrogen", GasType::Nitrogen },
+			{ "Oxygen", GasType::Oxygen }
+		});
+
+		state.new_usertype<ServerAtmosphere>("Atmosphere",
+			sol::no_constructor,
+			"GetGasAmount", LuaFunction(&ServerAtmosphere::GetGasAmount),
+			"SetGasAmount", LuaFunction(&ServerAtmosphere::SetGasAmount)
+		);
 	}
 
 	void ServerScriptingLibrary::RegisterEnvironment(sol::state& state)

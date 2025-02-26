@@ -4,6 +4,7 @@
 
 #include <ServerLib/Systems/AtmosphereSystem.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
+#include <ServerLib/ServerAtmosphere.hpp>
 #include <ServerLib/ServerEnvironment.hpp>
 #include <ServerLib/Components/AtmosphereCarrier.hpp>
 #include <ServerLib/Components/AtmosphereExchanger.hpp>
@@ -39,6 +40,13 @@ namespace tsom
 			exchangerData.timeBeforeTick += exchangerData.tickRate;
 
 			if (!exchangerMonitor.atmosphere)
+			{
+				// If we're in a vaccum there's no possible exchange
+				exchangerData.OnExchangeFailed(entt::handle(m_registry, exchangerEntity), &exchangerData);
+				continue;
+			}
+
+			if (!exchangerMonitor.atmosphere->Exchange(exchangerData.gasModifier))
 			{
 				// If we're in a vaccum there's no possible exchange
 				exchangerData.OnExchangeFailed(entt::handle(m_registry, exchangerEntity), &exchangerData);

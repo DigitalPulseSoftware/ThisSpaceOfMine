@@ -15,6 +15,11 @@
 
 namespace tsom::Constants
 {
+	// Atmosphere constants
+	constexpr Nz::UInt64 OxygenAtmospherePct = 21;
+	constexpr Nz::Int64 PlayerOxygenConsumption = 100;
+	constexpr Nz::UInt64 SecondsToEmptyOxygenBlock = 5;
+
 	// Chat constants
 	constexpr std::size_t ChatMaxLines = 100;
 	constexpr std::size_t ChatMaxMessageLength = 1024;

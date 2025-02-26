@@ -63,6 +63,20 @@ namespace tsom
 		planetComponent.planet->GeneratePlatform(blockLibrary, Direction::Front, { 22, -35, -59 });
 		planetComponent.planet->GeneratePlatform(blockLibrary, Direction::Down, { 23, -62, 26 });
 
+		std::size_t emptyChunkCount = 0;
+		planetComponent.planet->ForEachChunk([&](const ChunkIndices& /*osef*/, const Chunk& chunk)
+		{
+			emptyChunkCount += chunk.GetBlockCount(EmptyBlockIndex);
+		});
+
+		// We want the player to be able to breathe 5s per empty block count
+		// the player breathe 100ml per second
+		Nz::UInt64 oxygenAmount = Constants::SecondsToEmptyOxygenBlock * Nz::UInt64(Constants::PlayerOxygenConsumption) * emptyChunkCount;
+		m_atmosphere.SetGasAmount(GasType::Oxygen, oxygenAmount);
+
+		// We also want oxygen to be 21% of the atmosphere and have the rest as nitrogen
+		m_atmosphere.SetGasAmount(GasType::Nitrogen, oxygenAmount * (100 - Constants::OxygenAtmospherePct) / Constants::OxygenAtmospherePct);
+
 		planetComponent.planet->OnChunkUpdated.Connect([this](ChunkContainer* /*planet*/, Chunk* chunk, DirectionMask /*neighborMask*/, Nz::UInt32 /*layerMask*/)
 		{
 			m_dirtyChunks.insert(chunk->GetIndices());

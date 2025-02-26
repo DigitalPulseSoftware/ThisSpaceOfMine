@@ -74,6 +74,7 @@ namespace tsom
 			inline BlockIndex GetBlockContent(unsigned int blockIndex) const;
 			inline BlockIndex GetBlockContent(const Nz::Vector3ui& indices) const;
 			inline std::size_t GetBlockCount() const;
+			inline Nz::UInt16 GetBlockCount(std::size_t blockIndex) const;
 			inline float GetBlockSize() const;
 			inline ChunkContainer& GetContainer();
 			inline const ChunkContainer& GetContainer() const;

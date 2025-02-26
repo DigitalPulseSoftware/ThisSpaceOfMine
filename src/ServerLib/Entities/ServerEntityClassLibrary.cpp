@@ -38,7 +38,9 @@ namespace tsom
 		Nz::UInt32 deathRpc = m_playerClass->FindClientRpc("death");
 
 		auto& atmosphereExchanger = entity.emplace<AtmosphereExchanger>();
-		atmosphereExchanger.gasModifier[GasType::Oxygen] = -1000;
+		atmosphereExchanger.gasModifier[GasType::Oxygen] = -Constants::PlayerOxygenConsumption;
+		atmosphereExchanger.gasModifier[GasType::CarbonDioxyde] = Constants::PlayerOxygenConsumption;
+
 		atmosphereExchanger.OnExchangeFailed.Connect([healthIndex, oxygenIndex, deathRpc](entt::handle playerEntity, AtmosphereExchanger*)
 		{
 			auto& playerInstance = playerEntity.get<ClassInstanceComponent>();

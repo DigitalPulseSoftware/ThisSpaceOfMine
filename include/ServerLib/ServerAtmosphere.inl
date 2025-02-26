@@ -4,4 +4,32 @@
 
 namespace tsom
 {
+	inline ServerAtmosphere::ServerAtmosphere()
+	{
+		m_gasAmount.fill(0);
+	}
+
+	inline bool ServerAtmosphere::Exchange(const Nz::EnumArray<GasType, Nz::Int32>& amounts)
+	{
+		for (auto&& [gasType, amount] : amounts.iter_kv())
+		{
+			if (amount < 0 && m_gasAmount[gasType] < -amount)
+				return false;
+		}
+
+		for (auto&& [gasType, amount] : amounts.iter_kv())
+			m_gasAmount[gasType] += amount;
+
+		return true;
+	}
+
+	inline Nz::UInt64 ServerAtmosphere::GetGasAmount(GasType type) const
+	{
+		return m_gasAmount[type];
+	}
+
+	inline void ServerAtmosphere::SetGasAmount(GasType type, Nz::UInt64 millilitre)
+	{
+		m_gasAmount[type] = millilitre;
+	}
 }

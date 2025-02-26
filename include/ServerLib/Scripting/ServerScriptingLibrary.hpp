@@ -30,6 +30,7 @@ namespace tsom
 			ServerScriptingLibrary& operator=(ServerScriptingLibrary&&) = delete;
 
 		private:
+			void RegisterAtmosphere(sol::state& state);
 			void RegisterEnvironment(sol::state& state);
 			void RegisterPlayer(sol::state& state);
 			void RegisterServer(sol::state& state);

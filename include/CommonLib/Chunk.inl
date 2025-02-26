@@ -77,6 +77,14 @@ namespace tsom
 		return m_size.x * m_size.y * m_size.z;
 	}
 
+	inline Nz::UInt16 Chunk::GetBlockCount(std::size_t blockIndex) const
+	{
+		if (blockIndex >= m_blockTypeCount.size())
+			return 0;
+
+		return m_blockTypeCount[blockIndex];
+	}
+
 	inline float Chunk::GetBlockSize() const
 	{
 		return m_blockSize;

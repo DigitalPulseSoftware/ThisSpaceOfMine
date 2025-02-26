@@ -72,7 +72,10 @@ namespace tsom
 				LuaFunction(Nz::Overload<unsigned int>(&Chunk::GetBlockContent)),
 				LuaFunction(Nz::Overload<const Nz::Vector3ui&>(&Chunk::GetBlockContent))
 			),
-			"GetBlockCount", LuaFunction(&Chunk::GetBlockCount),
+			"GetBlockCount", sol::overload(
+				LuaFunction(Nz::Overload<>(&Chunk::GetBlockCount)),
+				LuaFunction(Nz::Overload<std::size_t>(&Chunk::GetBlockCount))
+			),
 			"GetBlockLocalIndex", LuaFunction(&Chunk::GetBlockLocalIndex),
 			"GetBlockLocalIndices", LuaFunction(&Chunk::GetBlockLocalIndices),
 			"GetContainer", LuaFunction([](Chunk& chunk)

@@ -8,11 +8,14 @@
 #define TSOM_COMMONLIB_GASTYPE_HPP
 
 #include <NazaraUtils/Prerequisites.hpp>
+#include <cstddef>
 
 namespace tsom
 {
 	enum class GasType
 	{
+		CarbonDioxyde,
+		Nitrogen,
 		Oxygen,
 
 		Max = Oxygen
