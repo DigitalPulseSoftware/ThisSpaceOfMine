@@ -512,22 +512,27 @@ namespace tsom
 			{
 				EntityId entityIndex = Nz::Retrieve(m_entityIndices, entity);
 
-				std::size_t valueIndex = 0;
 				Nz::UInt32 propertyBits = propertyData.propertiesMask;
+
+				Packets::EntityPropertiesUpdate propertyUpdatePacket;
+				propertyUpdatePacket.entity = entityIndex;
+				propertyUpdatePacket.tickIndex = tickIndex;
+				propertyUpdatePacket.properties.reserve(Nz::CountBits(propertyBits));
+
+				std::size_t valueIndex = 0;
 				while (Nz::UInt32 propertyIndex = Nz::FindFirstBit(propertyBits))
 				{
 					propertyIndex--; //< FFB returns 0 if no bit was found
 
-					Packets::EntityPropertyUpdate propertyUpdatePacket;
-					propertyUpdatePacket.entity = entityIndex;
-					propertyUpdatePacket.propertyIndex = propertyIndex;
-					propertyUpdatePacket.propertyValue = std::move(propertyData.values[valueIndex]);
-					propertyUpdatePacket.tickIndex = tickIndex;
-
-					m_networkSession->SendPacket(propertyUpdatePacket);
+					auto& packetPropertyData = propertyUpdatePacket.properties.emplace_back();
+					packetPropertyData.index = propertyIndex;
+					packetPropertyData.value = std::move(propertyData.values[valueIndex]);
 
 					propertyBits = Nz::ClearBit(propertyBits, propertyIndex);
+					valueIndex++;
 				}
+
+				m_networkSession->SendPacket(propertyUpdatePacket);
 			}
 			m_propertyUpdatedEntities.clear();
 		}

@@ -312,13 +312,14 @@ namespace tsom
 			fmt::print(fg(fmt::color::yellow), "client rpc {} has been triggered but has no callback\n", clientRpc.name);
 	}
 
-	void ClientSessionHandler::HandlePacket(Packets::EntityPropertyUpdate&& propertyUpdate)
+	void ClientSessionHandler::HandlePacket(Packets::EntityPropertiesUpdate&& propertyUpdate)
 	{
 		assert(m_entities[propertyUpdate.entity]);
 		EntityData& entityData = *m_entities[propertyUpdate.entity];
 
 		auto& classInstance = entityData.entity.get<ClassInstanceComponent>();
-		classInstance.UpdateProperty(propertyUpdate.propertyIndex, std::move(propertyUpdate.propertyValue));
+		for (auto& propertyData : propertyUpdate.properties)
+			classInstance.UpdateProperty(propertyData.index, std::move(propertyData.value));
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::EnvironmentCreate&& envCreate)

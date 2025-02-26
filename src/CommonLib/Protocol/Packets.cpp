@@ -317,12 +317,17 @@ namespace tsom
 			serializer &= data.rpcIndex;
 		}
 
-		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntityPropertyUpdate& data)
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntityPropertiesUpdate& data)
 		{
 			serializer &= data.tickIndex;
 			serializer &= data.entity;
-			serializer &= data.propertyIndex;
-			serializer &= data.propertyValue;
+
+			serializer.SerializeArraySize(data.properties);
+			for (auto& propertyData : data.properties)
+			{
+				serializer &= propertyData.index;
+				serializer &= propertyData.value;
+			}
 		}
 
 		void Serialize(PacketSerializer& serializer, EnvironmentCreate& data)

@@ -237,12 +237,17 @@ namespace tsom
 			CompressedUnsigned<Nz::UInt32> rpcIndex;
 		};
 
-		struct EntityPropertyUpdate
+		struct EntityPropertiesUpdate
 		{
+			struct Properties
+			{
+				CompressedUnsigned<Nz::UInt32> index;
+				EntityProperty value;
+			};
+
 			Nz::UInt16 tickIndex;
 			Helper::EntityId entity;
-			CompressedUnsigned<Nz::UInt32> propertyIndex;
-			EntityProperty propertyValue;
+			Nz::HybridVector<Properties, 8> properties;
 		};
 
 		struct EnvironmentCreate
@@ -359,7 +364,7 @@ namespace tsom
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntitiesStateUpdate& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntityEnvironmentUpdate& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntityProcedureCall& data);
-		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntityPropertyUpdate& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EntityPropertiesUpdate& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EnvironmentCreate& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EnvironmentDestroy& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, EnvironmentsUpdateOwner& data);
