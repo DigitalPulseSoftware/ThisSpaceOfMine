@@ -403,6 +403,93 @@ namespace tsom
 
 			return;
 		}
+		else if (message == "/spawnsensor")
+		{
+			entt::handle playerEntity = m_player->GetControlledEntityReference();
+			if (!playerEntity)
+				return;
+
+			ServerInstance& serverInstance = m_player->GetServerInstance();
+
+			ServerEnvironment* currentEnvironment = ServerEnvironment::GetEnvironment(playerEntity);
+
+			std::shared_ptr<const EntityClass> atmosphereSensor = serverInstance.GetEntityRegistry().FindClass("atmosphere_sensor");
+			if (!atmosphereSensor)
+				return;
+
+			const auto& characterController = m_player->GetCharacterController();
+			Nz::Quaternionf cameraRot = characterController->GetCameraRotation();
+
+			Nz::Vector3f hitPos, hitNormal;
+			entt::handle hitEntity;
+			std::uint32_t hitSubshapeID;
+			auto callback = [&](const Nz::Physics3DSystem::RaycastHit& hitInfo)
+			{
+				hitPos = hitInfo.hitPosition;
+				hitNormal = hitInfo.hitNormal;
+				hitEntity = hitInfo.hitEntity;
+				hitSubshapeID = hitInfo.subShapeID;
+			};
+
+			struct IgnorePlayer : Nz::PhysObjectLayerFilter3D
+			{
+				bool ShouldCollide(Nz::PhysObjectLayer3D layer) const override
+				{
+					return layer != Constants::ObjectLayerPlayer;
+				}
+			};
+			IgnorePlayer objectFilter;
+
+			auto& playerNode = playerEntity.get<Nz::NodeComponent>();
+
+			Nz::Vector3f cameraPos = characterController->GetEyePosition();
+
+			auto& physSystem = currentEnvironment->GetWorld().GetSystem<Nz::Physics3DSystem>();
+			if (physSystem.RaycastQueryFirst(cameraPos, cameraPos + cameraRot * Nz::Vector3f::Forward() * 10.f, callback, nullptr, &objectFilter))
+			{
+				if (auto* chunkComponent = hitEntity.try_get<ChunkComponent>())
+				{
+					auto& chunkRigidBody = hitEntity.get<Nz::RigidBody3DComponent>();
+					auto& chunkNode = hitEntity.get<Nz::NodeComponent>();
+
+					const Chunk& hitChunk = *chunkComponent->chunk;
+					const ChunkContainer& chunkContainer = hitChunk.GetContainer();
+
+					Nz::Vector3f localPos = chunkNode.ToLocalPosition(hitPos);
+					Nz::Vector3f localNormal = chunkNode.ToLocalDirection(hitNormal);
+
+					auto hitCoordinates = hitChunk.ComputeHitCoordinates(localPos, localNormal, *chunkRigidBody.GetCollider(), hitSubshapeID);
+					if (!hitCoordinates)
+						return;
+
+					BlockIndices blockIndices = chunkContainer.GetBlockIndices(hitChunk.GetIndices(), hitCoordinates->blockIndices);
+
+					const DirectionAxis& dirAxis = s_dirAxis[hitCoordinates->direction];
+					blockIndices[dirAxis.upAxis] += dirAxis.upDir;
+
+					Nz::Vector3ui innerCoordinates;
+					ChunkIndices chunkIndices = chunkContainer.GetChunkIndicesByBlockIndices(blockIndices, &innerCoordinates);
+					const Chunk* chunk = chunkContainer.GetChunk(chunkIndices);
+					if (!chunk)
+						return;
+
+					auto corners = chunk->ComputeBlockCorners(innerCoordinates);
+					Nz::Vector3f blockCenter = std::accumulate(corners.begin(), corners.end(), Nz::Vector3f::Zero()) / corners.size();
+					Nz::Vector3f offset = chunk->GetContainer().GetChunkOffset(chunk->GetIndices());
+
+					Direction dir = DirectionFromNormal(playerNode.GetForward());
+
+					entt::handle entity = currentEnvironment->CreateEntity();
+					entity.emplace<Nz::NodeComponent>(blockCenter + offset, Nz::Quaternionf::RotationBetween(Nz::Vector3f::Forward(), s_dirNormals[dir]));
+					entity.emplace<NetworkedComponent>();
+
+					entity.emplace<ClassInstanceComponent>(atmosphereSensor);
+					atmosphereSensor->InitAndActivateEntity(entity);
+				}
+			}
+
+			return;
+		}
 		else if (message == "/spawnplatform")
 		{
 // 			entt::handle playerEntity = m_player->GetControlledEntity();

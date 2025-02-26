@@ -9,12 +9,31 @@
 #include <ServerLib/ServerPlanetEnvironment.hpp>
 #include <ServerLib/ServerPlayer.hpp>
 #include <ServerLib/ServerShipEnvironment.hpp>
+#include <ServerLib/Components/AtmosphereMonitor.hpp>
 #include <ServerLib/Components/ServerInteractibleComponent.hpp>
 #include <fmt/color.h>
 #include <fmt/format.h>
+#include <frozen/string.h>
+#include <frozen/unordered_map.h>
 
 namespace tsom
 {
+	namespace
+	{
+		constexpr auto s_serverComponents = frozen::make_unordered_map<frozen::string, SharedEntityScriptingLibrary::ComponentEntry>({
+			{
+				"atmosphere_monitor", SharedEntityScriptingLibrary::ComponentEntry::Default<AtmosphereMonitor>()
+			}
+		});
+	}
+
+	void ServerEntityScriptingLibrary::Register(sol::state& state)
+	{
+		SharedEntityScriptingLibrary::Register(state);
+
+		RegisterServerComponents(state);
+	}
+
 	void ServerEntityScriptingLibrary::FillEntityMetatable(sol::state& state, sol::table entityMetatable)
 	{
 		SharedEntityScriptingLibrary::FillEntityMetatable(state, entityMetatable);
@@ -89,5 +108,36 @@ namespace tsom
 		}
 
 		return false;
+	}
+
+	void ServerEntityScriptingLibrary::RegisterServerComponents(sol::state& state)
+	{
+		state.new_usertype<AtmosphereMonitor>("AtmosphereMonitor",
+			sol::no_constructor,
+			"Atmosphere", sol::readonly_property(&AtmosphereMonitor::atmosphere));
+	}
+
+	auto ServerEntityScriptingLibrary::RetrieveAddComponentHandler(std::string_view componentType) -> AddComponentFunc
+	{
+		if (AddComponentFunc addComponentHandler = SharedEntityScriptingLibrary::RetrieveAddComponentHandler(componentType))
+			return addComponentHandler;
+
+		auto it = s_serverComponents.find(componentType);
+		if (it == s_serverComponents.end())
+			return nullptr;
+
+		return it->second.addComponent;
+	}
+
+	auto ServerEntityScriptingLibrary::RetrieveGetComponentHandler(std::string_view componentType) -> GetComponentFunc
+	{
+		if (GetComponentFunc getComponentHandler = SharedEntityScriptingLibrary::RetrieveGetComponentHandler(componentType))
+			return getComponentHandler;
+
+		auto it = s_serverComponents.find(componentType);
+		if (it == s_serverComponents.end())
+			return nullptr;
+
+		return it->second.getComponent;
 	}
 }

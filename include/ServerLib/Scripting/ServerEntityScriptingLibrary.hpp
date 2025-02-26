@@ -17,12 +17,19 @@ namespace tsom
 		public:
 			using SharedEntityScriptingLibrary::SharedEntityScriptingLibrary;
 
+			void Register(sol::state& state) override;
+
 		private:
 			void FillEntityMetatable(sol::state& state, sol::table entityMetatable) override;
 
 			void HandleInit(sol::table classMetatable, entt::handle entity) override;
 
 			bool RegisterEvent(sol::table classMetatable, std::string_view eventName, sol::protected_function callback) override;
+
+			void RegisterServerComponents(sol::state& state);
+
+			AddComponentFunc RetrieveAddComponentHandler(std::string_view componentType) override;
+			GetComponentFunc RetrieveGetComponentHandler(std::string_view componentType) override;
 	};
 }
 
