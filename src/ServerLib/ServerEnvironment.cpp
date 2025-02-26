@@ -4,6 +4,7 @@
 
 #include <ServerLib/ServerEnvironment.hpp>
 #include <CommonLib/Physics/PhysicsSettings.hpp>
+#include <CommonLib/Systems/TickSystem.hpp>
 #include <ServerLib/Debug/DebugDrawBroadcaster.hpp>
 #include <ServerLib/Systems/AtmosphereSystem.hpp>
 #include <ServerLib/Systems/EnvironmentProxySystem.hpp>
@@ -28,6 +29,7 @@ namespace tsom
 		m_world->AddSystem<AtmosphereSystem>();
 		m_world->AddSystem<EnvironmentProxySystem>();
 		m_world->AddSystem<NetworkedEntitiesSystem>(*this);
+		m_world->AddSystem<TickSystem>();
 
 		// Setup physics
 		Nz::Physics3DSystem::Settings physSettings = Physics::BuildSettings();

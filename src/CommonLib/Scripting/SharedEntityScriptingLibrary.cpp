@@ -10,6 +10,7 @@
 #include <CommonLib/PhysicsConstants.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Components/ScriptedEntityComponent.hpp>
+#include <CommonLib/Components/TickComponent.hpp>
 #include <CommonLib/Scripting/ScriptingProperties.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
 #include <ServerLib/ServerPlayer.hpp>
@@ -179,6 +180,17 @@ namespace tsom
 			return TranslatePropertyToLua(state, classComponent.GetProperty(propertyIndex));
 		});
 
+		entityMetatable["SetTickInterval"] = LuaFunction([this](sol::this_state L, sol::table entityTable, Nz::UInt32 milliseconds)
+		{
+			entt::handle entity = AssertScriptEntity(entityTable);
+
+			TickComponent* entityTick = entity.try_get<TickComponent>();
+			if (!entityTick)
+				TriggerLuaError(L, "entity has no tick callback");
+
+			entityTick->tickRate = Nz::Time::Milliseconds(milliseconds);
+		});
+
 		entityMetatable["UpdateProperty"] = LuaFunction([this](sol::this_state L, sol::table entityTable, std::string_view propertyName, sol::object value)
 		{
 			entt::handle entity = AssertScriptEntity(entityTable);
@@ -313,6 +325,8 @@ namespace tsom
 					entityBuilder.classMetatable["_Init"] = std::move(callback);
 				else if (eventName == "activate")
 					entityBuilder.classMetatable["_Activate"] = std::move(callback);
+				else if (eventName == "tick")
+					entityBuilder.classMetatable["_Tick"] = std::move(callback);
 				else
 				{
 					if (!RegisterEvent(entityBuilder.classMetatable, eventName, std::move(callback)))
@@ -405,7 +419,9 @@ namespace tsom
 				};
 			}
 
-			entityBuilder.callbacks.onInit = [this, state, metatable = std::move(entityBuilder.classMetatable), sharedCallbacks](entt::handle entity) mutable
+			sol::optional<sol::protected_function> tickCallback = entityBuilder.classMetatable["_Tick"];
+
+			entityBuilder.callbacks.onInit = [this, state, metatable = std::move(entityBuilder.classMetatable), sharedCallbacks, tickCallback](entt::handle entity) mutable
 			{
 				auto& entityInstance = entity.get<ClassInstanceComponent>();
 				entityInstance.OnPropertyUpdate.Connect([entity, sharedCallbacks, state](ClassInstanceComponent* classInstance, Nz::UInt32 propertyIndex, const EntityProperty& newValue) mutable
@@ -433,6 +449,21 @@ namespace tsom
 				entityScripted.entityTable["_Entity"] = entity;
 
 				HandleInit(entityScripted.classMetatable, entity);
+
+				if (tickCallback)
+				{
+					auto& entityTick = entity.emplace<TickComponent>();
+					entityTick.onTick = [onTick = *tickCallback](entt::handle entity)
+					{
+						auto& entityScripted = entity.get<ScriptedEntityComponent>();
+						auto res = onTick(entityScripted.entityTable);
+						if (!res.valid())
+						{
+							sol::error err = res;
+							fmt::print(fg(fmt::color::red), "entity tick callback failed: {}\n", err.what());
+						}
+					};
+				}
 
 				sol::optional<sol::protected_function> initCallback = entityScripted.classMetatable["_Init"];
 				if (initCallback)
