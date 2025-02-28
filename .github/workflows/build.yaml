@@ -17,13 +17,13 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-        - { runner: windows-latest,    os: windows,      arch: x64,    archive_ext: .zip }
-        - { runner: ubuntu-latest,     os: linux,        arch: x86_64, archive_ext: .tar.gz }
-        - { runner: ubuntu-24.04-arm,  os: linux,        arch: arm64,  archive_ext: .tar.gz }
-        - { runner: ubuntu-latest,     os: linux-server, arch: x86_64, archive_ext: .tar.gz, config: --serveronly=y, cache_key: -server }
-        - { runner: ubuntu-24.04-arm,  os: linux-server, arch: arm64,  archive_ext: .tar.gz, config: --serveronly=y, cache_key: -server }
-        - { runner: macos-latest,      os: macos,        arch: x86_64, archive_ext: .tar.gz }
-        - { runner: macos-latest,      os: macos,        arch: arm64,  archive_ext: .tar.gz }
+        - { runner: windows-2022,      os: windows,      arch: x64,    archive_ext: .zip }
+        - { runner: ubuntu-22.04,      os: linux,        arch: x86_64, archive_ext: .tgz }
+        - { runner: ubuntu-22.04-arm,  os: linux,        arch: arm64,  archive_ext: .tgz }
+        - { runner: ubuntu-22.04,      os: linux-server, arch: x86_64, archive_ext: .tgz, config: --serveronly=y, cache_key: -server }
+        - { runner: ubuntu-22.04-arm,  os: linux-server, arch: arm64,  archive_ext: .tgz, config: --serveronly=y, cache_key: -server }
+        - { runner: macos-14,          os: macos,        arch: x86_64, archive_ext: .tgz }
+        - { runner: macos-14,          os: macos,        arch: arm64,  archive_ext: .tgz }
         mode: [debug, releasedbg]
 
     runs-on: ${{ matrix.platform.runner }}
