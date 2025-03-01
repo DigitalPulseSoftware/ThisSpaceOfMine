@@ -5,6 +5,7 @@
 #include <ServerLib/Components/ServerEnvironmentSwitchComponent.hpp>
 #include <CommonLib/EntityReference.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
+#include <CommonLib/Components/ScriptedEntityComponent.hpp>
 #include <CommonLib/Components/TickComponent.hpp>
 #include <ServerLib/ServerEnvironment.hpp>
 #include <ServerLib/Components/AtmosphereMonitor.hpp>
@@ -73,12 +74,30 @@ namespace tsom
 		if (AtmosphereMonitor* atmosphereMonitor = oldEntity.try_get<AtmosphereMonitor>())
 			newEntity.emplace<AtmosphereMonitor>(*atmosphereMonitor);
 
+		if (ScriptedEntityComponent* scriptedEntityComponent = oldEntity.try_get<ScriptedEntityComponent>())
+		{
+			sol::state_view state(scriptedEntityComponent->entityTable.lua_state());
+
+			// Create a new handle so that previous is still accessible
+			auto& scriptedEntity = newEntity.emplace<ScriptedEntityComponent>();
+			scriptedEntity.classMetatable = scriptedEntityComponent->classMetatable;
+			scriptedEntity.entityTable = state.create_table();
+			scriptedEntity.entityTable[sol::metatable_key] = scriptedEntity.classMetatable;
+			scriptedEntity.entityTable["_Entity"] = EntityReference(newEntity);
+		}
+
 		if (ServerEnvironmentSwitchComponent* envSwitchComponent = oldEntity.try_get<ServerEnvironmentSwitchComponent>())
 			newEntity.emplace<ServerEnvironmentSwitchComponent>(*envSwitchComponent);
 
 		if (TickComponent* tickComponent = oldEntity.try_get<TickComponent>())
 			newEntity.emplace<TickComponent>(*tickComponent);
 
+		if (handleEnvironmentSwitch)
+			handleEnvironmentSwitch(oldEntity, newEntity, relativeTransform);
+
+		OnEntitySwitchedEnvironment(oldEntity, newEntity, newEnvironment, relativeTransform);
+
+		// Update EntityReference after callbacks have been triggered
 		if (EntityReference::HandleOwner* handleOwner = oldEntity.try_get<EntityReference::HandleOwner>())
 		{
 			auto& newHandleOwner = newEntity.emplace<EntityReference::HandleOwner>();
@@ -86,8 +105,6 @@ namespace tsom
 			newHandleOwner.handleData->entity = newEntity;
 		}
 
-		handleEnvironmentSwitch(oldEntity, newEntity, relativeTransform);
-		OnEntitySwitchedEnvironment(oldEntity, newEntity, newEnvironment, relativeTransform);
 		oldEntity.destroy();
 
 		return newEntity;

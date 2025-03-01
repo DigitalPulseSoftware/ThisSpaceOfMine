@@ -26,6 +26,7 @@ classData:On("init", function (self)
 	end
 
 	if SERVER then
+		self:AllowEnvironmentSwitch()
 		self:SetTickInterval(1000)
 		self:AddComponent("atmosphere_monitor")
 	end
@@ -46,7 +47,7 @@ else
 		local co2 = self:GetProperty("sensor_co2")
 		local n2 = self:GetProperty("sensor_n2")
 		
-		local sum = o2 + co2 + n2
+		local sum = math.max(o2 + co2 + n2, 1) -- avoid division by zero
 		local o2_pct = o2 * 100 // sum
 		local co2_pct = co2 * 100 // sum
 		local n2_pct = n2 * 100 // sum

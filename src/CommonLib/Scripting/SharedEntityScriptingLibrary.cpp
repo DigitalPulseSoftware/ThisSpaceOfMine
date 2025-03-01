@@ -119,7 +119,7 @@ namespace tsom
 		else
 		{
 			sol::table entityTable = state.create_table();
-			entityTable["_Entity"] = entity;
+			entityTable["_Entity"] = EntityReference(entity);
 			entityTable[sol::metatable_key] = m_entityMetatable;
 
 			return entityTable;
@@ -446,7 +446,7 @@ namespace tsom
 				entityScripted.classMetatable = metatable;
 				entityScripted.entityTable = state.create_table();
 				entityScripted.entityTable[sol::metatable_key] = entityScripted.classMetatable;
-				entityScripted.entityTable["_Entity"] = entity;
+				entityScripted.entityTable["_Entity"] = EntityReference(entity);
 
 				HandleInit(entityScripted.classMetatable, entity);
 

@@ -20,7 +20,7 @@ namespace tsom
 	{
 		entt::handle Switch(entt::handle entity, ServerEnvironment* previousEnvironment, ServerEnvironment* newEnvironment, const EnvironmentTransform& relativeTransform);
 
-		std::function<void(entt::handle previousEntity, entt::handle newEntity, const EnvironmentTransform& /*relativeTransform*/)> handleEnvironmentSwitch;
+		std::function<void(entt::handle /*previousEntity*/, entt::handle /*newEntity*/, const EnvironmentTransform& /*relativeTransform*/)> handleEnvironmentSwitch;
 
 		NazaraSignal(OnEntitySwitchedEnvironment, entt::handle /*previousEntity*/, entt::handle /*newEntity*/, ServerEnvironment* /*newEnvironment*/, const EnvironmentTransform& /*relativeTransform*/);
 	};

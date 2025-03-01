@@ -11,6 +11,7 @@
 #include <ServerLib/ServerShipEnvironment.hpp>
 #include <ServerLib/Components/AtmosphereMonitor.hpp>
 #include <ServerLib/Components/ServerInteractibleComponent.hpp>
+#include <ServerLib/Components/ServerEnvironmentSwitchComponent.hpp>
 #include <fmt/color.h>
 #include <fmt/format.h>
 #include <frozen/string.h>
@@ -37,6 +38,13 @@ namespace tsom
 	void ServerEntityScriptingLibrary::FillEntityMetatable(sol::state& state, sol::table entityMetatable)
 	{
 		SharedEntityScriptingLibrary::FillEntityMetatable(state, entityMetatable);
+
+		entityMetatable["AllowEnvironmentSwitch"] = LuaFunction([](sol::table entityTable)
+		{
+			entt::handle entity = AssertScriptEntity(entityTable);
+
+			entity.emplace<ServerEnvironmentSwitchComponent>();
+		});
 
 		entityMetatable["CallClientRPC"] = LuaFunction([](sol::table entityTable, std::string rpcName, std::optional<ServerPlayerHandle> targetPlayer)
 		{
@@ -97,6 +105,24 @@ namespace tsom
 				}
 			};
 		}
+
+		sol::optional<sol::protected_function> envSwitchCallback = classMetatable["_EnvSwitch"];
+		if (envSwitchCallback)
+		{
+			auto& entityEnvSwitch = entity.get<ServerEnvironmentSwitchComponent>();
+			entityEnvSwitch.handleEnvironmentSwitch = [cb = std::move(*envSwitchCallback)](entt::handle previousEntity, entt::handle newEntity, const EnvironmentTransform& /*relativeTransform*/)
+			{
+				auto& previousEntityScripted = previousEntity.get<ScriptedEntityComponent>();
+				auto& newEntityScripted = newEntity.get<ScriptedEntityComponent>();
+
+				auto res = cb(newEntityScripted.entityTable, previousEntityScripted.entityTable);
+				if (!res.valid())
+				{
+					sol::error err = res;
+					fmt::print(fg(fmt::color::red), "entity environment switch event failed: {}\n", err.what());
+				}
+			};
+		}
 	}
 
 	bool ServerEntityScriptingLibrary::RegisterEvent(sol::table classMetatable, std::string_view eventName, sol::protected_function callback)
@@ -104,6 +130,11 @@ namespace tsom
 		if (eventName == "interact")
 		{
 			classMetatable["_Interact"] = std::move(callback);
+			return true;
+		}
+		else if (eventName == "env_switch")
+		{
+			classMetatable["_EnvSwitch"] = std::move(callback);
 			return true;
 		}
 
