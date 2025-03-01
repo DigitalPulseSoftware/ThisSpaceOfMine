@@ -348,42 +348,50 @@ namespace tsom
 			OnInteriorColliderUpdated();
 		}
 
-		if (m_exteriorEnvironment)
+		if (m_exteriorEnvironment && m_exteriorEntity)
 		{
-			ForEachPlayer([this](ServerPlayer& player)
+			entt::registry& registry = m_world->GetRegistry();
+			auto switchView = registry.view<Nz::NodeComponent, ClassInstanceComponent, ServerEnvironmentSwitchComponent>();
+
+			Ship& ship = GetShip();
+			for (entt::entity entity : switchView)
 			{
-				if (player.GetControlledEntityEnvironment() != this)
-					return;
+				auto& entityNode = switchView.get<Nz::NodeComponent>(entity);
 
-				entt::handle controlledEntity = player.GetControlledEntityReference();
-				if (!controlledEntity)
-					return;
-
-				Nz::Vector3f playerPos = controlledEntity.get<Nz::NodeComponent>().GetPosition();
+				Nz::Vector3f entityPos = entityNode.GetPosition();
 				Ship& ship = GetShip();
 
+				bool isInside = false;
 				for (const auto& [chunkIndices, chunkData] : m_chunkData)
 				{
 					if (!chunkData.hullCollider)
 						continue;
 
-					Nz::Vector3f relativePos = playerPos - ship.GetChunkOffset(chunkIndices);
+					Nz::Vector3f relativePos = entityPos - ship.GetChunkOffset(chunkIndices);
 					relativePos -= chunkData.hullCollider->GetCenterOfMass(); //< https://jrouwe.github.io/JoltPhysics/index.html#center-of-mass
 					if (chunkData.hullCollider->CollisionQuery(relativePos))
-						return;
+					{
+						isInside = true;
+						break;
+					}
 				}
+
+				if (isInside)
+					continue;
+
+				auto& envSwitch = switchView.get<ServerEnvironmentSwitchComponent>(entity);
 
 				// No longer colliding with the interior
 				auto& outsideNode = m_exteriorEntity.get<Nz::NodeComponent>();
 				EnvironmentTransform outsideTransform(outsideNode.GetPosition(), outsideNode.GetRotation());
 				Nz::Vector3f shipLinearVelocity = m_exteriorEntity.get<Nz::RigidBody3DComponent>().GetLinearVelocity();
 
-				controlledEntity = controlledEntity.get<ServerEnvironmentSwitchComponent>().Switch(controlledEntity, this, m_exteriorEnvironment, outsideTransform);
-				if (Nz::PhysCharacter3DComponent* controlledCharacter = controlledEntity.try_get<Nz::PhysCharacter3DComponent>())
+				entt::handle newEntity = envSwitch.Switch(entt::handle(registry, entity), this, m_exteriorEnvironment, outsideTransform);
+				if (Nz::PhysCharacter3DComponent* controlledCharacter = newEntity.try_get<Nz::PhysCharacter3DComponent>())
 					controlledCharacter->AddLinearVelocity(shipLinearVelocity);
-				else if (Nz::RigidBody3DComponent* controlledRigidbody = controlledEntity.try_get<Nz::RigidBody3DComponent>())
+				else if (Nz::RigidBody3DComponent* controlledRigidbody = newEntity.try_get<Nz::RigidBody3DComponent>())
 					controlledRigidbody->AddLinearVelocity(shipLinearVelocity);
-			});
+			}
 		}
 
 		ServerEnvironment::OnTick(elapsedTime);
