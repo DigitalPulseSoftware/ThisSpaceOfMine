@@ -76,6 +76,25 @@ namespace tsom
 				playerInstance.UpdateProperty(oxygenIndex, oxygenValue);
 			}
 		});
+	}
+
+	void ServerEntityClassLibrary::OnPlayerInit(entt::handle entity)
+	{
+		auto& playerControlled = entity.get<ServerPlayerControlledComponent>();
+		ServerPlayer* player = playerControlled.GetPlayer();
+		NazaraAssert(player);
+
+		Nz::PhysCharacter3DComponent::Settings characterSettings;
+		characterSettings.collider = m_playerCollider;
+		characterSettings.objectLayer = Constants::ObjectLayerPlayer;
+
+		auto characterController = player->GetCharacterController();
+
+		auto& characterComponent = entity.emplace<Nz::PhysCharacter3DComponent>(std::move(characterSettings));
+		characterComponent.SetImpl(characterController);
+		characterComponent.DisableSleeping();
+
+		player->GetVisibilityHandler().UpdateControlledEntity(entity, characterController.get()); // TODO: Reset to nullptr when player entity is destroyed
 
 		auto& envSwitchComponent = entity.emplace<ServerEnvironmentSwitchComponent>();
 		envSwitchComponent.handleEnvironmentSwitch = [](entt::handle previousEntity, entt::handle newEntity, const EnvironmentTransform& envTransform)
@@ -92,9 +111,6 @@ namespace tsom
 			auto [linearVel, angularVel] = previousCharacter.GetLinearAndAngularVelocity();
 			linearVel = envTransform.Rotate(linearVel);
 			angularVel = envTransform.Rotate(angularVel);
-
-			Nz::Vector3f prevEnvironmentUp = -previousEnvironment->GetGravityController()->ComputeGravity(newNode.GetPosition()).direction;
-			Nz::Quaternionf environmentRotationCorrection = Nz::Quaternionf::RotationBetween(prevEnvironmentUp, Nz::Vector3f::Up());
 
 			auto& characterController = player->GetCharacterController();
 			characterController->SetGravityController(newEnvironment->GetGravityController());
@@ -122,25 +138,6 @@ namespace tsom
 			if (newEnvironment->IsRoot())
 				player->UpdateRootEnvironment(newEnvironment);
 		};
-	}
-
-	void ServerEntityClassLibrary::OnPlayerInit(entt::handle entity)
-	{
-		auto& playerControlled = entity.get<ServerPlayerControlledComponent>();
-		ServerPlayer* player = playerControlled.GetPlayer();
-		NazaraAssert(player);
-
-		Nz::PhysCharacter3DComponent::Settings characterSettings;
-		characterSettings.collider = m_playerCollider;
-		characterSettings.objectLayer = Constants::ObjectLayerPlayer;
-
-		auto characterController = player->GetCharacterController();
-
-		auto& characterComponent = entity.emplace<Nz::PhysCharacter3DComponent>(std::move(characterSettings));
-		characterComponent.SetImpl(characterController);
-		characterComponent.DisableSleeping();
-
-		player->GetVisibilityHandler().UpdateControlledEntity(entity, characterController.get()); // TODO: Reset to nullptr when player entity is destroyed
 	}
 
 	void ServerEntityClassLibrary::OnShipExteriorActivate(entt::handle entity)
@@ -176,6 +173,20 @@ namespace tsom
 			else
 				shipEntry.enabled = false;
 		});
+	}
+
+	void ServerEntityClassLibrary::OnShipExteriorInit(entt::handle entity)
+	{
+		auto& shipExterior = entity.get<ShipExteriorComponent>();
+
+		ServerShipEnvironment* shipEnvironment = shipExterior.ownerShip;
+
+		Nz::RigidBody3D::DynamicSettings physSettings(shipEnvironment->GetShip().BuildHullCollider(), 100.f);
+		physSettings.objectLayer = Constants::ObjectLayerDynamic;
+		physSettings.linearDamping = 0.f;
+
+		entity.emplace<Nz::RigidBody3DComponent>(physSettings);
+		entity.emplace<BuoyancyComponent>();
 
 		auto& envSwitchComponent = entity.emplace<ServerEnvironmentSwitchComponent>();
 		envSwitchComponent.handleEnvironmentSwitch = [shipEnvironment](entt::handle previousEntity, entt::handle newEntity, const EnvironmentTransform& envTransform)
@@ -183,14 +194,6 @@ namespace tsom
 			ServerEnvironment* previousEnvironment = ServerEnvironment::GetEnvironment(previousEntity);
 			ServerEnvironment* newEnvironment = ServerEnvironment::GetEnvironment(newEntity);
 
-			auto& oldRigidBody = previousEntity.get<Nz::RigidBody3DComponent>();
-
-			auto [linearVel, angularVel] = oldRigidBody.GetLinearAndAngularVelocity();
-			auto physicsSettings = std::get<Nz::RigidBody3D::DynamicSettings>(oldRigidBody.GetSettings());
-			physicsSettings.linearVelocity = envTransform.Rotate(linearVel);
-			physicsSettings.angularVelocity = envTransform.Rotate(angularVel);
-
-			newEntity.emplace<Nz::RigidBody3DComponent>(physicsSettings);
 			newEntity.emplace<ShipExteriorComponent>().ownerShip = shipEnvironment;
 			newEntity.emplace<BuoyancyComponent>();
 
@@ -211,19 +214,5 @@ namespace tsom
 				}
 			}
 		};
-	}
-
-	void ServerEntityClassLibrary::OnShipExteriorInit(entt::handle entity)
-	{
-		auto& shipExterior = entity.get<ShipExteriorComponent>();
-
-		ServerShipEnvironment* shipEnvironment = shipExterior.ownerShip;
-
-		Nz::RigidBody3D::DynamicSettings physSettings(shipEnvironment->GetShip().BuildHullCollider(), 100.f);
-		physSettings.objectLayer = Constants::ObjectLayerDynamic;
-		physSettings.linearDamping = 0.f;
-
-		entity.emplace<Nz::RigidBody3DComponent>(physSettings);
-		entity.emplace<BuoyancyComponent>();
 	}
 }

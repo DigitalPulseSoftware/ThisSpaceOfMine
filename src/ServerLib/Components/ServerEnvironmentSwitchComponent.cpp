@@ -5,11 +5,15 @@
 #include <ServerLib/Components/ServerEnvironmentSwitchComponent.hpp>
 #include <CommonLib/EntityReference.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
+#include <CommonLib/Components/TickComponent.hpp>
 #include <ServerLib/ServerEnvironment.hpp>
+#include <ServerLib/Components/AtmosphereMonitor.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
 #include <ServerLib/Systems/NetworkedEntitiesSystem.hpp>
 #include <Nazara/Core/Components/DisabledComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
+#include <Nazara/Physics3D/RigidBody3D.hpp>
+#include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
 #include <entt/entt.hpp>
 
 namespace tsom
@@ -42,6 +46,38 @@ namespace tsom
 				visibilityHandler.UpdateEntityEnvironment(*newEnvironment, oldEntity, newEntity);
 			});
 		}
+
+		if (Nz::RigidBody3DComponent* rigidBodyComponent = oldEntity.try_get<Nz::RigidBody3DComponent>())
+		{
+			auto [linearVel, angularVel] = rigidBodyComponent->GetLinearAndAngularVelocity();
+
+			Nz::RigidBody3D::Settings physicsSettings = rigidBodyComponent->GetSettings();
+			if (rigidBodyComponent->IsDynamic())
+			{
+				auto& dynamicPhysicsSettings = std::get<Nz::RigidBody3D::DynamicSettings>(physicsSettings);
+				dynamicPhysicsSettings.position = entityPosition;
+				dynamicPhysicsSettings.rotation = entityRotation;
+				dynamicPhysicsSettings.linearVelocity = relativeTransform.Rotate(dynamicPhysicsSettings.linearVelocity);
+				dynamicPhysicsSettings.angularVelocity = relativeTransform.Rotate(dynamicPhysicsSettings.angularVelocity);
+			}
+			else
+			{
+				auto& staticPhysicsSettings = std::get<Nz::RigidBody3D::StaticSettings>(physicsSettings);
+				staticPhysicsSettings.position = entityPosition;
+				staticPhysicsSettings.rotation = entityRotation;
+			}
+
+			newEntity.emplace<Nz::RigidBody3DComponent>(physicsSettings, rigidBodyComponent->GetReplicationMode());
+		}
+
+		if (AtmosphereMonitor* atmosphereMonitor = oldEntity.try_get<AtmosphereMonitor>())
+			newEntity.emplace<AtmosphereMonitor>(*atmosphereMonitor);
+
+		if (ServerEnvironmentSwitchComponent* envSwitchComponent = oldEntity.try_get<ServerEnvironmentSwitchComponent>())
+			newEntity.emplace<ServerEnvironmentSwitchComponent>(*envSwitchComponent);
+
+		if (TickComponent* tickComponent = oldEntity.try_get<TickComponent>())
+			newEntity.emplace<TickComponent>(*tickComponent);
 
 		if (EntityReference::HandleOwner* handleOwner = oldEntity.try_get<EntityReference::HandleOwner>())
 		{
