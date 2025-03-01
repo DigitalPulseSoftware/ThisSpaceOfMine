@@ -9,6 +9,18 @@ namespace tsom
 		m_gasAmount.fill(0);
 	}
 
+	inline bool ServerAtmosphere::DecreaseGasAmount(GasType type, Nz::UInt64 amount)
+	{
+		if (m_gasAmount[type] < amount)
+		{
+			m_gasAmount[type] = 0;
+			return false;
+		}
+
+		m_gasAmount[type] -= amount;
+		return true;
+	}
+
 	inline bool ServerAtmosphere::Exchange(const Nz::EnumArray<GasType, Nz::Int32>& amounts)
 	{
 		for (auto&& [gasType, amount] : amounts.iter_kv())
@@ -26,6 +38,16 @@ namespace tsom
 	inline Nz::UInt64 ServerAtmosphere::GetGasAmount(GasType type) const
 	{
 		return m_gasAmount[type];
+	}
+
+	inline const Nz::EnumArray<GasType, Nz::UInt64>& ServerAtmosphere::GetGasAmounts() const
+	{
+		return m_gasAmount;
+	}
+
+	inline void ServerAtmosphere::IncreaseGasAmount(GasType type, Nz::UInt64 amount)
+	{
+		m_gasAmount[type] += amount;
 	}
 
 	inline void ServerAtmosphere::SetGasAmount(GasType type, Nz::UInt64 millilitre)

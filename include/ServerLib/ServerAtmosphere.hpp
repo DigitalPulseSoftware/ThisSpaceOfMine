@@ -21,9 +21,14 @@ namespace tsom
 			ServerAtmosphere(ServerAtmosphere&&) = default;
 			~ServerAtmosphere() = default;
 
+			inline bool DecreaseGasAmount(GasType type, Nz::UInt64 amount);
+
 			inline bool Exchange(const Nz::EnumArray<GasType, Nz::Int32>& amounts);
 
 			inline Nz::UInt64 GetGasAmount(GasType type) const;
+			inline const Nz::EnumArray<GasType, Nz::UInt64>& GetGasAmounts() const;
+
+			inline void IncreaseGasAmount(GasType type, Nz::UInt64 amount);
 
 			inline void SetGasAmount(GasType type, Nz::UInt64 millilitre);
 

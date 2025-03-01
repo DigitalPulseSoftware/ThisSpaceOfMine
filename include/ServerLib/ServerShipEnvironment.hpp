@@ -87,7 +87,13 @@ namespace tsom
 
 			struct AreaList
 			{
+				std::optional<Area> outsideArea;
 				std::vector<Area> areas;
+			};
+
+			struct AreaOccupancy
+			{
+				Nz::HybridVector<std::size_t, 16> areaOccupancy;
 			};
 
 			struct ChunkData
@@ -108,6 +114,9 @@ namespace tsom
 			{
 				std::function<void(ChunkIndices chunkIndices, AreaUpdateJob&& updateJob)> applyFunc;
 				std::shared_ptr<AreaList> chunkArea;
+				std::shared_ptr<AreaList> previousAreaList;
+				Nz::HybridVector<AreaOccupancy, 16> previousAreaOccupancy;
+				AreaOccupancy previousOutsideAreaOccupancy;
 			};
 
 			struct TriggerUpdateJob : UpdateJob

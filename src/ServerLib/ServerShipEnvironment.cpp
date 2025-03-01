@@ -423,15 +423,115 @@ namespace tsom
 				}
 			}
 
+			if (updateJob.previousAreaList)
+			{
+				std::size_t areaCount = updateJob.chunkArea->areas.size();
+				std::size_t previousAreaCount = updateJob.previousAreaList->areas.size();
+
+				if (areaCount > 0)
+				{
+					// Take atmosphere from exterior from newly created/extended areas
+					if (m_exteriorEnvironment && m_exteriorEntity)
+					{
+						auto& outsideNode = m_exteriorEntity.get<Nz::NodeComponent>();
+						Nz::Vector3f outsidePosition = outsideNode.GetPosition();
+
+						ServerAtmosphere* outsideAtmosphere = m_exteriorEnvironment->GetAtmosphereAtPosition(outsidePosition);
+						if (outsideAtmosphere)
+						{
+							for (std::size_t areaIndex = 0; areaIndex < areaCount; ++areaIndex)
+							{
+								std::size_t occupiedBlockCount = updateJob.previousOutsideAreaOccupancy.areaOccupancy[areaIndex];
+								ServerAtmosphere& newAtmosphere = updateJob.chunkArea->areas[areaIndex].atmosphere;
+
+								Nz::UInt64 oxygenAmount = Constants::SecondsToEmptyOxygenBlock * Nz::UInt64(Constants::PlayerOxygenConsumption) * occupiedBlockCount;
+								Nz::UInt64 nitrogenAmount = oxygenAmount * (100 - Constants::OxygenAtmospherePct) / Constants::OxygenAtmospherePct;
+								outsideAtmosphere->DecreaseGasAmount(GasType::Oxygen, oxygenAmount);
+								outsideAtmosphere->DecreaseGasAmount(GasType::Nitrogen, nitrogenAmount);
+								newAtmosphere.IncreaseGasAmount(GasType::Oxygen, oxygenAmount);
+								newAtmosphere.IncreaseGasAmount(GasType::Nitrogen, nitrogenAmount);
+							}
+						}
+					}
+
+					// Split/join atmosphere values from previous areas
+					for (std::size_t previousAreaIndex = 0; previousAreaIndex < previousAreaCount; ++previousAreaIndex)
+					{
+						std::size_t blockCount = updateJob.previousAreaList->areas[previousAreaIndex].blocks.Count();
+						const ServerAtmosphere& previousAtmosphere = updateJob.previousAreaList->areas[previousAreaIndex].atmosphere;
+
+						// Attribute a part of the previous area atmosphere to each new area
+						Nz::EnumArray<GasType, Nz::UInt64> leftOvers;
+						leftOvers.fill(0);
+
+						for (std::size_t areaIndex = 0; areaIndex < areaCount; ++areaIndex)
+						{
+							std::size_t occupiedBlockCount = updateJob.previousAreaOccupancy[areaIndex].areaOccupancy[previousAreaIndex];
+							ServerAtmosphere& newAtmosphere = updateJob.chunkArea->areas[areaIndex].atmosphere;
+
+							for (auto&& [gasType, amount] : previousAtmosphere.GetGasAmounts().iter_kv())
+							{
+								Nz::UInt64 gasAmount = amount * occupiedBlockCount / blockCount;
+								newAtmosphere.IncreaseGasAmount(gasType, gasAmount);
+								leftOvers[gasType] += amount * occupiedBlockCount - gasAmount * blockCount;
+							}
+						}
+
+						// Ensure we don't lose atmosphere because of integer division
+						for (auto&& [gasType, leftOver] : leftOvers.iter_kv())
+							updateJob.chunkArea->areas[0].atmosphere.IncreaseGasAmount(gasType, leftOver);
+					}
+				}
+			}
+
 			chunkData.areas = std::move(updateJob.chunkArea);
+
 			StartTriggerUpdate(*chunkPtr, chunkData.areas);
 		};
 
-		taskScheduler.AddTask([updateJob, chunkPtr = chunk.shared_from_this()]
+		assert(m_chunkData.contains(chunk.GetIndices()));
+		ChunkData& chunkData = m_chunkData[chunk.GetIndices()];
+
+		taskScheduler.AddTask([updateJob, previousAreaList = chunkData.areas, chunkPtr = chunk.shared_from_this()]
 		{
+			updateJob->previousAreaList = previousAreaList;
+
 			chunkPtr->LockRead();
 			updateJob->chunkArea = GenerateChunkAreas(*chunkPtr, updateJob->isCancelled);
 			chunkPtr->UnlockRead();
+
+			// Compute previous area occupancy
+			if (updateJob->chunkArea && previousAreaList)
+			{
+				std::size_t areaCount = updateJob->chunkArea->areas.size();
+				std::size_t previousAreaCount = previousAreaList->areas.size();
+
+				Nz::Bitset<Nz::UInt64> commonBlocks;
+
+				updateJob->previousAreaOccupancy.resize(areaCount);
+				updateJob->previousOutsideAreaOccupancy.areaOccupancy.resize(areaCount);
+				for (std::size_t areaIndex = 0; areaIndex < areaCount; ++areaIndex)
+				{
+					auto& occupancy = updateJob->previousAreaOccupancy[areaIndex];
+					occupancy.areaOccupancy.resize(previousAreaCount);
+
+					for (std::size_t previousAreaIndex = 0; previousAreaIndex < previousAreaCount; ++previousAreaIndex)
+					{
+						if (updateJob->isCancelled)
+							return;
+
+						// Occupancy = countbits(blocks & prevBlocks)
+						commonBlocks.PerformsAND(updateJob->chunkArea->areas[areaIndex].blocks, previousAreaList->areas[previousAreaIndex].blocks);
+						occupancy.areaOccupancy[previousAreaIndex] = commonBlocks.Count();
+					}
+
+					if (previousAreaList->outsideArea)
+					{
+						commonBlocks.PerformsAND(updateJob->chunkArea->areas[areaIndex].blocks, previousAreaList->outsideArea->blocks);
+						updateJob->previousOutsideAreaOccupancy.areaOccupancy[areaIndex] = commonBlocks.Count();
+					}
+				}
+			}
 
 			updateJob->isFinished = true;
 		});
@@ -450,9 +550,6 @@ namespace tsom
 
 		auto& app = m_serverInstance.GetApplication();
 		auto& taskScheduler = app.GetComponent<Nz::TaskSchedulerAppComponent>();
-
-		assert(m_chunkData.contains(chunk.GetIndices()));
-		ChunkData& chunkData = m_chunkData[chunk.GetIndices()];
 
 		std::shared_ptr<TriggerUpdateJob> updateJob = std::make_shared<TriggerUpdateJob>();
 
@@ -711,7 +808,7 @@ namespace tsom
 			if (isCancelled)
 				return {};
 
-			Area outside = BuildArea(chunk, firstCandidate, remainingBlocks);
+			chunkArea->outsideArea = BuildArea(chunk, firstCandidate, remainingBlocks);
 
 			while (remainingBlocks.TestAny())
 			{
