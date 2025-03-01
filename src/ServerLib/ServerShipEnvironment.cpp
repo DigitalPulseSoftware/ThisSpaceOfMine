@@ -152,7 +152,7 @@ namespace tsom
 		GetShip().Generate(blockLibrary, small);
 	}
 
-	ServerAtmosphere* ServerShipEnvironment::GetAtmosphereAtPosition(const Nz::Vector3f& position)
+	ServerAtmosphere* ServerShipEnvironment::GetFallbackAtmosphereAtPosition(const Nz::Vector3f& position)
 	{
 		// Should (almost) never be called since entities exit the ship when exiting atmosphere
 		// Atmosphere is handled by multiple entities AtmosphereCarrier

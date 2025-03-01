@@ -44,7 +44,7 @@ namespace tsom
 			template<typename F> void ForEachPlayer(F&& callback);
 			template<typename F> void ForEachPlayer(F&& callback) const;
 
-			virtual ServerAtmosphere* GetAtmosphereAtPosition(const Nz::Vector3f& position) = 0;
+			virtual ServerAtmosphere* GetAtmosphereAtPosition(const Nz::Vector3f& position);
 			virtual const GravityController* GetGravityController() const = 0;
 			inline ServerInstance& GetServerInstance();
 			inline ServerEnvironmentType GetType() const;
@@ -67,6 +67,8 @@ namespace tsom
 
 		protected:
 			ServerEnvironment(ServerInstance& serverInstance, ServerEnvironmentType type, bool isRoot);
+
+			virtual ServerAtmosphere* GetFallbackAtmosphereAtPosition(const Nz::Vector3f& position) = 0;
 
 			std::unique_ptr<Nz::EnttWorld> m_world;
 			std::unique_ptr<DebugDrawInterface> m_debugDrawer;

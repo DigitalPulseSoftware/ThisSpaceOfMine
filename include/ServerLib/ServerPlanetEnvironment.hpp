@@ -31,7 +31,7 @@ namespace tsom
 
 			entt::handle CreateEntity() override;
 
-			ServerAtmosphere* GetAtmosphereAtPosition(const Nz::Vector3f& position) override;
+			ServerAtmosphere* GetFallbackAtmosphereAtPosition(const Nz::Vector3f& position) override;
 			const GravityController* GetGravityController() const override;
 			Planet& GetPlanet();
 			const Planet& GetPlanet() const;

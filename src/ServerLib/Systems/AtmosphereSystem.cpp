@@ -6,12 +6,10 @@
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <ServerLib/ServerAtmosphere.hpp>
 #include <ServerLib/ServerEnvironment.hpp>
-#include <ServerLib/Components/AtmosphereCarrier.hpp>
 #include <ServerLib/Components/AtmosphereExchanger.hpp>
 #include <ServerLib/Components/AtmosphereMonitor.hpp>
 #include <Nazara/Core/Components/DisabledComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
-#include <Nazara/Physics3D/Collider3D.hpp>
 #include <fmt/format.h>
 
 namespace tsom
@@ -61,35 +59,13 @@ namespace tsom
 	void AtmosphereSystem::UpdateAtmosphere()
 	{
 		auto monitorView = m_registry.view<Nz::NodeComponent, AtmosphereMonitor>(entt::exclude<Nz::DisabledComponent>);
-		auto carrierView = m_registry.view<Nz::NodeComponent, AtmosphereCarrier>(entt::exclude<Nz::DisabledComponent>);
 
 		for (auto&& [monitorEntity, monitorNode, monitor] : monitorView.each())
 		{
 			Nz::Vector3f monitorPosition = monitorNode.GetPosition();
 
 			ServerAtmosphere* previousAtmosphere = monitor.atmosphere;
-
-			monitor.atmosphere = nullptr;
-			for (auto&& [carrierEntity, carrierNode, carrier] : carrierView.each())
-			{
-				Nz::Vector3f localPos = carrierNode.ToLocalPosition(monitorPosition);
-
-				// Use AABB as a cheap test
-				if NAZARA_LIKELY(!carrier.aabb.Contains(localPos))
-					continue;
-
-				if (carrier.collider)
-				{
-					if (!carrier.collider->CollisionQuery(localPos - carrier.collider->GetCenterOfMass())) //< https://jrouwe.github.io/JoltPhysics/index.html#center-of-mass
-						continue;
-				}
-
-				monitor.atmosphere = carrier.atmosphere;
-				break;
-			}
-
-			if (!monitor.atmosphere)
-				monitor.atmosphere = m_ownerEnvironment->GetAtmosphereAtPosition(monitorPosition);
+			monitor.atmosphere = m_ownerEnvironment->GetAtmosphereAtPosition(monitorPosition);
 
 			if (monitor.atmosphere != previousAtmosphere)
 				fmt::print("atmosphere update: {}!\n", (void*) monitor.atmosphere);

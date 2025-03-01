@@ -118,7 +118,7 @@ namespace tsom
 		return ServerEnvironment::CreateEntity();
 	}
 
-	ServerAtmosphere* ServerPlanetEnvironment::GetAtmosphereAtPosition(const Nz::Vector3f& position)
+	ServerAtmosphere* ServerPlanetEnvironment::GetFallbackAtmosphereAtPosition(const Nz::Vector3f& position)
 	{
 		Planet& planet = GetPlanet();
 		if (position.SquaredDistance(planet.GetCenter()) > Nz::IntegralPow(100, 2))

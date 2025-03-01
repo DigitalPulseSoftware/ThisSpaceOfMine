@@ -39,7 +39,7 @@ namespace tsom
 
 			void GenerateShip(bool small);
 
-			ServerAtmosphere* GetAtmosphereAtPosition(const Nz::Vector3f& position) override;
+			ServerAtmosphere* GetFallbackAtmosphereAtPosition(const Nz::Vector3f& position) override;
 			const GravityController* GetGravityController() const override;
 			inline entt::handle GetExteriorShipEntity() const;
 			inline const std::shared_ptr<Nz::Collider3D>& GetInteriorAreaCollider() const;

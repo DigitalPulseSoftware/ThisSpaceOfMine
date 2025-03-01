@@ -5,10 +5,13 @@
 #include <ServerLib/ServerEnvironment.hpp>
 #include <CommonLib/Physics/PhysicsSettings.hpp>
 #include <CommonLib/Systems/TickSystem.hpp>
+#include <ServerLib/Components/AtmosphereCarrier.hpp>
 #include <ServerLib/Debug/DebugDrawBroadcaster.hpp>
 #include <ServerLib/Systems/AtmosphereSystem.hpp>
 #include <ServerLib/Systems/EnvironmentProxySystem.hpp>
 #include <ServerLib/Systems/NetworkedEntitiesSystem.hpp>
+#include <Nazara/Core/Components/DisabledComponent.hpp>
+#include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 
 namespace tsom
@@ -57,6 +60,31 @@ namespace tsom
 	entt::handle ServerEnvironment::CreateEntity()
 	{
 		return m_world->CreateEntity();
+	}
+
+	ServerAtmosphere* ServerEnvironment::GetAtmosphereAtPosition(const Nz::Vector3f& position)
+	{
+		auto& registry = m_world->GetRegistry();
+		auto carrierView = registry.view<Nz::NodeComponent, AtmosphereCarrier>(entt::exclude<Nz::DisabledComponent>);
+
+		for (auto&& [carrierEntity, carrierNode, carrier] : carrierView.each())
+		{
+			Nz::Vector3f localPos = carrierNode.ToLocalPosition(position);
+
+			// Use AABB as a cheap test
+			if NAZARA_LIKELY(!carrier.aabb.Contains(localPos))
+				continue;
+
+			if (carrier.collider)
+			{
+				if (!carrier.collider->CollisionQuery(localPos - carrier.collider->GetCenterOfMass())) //< https://jrouwe.github.io/JoltPhysics/index.html#center-of-mass
+					continue;
+			}
+
+			return carrier.atmosphere;
+		}
+
+		return GetFallbackAtmosphereAtPosition(position);
 	}
 
 	void ServerEnvironment::OnTick(Nz::Time elapsedTime)
