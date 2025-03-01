@@ -7,6 +7,8 @@
 #include <CommonLib/Ship.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Components/ShipComponent.hpp>
+#include <CommonLib/Systems/BuoyancySystem.hpp>
+#include <CommonLib/Systems/GravityPhysicsSystem.hpp>
 #include <CommonLib/Systems/ShipSystem.hpp>
 #include <ServerLib/PlayerTokenAppComponent.hpp>
 #include <ServerLib/ServerInstance.hpp>
@@ -40,7 +42,6 @@ namespace tsom
 		auto& app = serverInstance.GetApplication();
 		auto& blockLibrary = serverInstance.GetBlockLibrary();
 
-		m_world->AddSystem<ShipSystem>();
 		m_world->GetRegistry().ctx().emplace<ServerShipEnvironment*>(this);
 
 		m_shipEntity = CreateEntity();
@@ -87,6 +88,11 @@ namespace tsom
 			m_invalidatedChunks.emplace(chunk);
 			*m_shouldSave = true;
 		});
+
+		auto& physicsSystem = m_world->GetSystem<Nz::Physics3DSystem>();
+		m_world->AddSystem<BuoyancySystem>(*shipComponent.ship, physicsSystem.GetPhysWorld(), m_debugDrawer.get());
+		m_world->AddSystem<GravityPhysicsSystem>(*shipComponent.ship, physicsSystem.GetPhysWorld());
+		m_world->AddSystem<ShipSystem>();
 	}
 
 	ServerShipEnvironment::~ServerShipEnvironment()
