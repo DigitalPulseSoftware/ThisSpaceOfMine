@@ -96,7 +96,7 @@ namespace tsom
 			Nz::ApplicationBase& applicationBase = m_serverInstance.GetApplication();
 
 			m_console.Emplace(applicationBase);
-			m_console->scriptingContext.RegisterLibrary<AssetScriptingLibrary>();
+			m_console->scriptingContext.RegisterLibrary<AssetScriptingLibrary>(applicationBase);
 			m_console->scriptingContext.RegisterLibrary<MathScriptingLibrary>();
 			m_console->scriptingContext.RegisterLibrary<ChunkScriptingLibrary>();
 			ServerEntityScriptingLibrary& entityScriptingLibrary = m_console->scriptingContext.RegisterLibrary<ServerEntityScriptingLibrary>(m_serverInstance.GetEntityRegistry());
