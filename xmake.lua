@@ -223,6 +223,7 @@ target("ServerLib", function ()
 	add_headerfiles("include/(ServerLib/**.hpp)", "include/(ServerLib/**.inl)")
 	add_headerfiles("src/ServerLib/**.hpp", "src/ServerLib/**.inl", { install = false })
 	add_files("src/ServerLib/**.cpp")
+
 	add_deps("CommonLib", { public = true })
 	add_packages("frozen")
 	add_packages("libcurl", { links = {}, public = true })
@@ -276,6 +277,7 @@ if not has_config("serveronly") then
 		add_headerfiles("include/(ClientLib/**.hpp)", "include/(ClientLib/**.inl)")
 		add_headerfiles("src/ClientLib/**.hpp", "src/ClientLib/**.inl", { install = false })
 		add_files("src/ClientLib/**.cpp")
+
 		add_deps("CommonLib", { public = true })
 		add_packages("frozen")
 		add_rules("inherit_version")

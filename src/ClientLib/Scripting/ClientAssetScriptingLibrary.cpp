@@ -5,7 +5,6 @@
 #include <ClientLib/Scripting/ClientAssetScriptingLibrary.hpp>
 #include <ClientLib/ClientAssetLibraryAppComponent.hpp>
 #include <ClientLib/ClientSessionHandler.hpp>
-#include <ClientLib/Scripting/ClientAssetScriptingLibrary.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>

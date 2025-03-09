@@ -4,12 +4,12 @@
 
 #include <CommonLib/Scripting/AssetScriptingLibrary.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
-#include <NazaraUtils/FunctionTraits.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <Nazara/Core/Mesh.hpp>
 #include <Nazara/Core/SkeletalMesh.hpp>
 #include <Nazara/Core/StaticMesh.hpp>
+#include <NazaraUtils/FunctionTraits.hpp>
 
 SOL_BASE_CLASSES(Nz::SkeletalMesh, Nz::SubMesh);
 SOL_BASE_CLASSES(Nz::StaticMesh, Nz::SubMesh);

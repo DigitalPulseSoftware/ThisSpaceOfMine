@@ -8,8 +8,8 @@
 #define TSOM_COMMONLIB_SYSTEMS_TICKSYSTEM_HPP
 
 #include <CommonLib/Export.hpp>
-#include <NazaraUtils/TypeList.hpp>
 #include <Nazara/Core/Time.hpp>
+#include <NazaraUtils/TypeList.hpp>
 #include <entt/fwd.hpp>
 
 namespace tsom

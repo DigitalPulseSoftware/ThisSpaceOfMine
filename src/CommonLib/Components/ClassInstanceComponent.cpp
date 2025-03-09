@@ -17,7 +17,7 @@ namespace tsom
 		for (std::size_t i = 0; i < propertyCount; ++i)
 			m_properties.emplace_back(m_entityClass->GetProperty(i).defaultValue);
 	}
-	
+
 	ClassInstanceComponent::ClassInstanceComponent(std::shared_ptr<const EntityClass> entityClass, std::vector<EntityProperty>&& properties) :
 	m_entityClass(std::move(entityClass)),
 	m_properties(std::move(properties))
