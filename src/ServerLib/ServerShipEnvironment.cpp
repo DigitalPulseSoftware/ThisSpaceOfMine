@@ -101,6 +101,26 @@ namespace tsom
 
 		if (m_exteriorEnvironment)
 		{
+			// Release atmosphere from every area to the exterior atmosphere
+			if (m_exteriorEnvironment && m_exteriorEntity)
+			{
+				auto& outsideNode = m_exteriorEntity.get<Nz::NodeComponent>();
+				Nz::Vector3f outsidePosition = outsideNode.GetPosition();
+
+				ServerAtmosphere* outsideAtmosphere = m_exteriorEnvironment->GetAtmosphereAtPosition(outsidePosition);
+				if (outsideAtmosphere)
+				{
+					for (auto&& [chunkIndices, chunkData] : m_chunkData)
+					{
+						for (const auto& area : chunkData.areas->areas)
+						{
+							for (auto&& [gasType, amount] : area.atmosphere.GetGasAmounts().iter_kv())
+								outsideAtmosphere->IncreaseGasAmount(gasType, amount);
+						}
+					}
+				}
+			}
+
 			// Move every switchable entity out of the ship before destroying it (otherwise the entities will be destroyed)
 			EnvironmentTransform outsideTransform(Nz::Vector3f::Zero(), Nz::Quaternionf::Identity());
 			Nz::Vector3f outsideVelocity = Nz::Vector3f::Zero();
