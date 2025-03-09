@@ -431,64 +431,67 @@ namespace tsom
 				}
 			}
 
-			if (updateJob.previousAreaList)
+			std::size_t areaCount = updateJob.chunkArea->areas.size();
+
+			if (areaCount > 0)
 			{
-				std::size_t areaCount = updateJob.chunkArea->areas.size();
-				std::size_t previousAreaCount = updateJob.previousAreaList->areas.size();
-
-				if (areaCount > 0)
+				// Take atmosphere from exterior from newly created/extended areas
+				if (m_exteriorEnvironment && m_exteriorEntity)
 				{
-					// Take atmosphere from exterior from newly created/extended areas
-					if (m_exteriorEnvironment && m_exteriorEntity)
+					auto& outsideNode = m_exteriorEntity.get<Nz::NodeComponent>();
+					Nz::Vector3f outsidePosition = outsideNode.GetPosition();
+
+					ServerAtmosphere* outsideAtmosphere = m_exteriorEnvironment->GetAtmosphereAtPosition(outsidePosition);
+					if (outsideAtmosphere)
 					{
-						auto& outsideNode = m_exteriorEntity.get<Nz::NodeComponent>();
-						Nz::Vector3f outsidePosition = outsideNode.GetPosition();
-
-						ServerAtmosphere* outsideAtmosphere = m_exteriorEnvironment->GetAtmosphereAtPosition(outsidePosition);
-						if (outsideAtmosphere)
-						{
-							for (std::size_t areaIndex = 0; areaIndex < areaCount; ++areaIndex)
-							{
-								std::size_t occupiedBlockCount = updateJob.previousOutsideAreaOccupancy.areaOccupancy[areaIndex];
-								ServerAtmosphere& newAtmosphere = updateJob.chunkArea->areas[areaIndex].atmosphere;
-
-								Nz::UInt64 oxygenAmount = Constants::SecondsToEmptyOxygenBlock * Nz::UInt64(Constants::PlayerOxygenConsumption) * occupiedBlockCount;
-								Nz::UInt64 nitrogenAmount = oxygenAmount * (100 - Constants::OxygenAtmospherePct) / Constants::OxygenAtmospherePct;
-								outsideAtmosphere->DecreaseGasAmount(GasType::Oxygen, oxygenAmount);
-								outsideAtmosphere->DecreaseGasAmount(GasType::Nitrogen, nitrogenAmount);
-								newAtmosphere.IncreaseGasAmount(GasType::Oxygen, oxygenAmount);
-								newAtmosphere.IncreaseGasAmount(GasType::Nitrogen, nitrogenAmount);
-							}
-						}
-					}
-
-					// Split/join atmosphere values from previous areas
-					for (std::size_t previousAreaIndex = 0; previousAreaIndex < previousAreaCount; ++previousAreaIndex)
-					{
-						std::size_t blockCount = updateJob.previousAreaList->areas[previousAreaIndex].blocks.Count();
-						const ServerAtmosphere& previousAtmosphere = updateJob.previousAreaList->areas[previousAreaIndex].atmosphere;
-
-						// Attribute a part of the previous area atmosphere to each new area
-						Nz::EnumArray<GasType, Nz::UInt64> leftOvers;
-						leftOvers.fill(0);
-
 						for (std::size_t areaIndex = 0; areaIndex < areaCount; ++areaIndex)
 						{
-							std::size_t occupiedBlockCount = updateJob.previousAreaOccupancy[areaIndex].areaOccupancy[previousAreaIndex];
+							std::size_t occupiedBlockCount;
+							if (updateJob.previousAreaList)
+								occupiedBlockCount = updateJob.previousOutsideAreaOccupancy.areaOccupancy[areaIndex];
+							else
+								occupiedBlockCount = updateJob.chunkArea->areas[areaIndex].blocks.Count();
+
 							ServerAtmosphere& newAtmosphere = updateJob.chunkArea->areas[areaIndex].atmosphere;
 
-							for (auto&& [gasType, amount] : previousAtmosphere.GetGasAmounts().iter_kv())
-							{
-								Nz::UInt64 gasAmount = amount * occupiedBlockCount / blockCount;
-								newAtmosphere.IncreaseGasAmount(gasType, gasAmount);
-								leftOvers[gasType] += amount * occupiedBlockCount - gasAmount * blockCount;
-							}
+							Nz::UInt64 oxygenAmount = Constants::SecondsToEmptyOxygenBlock * Nz::UInt64(Constants::PlayerOxygenConsumption) * occupiedBlockCount;
+							Nz::UInt64 nitrogenAmount = oxygenAmount * (100 - Constants::OxygenAtmospherePct) / Constants::OxygenAtmospherePct;
+							outsideAtmosphere->DecreaseGasAmount(GasType::Oxygen, oxygenAmount);
+							outsideAtmosphere->DecreaseGasAmount(GasType::Nitrogen, nitrogenAmount);
+							newAtmosphere.IncreaseGasAmount(GasType::Oxygen, oxygenAmount);
+							newAtmosphere.IncreaseGasAmount(GasType::Nitrogen, nitrogenAmount);
 						}
-
-						// Ensure we don't lose atmosphere because of integer division
-						for (auto&& [gasType, leftOver] : leftOvers.iter_kv())
-							updateJob.chunkArea->areas[0].atmosphere.IncreaseGasAmount(gasType, leftOver);
 					}
+				}
+
+				std::size_t previousAreaCount = (updateJob.previousAreaList) ? updateJob.previousAreaList->areas.size() : 0;
+
+				// Split/join atmosphere values from previous areas
+				for (std::size_t previousAreaIndex = 0; previousAreaIndex < previousAreaCount; ++previousAreaIndex)
+				{
+					std::size_t blockCount = updateJob.previousAreaList->areas[previousAreaIndex].blocks.Count();
+					const ServerAtmosphere& previousAtmosphere = updateJob.previousAreaList->areas[previousAreaIndex].atmosphere;
+
+					// Attribute a part of the previous area atmosphere to each new area
+					Nz::EnumArray<GasType, Nz::UInt64> leftOvers;
+					leftOvers.fill(0);
+
+					for (std::size_t areaIndex = 0; areaIndex < areaCount; ++areaIndex)
+					{
+						std::size_t occupiedBlockCount = updateJob.previousAreaOccupancy[areaIndex].areaOccupancy[previousAreaIndex];
+						ServerAtmosphere& newAtmosphere = updateJob.chunkArea->areas[areaIndex].atmosphere;
+
+						for (auto&& [gasType, amount] : previousAtmosphere.GetGasAmounts().iter_kv())
+						{
+							Nz::UInt64 gasAmount = amount * occupiedBlockCount / blockCount;
+							newAtmosphere.IncreaseGasAmount(gasType, gasAmount);
+							leftOvers[gasType] += amount * occupiedBlockCount - gasAmount * blockCount;
+						}
+					}
+
+					// Ensure we don't lose atmosphere because of integer division
+					for (auto&& [gasType, leftOver] : leftOvers.iter_kv())
+						updateJob.chunkArea->areas[0].atmosphere.IncreaseGasAmount(gasType, leftOver);
 				}
 			}
 
