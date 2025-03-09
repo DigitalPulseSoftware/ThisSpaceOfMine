@@ -33,13 +33,8 @@ namespace tsom
 			ClientScriptingLibrary& operator=(ClientScriptingLibrary&&) = delete;
 
 		private:
-			void RegisterAssetLibrary(sol::state& state);
 			void RegisterClientSession(sol::state& state);
-			void RegisterMaterialInstance(sol::state& state);
-			void RegisterRenderables(sol::state& state);
-			void RegisterRenderStates(sol::state& state);
 			void RegisterScripts(sol::state& state);
-			void RegisterTexture(sol::state& state);
 
 			Nz::ApplicationBase& m_app;
 			ClientSessionHandler& m_sessionHandler;

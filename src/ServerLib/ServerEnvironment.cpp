@@ -62,6 +62,30 @@ namespace tsom
 		return m_world->CreateEntity();
 	}
 
+	void ServerEnvironment::ForEachAtmosphere(Nz::FunctionRef<void(ServerAtmosphere*)> callback)
+	{
+		auto& registry = m_world->GetRegistry();
+		auto carrierView = registry.view<Nz::NodeComponent, AtmosphereCarrier>(entt::exclude<Nz::DisabledComponent>);
+
+		for (entt::entity carrierEntity : carrierView)
+		{
+			AtmosphereCarrier& carrier = carrierView.get<AtmosphereCarrier>(carrierEntity);
+			callback(carrier.atmosphere);
+		}
+	}
+
+	void ServerEnvironment::ForEachAtmosphere(Nz::FunctionRef<void(const ServerAtmosphere*)> callback) const
+	{
+		auto& registry = m_world->GetRegistry();
+		auto carrierView = registry.view<Nz::NodeComponent, AtmosphereCarrier>(entt::exclude<Nz::DisabledComponent>);
+
+		for (entt::entity carrierEntity : carrierView)
+		{
+			AtmosphereCarrier& carrier = carrierView.get<AtmosphereCarrier>(carrierEntity);
+			callback(carrier.atmosphere);
+		}
+	}
+
 	ServerAtmosphere* ServerEnvironment::GetAtmosphereAtPosition(const Nz::Vector3f& position)
 	{
 		auto& registry = m_world->GetRegistry();

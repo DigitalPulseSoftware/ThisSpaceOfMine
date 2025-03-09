@@ -118,13 +118,18 @@ namespace tsom
 		return ServerEnvironment::CreateEntity();
 	}
 
-	ServerAtmosphere* ServerPlanetEnvironment::GetFallbackAtmosphereAtPosition(const Nz::Vector3f& position)
+	void ServerPlanetEnvironment::ForEachAtmosphere(Nz::FunctionRef<void(ServerAtmosphere*)> callback)
 	{
-		Planet& planet = GetPlanet();
-		if (position.SquaredDistance(planet.GetCenter()) > Nz::IntegralPow(100, 2))
-			return nullptr; //< too far away
+		ServerEnvironment::ForEachAtmosphere(callback);
 
-		return &m_atmosphere;
+		callback(&m_atmosphere);
+	}
+
+	void ServerPlanetEnvironment::ForEachAtmosphere(Nz::FunctionRef<void(const ServerAtmosphere*)> callback) const
+	{
+		ServerEnvironment::ForEachAtmosphere(callback);
+
+		callback(&m_atmosphere);
 	}
 
 	const GravityController* ServerPlanetEnvironment::GetGravityController() const
@@ -185,6 +190,15 @@ namespace tsom
 			});
 		}
 		m_dirtyChunks.clear();
+	}
+
+	ServerAtmosphere* ServerPlanetEnvironment::GetFallbackAtmosphereAtPosition(const Nz::Vector3f& position)
+	{
+		Planet& planet = GetPlanet();
+		if (position.SquaredDistance(planet.GetCenter()) > Nz::IntegralPow(100, 2))
+			return nullptr; //< too far away
+
+		return &m_atmosphere;
 	}
 
 	void ServerPlanetEnvironment::LoadFromDatabase()

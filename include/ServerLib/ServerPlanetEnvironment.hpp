@@ -31,7 +31,9 @@ namespace tsom
 
 			entt::handle CreateEntity() override;
 
-			ServerAtmosphere* GetFallbackAtmosphereAtPosition(const Nz::Vector3f& position) override;
+			void ForEachAtmosphere(Nz::FunctionRef<void(ServerAtmosphere*)> callback) override;
+			void ForEachAtmosphere(Nz::FunctionRef<void(const ServerAtmosphere*)> callback) const override;
+
 			const GravityController* GetGravityController() const override;
 			Planet& GetPlanet();
 			const Planet& GetPlanet() const;
@@ -43,6 +45,7 @@ namespace tsom
 			ServerPlanetEnvironment& operator=(ServerPlanetEnvironment&&) = delete;
 
 		private:
+			ServerAtmosphere* GetFallbackAtmosphereAtPosition(const Nz::Vector3f& position) override;
 			void LoadFromDatabase();
 
 			ServerAtmosphere m_atmosphere;

@@ -39,6 +39,7 @@ namespace tsom
 	{
 		state.new_usertype<Nz::Box<T>>(name,
 			sol::call_constructor, sol::constructors<Nz::Box<T>(), Nz::Box<T>(T, T, T), Nz::Box<T>(const Nz::Vector3<T>& pos, const Nz::Vector3<T>& lengths), Nz::Box<T>(const Nz::Box<T>&)>(),
+			"GetCenter", &Nz::Box<T>::GetCenter,
 			"GetLengths", &Nz::Box<T>::GetLengths,
 			"x", &Nz::Box<T>::x,
 			"y", &Nz::Box<T>::y,

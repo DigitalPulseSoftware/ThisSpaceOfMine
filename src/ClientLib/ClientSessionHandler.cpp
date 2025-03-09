@@ -18,6 +18,7 @@
 #include <ClientLib/Components/VisualEntityComponent.hpp>
 #include <ClientLib/Entities/ClientChunkClassLibrary.hpp>
 #include <ClientLib/Entities/ClientEntityClassLibrary.hpp>
+#include <ClientLib/Scripting/ClientAssetScriptingLibrary.hpp>
 #include <ClientLib/Scripting/ClientEntityScriptingLibrary.hpp>
 #include <ClientLib/Scripting/ClientScriptingLibrary.hpp>
 #include <CommonLib/GameConstants.hpp>
@@ -77,13 +78,14 @@ namespace tsom
 		SetupAttributeTable(s_packetAttributes);
 
 		m_scriptingContext.RegisterLibrary<MathScriptingLibrary>();
-		m_scriptingContext.RegisterLibrary<ClientScriptingLibrary>(m_app, *this);
+		m_scriptingContext.RegisterLibrary<ClientAssetScriptingLibrary>(m_app);
 		m_scriptingContext.LoadDirectory("scripts/assets");
 
 		m_entityRegistry.RegisterClassLibrary<ClientChunkClassLibrary>(m_app, m_blockLibrary);
 		m_entityRegistry.RegisterClassLibrary<ClientEntityClassLibrary>(m_app);
 
 		m_scriptingContext.RegisterLibrary<ClientEntityScriptingLibrary>(m_entityRegistry);
+		m_scriptingContext.RegisterLibrary<ClientScriptingLibrary>(m_app, *this);
 
 		LoadScripts();
 	}

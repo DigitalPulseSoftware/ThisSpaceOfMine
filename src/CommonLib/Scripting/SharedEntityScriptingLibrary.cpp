@@ -58,7 +58,7 @@ namespace tsom
 
 						auto HandleCommonParameters = [](Nz::RigidBody3DComponent::CommonSettings& commonSettings, sol::table& parameters)
 						{
-							commonSettings.collider = parameters.get<std::shared_ptr<Nz::Collider3D>>("collider");
+							commonSettings.collider = parameters.get_or<std::shared_ptr<Nz::Collider3D>>("collider", commonSettings.collider);
 							commonSettings.initiallySleeping = parameters.get_or("initiallySleeping", commonSettings.initiallySleeping);
 							commonSettings.isSimulationEnabled = parameters.get_or("isSimulationEnabled", commonSettings.isSimulationEnabled);
 							commonSettings.isTrigger = parameters.get_or("isTrigger", commonSettings.isTrigger);

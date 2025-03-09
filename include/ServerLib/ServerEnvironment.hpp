@@ -41,6 +41,9 @@ namespace tsom
 
 			virtual entt::handle CreateEntity() = 0;
 
+			virtual void ForEachAtmosphere(Nz::FunctionRef<void(ServerAtmosphere*)> callback);
+			virtual void ForEachAtmosphere(Nz::FunctionRef<void(const ServerAtmosphere*)> callback) const;
+
 			template<typename F> void ForEachPlayer(F&& callback);
 			template<typename F> void ForEachPlayer(F&& callback) const;
 

@@ -38,14 +38,29 @@ namespace tsom
 
 	void ServerScriptingLibrary::RegisterAtmosphere(sol::state& state)
 	{
-		state.new_enum<GasType>("GasType", {
-			{ "CarbonDioxyde", GasType::CarbonDioxyde },
-			{ "Nitrogen", GasType::Nitrogen },
-			{ "Oxygen", GasType::Oxygen }
-		});
+		state.new_enum("GasType",
+			"CarbonDioxyde", GasType::CarbonDioxyde,
+			"Nitrogen", GasType::Nitrogen,
+			"Oxygen", GasType::Oxygen
+		);
 
 		state.new_usertype<ServerAtmosphere>("Atmosphere",
 			sol::no_constructor,
+			"Exchange", LuaFunction([](ServerAtmosphere& serverAtmosphere, sol::stack_table exchangeGas)
+			{
+				Nz::EnumArray<GasType, Nz::Int32> gasExchange;
+				gasExchange.fill(0);
+
+				for (auto&& [key, value] : exchangeGas)
+				{
+					GasType gasType = key.as<GasType>();
+					Nz::Int32 amount = value.as<Nz::Int32>();
+
+					gasExchange[gasType] = amount;
+				}
+
+				return serverAtmosphere.Exchange(gasExchange);
+			}),
 			"GetGasAmount", LuaFunction(&ServerAtmosphere::GetGasAmount),
 			"SetGasAmount", LuaFunction(&ServerAtmosphere::SetGasAmount)
 		);
@@ -53,18 +68,35 @@ namespace tsom
 
 	void ServerScriptingLibrary::RegisterEnvironment(sol::state& state)
 	{
-		state.new_enum<ServerEnvironmentType>("EnvironmentType", {
-			{ "Planet", ServerEnvironmentType::Planet },
-			{ "Ship", ServerEnvironmentType::Ship },
-		});
+		state.new_enum("EnvironmentType",
+			"Planet", ServerEnvironmentType::Planet,
+			"Ship", ServerEnvironmentType::Ship
+		);
 
 		state.new_usertype<ServerEnvironment>("Environment",
 			sol::no_constructor,
+
+			"GetAllAtmospheres", LuaFunction([](ServerEnvironment* environment, sol::this_state L)
+			{
+				sol::state_view state(L);
+				sol::table atmosphereTable = state.create_table();
+				lua_Integer index = 1;
+				environment->ForEachAtmosphere([&](ServerAtmosphere* atmosphere)
+				{
+					atmosphereTable[index++] = atmosphere;
+				});
+
+				return atmosphereTable;
+			}),
+
+			"GetAtmosphereAtPosition", LuaFunction(&ServerEnvironment::GetAtmosphereAtPosition),
 			"GetPhysWorld", LuaFunction([](ServerEnvironment* environment)
 			{
 				return &environment->GetWorld().GetSystem<Nz::Physics3DSystem>();
 			}),
-			"GetType", LuaFunction(&ServerEnvironment::GetType)
+			"GetType", LuaFunction(&ServerEnvironment::GetType),
+
+			"IsRoot", LuaFunction(&ServerEnvironment::IsRoot)
 		);
 
 		state.new_usertype<ServerPlanetEnvironment>("PlanetEnvironment",
@@ -99,6 +131,10 @@ namespace tsom
 			}),
 			"GetName", LuaFunction(&ServerPlayer::GetNickname),
 			"GetPlayerIndex", LuaFunction(&ServerPlayer::GetPlayerIndex),
+			"GetRootEnvironment", LuaFunction([](ServerPlayer& player)
+			{
+				return player.GetRootEnvironment();
+			}),
 			"GetUuid", LuaFunction([](ServerPlayer& player, sol::this_state L) -> sol::object
 			{
 				auto uuidOpt = player.GetUuid();

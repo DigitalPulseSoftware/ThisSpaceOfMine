@@ -10,8 +10,8 @@
 #include <ServerLib/ServerPlayer.hpp>
 #include <ServerLib/ServerShipEnvironment.hpp>
 #include <ServerLib/Components/AtmosphereMonitor.hpp>
-#include <ServerLib/Components/ServerInteractibleComponent.hpp>
 #include <ServerLib/Components/ServerEnvironmentSwitchComponent.hpp>
+#include <ServerLib/Components/ServerInteractibleComponent.hpp>
 #include <fmt/color.h>
 #include <fmt/format.h>
 #include <frozen/string.h>
