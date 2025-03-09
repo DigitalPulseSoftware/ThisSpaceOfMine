@@ -55,4 +55,9 @@ namespace tsom
 	{
 		return registry.ctx().get<ServerEnvironment*>();
 	}
+
+	inline void ServerEnvironment::ClearEntities()
+	{
+		m_world->GetRegistry().clear();
+	}
 }

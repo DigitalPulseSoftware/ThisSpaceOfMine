@@ -90,9 +90,9 @@ namespace tsom
 
 	ServerPlanetEnvironment::~ServerPlanetEnvironment()
 	{
-		m_world->GetRegistry().ctx().erase<ServerPlanetEnvironment*>();
+		ClearEntities();
 
-		m_planetEntity.destroy();
+		m_world->GetRegistry().ctx().erase<ServerPlanetEnvironment*>();
 	}
 
 	Nz::Boxf ServerPlanetEnvironment::ComputeBoundingBox() const

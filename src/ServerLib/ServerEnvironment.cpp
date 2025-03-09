@@ -44,10 +44,6 @@ namespace tsom
 
 	ServerEnvironment::~ServerEnvironment()
 	{
-		// Destroy all entities first
-		auto& registry = m_world->GetRegistry();
-		registry.clear();
-
 		ForEachPlayer([this](ServerPlayer& player)
 		{
 			player.RemoveFromEnvironment(this);

@@ -124,7 +124,7 @@ namespace tsom
 		if (m_exteriorEntity)
 			m_exteriorEntity.destroy();
 
-		m_shipEntity.destroy();
+		ClearEntities();
 
 		m_world->GetRegistry().ctx().erase<ServerShipEnvironment*>();
 	}

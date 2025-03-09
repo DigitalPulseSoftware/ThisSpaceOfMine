@@ -71,6 +71,8 @@ namespace tsom
 		protected:
 			ServerEnvironment(ServerInstance& serverInstance, ServerEnvironmentType type, bool isRoot);
 
+			inline void ClearEntities();
+
 			virtual ServerAtmosphere* GetFallbackAtmosphereAtPosition(const Nz::Vector3f& position) = 0;
 
 			std::unique_ptr<Nz::EnttWorld> m_world;
