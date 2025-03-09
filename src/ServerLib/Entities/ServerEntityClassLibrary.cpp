@@ -30,8 +30,6 @@ namespace tsom
 	{
 		SharedEntityClassLibrary::OnPlayerActivate(entity);
 
-		entity.emplace<AtmosphereMonitor>();
-
 		// TODO: Cache those
 		Nz::UInt32 healthIndex = m_playerClass->FindProperty("health");
 		Nz::UInt32 oxygenIndex = m_playerClass->FindProperty("oxygen");
@@ -89,6 +87,8 @@ namespace tsom
 		characterSettings.objectLayer = Constants::ObjectLayerPlayer;
 
 		auto characterController = player->GetCharacterController();
+
+		entity.emplace<AtmosphereMonitor>();
 
 		auto& characterComponent = entity.emplace<Nz::PhysCharacter3DComponent>(std::move(characterSettings));
 		characterComponent.SetImpl(characterController);
