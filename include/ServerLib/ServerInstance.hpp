@@ -12,6 +12,7 @@
 #include <CommonLib/EntityRegistry.hpp>
 #include <CommonLib/NetworkSessionManager.hpp>
 #include <CommonLib/Scripting/ScriptingContext.hpp>
+#include <ServerLib/Database/ServerDatabase.hpp>
 #include <ServerLib/ServerPlayer.hpp>
 #include <Nazara/Core/Clock.hpp>
 #include <Nazara/Core/TimerManager.hpp>
@@ -74,6 +75,8 @@ namespace tsom
 			inline Nz::Time GetTickDuration() const;
 			inline Nz::TimerManager& GetTickedTimerManager();
 
+			void LoadFromDatabase();
+
 			std::unique_ptr<Nz::EnttWorld> RegisterEnvironment(ServerEnvironment* environment);
 
 			inline void ScheduleForNextTick(std::function<void()>&& callback);
@@ -90,6 +93,7 @@ namespace tsom
 			struct Config
 			{
 				std::array<std::uint8_t, 32> connectionTokenEncryptionKey;
+				std::string databaseFile;
 				Nz::Time saveInterval = Nz::Time::Seconds(30);
 				bool enableDebugDrawer = false;
 				bool pauseWhenEmpty = true;
@@ -117,6 +121,7 @@ namespace tsom
 			std::vector<std::unique_ptr<NetworkSessionManager>> m_sessionManagers;
 			std::vector<PlayerRename> m_pendingPlayerRename;
 			std::vector<ServerEnvironment*> m_environments;
+			std::vector<std::unique_ptr<ServerEnvironment>> m_databaseEnvironments;
 			std::vector<std::unique_ptr<Nz::EnttWorld>> m_envWorldPool;
 			std::vector<std::function<void()>> m_scheduledTickFunctions;
 			std::vector<std::function<void()>> m_nextScheduledTickFunctions;
@@ -133,6 +138,7 @@ namespace tsom
 			Config m_config;
 			ScriptingContext m_scriptingContext;
 			EntityRegistry m_entityRegistry;
+			ServerDatabase m_serverDatabase;
 			Spawnpoint m_defaultSpawnpoint;
 	};
 }

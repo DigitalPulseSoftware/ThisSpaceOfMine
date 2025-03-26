@@ -37,15 +37,18 @@ int ServerMain(int argc, char* argv[])
 	auto& configAppComponent = app.AddComponent<tsom::ServerConfigAppComponent>();
 	auto& serverInstanceAppComponent = app.AddComponent<tsom::ServerInstanceAppComponent>();
 
-	std::filesystem::path scriptPath = Nz::Utf8Path("scripts");
-	if (!std::filesystem::is_directory(scriptPath))
-	{
-		fmt::print(fg(fmt::color::red), "scripts are missing!\n");
-		return EXIT_FAILURE;
-	}
-
 	auto& filesystem = app.AddComponent<Nz::FilesystemAppComponent>();
-	filesystem.Mount("scripts", scriptPath);
+	for (const char* directory : { "database", "scripts" })
+	{
+		std::filesystem::path dirPath = Nz::Utf8Path(directory);
+		if (!std::filesystem::is_directory(dirPath))
+		{
+			fmt::print(fg(fmt::color::red), "{0} directory is missing!\n", directory);
+			return EXIT_FAILURE;
+		}
+
+		filesystem.Mount(directory, dirPath);
+	}
 
 	auto& config = configAppComponent.GetConfig();
 
@@ -57,12 +60,14 @@ int ServerMain(int argc, char* argv[])
 	instanceConfig.saveInterval = Nz::Time::Seconds(config.GetIntegerValue<long long>("Save.Interval"));
 	instanceConfig.connectionTokenEncryptionKey = config.GetConnectionTokenEncryptionKey();
 	instanceConfig.enableDebugDrawer = config.GetBoolValue("Debug.EnableDrawer");
+	instanceConfig.databaseFile = config.GetStringValue("Database.Filename");
 
 	auto& instance = serverInstanceAppComponent.AddInstance(instanceConfig);
 	auto& sessionManager = instance.AddSessionManager(serverPort);
 	sessionManager.SetDefaultHandler<tsom::InitialSessionHandler>(std::ref(instance));
 
-	tsom::ServerPlanetEnvironment planet(instance, "alice", saveDirectory / Nz::Utf8Path("alice"), 42, Nz::Vector3ui(5), 1.f);
+	instance.LoadFromDatabase();
+	/*tsom::ServerPlanetEnvironment planet(instance, "alice", saveDirectory / Nz::Utf8Path("alice"), 42, Nz::Vector3ui(5), 1.f);
 	instance.SetDefaultSpawnpoint(&planet, Nz::Vector3f::Up() * 100.f + Nz::Vector3f::Backward() * 5.f, Nz::Quaternionf::Identity());
 
 	tsom::ServerPlanetEnvironment planet2(instance, "bob", saveDirectory / Nz::Utf8Path("bob"), 41, Nz::Vector3ui(5), 1.f, 40.f);
@@ -84,7 +89,7 @@ int ServerMain(int argc, char* argv[])
 	switchToPlanet1Entity.emplace<tsom::EnvironmentProxyComponent>().targetEnvironment = &planet;
 	switchToPlanet1Entity.emplace<tsom::NetworkedComponent>();
 	enterPlanet1Trigger.targetEnvironment = &planet;
-	enterPlanet1Trigger.updateRoot = true;
+	enterPlanet1Trigger.updateRoot = true;*/
 
 	fmt::print(fg(fmt::color::lime_green), "server ready.\n");
 

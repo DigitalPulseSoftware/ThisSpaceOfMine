@@ -19,6 +19,7 @@ namespace tsom
 		RegisterBoolOption("Debug.EnableDrawer", true);
 		RegisterBoolOption("Server.SleepWhenEmpty", true);
 		RegisterStringOption("Save.Directory", "saves/chunks");
+		RegisterStringOption("Database.Filename", "server_database.db");
 		RegisterIntegerOption("Save.Interval", 0, 60 * 60, 30);
 	}
 

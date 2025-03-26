@@ -32,7 +32,8 @@ add_requires(
 	"nlohmann_json",
 	"perlinnoise",
 	"semver",
-	"sol2"
+	"sol2",
+	"sqlitecpp"
 )
 
 if has_config("serveronly") then
@@ -223,6 +224,7 @@ target("ServerLib", function ()
 	add_headerfiles("src/ServerLib/**.hpp", "src/ServerLib/**.inl", { install = false })
 	add_files("src/ServerLib/**.cpp")
 	add_deps("CommonLib", { public = true })
+	add_packages("sqlitecpp", { public = true })
 	add_packages("libcurl", { links = {}, public = true })
 	add_rules("inherit_version")
 

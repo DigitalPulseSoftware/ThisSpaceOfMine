@@ -26,8 +26,11 @@ namespace tsom
 	m_tickIndex(0),
 	m_application(application),
 	m_config(std::move(config)),
-	m_scriptingContext(application)
+	m_scriptingContext(application),
+	m_serverDatabase(application, m_config.databaseFile)
 	{
+		m_serverDatabase.Migrate();
+
 		m_entityRegistry.RegisterClassLibrary<ChunkClassLibrary>(m_application, m_blockLibrary);
 		m_entityRegistry.RegisterClassLibrary<ServerClassLibrary>(m_application);
 
@@ -147,6 +150,18 @@ namespace tsom
 		m_newPlayers.UnboundedReset(playerIndex);
 
 		m_players.Free(playerIndex);
+	}
+
+	void ServerInstance::LoadFromDatabase()
+	{
+		std::vector planets = m_serverDatabase.GetAllPlanets();
+
+		m_databaseEnvironments.clear();
+		for (const auto& planetData : planets)
+			m_databaseEnvironments.push_back(std::make_unique<ServerPlanetEnvironment>(*this, planetData.generatorName, Nz::Utf8Path("saves/" + planetData.generatorName), planetData.seed, planetData.chunkCount, 1.f, planetData.cornerRadius));
+
+		if (!m_databaseEnvironments.empty())
+			SetDefaultSpawnpoint(m_databaseEnvironments.back().get(), Nz::Vector3f::Up() * 100.f + Nz::Vector3f::Backward() * 5.f, Nz::Quaternionf::Identity());
 	}
 
 	std::unique_ptr<Nz::EnttWorld> ServerInstance::RegisterEnvironment(ServerEnvironment* environment)
