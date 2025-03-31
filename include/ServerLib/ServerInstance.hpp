@@ -12,8 +12,8 @@
 #include <CommonLib/EntityRegistry.hpp>
 #include <CommonLib/NetworkSessionManager.hpp>
 #include <CommonLib/Scripting/ScriptingContext.hpp>
-#include <ServerLib/Database/ServerDatabase.hpp>
 #include <ServerLib/ServerPlayer.hpp>
+#include <ServerLib/Database/ServerDatabase.hpp>
 #include <Nazara/Core/Clock.hpp>
 #include <Nazara/Core/TimerManager.hpp>
 #include <NazaraUtils/Bitset.hpp>
@@ -72,6 +72,7 @@ namespace tsom
 			inline const EntityRegistry& GetEntityRegistry() const;
 			inline ServerPlayer* GetPlayer(PlayerIndex playerIndex);
 			inline const ServerPlayer* GetPlayer(PlayerIndex playerIndex) const;
+			inline ServerDatabase& GetServerDatabase();
 			inline Nz::Time GetTickDuration() const;
 			inline Nz::TimerManager& GetTickedTimerManager();
 
@@ -121,10 +122,10 @@ namespace tsom
 			std::vector<std::unique_ptr<NetworkSessionManager>> m_sessionManagers;
 			std::vector<PlayerRename> m_pendingPlayerRename;
 			std::vector<ServerEnvironment*> m_environments;
-			std::vector<std::unique_ptr<ServerEnvironment>> m_databaseEnvironments;
 			std::vector<std::unique_ptr<Nz::EnttWorld>> m_envWorldPool;
 			std::vector<std::function<void()>> m_scheduledTickFunctions;
 			std::vector<std::function<void()>> m_nextScheduledTickFunctions;
+			tsl::hopscotch_map<Nz::UInt32 /*databaseId*/, std::unique_ptr<ServerEnvironment>> m_databaseEnvironments;
 			Nz::Bitset<> m_disconnectedPlayers;
 			Nz::Bitset<> m_newPlayers;
 			Nz::MemoryPool<ServerPlayer> m_players;

@@ -3,13 +3,9 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/HealthCheckerAppComponent.hpp>
-#include <CommonLib/InternalConstants.hpp>
 #include <Server/ServerConfigAppComponent.hpp>
 #include <ServerLib/PlayerTokenAppComponent.hpp>
 #include <ServerLib/ServerInstanceAppComponent.hpp>
-#include <ServerLib/ServerPlanetEnvironment.hpp>
-#include <ServerLib/Components/EnvironmentProxyComponent.hpp>
-#include <ServerLib/Components/NetworkedComponent.hpp>
 #include <ServerLib/Session/InitialSessionHandler.hpp>
 #include <Nazara/Core/Application.hpp>
 #include <Nazara/Core/Core.hpp>
@@ -23,8 +19,8 @@
 #include <Main/Main.hpp>
 #include <fmt/color.h>
 
-#include <ServerLib/Components/EnvironmentEnterTriggerComponent.hpp>
-#include <Nazara/Core/Components/NodeComponent.hpp>
+void MigrateFileToSqlite(tsom::ServerInstance& instance, const std::filesystem::path& saveDirectory);
+void MigratePlanetChunksToSqlite(const std::filesystem::path& saveDirectory, tsom::ServerDatabase& serverDatabase, Nz::UInt32 planetId, std::string_view planetName);
 
 int ServerMain(int argc, char* argv[])
 {
@@ -53,7 +49,6 @@ int ServerMain(int argc, char* argv[])
 	auto& config = configAppComponent.GetConfig();
 
 	Nz::UInt16 serverPort = config.GetIntegerValue<Nz::UInt16>("Server.Port");
-	std::filesystem::path saveDirectory = Nz::Utf8Path(config.GetStringValue("Save.Directory"));
 
 	tsom::ServerInstance::Config instanceConfig;
 	instanceConfig.pauseWhenEmpty = config.GetBoolValue("Server.SleepWhenEmpty");
@@ -62,34 +57,28 @@ int ServerMain(int argc, char* argv[])
 	instanceConfig.enableDebugDrawer = config.GetBoolValue("Debug.EnableDrawer");
 	instanceConfig.databaseFile = config.GetStringValue("Database.Filename");
 
+	bool isMigratingToDatabase = !std::filesystem::is_regular_file(instanceConfig.databaseFile);
+
 	auto& instance = serverInstanceAppComponent.AddInstance(instanceConfig);
 	auto& sessionManager = instance.AddSessionManager(serverPort);
 	sessionManager.SetDefaultHandler<tsom::InitialSessionHandler>(std::ref(instance));
 
+	std::filesystem::path saveDirectory = Nz::Utf8Path(config.GetStringValue("Save.Directory"));
+
+	if (isMigratingToDatabase && std::filesystem::is_directory(saveDirectory))
+	{
+		fmt::print(fg(fmt::color::yellow), "first time launching after sqlite switch.\n");
+
+		MigrateFileToSqlite(instance, saveDirectory);
+		std::filesystem::path migratedSaveDir = saveDirectory;
+		migratedSaveDir += Nz::Utf8Path("_migrated");
+
+		std::filesystem::rename(saveDirectory, migratedSaveDir);
+
+		fmt::print(fg(fmt::color::green), "save migrated.\n");
+	}
+
 	instance.LoadFromDatabase();
-	/*tsom::ServerPlanetEnvironment planet(instance, "alice", saveDirectory / Nz::Utf8Path("alice"), 42, Nz::Vector3ui(5), 1.f);
-	instance.SetDefaultSpawnpoint(&planet, Nz::Vector3f::Up() * 100.f + Nz::Vector3f::Backward() * 5.f, Nz::Quaternionf::Identity());
-
-	tsom::ServerPlanetEnvironment planet2(instance, "bob", saveDirectory / Nz::Utf8Path("bob"), 41, Nz::Vector3ui(5), 1.f, 40.f);
-
-	entt::handle switchToPlanet2Entity = planet.CreateEntity();
-	auto& enterPlanet2Trigger = switchToPlanet2Entity.emplace<tsom::EnvironmentEnterTriggerComponent>();
-	enterPlanet2Trigger.aabb = Nz::Boxf(-300.f, -300.f, -300.f, 600.f, 600.f, 600.f);
-	enterPlanet2Trigger.targetEnvironment = &planet2;
-	enterPlanet2Trigger.updateRoot = true;
-
-	switchToPlanet2Entity.emplace<Nz::NodeComponent>(Nz::Vector3f(-10000.f, 0.f, 0.f));
-	switchToPlanet2Entity.emplace<tsom::EnvironmentProxyComponent>().targetEnvironment = &planet2;
-	switchToPlanet2Entity.emplace<tsom::NetworkedComponent>();
-
-	entt::handle switchToPlanet1Entity = planet2.CreateEntity();
-	auto& enterPlanet1Trigger = switchToPlanet1Entity.emplace<tsom::EnvironmentEnterTriggerComponent>();
-	enterPlanet1Trigger.aabb = Nz::Boxf(-300.f, -300.f, -300.f, 600.f, 600.f, 600.f);
-	switchToPlanet1Entity.emplace<Nz::NodeComponent>(Nz::Vector3f(10000.f, 0.f, 0.f));
-	switchToPlanet1Entity.emplace<tsom::EnvironmentProxyComponent>().targetEnvironment = &planet;
-	switchToPlanet1Entity.emplace<tsom::NetworkedComponent>();
-	enterPlanet1Trigger.targetEnvironment = &planet;
-	enterPlanet1Trigger.updateRoot = true;*/
 
 	fmt::print(fg(fmt::color::lime_green), "server ready.\n");
 
@@ -100,3 +89,88 @@ int ServerMain(int argc, char* argv[])
 }
 
 TSOMMain(ServerMain)
+
+void MigrateFileToSqlite(tsom::ServerInstance& instance, const std::filesystem::path& saveDirectory)
+{
+	auto& serverDatabase = instance.GetServerDatabase();
+
+	serverDatabase.StorePlanet({
+		.id = 1,
+		.generatorName = "alice",
+		.seed = 42,
+		.chunkCount = Nz::Vector3ui(5),
+		.cornerRadius = 16.f,
+		.gravity = 9.81f
+	});
+
+	serverDatabase.StorePlanet({
+		.id = 2,
+		.generatorName = "bob",
+		.seed = 41,
+		.chunkCount = Nz::Vector3ui(5),
+		.cornerRadius = 40.f,
+		.gravity = 9.81f
+	});
+
+	serverDatabase.StorePlanetLink({
+		.sourcePlanet = 1,
+		.destinationPlanet = 2,
+		.position = Nz::Vector3f(-10000.f, 0.f, 0.f)
+	});
+
+	serverDatabase.StorePlanetLink({
+		.sourcePlanet = 2,
+		.destinationPlanet = 1,
+		.position = Nz::Vector3f(10000.f, 0.f, 0.f)
+	});
+
+	MigratePlanetChunksToSqlite(saveDirectory, serverDatabase, 1, "alice");
+	MigratePlanetChunksToSqlite(saveDirectory, serverDatabase, 2, "bob");
+}
+
+void MigratePlanetChunksToSqlite(const std::filesystem::path& saveDirectory, tsom::ServerDatabase& serverDatabase, Nz::UInt32 planetId, std::string_view planetName)
+{
+	for (std::filesystem::path chunkFile : std::filesystem::directory_iterator(saveDirectory / Nz::Utf8Path(planetName)))
+	{
+		if (chunkFile.extension() != Nz::Utf8Path(".chunk"))
+			continue;
+
+		std::string fileName = Nz::PathToString(chunkFile.filename());
+		unsigned int x, y, z;
+		if (std::sscanf(fileName.c_str(), "%u_%u_%u.chunk", &x, &y, &z) != 3)
+		{
+			fmt::print(stderr, fg(fmt::color::red), "failed to load planet {0} chunk: failed to parse chunk name {1}\n", planetName, fileName);
+			continue;
+		}
+
+		std::optional chunkBuffer = Nz::File::ReadWhole(chunkFile);
+		if (!chunkBuffer)
+		{
+			fmt::print(stderr, fg(fmt::color::red), "failed to load planet {0} chunk: failed to load chunk file {1}\n", planetName, fileName);
+			continue;
+		}
+
+		Nz::UInt32 decompressedSize = Nz::SafeCaster(chunkBuffer->size());
+
+		tsom::BinaryCompressor& binaryCompressor = tsom::BinaryCompressor::GetThreadCompressor();
+		std::optional compressedDataOpt = binaryCompressor.Compress(chunkBuffer->data(), chunkBuffer->size());
+		if NAZARA_UNLIKELY(!compressedDataOpt)
+			throw std::runtime_error("chunk compression failed");
+
+		std::span<Nz::UInt8>& compressedData = *compressedDataOpt;
+
+		// Reuse byteArray
+		std::vector<Nz::UInt8> chunkData(sizeof(Nz::UInt32) + compressedData.size());
+
+		decompressedSize = Nz::HostToLittleEndian(decompressedSize);
+		std::memcpy(&chunkData[0], &decompressedSize, sizeof(decompressedSize));
+		std::memcpy(&chunkData[sizeof(decompressedSize)], &compressedData[0], compressedData.size());
+
+		serverDatabase.StorePlanetChunk(tsom::Database::PlanetChunk{
+			.planetId = planetId,
+			.position = tsom::ChunkIndices(x, y, z),
+			.version = 1,
+			.chunkData = chunkData
+		});
+	}
+}

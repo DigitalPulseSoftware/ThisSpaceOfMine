@@ -8,10 +8,14 @@
 #include <CommonLib/Scripting/MathScriptingLibrary.hpp>
 #include <CommonLib/Scripting/SharedScriptingLibrary.hpp>
 #include <ServerLib/ServerPlanetEnvironment.hpp>
+#include <ServerLib/Components/EnvironmentEnterTriggerComponent.hpp>
+#include <ServerLib/Components/EnvironmentProxyComponent.hpp>
+#include <ServerLib/Components/NetworkedComponent.hpp>
 #include <ServerLib/Entities/ServerClassLibrary.hpp>
 #include <ServerLib/Scripting/ServerEntityScriptingLibrary.hpp>
 #include <ServerLib/Scripting/ServerScriptingLibrary.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
+#include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <fmt/color.h>
 #include <fmt/format.h>
@@ -29,13 +33,11 @@ namespace tsom
 	m_scriptingContext(application),
 	m_serverDatabase(application, m_config.databaseFile)
 	{
-		m_serverDatabase.Migrate();
-
 		m_entityRegistry.RegisterClassLibrary<ChunkClassLibrary>(m_application, m_blockLibrary);
 		m_entityRegistry.RegisterClassLibrary<ServerClassLibrary>(m_application);
 
 		m_scriptingContext.RegisterLibrary<MathScriptingLibrary>();
-		ServerEntityScriptingLibrary& entityScriptingLibrary = m_scriptingContext.RegisterLibrary<ServerEntityScriptingLibrary>(m_entityRegistry);
+		auto& entityScriptingLibrary = m_scriptingContext.RegisterLibrary<ServerEntityScriptingLibrary>(m_entityRegistry);
 		m_scriptingContext.RegisterLibrary<SharedScriptingLibrary>(entityScriptingLibrary);
 		m_scriptingContext.RegisterLibrary<ServerScriptingLibrary>(*this, entityScriptingLibrary);
 
@@ -154,14 +156,46 @@ namespace tsom
 
 	void ServerInstance::LoadFromDatabase()
 	{
-		std::vector planets = m_serverDatabase.GetAllPlanets();
-
 		m_databaseEnvironments.clear();
-		for (const auto& planetData : planets)
-			m_databaseEnvironments.push_back(std::make_unique<ServerPlanetEnvironment>(*this, planetData.generatorName, Nz::Utf8Path("saves/" + planetData.generatorName), planetData.seed, planetData.chunkCount, 1.f, planetData.cornerRadius));
+		m_serverDatabase.GetAllPlanets([&](Database::Planet&& planetData)
+		{
+			auto planetEnv = std::make_unique<ServerPlanetEnvironment>(*this, planetData.id, std::string(planetData.generatorName), planetData.seed, planetData.chunkCount, 1.f, planetData.cornerRadius);
+			SetDefaultSpawnpoint(planetEnv.get(), Nz::Vector3f::Up() * 100.f + Nz::Vector3f::Backward() * 5.f, Nz::Quaternionf::Identity());
+			m_databaseEnvironments[planetData.id] = std::move(planetEnv);
 
-		if (!m_databaseEnvironments.empty())
-			SetDefaultSpawnpoint(m_databaseEnvironments.back().get(), Nz::Vector3f::Up() * 100.f + Nz::Vector3f::Backward() * 5.f, Nz::Quaternionf::Identity());
+			return true;
+		});
+
+		m_serverDatabase.GetAllPlanetLinks([&](Database::PlanetLink&& planetLink)
+		{
+			auto sourceIt = m_databaseEnvironments.find(planetLink.sourcePlanet);
+			if (sourceIt == m_databaseEnvironments.end())
+			{
+				fmt::print(fg(fmt::color::red), "Loading database: planet_link entry references unknown planet {}\n", planetLink.sourcePlanet);
+				return true;
+			}
+
+			auto destinationIt = m_databaseEnvironments.find(planetLink.destinationPlanet);
+			if (destinationIt == m_databaseEnvironments.end())
+			{
+				fmt::print(fg(fmt::color::red), "Loading database: planet_link entry references unknown planet {}\n", planetLink.destinationPlanet);
+				return true;
+			}
+
+			ServerEnvironment& sourceEnvironment = *sourceIt->second;
+			ServerEnvironment& destinationEnvironment = *destinationIt->second;
+
+			entt::handle switchTriggerEntity = sourceEnvironment.CreateEntity();
+			switchTriggerEntity.emplace<Nz::NodeComponent>(planetLink.position);
+			switchTriggerEntity.emplace<EnvironmentProxyComponent>().targetEnvironment = &destinationEnvironment;
+			switchTriggerEntity.emplace<NetworkedComponent>();
+
+			auto& enterTrigger = switchTriggerEntity.emplace<EnvironmentEnterTriggerComponent>();
+			enterTrigger.aabb = destinationEnvironment.ComputeBoundingBox().ScaleAroundCenter(2.f);
+			enterTrigger.targetEnvironment = &destinationEnvironment;
+			enterTrigger.updateRoot = true;
+			return true;
+		});
 	}
 
 	std::unique_ptr<Nz::EnttWorld> ServerInstance::RegisterEnvironment(ServerEnvironment* environment)

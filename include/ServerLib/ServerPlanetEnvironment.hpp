@@ -10,9 +10,8 @@
 #include <ServerLib/Export.hpp>
 #include <CommonLib/Chunk.hpp>
 #include <ServerLib/ServerEnvironment.hpp>
-#include <entt/entt.hpp>
 #include <filesystem>
-#include <memory>
+#include <optional>
 
 namespace tsom
 {
@@ -22,10 +21,12 @@ namespace tsom
 	class TSOM_SERVERLIB_API ServerPlanetEnvironment final : public ServerEnvironment
 	{
 		public:
-			ServerPlanetEnvironment(ServerInstance& serverInstance, std::string generatorName, std::filesystem::path savePath, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, float cellSize, float cornerRadius = 16.f);
+			ServerPlanetEnvironment(ServerInstance& serverInstance, std::optional<Nz::UInt32> databaseId, std::string generatorName, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, float cellSize, float cornerRadius = 16.f);
 			ServerPlanetEnvironment(const ServerPlanetEnvironment&) = delete;
 			ServerPlanetEnvironment(ServerPlanetEnvironment&&) = delete;
 			~ServerPlanetEnvironment();
+
+			Nz::Boxf ComputeBoundingBox() const override;
 
 			entt::handle CreateEntity() override;
 
@@ -40,9 +41,9 @@ namespace tsom
 			ServerPlanetEnvironment& operator=(ServerPlanetEnvironment&&) = delete;
 
 		private:
-			void LoadFromDirectory();
+			void LoadFromDatabase();
 
-			std::filesystem::path m_savePath;
+			std::optional<Nz::UInt32> m_databaseId;
 			std::unordered_set<ChunkIndices /*chunkIndex*/> m_dirtyChunks;
 			entt::handle m_planetEntity;
 	};

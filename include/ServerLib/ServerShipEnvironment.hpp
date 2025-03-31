@@ -32,6 +32,8 @@ namespace tsom
 			ServerShipEnvironment(ServerShipEnvironment&&) = delete;
 			~ServerShipEnvironment();
 
+			Nz::Boxf ComputeBoundingBox() const override;
+
 			entt::handle CreateEntity() override;
 
 			void GenerateShip(bool small);

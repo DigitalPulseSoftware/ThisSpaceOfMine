@@ -9,9 +9,10 @@
 
 #include <ServerLib/Export.hpp>
 #include <ServerLib/Database/Schema.hpp>
+#include <NazaraUtils/FunctionRef.hpp>
 #include <SQLiteCpp/Database.h>
+#include <optional>
 #include <string>
-#include <vector>
 
 namespace Nz
 {
@@ -28,15 +29,35 @@ namespace tsom
 			ServerDatabase(ServerDatabase&&) = delete;
 			~ServerDatabase() = default;
 
-			std::vector<Database::Planet> GetAllPlanets() const;
+			void GetAllPlanets(Nz::FunctionRef<bool(Database::Planet&& /*planet*/)> callback) const;
+			void GetAllPlanetLinks(Nz::FunctionRef<bool(Database::PlanetLink&& /*planetLink*/)> callback) const;
+			void GetPlanetChunks(Nz::UInt32 planetId, Nz::FunctionRef<bool(Database::PlanetChunk&& /*PlanetChunk*/)> callback) const;
 
-			void Migrate();
+			void StorePlanet(const Database::Planet& planetChunk);
+			void StorePlanetChunk(const Database::PlanetChunk& planetChunk);
+			void StorePlanetLink(const Database::PlanetLink& planetChunk);
 
 			ServerDatabase& operator=(const ServerDatabase&) = delete;
 			ServerDatabase& operator=(ServerDatabase&&) = delete;
 
 		private:
+			void Migrate();
+			void PrepareQueries();
+
+			struct PreparedStatements
+			{
+				PreparedStatements(SQLite::Database& database);
+
+				SQLite::Statement getAllPlanetQuery;
+				SQLite::Statement getAllPlanetLinkQuery;
+				SQLite::Statement getPlanetChunkQuery;
+				SQLite::Statement storePlanetQuery;
+				SQLite::Statement storePlanetChunkQuery;
+				SQLite::Statement storePlanetLinkQuery;
+			};
+
 			SQLite::Database m_database;
+			mutable std::optional<PreparedStatements> m_preparedStatements;
 			Nz::ApplicationBase& m_app;
 	};
 }

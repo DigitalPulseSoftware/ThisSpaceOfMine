@@ -8,14 +8,15 @@
 #define TSOM_SERVERLIB_DATABASE_SCHEMA_HPP
 
 #include <Nazara/Math/Vector3.hpp>
-#include <string>
+#include <span>
+#include <string_view>
 
 namespace tsom::Database
 {
 	struct Planet
 	{
 		Nz::UInt32 id;
-		std::string generatorName;
+		std::string_view generatorName;
 		Nz::UInt32 seed;
 		Nz::Vector3ui32 chunkCount;
 		float cornerRadius;
@@ -27,7 +28,7 @@ namespace tsom::Database
 		Nz::UInt32 planetId;
 		Nz::Vector3i32 position;
 		Nz::UInt32 version;
-		std::vector<Nz::UInt8> chunkData;
+		std::span<const Nz::UInt8> chunkData;
 	};
 
 	struct PlanetLink

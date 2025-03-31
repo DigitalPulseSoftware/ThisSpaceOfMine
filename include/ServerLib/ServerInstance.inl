@@ -106,6 +106,11 @@ namespace tsom
 		return m_players.RetrieveFromIndex(playerIndex);
 	}
 
+	inline ServerDatabase& ServerInstance::GetServerDatabase()
+	{
+		return m_serverDatabase;
+	}
+
 	inline Nz::Time ServerInstance::GetTickDuration() const
 	{
 		return m_tickDuration;

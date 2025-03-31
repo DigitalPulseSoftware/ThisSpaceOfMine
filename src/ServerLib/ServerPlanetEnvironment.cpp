@@ -16,24 +16,17 @@
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/ByteArray.hpp>
 #include <Nazara/Core/ByteStream.hpp>
-#include <Nazara/Core/File.hpp>
 #include <Nazara/Core/TaskSchedulerAppComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
-#include <NazaraUtils/PathUtils.hpp>
-#include <fmt/color.h>
-#include <fmt/core.h>
-#include <fmt/ostream.h>
-#include <fmt/std.h>
-#include <charconv>
 
 namespace tsom
 {
-	constexpr unsigned int chunkSaveVersion = 1;
+	constexpr unsigned int s_chunkVersion = 1;
 
-	ServerPlanetEnvironment::ServerPlanetEnvironment(ServerInstance& serverInstance, std::string generatorName, std::filesystem::path savePath, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, float cellSize, float cornerRadius) :
+	ServerPlanetEnvironment::ServerPlanetEnvironment(ServerInstance& serverInstance, std::optional<Nz::UInt32> databaseId, std::string generatorName, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, float cellSize, float cornerRadius) :
 	ServerEnvironment(serverInstance, ServerEnvironmentType::Planet, true),
-	m_savePath(std::move(savePath))
+	m_databaseId(databaseId)
 	{
 		m_world->GetRegistry().ctx().emplace<ServerPlanetEnvironment*>(this);
 		m_world->AddSystem<EnvironmentSwitchSystem>();
@@ -56,8 +49,8 @@ namespace tsom
 		auto& planetComponent = m_planetEntity.get<PlanetComponent>();
 		planetComponent.planet->AddChunks(blockLibrary, chunkCount);
 
-		if (!m_savePath.empty())
-			LoadFromDirectory();
+		if (m_databaseId)
+			LoadFromDatabase();
 
 		auto& app = serverInstance.GetApplication();
 		auto& taskScheduler = app.GetComponent<Nz::TaskSchedulerAppComponent>();
@@ -65,10 +58,10 @@ namespace tsom
 		planetComponent.planet->GenerateChunks(blockLibrary, taskScheduler, seed, chunkCount, std::move(generatorName));
 		taskScheduler.WaitForTasks();
 
-		planetComponent.planet->GeneratePlatform(blockLibrary, tsom::Direction::Right, { 65, -18, -39 });
-		planetComponent.planet->GeneratePlatform(blockLibrary, tsom::Direction::Back, { -34, 2, 53 });
-		planetComponent.planet->GeneratePlatform(blockLibrary, tsom::Direction::Front, { 22, -35, -59 });
-		planetComponent.planet->GeneratePlatform(blockLibrary, tsom::Direction::Down, { 23, -62, 26 });
+		planetComponent.planet->GeneratePlatform(blockLibrary, Direction::Right, { 65, -18, -39 });
+		planetComponent.planet->GeneratePlatform(blockLibrary, Direction::Back, { -34, 2, 53 });
+		planetComponent.planet->GeneratePlatform(blockLibrary, Direction::Front, { 22, -35, -59 });
+		planetComponent.planet->GeneratePlatform(blockLibrary, Direction::Down, { 23, -62, 26 });
 
 		planetComponent.planet->OnChunkUpdated.Connect([this](ChunkContainer* /*planet*/, Chunk* chunk, DirectionMask /*neighborMask*/, Nz::UInt32 /*layerMask*/)
 		{
@@ -86,6 +79,24 @@ namespace tsom
 		m_world->GetRegistry().ctx().erase<ServerPlanetEnvironment*>();
 
 		m_planetEntity.destroy();
+	}
+
+	Nz::Boxf ServerPlanetEnvironment::ComputeBoundingBox() const
+	{
+		Nz::Boxf boundingBox = Nz::Boxf::Invalid();
+		auto& planet = *m_planetEntity.get<PlanetComponent>().planet;
+		planet.ForEachChunk([&](const ChunkIndices& chunkIndices, Chunk& chunk)
+		{
+			Nz::Boxf chunkBox(Nz::Vector3f(chunk.GetBlockSize() * Planet::ChunkSize));
+			chunkBox.Translate(planet.GetChunkOffset(chunkIndices));
+
+			if (boundingBox.IsValid())
+				boundingBox.ExtendTo(chunkBox);
+			else
+				boundingBox = chunkBox;
+		});
+
+		return boundingBox;
 	}
 
 	entt::handle ServerPlanetEnvironment::CreateEntity()
@@ -110,13 +121,14 @@ namespace tsom
 
 	void ServerPlanetEnvironment::OnSave()
 	{
-		if (m_dirtyChunks.empty() || m_savePath.empty())
+		if (m_dirtyChunks.empty() || !m_databaseId)
 			return;
 
 		fmt::print("saving {} dirty chunks...\n", m_dirtyChunks.size());
 
-		if (!std::filesystem::is_directory(m_savePath))
-			std::filesystem::create_directories(m_savePath);
+		BinaryCompressor& binaryCompressor = BinaryCompressor::GetThreadCompressor();
+		ServerDatabase& serverDatabase = m_serverInstance.GetServerDatabase();
+		const Planet& planet = GetPlanet();
 
 		Nz::ByteArray byteArray;
 		for (const ChunkIndices& chunkIndices : m_dirtyChunks)
@@ -124,105 +136,70 @@ namespace tsom
 			byteArray.Clear();
 
 			Nz::ByteStream byteStream(&byteArray);
-			m_planetEntity.get<PlanetComponent>().planet->GetChunk(chunkIndices)->Serialize(byteStream);
+			planet.GetChunk(chunkIndices)->Serialize(byteStream);
 
-			if (!Nz::File::WriteWhole(m_savePath / Nz::Utf8Path(fmt::format("{0:+}_{1:+}_{2:+}.chunk", chunkIndices.x, chunkIndices.y, chunkIndices.z)), byteArray.GetBuffer(), byteArray.GetSize()))
-				fmt::print(stderr, "failed to save chunk {}\n", fmt::streamed(chunkIndices));
+			Nz::UInt32 decompressedSize = Nz::SafeCaster(byteArray.GetSize());
+
+			std::optional compressedDataOpt = binaryCompressor.Compress(byteArray.GetBuffer(), byteArray.GetSize());
+			if NAZARA_UNLIKELY(!compressedDataOpt)
+				throw std::runtime_error("chunk compression failed");
+
+			std::span<Nz::UInt8>& compressedData = *compressedDataOpt;
+
+			// Reuse byteArray
+			byteArray.Clear();
+			byteArray.Resize(sizeof(Nz::UInt32) + compressedData.size());
+
+			decompressedSize = Nz::HostToLittleEndian(decompressedSize);
+			std::memcpy(&byteArray[0], &decompressedSize, sizeof(decompressedSize));
+			std::memcpy(&byteArray[sizeof(decompressedSize)], &compressedData[0], compressedData.size());
+
+			serverDatabase.StorePlanetChunk(Database::PlanetChunk{
+				.planetId = *m_databaseId,
+				.position = chunkIndices,
+				.version = s_chunkVersion,
+				.chunkData = std::span(byteArray.GetBuffer(), byteArray.GetSize())
+			});
 		}
 		m_dirtyChunks.clear();
-
-		std::string version = std::to_string(chunkSaveVersion);
-		Nz::File::WriteWhole(m_savePath / Nz::Utf8Path("version.txt"), version.data(), version.size());
 	}
 
-	void ServerPlanetEnvironment::LoadFromDirectory()
+	void ServerPlanetEnvironment::LoadFromDatabase()
 	{
-		if (!std::filesystem::is_directory(m_savePath))
+		NazaraAssert(m_databaseId);
+
+		ServerDatabase& serverDatabase = m_serverInstance.GetServerDatabase();
+
+		BinaryCompressor& binaryCompressor = BinaryCompressor::GetThreadCompressor();
+		auto& blockLibrary = m_serverInstance.GetBlockLibrary();
+		Planet& planet = GetPlanet();
+
+		serverDatabase.GetPlanetChunks(*m_databaseId, [&](Database::PlanetChunk&& planetChunk)
 		{
-			fmt::print("save directory {0} doesn't exist, not loading chunks\n", m_savePath);
-			return;
-		}
+			if (planetChunk.version != s_chunkVersion)
+				throw std::runtime_error(fmt::format("unhandled version {}", planetChunk.version));
 
-		// Handle conversion
-		unsigned int saveVersion = 0;
-		if (std::filesystem::path versionPath = m_savePath / Nz::Utf8Path("version.txt"); std::filesystem::exists(versionPath))
-		{
-			auto contentOpt = Nz::File::ReadWhole(versionPath);
-			if (contentOpt)
-			{
-				const char* ptr = reinterpret_cast<const char*>(contentOpt->data());
-				if (auto err = std::from_chars(ptr, ptr + contentOpt->size(), saveVersion); err.ec != std::errc{})
-				{
-					fmt::print(stderr, fg(fmt::color::red), "failed to load planet: invalid version file (not a number)\n");
-					return;
-				}
+			// Chunk data has decompressedSize first
+			Nz::UInt32 decompressedSize;
+			std::memcpy(&decompressedSize, &planetChunk.chunkData[0], sizeof(decompressedSize));
+			decompressedSize = Nz::LittleEndianToHost(decompressedSize);
 
-				if (saveVersion > chunkSaveVersion)
-				{
-					fmt::print(stderr, fg(fmt::color::red), "failed to load planet: unknown save version {0}\n", saveVersion);
-					return;
-				}
-			}
-			else
-				fmt::print(stderr, fg(fmt::color::red), "failed to load planet: failed to load version file\n");
-		}
+			std::vector<Nz::UInt8> decompressedData(decompressedSize);
+			std::optional compressedDataOpt = binaryCompressor.Decompress(planetChunk.chunkData.data() + sizeof(decompressedSize), planetChunk.chunkData.size() - sizeof(decompressedSize), decompressedData.data(), decompressedData.size());
+			if (!compressedDataOpt)
+				throw std::runtime_error("chunk decompression failed");
 
-		bool didConvert = false;
-		if (saveVersion == 0)
-		{
-			std::filesystem::path oldSave = m_savePath / Nz::Utf8Path("old0");
-			std::filesystem::create_directory(oldSave);
-			for (const auto& entry : std::filesystem::directory_iterator(m_savePath))
-			{
-				if (!entry.is_regular_file())
-					continue;
+			if (*compressedDataOpt != decompressedSize)
+				throw std::runtime_error("chunk decompression failed (corrupt size)");
 
-				if (entry.path().extension() != Nz::Utf8Path(".chunk"))
-					continue;
+			Nz::ByteStream byteStream(decompressedData.data(), decompressedData.size());
+			Chunk* chunk = planet.GetChunk(planetChunk.position);
+			if (!chunk)
+				chunk = &planet.AddChunk(blockLibrary, planetChunk.position);
 
-				std::filesystem::copy_file(entry.path(), oldSave / entry.path().filename());
+			chunk->Deserialize(byteStream);
 
-				std::string fileName = Nz::PathToString(entry.path().filename());
-				unsigned int x, y, z;
-				if (std::sscanf(fileName.c_str(), "%u_%u_%u.chunk", &x, &y, &z) != 3)
-				{
-					fmt::print(stderr, fg(fmt::color::red), "planet conversion: failed to parse chunk name {}\n", fileName);
-					continue;
-				}
-
-				ChunkIndices chunkIndices(Nz::Vector3ui(x, y, z));
-				chunkIndices -= Nz::Vector3i(3); // previous planet had 6x6x6 chunks
-
-				std::filesystem::path newFilename = Nz::Utf8Path(fmt::format("{0:+}_{1:+}_{2:+}.chunk", chunkIndices.x, chunkIndices.z, chunkIndices.y)); //< reverse y & z
-
-				std::filesystem::rename(entry.path(), m_savePath / newFilename);
-			}
-
-			saveVersion++;
-			didConvert = true;
-		}
-
-		if (didConvert)
-		{
-			std::string version = std::to_string(saveVersion);
-			Nz::File::WriteWhole(m_savePath / Nz::Utf8Path("version.txt"), version.data(), version.size());
-		}
-
-		m_planetEntity.get<PlanetComponent>().planet->ForEachChunk([&](const ChunkIndices& chunkIndices, Chunk& chunk)
-		{
-			Nz::File chunkFile(m_savePath / Nz::Utf8Path(fmt::format("{0:+}_{1:+}_{2:+}.chunk", chunkIndices.x, chunkIndices.y, chunkIndices.z)), Nz::OpenMode::Read);
-			if (!chunkFile.IsOpen())
-				return;
-
-			try
-			{
-				Nz::ByteStream fileStream(&chunkFile);
-				chunk.Deserialize(fileStream);
-			}
-			catch (const std::exception& e)
-			{
-				fmt::print(stderr, fg(fmt::color::red), "failed to load chunk {}: {}\n", fmt::streamed(chunkIndices), e.what());
-			}
+			return true;
 		});
 	}
 }

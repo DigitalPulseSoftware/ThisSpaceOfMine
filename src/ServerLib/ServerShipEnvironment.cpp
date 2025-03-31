@@ -122,6 +122,24 @@ namespace tsom
 		m_world->GetRegistry().ctx().erase<ServerShipEnvironment*>();
 	}
 
+	Nz::Boxf ServerShipEnvironment::ComputeBoundingBox() const
+	{
+		Nz::Boxf boundingBox = Nz::Boxf::Invalid();
+		auto& ship = *m_shipEntity.get<ShipComponent>().ship;
+		ship.ForEachChunk([&](const ChunkIndices& chunkIndices, Chunk& chunk)
+		{
+			Nz::Boxf chunkBox(Nz::Vector3f(chunk.GetBlockSize() * Ship::ChunkSize));
+			chunkBox.Translate(ship.GetChunkOffset(chunkIndices));
+
+			if (boundingBox.IsValid())
+				boundingBox.ExtendTo(chunkBox);
+			else
+				boundingBox = chunkBox;
+		});
+
+		return boundingBox;
+	}
+
 	entt::handle ServerShipEnvironment::CreateEntity()
 	{
 		return ServerEnvironment::CreateEntity();

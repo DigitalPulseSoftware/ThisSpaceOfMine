@@ -22,6 +22,7 @@ CREATE TABLE "planet_chunks" (
 	"position_z"	INTEGER NOT NULL,
 	"version"	INTEGER NOT NULL,
 	"chunk_data"	BLOB NOT NULL,
+	"last_update"   TEXT NOT NULL,
 	PRIMARY KEY("position_x","planet_id","position_y","position_z"),
 	FOREIGN KEY("planet_id") REFERENCES "planets"("id")
 ) WITHOUT ROWID,STRICT;

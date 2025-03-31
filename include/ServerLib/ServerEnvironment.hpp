@@ -36,6 +36,8 @@ namespace tsom
 			ServerEnvironment(ServerEnvironment&&) = delete;
 			virtual ~ServerEnvironment();
 
+			virtual Nz::Boxf ComputeBoundingBox() const = 0;
+
 			virtual entt::handle CreateEntity() = 0;
 
 			template<typename F> void ForEachPlayer(F&& callback);

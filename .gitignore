@@ -4,6 +4,11 @@ assets/*
 saves/
 gameconfig.lua
 serverconfig.lua
+src/CommonLib/VersionData.hpp
+project.autoversion.d
+*.dmp
+imgui.ini
+*.db
 
 # xmake-related files
 .xmake/*
@@ -161,7 +166,3 @@ DocProject/Help/*.hhk
 DocProject/Help/*.hhp
 DocProject/Help/Html2
 DocProject/Help/html
-src/CommonLib/VersionData.hpp
-project.autoversion.d
-*.dmp
-imgui.ini
