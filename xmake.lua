@@ -33,7 +33,7 @@ add_requires(
 	"perlinnoise",
 	"semver",
 	"sol2",
-	"sqlitecpp"
+	"sqlitecpp[sqlite3_external:y]"
 )
 
 if has_config("serveronly") then
@@ -64,7 +64,7 @@ add_requireconfs("fmt", "stackwalker", { debug = is_mode("debug") })
 
 -- Don't link with system-installed libs on CI
 if os.getenv("CI") then
-	add_requireconfs("*", { system = false })
+	add_requireconfs("*", "sqlitecpp.sqlite3", { system = false })
 end
 
 add_rules("mode.debug", "mode.releasedbg", "mode.release")
