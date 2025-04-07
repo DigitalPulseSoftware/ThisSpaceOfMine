@@ -492,32 +492,91 @@ namespace tsom
 
 			return;
 		}
-		else if (message == "/spawnplatform")
+		else if (message == "/spawntree" && m_player->HasPermission(PlayerPermission::Admin))
 		{
-// 			entt::handle playerEntity = m_player->GetControlledEntity();
-// 			if (playerEntity)
-// 			{
-// 				PlanetComponent* playerPlanet = playerEntity.try_get<PlanetComponent>();
-// 				if (playerPlanet)
-// 				{
-// 					const BlockLibrary& blockLibrary = m_player->GetServerInstance().GetBlockLibrary();
-// 
-// 					Nz::Vector3f playerPos = playerEntity.get<Nz::NodeComponent>().GetGlobalPosition();
-// 					ChunkIndices chunkIndices = playerPlanet->GetChunkIndicesByPosition(playerPos);
-// 					if (Chunk* chunk = playerPlanet->GetChunk(chunkIndices))
-// 					{
-// 						std::optional<Nz::Vector3ui> coords = chunk->ComputeCoordinates(playerPos);
-// 						if (coords)
-// 						{
-// 							Direction dir = DirectionFromNormal(playerPlanet->ComputeUpDirection(playerPos));
-// 							BlockIndices blockIndices = playerPlanet->GetBlockIndices(chunkIndices, *coords);
-// 							playerPlanet->GeneratePlatform(blockLibrary, dir, blockIndices);
-// 
-// 							fmt::print("generated platform at {};{};{}\n", blockIndices.x, blockIndices.y, blockIndices.z);
-// 						}
-// 					}
-// 				}
-// 			}
+			entt::handle playerEntity = m_player->GetControlledEntityReference();
+			if (!playerEntity)
+				return;
+
+			ServerInstance& serverInstance = m_player->GetServerInstance();
+
+			ServerEnvironment* currentEnvironment = ServerEnvironment::GetEnvironment(playerEntity);
+
+			std::shared_ptr<const EntityClass> treeClass = serverInstance.GetEntityRegistry().FindClass("tree");
+			if (!treeClass)
+				return;
+
+			const auto& characterController = m_player->GetCharacterController();
+			Nz::Quaternionf cameraRot = characterController->GetCameraRotation();
+
+			Nz::Vector3f hitPos, hitNormal;
+			entt::handle hitEntity;
+			std::uint32_t hitSubshapeID;
+			auto callback = [&](const Nz::Physics3DSystem::RaycastHit& hitInfo)
+			{
+				hitPos = hitInfo.hitPosition;
+				hitNormal = hitInfo.hitNormal;
+				hitEntity = hitInfo.hitEntity;
+				hitSubshapeID = hitInfo.subShapeID;
+			};
+
+			struct IgnorePlayer : Nz::PhysObjectLayerFilter3D
+			{
+				bool ShouldCollide(Nz::PhysObjectLayer3D layer) const override
+				{
+					return layer != Constants::ObjectLayerPlayer;
+				}
+			};
+			IgnorePlayer objectFilter;
+
+			auto& playerNode = playerEntity.get<Nz::NodeComponent>();
+
+			Nz::Vector3f cameraPos = characterController->GetEyePosition();
+
+			auto& physSystem = currentEnvironment->GetWorld().GetSystem<Nz::Physics3DSystem>();
+			if (physSystem.RaycastQueryFirst(cameraPos, cameraPos + cameraRot * Nz::Vector3f::Forward() * 10.f, callback, nullptr, &objectFilter))
+			{
+				entt::handle entity = currentEnvironment->CreateEntity();
+				entity.emplace<Nz::NodeComponent>(hitPos, Nz::Quaternionf::RotationBetween(Nz::Vector3f::Up(), hitNormal));
+				entity.emplace<NetworkedComponent>();
+				entity.emplace<DatabaseComponent>();
+
+				auto& treeInstance = entity.emplace<ClassInstanceComponent>(treeClass);
+				treeInstance.UpdateProperty<EntityPropertyType::Float>("scale", (float) std::rand() / RAND_MAX + 0.5f);
+
+				treeClass->InitAndActivateEntity(entity);
+			}
+
+			return;
+		}
+		else if (message == "/spawnplatform" && m_player->HasPermission(PlayerPermission::Admin))
+		{
+/*
+			entt::handle playerEntity = m_player->GetControlledEntity();
+			if (playerEntity)
+			{
+				PlanetComponent* playerPlanet = playerEntity.try_get<PlanetComponent>();
+				if (playerPlanet)
+				{
+					const BlockLibrary& blockLibrary = m_player->GetServerInstance().GetBlockLibrary();
+
+					Nz::Vector3f playerPos = playerEntity.get<Nz::NodeComponent>().GetGlobalPosition();
+					ChunkIndices chunkIndices = playerPlanet->GetChunkIndicesByPosition(playerPos);
+					if (Chunk* chunk = playerPlanet->GetChunk(chunkIndices))
+					{
+						std::optional<Nz::Vector3ui> coords = chunk->ComputeCoordinates(playerPos);
+						if (coords)
+						{
+							Direction dir = DirectionFromNormal(playerPlanet->ComputeUpDirection(playerPos));
+							BlockIndices blockIndices = playerPlanet->GetBlockIndices(chunkIndices, *coords);
+							playerPlanet->GeneratePlatform(blockLibrary, dir, blockIndices);
+
+							fmt::print("generated platform at {};{};{}\n", blockIndices.x, blockIndices.y, blockIndices.z);
+						}
+					}
+				}
+			}
+*/
 			return;
 		}
 		else if (message == "/spawnplanet" && m_player->HasPermission(PlayerPermission::Admin))
