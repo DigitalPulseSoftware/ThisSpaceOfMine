@@ -13,6 +13,10 @@
 namespace tsom
 {
 	ServerDatabase::PreparedStatements::PreparedStatements(SQLite::Database& database) :
+	createPlanetEntityQuery(database, "INSERT INTO planet_entities(unique_id, planet_id, class_name, class_version, position_x, position_y, position_z, rotation_x, rotation_y, rotation_z, rotation_w, properties, last_update) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime()) RETURNING id"),
+	deletePlanetEntityQuery(database, "DELETE FROM planet_entities WHERE id = ?"),
+	getAllPlanetEntitiesQuery(database, "SELECT id, unique_id, class_name, class_version, position_x, position_y, position_z, rotation_x, rotation_y, rotation_z, rotation_w, properties FROM planet_entities WHERE planet_id = ?"),
+	partialUpdatePlanetEntityQuery(database, "UPDATE planet_entities SET class_version = ?, position_x = ?, position_y = ?, position_z = ?, rotation_x = ?, rotation_y = ?, rotation_z = ?, rotation_w = ?, properties = ?, last_update = datetime() WHERE id = ?"),
 	getAllPlanetQuery(database, "SELECT id, generator, seed, chunk_count_x, chunk_count_y, chunk_count_z, corner_radius, gravity FROM planets"),
 	getAllPlanetLinkQuery(database, "SELECT source_planet_id, destination_planet_id, position_x, position_y, position_z FROM planet_links"),
 	getPlanetChunkQuery(database, "SELECT position_x, position_y, position_z, version, chunk_data FROM planet_chunks WHERE planet_id = ?"),
@@ -28,6 +32,37 @@ namespace tsom
 	{
 		Migrate();
 		PrepareQueries();
+	}
+
+	Nz::UInt32 ServerDatabase::CreatePlanetEntity(const Database::PlanetEntity& planetEntity)
+	{
+		NAZARA_DEFER({ m_preparedStatements->createPlanetEntityQuery.reset(); });
+
+		m_preparedStatements->createPlanetEntityQuery.bind(1, planetEntity.uniqueId.ToString());
+		m_preparedStatements->createPlanetEntityQuery.bind(2, planetEntity.planetId);
+		m_preparedStatements->createPlanetEntityQuery.bindNoCopy(3, planetEntity.className.data());
+		m_preparedStatements->createPlanetEntityQuery.bind(4, planetEntity.classVersion);
+		m_preparedStatements->createPlanetEntityQuery.bind(5, planetEntity.position.x);
+		m_preparedStatements->createPlanetEntityQuery.bind(6, planetEntity.position.y);
+		m_preparedStatements->createPlanetEntityQuery.bind(7, planetEntity.position.z);
+		m_preparedStatements->createPlanetEntityQuery.bind(8, planetEntity.rotation.x);
+		m_preparedStatements->createPlanetEntityQuery.bind(9, planetEntity.rotation.y);
+		m_preparedStatements->createPlanetEntityQuery.bind(10, planetEntity.rotation.z);
+		m_preparedStatements->createPlanetEntityQuery.bind(11, planetEntity.rotation.w);
+		m_preparedStatements->createPlanetEntityQuery.bind(12, planetEntity.properties.dump());
+
+		m_preparedStatements->createPlanetEntityQuery.executeStep();
+
+		return m_preparedStatements->createPlanetEntityQuery.getColumn(0);
+	}
+
+	void ServerDatabase::DeletePlanetEntity(Nz::UInt32 planetEntityId)
+	{
+		NAZARA_DEFER({ m_preparedStatements->deletePlanetEntityQuery.reset(); });
+
+		m_preparedStatements->deletePlanetEntityQuery.bind(1, planetEntityId);
+
+		m_preparedStatements->deletePlanetEntityQuery.exec();
 	}
 
 	void ServerDatabase::GetAllPlanets(Nz::FunctionRef<bool(Database::Planet&& /*planet*/)> callback) const
@@ -46,6 +81,35 @@ namespace tsom
 			planet.gravity = Nz::SafeCaster(m_preparedStatements->getAllPlanetQuery.getColumn(7).getDouble());
 
 			if (!callback(std::move(planet)))
+				break;
+		}
+	}
+
+	void ServerDatabase::GetAllPlanetEntities(Nz::UInt32 planetEntityId, Nz::FunctionRef<bool(Database::PlanetEntity&& /*planetEntities*/)> callback) const
+	{
+		NAZARA_DEFER({ m_preparedStatements->getAllPlanetEntitiesQuery.reset(); });
+
+		m_preparedStatements->getAllPlanetEntitiesQuery.bind(1, planetEntityId);
+
+		while (m_preparedStatements->getAllPlanetEntitiesQuery.executeStep())
+		{
+			Database::PlanetEntity planetEntity;
+			planetEntity.planetId = planetEntityId;
+
+			planetEntity.id = m_preparedStatements->getAllPlanetEntitiesQuery.getColumn(0);
+			planetEntity.uniqueId = Nz::Uuid::FromString(m_preparedStatements->getAllPlanetEntitiesQuery.getColumn(1).getText());
+			planetEntity.className = m_preparedStatements->getAllPlanetEntitiesQuery.getColumn(2).getText();
+			planetEntity.classVersion = m_preparedStatements->getAllPlanetEntitiesQuery.getColumn(3);
+			planetEntity.position.x = Nz::SafeCaster(m_preparedStatements->getAllPlanetEntitiesQuery.getColumn(4).getDouble());
+			planetEntity.position.y = Nz::SafeCaster(m_preparedStatements->getAllPlanetEntitiesQuery.getColumn(5).getDouble());
+			planetEntity.position.z = Nz::SafeCaster(m_preparedStatements->getAllPlanetEntitiesQuery.getColumn(6).getDouble());
+			planetEntity.rotation.x = Nz::SafeCaster(m_preparedStatements->getAllPlanetEntitiesQuery.getColumn(7).getDouble());
+			planetEntity.rotation.y = Nz::SafeCaster(m_preparedStatements->getAllPlanetEntitiesQuery.getColumn(8).getDouble());
+			planetEntity.rotation.z = Nz::SafeCaster(m_preparedStatements->getAllPlanetEntitiesQuery.getColumn(9).getDouble());
+			planetEntity.rotation.w = Nz::SafeCaster(m_preparedStatements->getAllPlanetEntitiesQuery.getColumn(10).getDouble());
+			planetEntity.properties = nlohmann::json::parse(m_preparedStatements->getAllPlanetEntitiesQuery.getColumn(11).getText());
+
+			if (!callback(std::move(planetEntity)))
 				break;
 		}
 	}
@@ -196,5 +260,32 @@ namespace tsom
 		m_preparedStatements->storePlanetLinkQuery.bind(5, planetLink.position.z);
 
 		m_preparedStatements->storePlanetLinkQuery.exec();
+	}
+
+	void ServerDatabase::Transaction(Nz::FunctionRef<bool(ServerDatabase& database)> callback)
+	{
+		SQLite::Transaction transaction(m_database);
+		if (callback(*this))
+			transaction.commit();
+		else
+			transaction.rollback();
+	}
+
+	void ServerDatabase::UpdatePlanetEntity(Nz::UInt32 planetEntityId, const Database::PlanetEntityPartial& planetEntity)
+	{
+		NAZARA_DEFER({ m_preparedStatements->partialUpdatePlanetEntityQuery.reset(); });
+
+		m_preparedStatements->partialUpdatePlanetEntityQuery.bind(1, planetEntity.classVersion);
+		m_preparedStatements->partialUpdatePlanetEntityQuery.bind(2, planetEntity.position.x);
+		m_preparedStatements->partialUpdatePlanetEntityQuery.bind(3, planetEntity.position.y);
+		m_preparedStatements->partialUpdatePlanetEntityQuery.bind(4, planetEntity.position.z);
+		m_preparedStatements->partialUpdatePlanetEntityQuery.bind(5, planetEntity.rotation.x);
+		m_preparedStatements->partialUpdatePlanetEntityQuery.bind(6, planetEntity.rotation.y);
+		m_preparedStatements->partialUpdatePlanetEntityQuery.bind(7, planetEntity.rotation.z);
+		m_preparedStatements->partialUpdatePlanetEntityQuery.bind(8, planetEntity.rotation.w);
+		m_preparedStatements->partialUpdatePlanetEntityQuery.bind(9, planetEntity.properties.dump());
+		m_preparedStatements->partialUpdatePlanetEntityQuery.bind(10, planetEntityId);
+
+		m_preparedStatements->partialUpdatePlanetEntityQuery.exec();
 	}
 }

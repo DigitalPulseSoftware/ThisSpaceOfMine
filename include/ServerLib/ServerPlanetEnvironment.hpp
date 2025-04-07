@@ -46,7 +46,8 @@ namespace tsom
 
 		private:
 			ServerAtmosphere* GetFallbackAtmosphereAtPosition(const Nz::Vector3f& position) override;
-			void LoadFromDatabase();
+			void LoadChunksFromDatabase();
+			void LoadEntitiesFromDatabase();
 
 			ServerAtmosphere m_atmosphere;
 			std::filesystem::path m_savePath;

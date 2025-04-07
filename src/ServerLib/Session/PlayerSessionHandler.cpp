@@ -17,6 +17,7 @@
 #include <ServerLib/ServerInstance.hpp>
 #include <ServerLib/ServerPlanetEnvironment.hpp>
 #include <ServerLib/ServerShipEnvironment.hpp>
+#include <ServerLib/Components/DatabaseComponent.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
 #include <ServerLib/Components/ServerInteractibleComponent.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
@@ -395,6 +396,7 @@ namespace tsom
 					entt::handle entity = currentEnvironment->CreateEntity();
 					entity.emplace<Nz::NodeComponent>(blockCenter + offset, Nz::Quaternionf::RotationBetween(Nz::Vector3f::Forward(), s_dirNormals[dir]));
 					entity.emplace<NetworkedComponent>();
+					entity.emplace<DatabaseComponent>();
 
 					entity.emplace<ClassInstanceComponent>(computerClass);
 					computerClass->InitAndActivateEntity(entity);

@@ -24,7 +24,7 @@ CREATE TABLE "planet_chunks" (
 	"chunk_data"	BLOB NOT NULL,
 	"last_update"   TEXT NOT NULL,
 	PRIMARY KEY("position_x","planet_id","position_y","position_z"),
-	FOREIGN KEY("planet_id") REFERENCES "planets"("id")
+	FOREIGN KEY("planet_id") REFERENCES "planets"("id") ON DELETE CASCADE
 ) WITHOUT ROWID,STRICT;
 
 CREATE TABLE "planet_links" (
@@ -34,6 +34,6 @@ CREATE TABLE "planet_links" (
 	"position_y"	REAL NOT NULL,
 	"position_z"	REAL NOT NULL,
 	PRIMARY KEY("source_planet_id","destination_planet_id"),
-	FOREIGN KEY("destination_planet_id") REFERENCES "planets"("id"),
-	FOREIGN KEY("source_planet_id") REFERENCES "planets"("id")
+	FOREIGN KEY("destination_planet_id") REFERENCES "planets"("id") ON DELETE CASCADE,
+	FOREIGN KEY("source_planet_id") REFERENCES "planets"("id") ON DELETE CASCADE
 ) WITHOUT ROWID,STRICT;

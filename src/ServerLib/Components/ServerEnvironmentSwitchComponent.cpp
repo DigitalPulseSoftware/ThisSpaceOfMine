@@ -9,13 +9,13 @@
 #include <CommonLib/Components/TickComponent.hpp>
 #include <ServerLib/ServerEnvironment.hpp>
 #include <ServerLib/Components/AtmosphereMonitor.hpp>
+#include <ServerLib/Components/DatabaseComponent.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
 #include <ServerLib/Systems/NetworkedEntitiesSystem.hpp>
 #include <Nazara/Core/Components/DisabledComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/RigidBody3D.hpp>
 #include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
-#include <entt/entt.hpp>
 
 namespace tsom
 {
@@ -91,6 +91,9 @@ namespace tsom
 
 		if (TickComponent* tickComponent = oldEntity.try_get<TickComponent>())
 			newEntity.emplace<TickComponent>(*tickComponent);
+
+		if (DatabaseComponent* databaseComponent = oldEntity.try_get<DatabaseComponent>())
+			newEntity.emplace<DatabaseComponent>(databaseComponent->uniqueId); // don't copy database planet id!
 
 		if (handleEnvironmentSwitch)
 			handleEnvironmentSwitch(oldEntity, newEntity, relativeTransform);

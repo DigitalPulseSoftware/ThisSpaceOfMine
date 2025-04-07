@@ -11,7 +11,9 @@
 #include <CommonLib/Systems/GravityPhysicsSystem.hpp>
 #include <CommonLib/Systems/PlanetSystem.hpp>
 #include <ServerLib/ServerInstance.hpp>
+#include <ServerLib/Components/DatabaseComponent.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
+#include <ServerLib/Systems/PlanetDatabaseSystem.hpp>
 #include <ServerLib/Systems/EnvironmentSwitchSystem.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/ByteArray.hpp>
@@ -50,7 +52,7 @@ namespace tsom
 		planetComponent.planet->AddChunks(blockLibrary, chunkCount);
 
 		if (m_databaseId)
-			LoadFromDatabase();
+			LoadChunksFromDatabase();
 
 		auto& app = serverInstance.GetApplication();
 		auto& taskScheduler = app.GetComponent<Nz::TaskSchedulerAppComponent>();
@@ -86,6 +88,14 @@ namespace tsom
 		m_world->AddSystem<BuoyancySystem>(*planetComponent.planet, physicsSystem.GetPhysWorld(), m_debugDrawer.get());
 		m_world->AddSystem<GravityPhysicsSystem>(*planetComponent.planet, physicsSystem.GetPhysWorld());
 		m_world->AddSystem<PlanetSystem>();
+
+		if (m_databaseId)
+		{
+			ServerDatabase& serverDatabase = m_serverInstance.GetServerDatabase();
+			m_world->AddSystem<PlanetDatabaseSystem>(serverDatabase, *m_databaseId);
+
+			LoadEntitiesFromDatabase();
+		}
 	}
 
 	ServerPlanetEnvironment::~ServerPlanetEnvironment()
@@ -149,59 +159,65 @@ namespace tsom
 
 	void ServerPlanetEnvironment::OnSave()
 	{
-		if (m_dirtyChunks.empty() || !m_databaseId)
+		if (!m_databaseId)
 			return;
 
-		fmt::print("saving {} dirty chunks...\n", m_dirtyChunks.size());
-
-		BinaryCompressor& binaryCompressor = BinaryCompressor::GetThreadCompressor();
-		ServerDatabase& serverDatabase = m_serverInstance.GetServerDatabase();
-		const Planet& planet = GetPlanet();
-
-		Nz::ByteArray byteArray;
-		for (const ChunkIndices& chunkIndices : m_dirtyChunks)
+		if (!m_dirtyChunks.empty())
 		{
-			byteArray.Clear();
+			fmt::print("saving {} dirty chunks...\n", m_dirtyChunks.size());
 
-			Nz::ByteStream byteStream(&byteArray);
-			planet.GetChunk(chunkIndices)->Serialize(byteStream);
+			BinaryCompressor& binaryCompressor = BinaryCompressor::GetThreadCompressor();
+			ServerDatabase& serverDatabase = m_serverInstance.GetServerDatabase();
+			const Planet& planet = GetPlanet();
 
-			Nz::UInt32 decompressedSize = Nz::SafeCaster(byteArray.GetSize());
+			Nz::ByteArray byteArray;
+			for (const ChunkIndices& chunkIndices : m_dirtyChunks)
+			{
+				byteArray.Clear();
 
-			std::optional compressedDataOpt = binaryCompressor.Compress(byteArray.GetBuffer(), byteArray.GetSize());
-			if NAZARA_UNLIKELY(!compressedDataOpt)
-				throw std::runtime_error("chunk compression failed");
+				Nz::ByteStream byteStream(&byteArray);
+				planet.GetChunk(chunkIndices)->Serialize(byteStream);
 
-			std::span<Nz::UInt8>& compressedData = *compressedDataOpt;
+				Nz::UInt32 decompressedSize = Nz::SafeCaster(byteArray.GetSize());
 
-			// Reuse byteArray
-			byteArray.Clear();
-			byteArray.Resize(sizeof(Nz::UInt32) + compressedData.size());
+				std::optional compressedDataOpt = binaryCompressor.Compress(byteArray.GetBuffer(), byteArray.GetSize());
+				if NAZARA_UNLIKELY(!compressedDataOpt)
+					throw std::runtime_error("chunk compression failed");
 
-			decompressedSize = Nz::HostToLittleEndian(decompressedSize);
-			std::memcpy(&byteArray[0], &decompressedSize, sizeof(decompressedSize));
-			std::memcpy(&byteArray[sizeof(decompressedSize)], &compressedData[0], compressedData.size());
+				std::span<Nz::UInt8>& compressedData = *compressedDataOpt;
 
-			serverDatabase.StorePlanetChunk(Database::PlanetChunk{
-				.planetId = *m_databaseId,
-				.position = chunkIndices,
-				.version = s_chunkVersion,
-				.chunkData = std::span(byteArray.GetBuffer(), byteArray.GetSize())
-			});
+				// Reuse byteArray
+				byteArray.Clear();
+				byteArray.Resize(sizeof(Nz::UInt32) + compressedData.size());
+
+				decompressedSize = Nz::HostToLittleEndian(decompressedSize);
+				std::memcpy(&byteArray[0], &decompressedSize, sizeof(decompressedSize));
+				std::memcpy(&byteArray[sizeof(decompressedSize)], &compressedData[0], compressedData.size());
+
+				serverDatabase.StorePlanetChunk(Database::PlanetChunk{
+					.planetId = *m_databaseId,
+					.position = chunkIndices,
+					.version = s_chunkVersion,
+					.chunkData = std::span(byteArray.GetBuffer(), byteArray.GetSize())
+					});
+			}
+			m_dirtyChunks.clear();
 		}
-		m_dirtyChunks.clear();
+
+		if (PlanetDatabaseSystem* databaseSystem = m_world->TryGetSystem<PlanetDatabaseSystem>())
+			databaseSystem->Save();
 	}
 
 	ServerAtmosphere* ServerPlanetEnvironment::GetFallbackAtmosphereAtPosition(const Nz::Vector3f& position)
 	{
 		Planet& planet = GetPlanet();
-		if (position.SquaredDistance(planet.GetCenter()) > Nz::IntegralPow(100, 2))
+		if (position.SquaredDistance(planet.GetCenter()) > Nz::IntegralPow(150, 2))
 			return nullptr; //< too far away
 
 		return &m_atmosphere;
 	}
 
-	void ServerPlanetEnvironment::LoadFromDatabase()
+	void ServerPlanetEnvironment::LoadChunksFromDatabase()
 	{
 		NazaraAssert(m_databaseId);
 
@@ -235,6 +251,30 @@ namespace tsom
 				chunk = &planet.AddChunk(blockLibrary, planetChunk.position);
 
 			chunk->Deserialize(byteStream);
+
+			return true;
+		});
+	}
+
+	void ServerPlanetEnvironment::LoadEntitiesFromDatabase()
+	{
+		ServerDatabase& serverDatabase = m_serverInstance.GetServerDatabase();
+		serverDatabase.GetAllPlanetEntities(*m_databaseId, [&](Database::PlanetEntity&& planetEntity)
+		{
+			std::shared_ptr<const EntityClass> entityClass = m_serverInstance.GetEntityRegistry().FindClass(planetEntity.className);
+			if (!entityClass)
+			{
+				NazaraError("Database entity {} has unknown class {}", planetEntity.id, planetEntity.className);
+				return true;
+			}
+
+			entt::handle entity = CreateEntity();
+			entity.emplace<Nz::NodeComponent>(planetEntity.position, planetEntity.rotation);
+			entity.emplace<NetworkedComponent>();
+			entity.emplace<DatabaseComponent>(planetEntity.uniqueId, planetEntity.id);
+
+			entity.emplace<ClassInstanceComponent>(entityClass, entityClass->PropertiesFromJson(planetEntity.properties));
+			entityClass->InitAndActivateEntity(entity);
 
 			return true;
 		});

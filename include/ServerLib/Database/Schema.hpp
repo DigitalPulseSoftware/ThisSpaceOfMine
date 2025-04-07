@@ -7,7 +7,10 @@
 #ifndef TSOM_SERVERLIB_DATABASE_SCHEMA_HPP
 #define TSOM_SERVERLIB_DATABASE_SCHEMA_HPP
 
+#include <Nazara/Core/Uuid.hpp>
+#include <Nazara/Math/Quaternion.hpp>
 #include <Nazara/Math/Vector3.hpp>
+#include <nlohmann/json.hpp>
 #include <span>
 #include <string_view>
 
@@ -29,6 +32,22 @@ namespace tsom::Database
 		Nz::Vector3i32 position;
 		Nz::UInt32 version;
 		std::span<const Nz::UInt8> chunkData;
+	};
+
+	struct PlanetEntityPartial
+	{
+		Nz::UInt32 classVersion;
+		Nz::Vector3f position;
+		Nz::Quaternionf rotation;
+		nlohmann::json properties;
+	};
+
+	struct PlanetEntity : PlanetEntityPartial
+	{
+		Nz::UInt32 id;
+		Nz::Uuid uniqueId;
+		Nz::UInt32 planetId;
+		std::string_view className;
 	};
 
 	struct PlanetLink

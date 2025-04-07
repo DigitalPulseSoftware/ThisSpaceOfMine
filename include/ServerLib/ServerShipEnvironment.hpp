@@ -136,6 +136,7 @@ namespace tsom
 			tsl::hopscotch_map<ChunkIndices, ChunkData> m_chunkData;
 			tsl::hopscotch_set<Chunk*> m_invalidatedChunks;
 			ServerEnvironment* m_exteriorEnvironment;
+			bool m_isInteriorAreaColliderGenerated;
 			bool m_isInteriorAreaColliderInvalidated;
 			int m_saveSlot;
 	};

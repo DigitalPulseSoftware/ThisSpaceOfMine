@@ -29,13 +29,21 @@ namespace tsom
 			ServerDatabase(ServerDatabase&&) = delete;
 			~ServerDatabase() = default;
 
+			Nz::UInt32 CreatePlanetEntity(const Database::PlanetEntity& planetEntity);
+			void DeletePlanetEntity(Nz::UInt32 planetEntityId);
+
 			void GetAllPlanets(Nz::FunctionRef<bool(Database::Planet&& /*planet*/)> callback) const;
+			void GetAllPlanetEntities(Nz::UInt32 planetEntityId, Nz::FunctionRef<bool(Database::PlanetEntity&& /*planetEntities*/)> callback) const;
 			void GetAllPlanetLinks(Nz::FunctionRef<bool(Database::PlanetLink&& /*planetLink*/)> callback) const;
 			void GetPlanetChunks(Nz::UInt32 planetId, Nz::FunctionRef<bool(Database::PlanetChunk&& /*PlanetChunk*/)> callback) const;
 
 			void StorePlanet(const Database::Planet& planetChunk);
 			void StorePlanetChunk(const Database::PlanetChunk& planetChunk);
 			void StorePlanetLink(const Database::PlanetLink& planetChunk);
+
+			void Transaction(Nz::FunctionRef<bool(ServerDatabase& database)> callback);
+
+			void UpdatePlanetEntity(Nz::UInt32 planetEntityId, const Database::PlanetEntityPartial& planetEntity);
 
 			ServerDatabase& operator=(const ServerDatabase&) = delete;
 			ServerDatabase& operator=(ServerDatabase&&) = delete;
@@ -47,6 +55,12 @@ namespace tsom
 			struct PreparedStatements
 			{
 				PreparedStatements(SQLite::Database& database);
+
+				// planet entities
+				SQLite::Statement createPlanetEntityQuery;
+				SQLite::Statement deletePlanetEntityQuery;
+				SQLite::Statement getAllPlanetEntitiesQuery;
+				SQLite::Statement partialUpdatePlanetEntityQuery;
 
 				SQLite::Statement getAllPlanetQuery;
 				SQLite::Statement getAllPlanetLinkQuery;

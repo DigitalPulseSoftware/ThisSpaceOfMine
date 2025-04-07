@@ -10,9 +10,11 @@
 #include <CommonLib/Systems/BuoyancySystem.hpp>
 #include <CommonLib/Systems/GravityPhysicsSystem.hpp>
 #include <CommonLib/Systems/ShipSystem.hpp>
+#include <CommonLib/Utility/JsonSerialization.hpp>
 #include <ServerLib/PlayerTokenAppComponent.hpp>
 #include <ServerLib/ServerInstance.hpp>
 #include <ServerLib/Components/AtmosphereCarrier.hpp>
+#include <ServerLib/Components/DatabaseComponent.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
 #include <ServerLib/Components/ServerEnvironmentSwitchComponent.hpp>
 #include <ServerLib/Components/ShipExteriorComponent.hpp>
@@ -36,6 +38,7 @@ namespace tsom
 	m_playerUuid(playerUuid),
 	m_shouldSave(std::make_shared<bool>(false)),
 	m_exteriorEnvironment(nullptr),
+	m_isInteriorAreaColliderGenerated(false),
 	m_isInteriorAreaColliderInvalidated(false),
 	m_saveSlot(saveSlot)
 	{
@@ -133,7 +136,7 @@ namespace tsom
 			}
 
 			entt::registry& registry = m_world->GetRegistry();
-			auto switchView = registry.view<Nz::NodeComponent, ClassInstanceComponent, ServerEnvironmentSwitchComponent>();
+			auto switchView = registry.view<Nz::NodeComponent, ClassInstanceComponent, ServerEnvironmentSwitchComponent>(entt::exclude<DatabaseComponent>);
 			for (entt::entity entity : switchView)
 			{
 				auto& envSwitch = switchView.get<ServerEnvironmentSwitchComponent>(entity);
@@ -169,6 +172,7 @@ namespace tsom
 
 	entt::handle ServerShipEnvironment::CreateEntity()
 	{
+		*m_shouldSave = true; //< TODO: Have a system tracking entities changes to know when this is interesting
 		return ServerEnvironment::CreateEntity();
 	}
 
@@ -233,6 +237,7 @@ namespace tsom
 			if (version != 1)
 				return Nz::Err(fmt::format("unhandled version {}", version));
 
+			// Load chunks
 			const nlohmann::json& chunks = data["chunks"];
 			if (chunks.empty())
 				return Nz::Err("no chunk in ship save");
@@ -263,6 +268,40 @@ namespace tsom
 				chunk.Deserialize(byteStream);
 			}
 
+			// Load entities
+			if (auto it = data.find("entities"); it != data.end())
+			{
+				const nlohmann::json& entities = *it;
+
+				std::size_t entityIndex = 0;
+				for (const nlohmann::json& entityDoc : entities)
+				{
+					const std::string& uniqueId = entityDoc["unique_id"];
+					const std::string& className = entityDoc["class_name"];
+					Nz::UInt32 classVersion = entityDoc["class_version"];
+					Nz::Vector3f position = entityDoc["position"];
+					Nz::Quaternionf rotation = entityDoc["rotation"];
+					const nlohmann::json& propertiesDoc = entityDoc["properties"];
+
+					std::shared_ptr<const EntityClass> entityClass = m_serverInstance.GetEntityRegistry().FindClass(className);
+					if (!entityClass)
+					{
+						NazaraError("Database entity #{} has unknown class {}", entityIndex, className);
+						continue;
+					}
+
+					entt::handle entity = CreateEntity();
+					entity.emplace<Nz::NodeComponent>(position, rotation);
+					entity.emplace<NetworkedComponent>();
+					entity.emplace<DatabaseComponent>(Nz::Uuid::FromString(uniqueId)); //< no planet id for ships
+
+					entity.emplace<ClassInstanceComponent>(entityClass, entityClass->PropertiesFromJson(propertiesDoc));
+					entityClass->InitAndActivateEntity(entity);
+
+					entityIndex++;
+				}
+			}
+
 			return Nz::Ok();
 		}
 		catch (const std::exception& e)
@@ -276,8 +315,10 @@ namespace tsom
 		if (!m_playerUuid || !*m_shouldSave)
 			return;
 
-		nlohmann::json chunks;
+		nlohmann::json chunks = nlohmann::json::array();
+		nlohmann::json entities = nlohmann::json::array();
 
+		// Chunks
 		BinaryCompressor& binaryCompressor = BinaryCompressor::GetThreadCompressor();
 		Nz::ByteArray byteArray;
 		GetShip().ForEachChunk([&](const ChunkIndices& chunkIndices, const Chunk& chunk)
@@ -302,15 +343,33 @@ namespace tsom
 			chunkDoc["chunk_datasize"] = byteArray.GetSize();
 		});
 
+		// Entities
+		auto entityView = m_world->GetRegistry().view<Nz::NodeComponent, DatabaseComponent, ClassInstanceComponent>();
+		for (auto&& [entity, entityNode, entityDatabase, entityClassInstance] : entityView.each())
+		{
+			const auto& entityClass = entityClassInstance.GetClass();
+
+			nlohmann::json& entityDoc = entities.emplace_back();
+			entityDoc["unique_id"] = entityDatabase.uniqueId.ToString();
+			entityDoc["class_name"] = entityClass->GetName();
+			entityDoc["class_version"] = 1; //< TODO
+			entityDoc["position"] = entityNode.GetPosition();
+			entityDoc["rotation"] = entityNode.GetRotation();
+			entityDoc["properties"] = entityClass->PropertiesToJson(entityClassInstance.GetProperties());
+		}
+
+		bool hasEntities = !entities.empty();
+
 		nlohmann::json shipData;
 		shipData["chunks"] = std::move(chunks);
+		shipData["entities"] = std::move(entities);
 		shipData["version"] = Nz::UInt32(1);
 
 		nlohmann::json body;
 		body["data"] = shipData.dump();
 
 		auto& playerToken = m_serverInstance.GetApplication().GetComponent<PlayerTokenAppComponent>();
-		playerToken.QueueRequest(*m_playerUuid, Nz::WebRequestMethod::Patch, fmt::format("/v1/player_ship/{}", m_saveSlot), body, [shouldSave = m_shouldSave, uuid = *m_playerUuid](Nz::UInt32 code, const std::string& body)
+		playerToken.QueueRequest(*m_playerUuid, Nz::WebRequestMethod::Patch, fmt::format("/v1/player_ship/{}", m_saveSlot), body, [shouldSave = m_shouldSave, uuid = *m_playerUuid, hasEntities](Nz::UInt32 code, const std::string& body)
 		{
 			if (code != 200)
 			{
@@ -318,7 +377,8 @@ namespace tsom
 				return;
 			}
 
-			*shouldSave = false;
+			if (!hasEntities)
+				*shouldSave = false;
 		});
 	}
 
@@ -363,12 +423,13 @@ namespace tsom
 		if (m_isInteriorAreaColliderInvalidated)
 		{
 			m_interiorAreaColliders = BuildInteriorAreaCollider();
+			m_isInteriorAreaColliderGenerated = true;
 			m_isInteriorAreaColliderInvalidated = false;
 
 			OnInteriorColliderUpdated();
 		}
 
-		if (m_exteriorEnvironment && m_exteriorEntity)
+		if (m_exteriorEnvironment && m_exteriorEntity && m_isInteriorAreaColliderGenerated) //< ensure interior finished computing before allowing entities to exit
 		{
 			entt::registry& registry = m_world->GetRegistry();
 			auto switchView = registry.view<Nz::NodeComponent, ClassInstanceComponent, ServerEnvironmentSwitchComponent>();

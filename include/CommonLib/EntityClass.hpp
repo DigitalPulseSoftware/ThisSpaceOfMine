@@ -10,8 +10,10 @@
 #include <CommonLib/Export.hpp>
 #include <CommonLib/EntityProperties.hpp>
 #include <entt/fwd.hpp>
+#include <nlohmann/json_fwd.hpp>
 #include <tsl/hopscotch_map.h>
 #include <functional>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -44,6 +46,9 @@ namespace tsom
 
 			void InitAndActivateEntity(entt::handle entity) const;
 			void InitEntity(entt::handle entity) const;
+
+			std::vector<EntityProperty> PropertiesFromJson(const nlohmann::json& propertiesJson) const;
+			nlohmann::json PropertiesToJson(std::span<const EntityProperty> properties) const;
 
 			EntityClass& operator=(const EntityClass&) = delete;
 			EntityClass& operator=(EntityClass&&) noexcept = default;
