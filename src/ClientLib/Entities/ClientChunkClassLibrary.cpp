@@ -3,11 +3,13 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ClientLib/Entities/ClientChunkClassLibrary.hpp>
+#include <ClientLib/ClientAssetLibraryAppComponent.hpp>
 #include <ClientLib/ClientBlockLibrary.hpp>
 #include <ClientLib/ClientChunkEntities.hpp>
-#include <CommonLib/AtmosphereScattering.hpp>
 #include <ClientLib/Components/ChunkNetworkMapComponent.hpp>
+#include <CommonLib/AtmosphereScattering.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
+#include <Nazara/Core/ApplicationBase.hpp>
 
 namespace tsom
 {

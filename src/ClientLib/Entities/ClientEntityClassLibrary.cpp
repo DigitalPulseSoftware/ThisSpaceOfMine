@@ -3,8 +3,6 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ClientLib/Entities/ClientEntityClassLibrary.hpp>
-#include <CommonLib/EntityClass.hpp>
-#include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <entt/entt.hpp>
 #include <fmt/format.h>
 

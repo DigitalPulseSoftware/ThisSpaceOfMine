@@ -4,11 +4,11 @@
 
 #include <Game/GameAppComponent.hpp>
 #include <ClientLib/RenderConstants.hpp>
+#include <ClientLib/Rendering/AtmosphereScatteringPipelinePass.hpp>
 #include <ClientLib/Systems/AnimationSystem.hpp>
 #include <ClientLib/Systems/CameraFollowerSystem.hpp>
 #include <ClientLib/Systems/NetworkMovementInterpolationSystem.hpp>
 #include <ClientLib/Systems/PhysicsInterpolationSystem.hpp>
-#include <ClientLib/Rendering/AtmosphereScatteringPipelinePass.hpp>
 #include <ClientLib/Systems/TransformCopySystem.hpp>
 #include <CommonLib/DownloadManager.hpp>
 #include <CommonLib/GameConstants.hpp>
