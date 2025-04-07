@@ -5,16 +5,11 @@ local classData = EntityRegistry.ClassBuilder()
 classData:AddProperty("scale", { type = "float", default = 1, isNetworked = true })
 
 classData:On("init", function (self)
-	local physSettings = {
-		kind = "static",
-		objectLayer = Constants.ObjectLayerStatic
-	}
-
 	if CLIENT then
 		local model = AssetLibrary.GetModel("tree-01-" .. math.random(1, 4))
 
 		local gfx = self:AddComponent("graphics")
-		gfx:AttachRenderable(model, Constants.RenderMaskOther)
+		gfx:AttachRenderable(model, Constants.RenderMask3D)
 
 		local node = self:GetComponent("node")
 		node:Scale(Vec3f(self:GetProperty("scale")))
