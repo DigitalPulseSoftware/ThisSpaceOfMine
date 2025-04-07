@@ -34,7 +34,9 @@ namespace tsom
 
 		private:
 			void RegisterAssetLibrary(sol::state& state);
+			void RegisterMaterial(sol::state& state);
 			void RegisterMaterialInstance(sol::state& state);
+			void RegisterMaterialSettings(sol::state& state);
 			void RegisterRenderables(sol::state& state);
 			void RegisterRenderStates(sol::state& state);
 			void RegisterTexture(sol::state& state);

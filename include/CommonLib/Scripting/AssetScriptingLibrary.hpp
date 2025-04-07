@@ -39,6 +39,7 @@ namespace tsom
 
 		private:
 			void RegisterMesh(sol::state& state);
+			void RegisterPrimitive(sol::state& state);
 			void RegisterSubMesh(sol::state& state);
 	};
 }

@@ -8,8 +8,10 @@
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
+#include <Nazara/Graphics/Material.hpp>
 #include <Nazara/Graphics/MaterialInstance.hpp>
 #include <Nazara/Graphics/Model.hpp>
+#include <Nazara/Graphics/PredefinedMaterials.hpp>
 #include <Nazara/Graphics/TextureAsset.hpp>
 #include <NazaraUtils/FunctionTraits.hpp>
 #include <fmt/format.h>
@@ -39,7 +41,9 @@ namespace tsom
 		state["SERVER"] = false;
 
 		RegisterAssetLibrary(state);
+		RegisterMaterial(state);
 		RegisterMaterialInstance(state);
+		RegisterMaterialSettings(state);
 		RegisterRenderables(state);
 		RegisterRenderStates(state);
 		RegisterTexture(state);
@@ -62,6 +66,20 @@ namespace tsom
 		});
 	}
 
+	void ClientAssetScriptingLibrary::RegisterMaterial(sol::state& state)
+	{
+		state.new_usertype<Nz::Material>("Material",
+			sol::meta_function::construct, sol::factories([](sol::this_state L, std::unique_ptr<Nz::MaterialSettings>& materialSettings, std::string referenceShader)
+			{
+				if (!materialSettings)
+					TriggerLuaArgError(L, 1, "material settings can be used only once");
+
+				return std::make_shared<Nz::Material>(std::move(*materialSettings), std::move(referenceShader));
+			}),
+			"Instantiate", LuaFunction(&Nz::Material::Instantiate)
+		);
+	}
+
 	void ClientAssetScriptingLibrary::RegisterMaterialInstance(sol::state& state)
 	{
 		state.new_enum("MaterialType",
@@ -80,8 +98,16 @@ namespace tsom
 			sol::meta_function::bitwise_or, &Nz::MaterialInstancePresetFlags::operator|
 		);
 
-		state.new_usertype<Nz::MaterialInstance>(
-			"MaterialInstance", sol::no_constructor,
+		state.new_usertype<Nz::MaterialInstance>("MaterialInstance",
+			sol::no_constructor,
+
+			"ApplyPreset", LuaFunction(&Nz::MaterialInstance::ApplyPreset),
+
+			"DisablePass", LuaFunction(Nz::Overload<std::string_view>(&Nz::MaterialInstance::DisablePass)),
+			"EnablePass", LuaFunction([](Nz::MaterialInstance& mat, std::string_view passName, sol::optional<bool> enable)
+			{
+				mat.EnablePass(passName, enable.value_or(true));
+			}),
 
 			"SetTextureProperty", LuaFunction(Nz::Overload<std::string_view, std::shared_ptr<Nz::TextureAsset>>(&Nz::MaterialInstance::SetTextureProperty)),
 			"SetValueProperty", sol::overload(
@@ -132,6 +158,48 @@ namespace tsom
 		);
 	}
 
+	void ClientAssetScriptingLibrary::RegisterMaterialSettings(sol::state& state)
+	{
+		state.new_usertype<nzsl::ShaderStageTypeFlags>("ShaderStageType",
+			sol::no_constructor,
+
+			"Compute", sol::var(nzsl::ShaderStageTypeFlags(nzsl::ShaderStageType::Compute)),
+			"Fragment", sol::var(nzsl::ShaderStageTypeFlags(nzsl::ShaderStageType::Fragment)),
+			"Vertex",   sol::var(nzsl::ShaderStageTypeFlags(nzsl::ShaderStageType::Vertex)),
+
+			sol::meta_function::bitwise_or, &nzsl::ShaderStageTypeFlags::operator|
+		);
+
+		state.new_usertype<Nz::MaterialSettings>("MaterialSettings",
+			sol::meta_function::construct, sol::factories([] { return std::make_unique<Nz::MaterialSettings>(); }),
+			"AddPredefinedBasicSettings", LuaFunction([](Nz::MaterialSettings& settings)
+			{
+				Nz::PredefinedMaterials::AddBasicSettings(settings);
+			}),
+			"AddPass", LuaFunction([](Nz::MaterialSettings& settings, std::string_view passName, sol::stack_table passParameters)
+			{
+				Nz::MaterialPass pass;
+				pass.flags = passParameters.get_or("flags", pass.flags);
+				pass.states = passParameters.get_or("states", pass.states);
+
+				sol::table shaderTable = passParameters["shaders"];
+				for (auto&& [key, value] : shaderTable)
+				{
+					sol::table shaderEntryTable = value;
+
+					std::string shaderName = shaderEntryTable["shader"];
+					nzsl::ShaderStageTypeFlags shaderStageTypes = shaderEntryTable["stages"];
+
+					pass.shaders.emplace_back(std::make_shared<Nz::UberShader>(shaderStageTypes, std::move(shaderName)));
+				}
+
+				// TODO: options
+
+				settings.AddPass(passName, std::move(pass));
+			})
+		);
+	}
+
 	void ClientAssetScriptingLibrary::RegisterRenderables(sol::state& state)
 	{
 		state.new_usertype<Nz::InstancedRenderable>("InstancedRenderable",
@@ -159,6 +227,7 @@ namespace tsom
 
 				return model;
 			}),
+			"UpdateRenderLayer", LuaFunction(&Nz::Model::UpdateRenderLayer),
 			"Load", LuaFunction([this](std::string assetPath, sol::optional<sol::table> paramOpt)
 			{
 				Nz::Model::Params params;
@@ -210,8 +279,22 @@ namespace tsom
 			"None", Nz::FaceCulling::None
 		);
 
+		state.new_enum("FaceFilling",
+			"Fill", Nz::FaceFilling::Fill,
+			"Line", Nz::FaceFilling::Line,
+			"Point", Nz::FaceFilling::Point
+		);
+
 		state.new_usertype<Nz::RenderStates>("RenderStates",
+			sol::meta_function::construct, LuaFunction([]
+			{
+				Nz::RenderStates states;
+				states.depthCompare = Nz::RendererComparison::GreaterOrEqual;
+
+				return states;
+			}),
 			"faceCulling", &Nz::RenderStates::faceCulling,
+			"faceFilling", &Nz::RenderStates::faceFilling,
 
 			"blending",    &Nz::RenderStates::blending,
 			"depthBias",   &Nz::RenderStates::depthBias,

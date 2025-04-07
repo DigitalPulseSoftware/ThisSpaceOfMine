@@ -7,6 +7,7 @@
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <Nazara/Core/Mesh.hpp>
+#include <Nazara/Core/Primitive.hpp>
 #include <Nazara/Core/SkeletalMesh.hpp>
 #include <Nazara/Core/StaticMesh.hpp>
 #include <NazaraUtils/FunctionTraits.hpp>
@@ -20,6 +21,7 @@ namespace tsom
 	void AssetScriptingLibrary::Register(sol::state& state)
 	{
 		RegisterMesh(state);
+		RegisterPrimitive(state);
 		RegisterSubMesh(state);
 	}
 
@@ -30,6 +32,12 @@ namespace tsom
 			"AddSubMesh", sol::overload(
 				LuaFunction(Nz::Overload<std::shared_ptr<Nz::SubMesh>>(&Nz::Mesh::AddSubMesh)),
 				LuaFunction(Nz::Overload<std::string, std::shared_ptr<Nz::SubMesh>>(&Nz::Mesh::AddSubMesh))
+			),
+			"BuildSubMesh", sol::overload(
+				LuaFunction([](Nz::Mesh& mesh, const Nz::Primitive& primitive)
+				{
+					return mesh.BuildSubMesh(primitive);
+				})
 			),
 			"GetAABB", LuaFunction(&Nz::Mesh::GetAABB),
 			"GetMaterialData", LuaFunction([](const Nz::Mesh& mesh, std::size_t index)
@@ -83,6 +91,19 @@ namespace tsom
 
 				return mesh;
 			})
+		);
+	}
+
+	void AssetScriptingLibrary::RegisterPrimitive(sol::state& state)
+	{
+		state.new_usertype<Nz::Primitive>("Primitive",
+			sol::no_constructor,
+			"IcoSphere", sol::overload(
+				[](float size, unsigned int recursionLevel, const Nz::Vector3f& position)
+				{
+					return Nz::Primitive::IcoSphere(size, recursionLevel, position);
+				}
+			)
 		);
 	}
 
