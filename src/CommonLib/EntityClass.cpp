@@ -78,7 +78,7 @@ namespace tsom
 			std::size_t propertyIndex = it->second;
 			const auto& propertyData = m_properties[propertyIndex];
 
-			auto Deserialize = [&, propertyName = propertyName](auto dummyType)
+			auto Deserialize = [&, &propertyName = propertyName, &propertyValue = propertyValue](auto dummyType)
 			{
 				using T = std::decay_t<decltype(dummyType)>;
 
@@ -126,7 +126,7 @@ namespace tsom
 		{
 			NazaraAssert(propertyIndex < properties.size());
 
-			std::visit([&](auto&& propertyValue)
+			std::visit([&, &propertyName = propertyName](auto&& propertyValue)
 			{
 				using T = std::decay_t<decltype(propertyValue)>;
 				using TypeExtractor = EntityPropertyTypeExtractor<T>;
