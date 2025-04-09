@@ -3,22 +3,16 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <Game/States/PlayState.hpp>
-#include <CommonLib/GameConstants.hpp>
-#include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/UpdaterAppComponent.hpp>
-#include <CommonLib/Version.hpp>
 #include <Game/GameConfigAppComponent.hpp>
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/CreatePlayerState.hpp>
 #include <Game/States/DirectConnectionState.hpp>
 #include <Game/States/GameState.hpp>
-#include <Game/States/UpdateState.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/StateMachine.hpp>
-#include <Nazara/Core/StringExt.hpp>
 #include <Nazara/Network/Algorithm.hpp>
 #include <Nazara/Network/IpAddress.hpp>
-#include <Nazara/Network/Network.hpp>
 #include <Nazara/Network/WebServiceAppComponent.hpp>
 #include <Nazara/TextRenderer/SimpleTextDrawer.hpp>
 #include <Nazara/Widgets/BoxLayout.hpp>
@@ -134,7 +128,7 @@ namespace tsom
 		webService.QueueRequest([&](Nz::WebRequest& request)
 		{
 			request.SetMethod(Nz::WebRequestMethod::Post);
-			request.SetURL(fmt::format("{}/v1/player/auth", gameConfig.GetStringValue("Api.Url"), BuildConfig));
+			request.SetURL(fmt::format("{}/v1/player/auth", gameConfig.GetStringValue("Api.Url")));
 			request.SetServiceName("TSOM Player Info");
 
 			nlohmann::json connectBody;
@@ -208,7 +202,7 @@ namespace tsom
 			webService.QueueRequest([&](Nz::WebRequest& request)
 			{
 				request.SetMethod(Nz::WebRequestMethod::Post);
-				request.SetURL(fmt::format("{}/v1/game/connect", gameConfig.GetStringValue("Api.Url"), BuildConfig));
+				request.SetURL(fmt::format("{}/v1/game/connect", gameConfig.GetStringValue("Api.Url")));
 				request.SetServiceName("TSOM Player Info");
 
 				nlohmann::json connectBody;

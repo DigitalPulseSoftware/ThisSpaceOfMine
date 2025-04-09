@@ -3,21 +3,13 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <Game/States/CreatePlayerState.hpp>
-#include <CommonLib/GameConstants.hpp>
-#include <CommonLib/InternalConstants.hpp>
-#include <CommonLib/UpdaterAppComponent.hpp>
-#include <CommonLib/Version.hpp>
 #include <Game/GameConfigAppComponent.hpp>
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/GameState.hpp>
-#include <Game/States/UpdateState.hpp>
 #include <Nazara/Widgets.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/StateMachine.hpp>
-#include <Nazara/Core/StringExt.hpp>
-#include <Nazara/Network/Algorithm.hpp>
 #include <Nazara/Network/IpAddress.hpp>
-#include <Nazara/Network/Network.hpp>
 #include <Nazara/Network/WebServiceAppComponent.hpp>
 #include <Nazara/TextRenderer/SimpleTextDrawer.hpp>
 #include <fmt/color.h>
@@ -96,7 +88,7 @@ namespace tsom
 		webService.QueueRequest([&, nickname](Nz::WebRequest& request) mutable
 		{
 			request.SetMethod(Nz::WebRequestMethod::Post);
-			request.SetURL(fmt::format("{}/v1/players", gameConfig.GetStringValue("Api.Url"), BuildConfig));
+			request.SetURL(fmt::format("{}/v1/players", gameConfig.GetStringValue("Api.Url")));
 			request.SetServiceName("TSOM Player Create");
 
 			nlohmann::json createParams;

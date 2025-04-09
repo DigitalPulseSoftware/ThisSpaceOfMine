@@ -65,7 +65,7 @@ namespace tsom
 			m_isCancelled = true;
 		});
 
-		updater.DownloadAndUpdate(m_updateInfo, m_updateInfo.assetVersion > currentGameVersion, m_updateInfo.binaryVersion > currentGameVersion);
+		updater.DownloadAndUpdate(m_updateInfo, m_updateInfo.assetVersion > currentGameVersion, m_updateInfo.binaryVersion > currentGameVersion, true, true);
 	}
 
 	bool UpdateState::Update(Nz::StateMachine& fsm, Nz::Time elapsedTime)

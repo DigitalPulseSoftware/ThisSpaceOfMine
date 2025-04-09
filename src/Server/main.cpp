@@ -3,7 +3,10 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/HealthCheckerAppComponent.hpp>
+#include <CommonLib/InternalConstants.hpp>
+#include <CommonLib/UpdaterAppComponent.hpp>
 #include <Server/ServerConfigAppComponent.hpp>
+#include <Server/ServerUpdateAppComponent.hpp>
 #include <ServerLib/PlayerTokenAppComponent.hpp>
 #include <ServerLib/ServerInstanceAppComponent.hpp>
 #include <ServerLib/Session/InitialSessionHandler.hpp>
@@ -47,6 +50,26 @@ int ServerMain(int argc, char* argv[])
 	}
 
 	auto& config = configAppComponent.GetConfig();
+
+	if (config.GetBoolValue("Server.AutoUpdater.Enabled"))
+	{
+		app.AddComponent<tsom::UpdaterAppComponent>(config);
+
+		tsom::ServerUpdateAppComponent::UpdateBehavior updateBehavior;
+		const std::string& updateBehaviorStr = config.GetStringValue("Server.AutoUpdater.Behavior");
+		if (updateBehaviorStr == "downloadandexit")
+			updateBehavior = tsom::ServerUpdateAppComponent::UpdateBehavior::DownloadAndExit;
+		else
+		{
+			NazaraAssertMsg(updateBehaviorStr == "downloadandupdate", "unexpected update behavior %s", updateBehaviorStr.c_str());
+			updateBehavior = tsom::ServerUpdateAppComponent::UpdateBehavior::DownloadAndUpdate;
+		}
+
+		Nz::Time checkInterval = Nz::Time::Seconds(config.GetIntegerValue<long long>("Server.AutoUpdater.CheckInterval"));
+		Nz::Time quitDelay = Nz::Time::Seconds(config.GetIntegerValue<long long>("Server.AutoUpdater.QuitDelay"));
+
+		app.AddComponent<tsom::ServerUpdateAppComponent>(updateBehavior, checkInterval, quitDelay);
+	}
 
 	Nz::UInt16 serverPort = config.GetIntegerValue<Nz::UInt16>("Server.Port");
 

@@ -63,11 +63,15 @@ namespace tsom
 		m_downloadManager.Cancel();
 	}
 
-	void UpdaterAppComponent::DownloadAndUpdate(const UpdateInfo& updateInfo, bool downloadAssets, bool downloadBinaries)
+	void UpdaterAppComponent::DownloadAndUpdate(const UpdateInfo& updateInfo, bool downloadAssets, bool downloadBinaries, bool downloadUpdater, bool startUpdateWhenReady)
 	{
 		assert(downloadAssets || downloadBinaries);
+		assert(!startUpdateWhenReady || downloadUpdater);
 
-		m_activeDownloads.clear(); //< just in case
+		// just in case
+		m_activeDownloads.clear();
+		m_updaterDownload.reset();
+
 		auto QueueDownload = [&](std::string_view filename, const UpdateInfo::DownloadInfo& info, bool isExecutable = false)
 		{
 			auto download = m_downloadManager.QueueDownload(Nz::Utf8Path(filename), info.downloadUrl, info.size, info.sha256, false, isExecutable);
@@ -82,7 +86,8 @@ namespace tsom
 		if (downloadBinaries)
 			m_updateArchives.push_back(QueueDownload("autoupdate_binaries", updateInfo.binaries));
 
-		m_updaterDownload = QueueDownload("this_updater_of_mine", updateInfo.updater, true);
+		if (downloadUpdater)
+			m_updaterDownload = QueueDownload("this_updater_of_mine", updateInfo.updater, true);
 
 		for (auto& downloadPtr : m_activeDownloads)
 		{
@@ -96,19 +101,27 @@ namespace tsom
 				UpdateProgression();
 			});
 
-			downloadPtr->OnDownloadFinished.Connect([this](const DownloadManager::Download&)
+			downloadPtr->OnDownloadFinished.Connect([this, startUpdateWhenReady](const DownloadManager::Download&)
 			{
 				if (!m_downloadManager.HasDownloadInProgress())
-					StartUpdaterAndQuit();
+				{
+					OnUpdateReady();
+					if (startUpdateWhenReady)
+						StartUpdaterAndQuit();
+				}
 			});
 		}
 
 		// Can happen if all files were already downloaded
 		if (!m_downloadManager.HasDownloadInProgress())
-			StartUpdaterAndQuit();
+		{
+			OnUpdateReady();
+			if (startUpdateWhenReady)
+				StartUpdaterAndQuit();
+		}
 	}
 
-	void UpdaterAppComponent::FetchLastVersion(std::function<void(Nz::Result<UpdateInfo, std::string>&& updateInfo)>&& callback)
+	void UpdaterAppComponent::FetchLastVersion(bool server, std::function<void(Nz::Result<UpdateInfo, std::string>&& updateInfo)>&& callback)
 	{
 		auto* webService = GetApp().TryGetComponent<Nz::WebServiceAppComponent>();
 		if (!webService)
@@ -117,10 +130,10 @@ namespace tsom
 			return;
 		}
 
-		webService->QueueRequest([&](Nz::WebRequest& request)
+		webService->QueueRequest([&, server](Nz::WebRequest& request)
 		{
 			request.SetMethod(Nz::WebRequestMethod::Get);
-			request.SetURL(fmt::format("{}/game_version?platform={}", m_configFile.GetStringValue("Api.Url"), BuildConfig));
+			request.SetURL(fmt::format("{}/game_version?platform={}{}_{}", m_configFile.GetStringValue("Api.Url"), BuildPlatform, server ? "-server" : "", BuildArch));
 			request.SetServiceName("TSOM Version Check");
 			request.SetResultCallback([cb = std::move(callback)](Nz::WebRequestResult&& result)
 			{
@@ -158,33 +171,39 @@ namespace tsom
 	{
 		OnUpdateStarting();
 
-		Nz::Pid pid = Nz::Process::GetCurrentPid();
-
-		std::vector<std::string> args;
-		args.push_back(std::to_string(pid)); // pid to wait before starting update
-
-		// TODO: Add a way to retrieve executable name (or use argv[0]?)
-#ifdef NAZARA_PLATFORM_WINDOWS
-		args.push_back("ThisSpaceOfMine.exe");
-#else
-		args.push_back("./ThisSpaceOfMine");
-#endif
-
-		for (auto& downloadPtr : m_updateArchives)
-			args.push_back(Nz::PathToString(downloadPtr->filepath));
-
-		Nz::Result updater = Nz::Process::SpawnDetached(m_updaterDownload->filepath, args);
-		if (!updater)
+		if (m_updaterDownload)
 		{
-			fmt::print(fg(fmt::color::red), "failed to start autoupdater process: {0}\n", updater.GetError());
-			return;
+			Nz::Pid pid = Nz::Process::GetCurrentPid();
+
+			std::vector<std::string> args;
+			args.push_back(fmt::format("--pid={}", pid)); // pid to wait before starting update
+
+			for (auto& downloadPtr : m_updateArchives)
+			{
+				args.push_back("--archive");
+				args.push_back(Nz::PathToString(downloadPtr->filepath));
+			}
+
+			std::span<const char*> applicationArgs = GetApp().GetArgs();
+
+			args.push_back("--executable");
+			args.push_back(applicationArgs[0]);
+
+			for (std::size_t i = 1; i < applicationArgs.size(); ++i)
+			{
+				args.push_back("--arg");
+				args.push_back(applicationArgs[i]);
+			}
+
+			Nz::Result updater = Nz::Process::SpawnDetached(m_updaterDownload->filepath, args);
+			if (!updater)
+			{
+				fmt::print(fg(fmt::color::red), "failed to start autoupdater process: {0}\n", updater.GetError());
+				return;
+			}
 		}
 
 		GetApp().Quit();
-	}
-
-	void UpdaterAppComponent::Update(Nz::Time elapsedTime)
-	{
 	}
 
 	void UpdaterAppComponent::UpdateProgression()

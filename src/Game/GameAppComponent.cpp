@@ -153,7 +153,7 @@ namespace tsom
 					return false;
 				}
 
-				updater->FetchLastVersion([updater](Nz::Result<UpdateInfo, std::string>&& result)
+				updater->FetchLastVersion(false, [updater](Nz::Result<UpdateInfo, std::string>&& result)
 				{
 					if (!result)
 					{
@@ -189,7 +189,7 @@ namespace tsom
 						fmt::print("update is starting...\n");
 					});
 
-					updater->DownloadAndUpdate(result.GetValue(), true, false);
+					updater->DownloadAndUpdate(result.GetValue(), true, false, true, true);
 				});
 			}
 			else

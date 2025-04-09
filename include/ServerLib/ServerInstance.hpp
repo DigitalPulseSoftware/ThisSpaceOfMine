@@ -50,7 +50,7 @@ namespace tsom
 
 			template<typename... Args> NetworkSessionManager& AddSessionManager(Args&&... args);
 
-			void BroadcastChatMessage(std::string message, std::optional<PlayerIndex> senderIndex);
+			void BroadcastChatMessage(std::string message, std::optional<PlayerIndex> senderIndex = std::nullopt);
 
 			ServerPlayer* CreateAnonymousPlayer(NetworkSession* session, std::string nickname);
 			ServerPlayer* CreateAuthenticatedPlayer(NetworkSession* session, const Nz::Uuid& uuid, std::string nickname, PlayerPermissionFlags permissions);

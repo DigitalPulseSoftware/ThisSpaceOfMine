@@ -9,4 +9,11 @@ namespace tsom
 	{
 		return *m_instances.emplace_back(std::make_unique<ServerInstance>(GetApp(), std::forward<Args>(args)...));
 	}
+
+	template<typename F>
+	void ServerInstanceAppComponent::ForEachInstance(F&& callback)
+	{
+		for (auto& instancePtr : m_instances)
+			callback(*instancePtr);
+	}
 }

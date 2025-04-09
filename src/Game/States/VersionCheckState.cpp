@@ -68,7 +68,7 @@ namespace tsom
 		if (!updater)
 			return;
 
-		updater->FetchLastVersion([state = std::static_pointer_cast<VersionCheckState>(shared_from_this())](Nz::Result<UpdateInfo, std::string>&& result)
+		updater->FetchLastVersion(false, [state = std::static_pointer_cast<VersionCheckState>(shared_from_this())](Nz::Result<UpdateInfo, std::string>&& result)
 		{
 			if (!result)
 			{

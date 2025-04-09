@@ -189,7 +189,7 @@ target("CommonLib", function ()
 		if targetplat == "macosx" then
 			targetplat = "macos"
 		end
-		local buildconf = string.format("%s_%s", targetplat, target:arch())
+		local targetarch = target:arch()
 
 		local dependfile = target:dependfile("versioninfo")
 		depend.on_changed(function ()
@@ -201,18 +201,19 @@ target("CommonLib", function ()
 std::uint32_t GameMajorVersion = %s;
 std::uint32_t GameMinorVersion = %s;
 std::uint32_t GamePatchVersion = %s;
-std::string_view BuildConfig = "%s";
+std::string_view BuildPlatform = "%s";
+std::string_view BuildArch = "%s";
 std::string_view BuildSystem = "%s";
 std::string_view BuildBranch = "%s";
 std::string_view BuildCommit = "%s";
 std::string_view BuildCommitDate = "%s";
-]], targetversion:major(), targetversion:minor(), targetversion:patch(), buildconf, system, branch, commitHash, commitDate))
+]], targetversion:major(), targetversion:minor(), targetversion:patch(), targetplat, targetarch, system, branch, commitHash, commitDate))
 		end,
 		{
 			dependfile = dependfile, 
 			files = targetfile,
 			changed = target:is_rebuilt(),
-			values = {targetversion:shortstr(), buildconf, system, branch, commitHash, commitDate}
+			values = {targetversion:shortstr(), targetplat, targetarch, system, branch, commitHash, commitDate}
 		})
 	end)
 end)
