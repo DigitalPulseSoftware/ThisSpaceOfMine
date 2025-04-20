@@ -87,11 +87,10 @@ int ServerMain(int argc, char* argv[])
 	sessionManager.SetDefaultHandler<tsom::InitialSessionHandler>(std::ref(instance));
 
 	std::filesystem::path saveDirectory = Nz::Utf8Path(config.GetStringValue("Save.Directory"));
-	bool isDirectory = std::filesystem::is_directory(saveDirectory);
 
 	if (isMigratingToDatabase)
 	{
-		if (isDirectory)
+		if (std::filesystem::is_directory(saveDirectory))
 		{
 			spdlog::warn("first time launching after sqlite switch.");
 
