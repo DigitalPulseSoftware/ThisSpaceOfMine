@@ -10,6 +10,15 @@ namespace tsom
 		return *m_sessionManagers.emplace_back(std::make_unique<NetworkSessionManager>(std::forward<Args>(args)...));
 	}
 
+	inline ServerEnvironment* ServerInstance::FindEnvironmentFromDatabaseId(Nz::UInt32 databaseId) const
+	{
+		auto it = m_databaseEnvironments.find(databaseId);
+		if (it == m_databaseEnvironments.end())
+			return nullptr;
+
+		return it.value().get();
+	}
+
 	inline ServerPlayer* ServerInstance::FindPlayerByNickname(std::string_view nickname)
 	{
 		for (ServerPlayer& serverPlayer : m_players)

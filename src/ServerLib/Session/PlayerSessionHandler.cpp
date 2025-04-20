@@ -76,6 +76,10 @@ namespace tsom
 
 	void PlayerSessionHandler::HandlePacket(Packets::C_Interact&& interact)
 	{
+		entt::handle playerEntity = m_player->GetControlledEntityReference();
+		if (!playerEntity)
+			return; //< player is either dead or not spawned yet
+
 		entt::handle entity;
 		if (!m_player->GetVisibilityHandler().GetEntityByNetworkId(interact.entityId, &entity))
 			return;
@@ -98,6 +102,10 @@ namespace tsom
 
 	void PlayerSessionHandler::HandlePacket(Packets::C_MineBlock&& mineBlock)
 	{
+		entt::handle playerEntity = m_player->GetControlledEntityReference();
+		if (!playerEntity)
+			return; //< player is either dead or not spawned yet
+
 		Chunk* chunk;
 		if (!m_player->GetVisibilityHandler().GetChunkByNetworkId(mineBlock.chunkId, nullptr, &chunk))
 			return; //< ignore
@@ -115,6 +123,10 @@ namespace tsom
 
 	void PlayerSessionHandler::HandlePacket(Packets::C_PlaceBlock&& placeBlock)
 	{
+		entt::handle playerEntity = m_player->GetControlledEntityReference();
+		if (!playerEntity)
+			return; //< player is either dead or not spawned yet
+
 		Chunk* chunk;
 		entt::handle entityOwner;
 		if (!m_player->GetVisibilityHandler().GetChunkByNetworkId(placeBlock.chunkId, &entityOwner, &chunk))
@@ -144,8 +156,58 @@ namespace tsom
 			m_player->Respawn(spawnpoint.env, spawnpoint.position, spawnpoint.rotation);
 			return;
 		}
+		else if (message.starts_with("/tpplanet "))
+		{
+			constexpr std::size_t commandLength = sizeof("/tpplanet ") - 1;
+
+			Nz::UInt32 planetId;
+			const char* last = message.data() + message.size();
+			std::from_chars_result res = std::from_chars(&message[commandLength], last, planetId);
+			if (res.ptr != last || res.ec != std::errc{})
+			{
+				m_player->SendChatMessage("failed to parse planet id");
+				return;
+			}
+
+			auto& serverInstance = m_player->GetServerInstance();
+			ServerEnvironment* env = serverInstance.FindEnvironmentFromDatabaseId(planetId);
+			if (!env)
+			{
+				m_player->SendChatMessage("invalid planet id");
+				return;
+			}
+
+			Nz::Boxf planetAABB = env->ComputeBoundingBox();
+
+			Nz::Vector3f planetCenter = planetAABB.GetCenter();
+			Nz::Vector3f spawnPos = planetCenter + planetAABB.GetRadius() * Nz::Vector3f::Up();
+
+			auto callback = [&](const Nz::Physics3DSystem::RaycastHit& hitInfo)
+			{
+				spawnPos = hitInfo.hitPosition + hitInfo.hitNormal * Constants::PlayerColliderHeight;
+			};
+
+			struct IgnorePlayer : Nz::PhysObjectLayerFilter3D
+			{
+				bool ShouldCollide(Nz::PhysObjectLayer3D layer) const override
+				{
+					return layer != Constants::ObjectLayerPlayer;
+				}
+			};
+			IgnorePlayer objectFilter;
+
+			auto& physSystem = env->GetWorld().GetSystem<Nz::Physics3DSystem>();
+			physSystem.RaycastQueryFirst(spawnPos, planetCenter, callback, nullptr, &objectFilter);
+
+			m_player->UpdateRootEnvironment(env);
+			m_player->Respawn(env, spawnPos, Nz::Quaternionf::Identity());
+		}
 		else if (message == "/fly")
 		{
+			entt::handle playerEntity = m_player->GetControlledEntityReference();
+			if (!playerEntity)
+				return; //< player is either dead or not spawned yet
+
 			m_player->GetCharacterController()->EnableFlying(!m_player->GetCharacterController()->IsFlying());
 
 			Packets::S_ChatMessage chatMessage;
@@ -156,6 +218,10 @@ namespace tsom
 		}
 		else if (message == "/spawnship" || message.starts_with("/spawnship "))
 		{
+			entt::handle playerEntity = m_player->GetControlledEntityReference();
+			if (!playerEntity)
+				return; //< player is either dead or not spawned yet
+
 			constexpr std::size_t commandLength = sizeof("/spawnship ") - 1;
 
 			int slot = 0;
@@ -174,13 +240,6 @@ namespace tsom
 					m_player->SendChatMessage("slot must lie in [0;3[");
 					return;
 				}
-			}
-
-			entt::handle playerEntity = m_player->GetControlledEntityReference();
-			if (!playerEntity)
-			{
-				spdlog::warn("player {} tried to spawn ship but has no entity", m_player->GetNickname());
-				return;
 			}
 
 			ServerInstance& serverInstance = m_player->GetServerInstance();
@@ -282,9 +341,10 @@ namespace tsom
 
 			ServerInstance& serverInstance = m_player->GetServerInstance();
 			ServerEnvironment* currentEnvironment = ServerEnvironment::GetEnvironment(playerEntity);
+			if (currentEnvironment->GetType() != ServerEnvironmentType::Planet)
+				return;
 
-			// Bad temporary code
-			ServerPlanetEnvironment* planetEnvironment = dynamic_cast<ServerPlanetEnvironment*>(currentEnvironment);
+			ServerPlanetEnvironment* planetEnvironment = static_cast<ServerPlanetEnvironment*>(currentEnvironment);
 			if (!planetEnvironment)
 				return;
 
@@ -549,6 +609,61 @@ namespace tsom
 				treeClass->InitAndActivateEntity(entity);
 			}
 
+			return;
+		}
+		else if (message == "/removetree" && m_player->HasPermission(PlayerPermission::Admin))
+		{
+			entt::handle playerEntity = m_player->GetControlledEntityReference();
+			if (!playerEntity)
+				return;
+
+			ServerInstance& serverInstance = m_player->GetServerInstance();
+
+			ServerEnvironment* currentEnvironment = ServerEnvironment::GetEnvironment(playerEntity);
+
+			std::shared_ptr<const EntityClass> treeClass = serverInstance.GetEntityRegistry().FindClass("tree");
+			if (!treeClass)
+				return;
+
+			const auto& characterController = m_player->GetCharacterController();
+			Nz::Quaternionf cameraRot = characterController->GetCameraRotation();
+
+			Nz::Vector3f hitPos;
+			auto callback = [&](const Nz::Physics3DSystem::RaycastHit& hitInfo)
+			{
+				hitPos = hitInfo.hitPosition;
+			};
+
+			struct IgnorePlayer : Nz::PhysObjectLayerFilter3D
+			{
+				bool ShouldCollide(Nz::PhysObjectLayer3D layer) const override
+				{
+					return layer != Constants::ObjectLayerPlayer;
+				}
+			};
+			IgnorePlayer objectFilter;
+
+			auto& playerNode = playerEntity.get<Nz::NodeComponent>();
+
+			Nz::Vector3f cameraPos = characterController->GetEyePosition();
+
+			auto& physSystem = currentEnvironment->GetWorld().GetSystem<Nz::Physics3DSystem>();
+			if (physSystem.RaycastQueryFirst(cameraPos, cameraPos + cameraRot * Nz::Vector3f::Forward() * 10.f, callback, nullptr, &objectFilter))
+			{
+				entt::registry& environmentRegistry = currentEnvironment->GetWorld().GetRegistry();
+				auto classInstanceView = environmentRegistry.view<Nz::NodeComponent, ClassInstanceComponent>();
+				for (auto&& [entity, entityNode, classInstance] : classInstanceView.each())
+				{
+					if (classInstance.GetClass() == treeClass && entityNode.GetPosition().SquaredDistance(hitPos) < Nz::IntegralPow(0.5f, 2))
+					{
+						environmentRegistry.destroy(entity);
+						m_player->SendChatMessage("Tree removed");
+						return;
+					}
+				}
+			}
+
+			m_player->SendChatMessage("No tree found");
 			return;
 		}
 		else if (message == "/spawnplatform" && m_player->HasPermission(PlayerPermission::Admin))

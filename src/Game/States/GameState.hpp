@@ -59,6 +59,16 @@ namespace tsom
 			GameState& operator=(GameState&&) = delete;
 
 		private:
+			enum class CameraMode
+			{
+				Firstperson,
+				Thirdperson,
+				ThirdpersonRear,
+
+				First = Firstperson,
+				Last = ThirdpersonRear
+			};
+
 			struct RaycastResult
 			{
 				entt::handle hitEntity;
@@ -69,6 +79,7 @@ namespace tsom
 
 			void BindControlledEntitySignals();
 			void LayoutWidgets(const Nz::Vector2f& newSize) override;
+			Nz::Vector3f RaycastCamera(const Nz::Vector3f& from, const Nz::Vector3f& to);
 			std::optional<RaycastResult> RaycastQuery() const;
 			void OnTick(Nz::Time elapsedTime, bool lastTick);
 			void SendInputs();
@@ -123,13 +134,19 @@ namespace tsom
 				Nz::EulerAnglesf inputRotation;
 			};
 
+			struct PilotedShip
+			{
+				entt::handle exteriorEntity;
+				entt::handle interiorEntity;
+			};
+
 			std::optional<ConsoleExecutor> m_consoleExecutor;
+			std::optional<PilotedShip> m_pilotedShip;
 			std::shared_ptr<DebugOverlay> m_debugOverlay;
 			std::vector<InputRotation> m_predictedInputRotations;
 			tsl::hopscotch_map<Nz::UInt64, DebugDrawLines> m_debugDrawLines;
 			entt::handle m_cameraEntity;
 			entt::handle m_controlledEntity;
-			entt::handle m_shipEntity;
 			entt::handle m_crosshairEntity;
 			entt::handle m_skyboxEntity;
 			entt::handle m_sunLightEntity;
@@ -147,6 +164,7 @@ namespace tsom
 			Nz::Time m_tickDuration;
 			Nz::TimerManager m_timerManager;
 			Nz::UInt8 m_nextInputIndex;
+			CameraMode m_cameraMode;
 			HealthOxygen m_healthOxygen;
 			Nz::SimpleLabelWidget* m_interactionLabel;
 			BlockSelectionBar* m_blockSelectionBar;
@@ -155,7 +173,9 @@ namespace tsom
 			Console* m_remoteConsole;
 			EscapeMenu* m_escapeMenu;
 			bool m_isMouseLocked;
-			unsigned int m_cameraMode;
+			float m_currentCameraDistance;
+			float m_defaultCameraDistance;
+			float m_targetCameraDistance;
 	};
 }
 

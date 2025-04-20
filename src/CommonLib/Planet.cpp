@@ -131,7 +131,7 @@ namespace tsom
 		constexpr float PlanetGravityCenterNoGravity = 4.f;
 		constexpr float PlanetGravitySpaceStart = 100.f;
 		constexpr float PlanetGravitySpaceFinish = 150.f;
-		constexpr float PlanetGravitySpaceNone = 250.f;
+		constexpr float PlanetGravitySpaceNone = 350.f;
 
 		// Decrease gravity near the center
 		float distSq = position.SquaredDistance(GetCenter());

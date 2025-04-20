@@ -56,6 +56,7 @@ namespace tsom
 			ServerPlayer* CreateAuthenticatedPlayer(NetworkSession* session, const Nz::Uuid& uuid, std::string nickname, PlayerPermissionFlags permissions);
 			void DestroyPlayer(PlayerIndex playerIndex);
 
+			inline ServerEnvironment* FindEnvironmentFromDatabaseId(Nz::UInt32 databaseId) const;
 			inline ServerPlayer* FindPlayerByNickname(std::string_view nickname);
 			inline const ServerPlayer* FindPlayerByNickname(std::string_view nickname) const;
 			inline ServerPlayer* FindPlayerByUuid(const Nz::Uuid& uuid);

@@ -69,8 +69,8 @@ namespace tsom
 	m_tickAccumulator(Nz::Time::Zero()),
 	m_tickDuration(Constants::TickDuration),
 	m_nextInputIndex(1),
-	m_isMouseLocked(true),
-	m_cameraMode(0)
+	m_cameraMode(CameraMode::Firstperson),
+	m_isMouseLocked(true)
 	{
 		auto& stateData = GetStateData();
 		auto& filesystem = stateData.app->GetComponent<Nz::FilesystemAppComponent>();
@@ -260,13 +260,20 @@ namespace tsom
 
 		m_mouseWheelMovedSlot.Connect(stateData.window->GetEventHandler().OnMouseWheelMoved, [&](const Nz::WindowEventHandler* /*eventHandler*/, const Nz::WindowEvent::MouseWheelEvent& event)
 		{
-			if (!m_isMouseLocked || !m_blockSelectionBar->IsVisible())
+			if (!m_isMouseLocked)
 				return;
 
-			if (event.delta < 0.f)
-				m_blockSelectionBar->SelectNext();
-			else
-				m_blockSelectionBar->SelectPrevious();
+			if (m_pilotedShip)
+			{
+				m_targetCameraDistance = Nz::Clamp(m_targetCameraDistance - event.delta, m_defaultCameraDistance * 0.5f, m_defaultCameraDistance * 2.f);
+			}
+			else if (!m_blockSelectionBar->IsVisible())
+			{
+				if (event.delta < 0.f)
+					m_blockSelectionBar->SelectNext();
+				else
+					m_blockSelectionBar->SelectPrevious();
+			}
 		});
 
 		m_escapeMenu = CreateWidget<EscapeMenu>();
@@ -368,7 +375,7 @@ namespace tsom
 						m_remoteConsole->Hide();
 					else if (m_chatBox->IsOpen())
 						m_chatBox->Close();
-					else if (m_shipEntity)
+					else if (m_pilotedShip)
 						stateData.networkSession->SendPacket(Packets::C_ExitShipControl{});
 					else
 						m_escapeMenu->Show();
@@ -478,12 +485,13 @@ namespace tsom
 
 				case Nz::Keyboard::Scancode::F5:
 				{
-					m_cameraMode++;
-					if (m_cameraMode > 2)
-						m_cameraMode = 0;
+					if (m_cameraMode >= CameraMode::Last)
+						m_cameraMode = CameraMode::First;
+					else
+						m_cameraMode = static_cast<CameraMode>(Nz::UnderlyingCast(m_cameraMode) + 1);
 
 					auto& cameraComponent = m_cameraEntity.get<Nz::CameraComponent>();
-					if (m_cameraMode > 0)
+					if (m_cameraMode != CameraMode::Firstperson)
 						cameraComponent.UpdateRenderMask(tsom::Constants::RenderMask3D);
 					else
 						cameraComponent.UpdateRenderMask(tsom::Constants::RenderMask3D & ~tsom::Constants::RenderMaskLocalPlayer);
@@ -590,8 +598,12 @@ namespace tsom
 
 		m_onControlledShip.Connect(stateData.sessionHandler->OnControlledShip, [this](entt::handle shipEntity, entt::handle shipExteriorEntity, const Nz::Quaternionf& referenceRotation)
 		{
-			m_shipEntity = shipExteriorEntity;
-			bool isControllingShip = static_cast<bool>(m_shipEntity);
+			m_pilotedShip = PilotedShip{
+				.exteriorEntity = shipExteriorEntity,
+				.interiorEntity = shipEntity
+			};
+
+			bool isControllingShip = static_cast<bool>(shipExteriorEntity);
 
 			m_blockSelectionBar->Show(!isControllingShip);
 			m_crosshairEntity.get<Nz::GraphicsComponent>().Show(isControllingShip);
@@ -617,13 +629,17 @@ namespace tsom
 					});
 				}
 			}
+
+			m_targetCameraDistance = m_currentCameraDistance = m_defaultCameraDistance = m_shipAABB.GetRadius();
+			LayoutWidgets(Nz::Vector2f(GetStateData().renderTarget->GetSize()));
 		});
 
 		m_onControlledShipFinished.Connect(stateData.sessionHandler->OnControlledShipFinished, [this]
 		{
-			m_shipEntity = {};
+			m_pilotedShip = {};
 			m_blockSelectionBar->Show();
 			m_crosshairEntity.get<Nz::GraphicsComponent>().Show(false);
+			LayoutWidgets(Nz::Vector2f(GetStateData().renderTarget->GetSize()));
 		});
 
 		m_escapeMenu->OnDisconnect.Connect([this](EscapeMenu* /*menu*/)
@@ -684,7 +700,7 @@ namespace tsom
 
 			auto& stateData = GetStateData();
 
-			if (!m_shipEntity)
+			if (!m_pilotedShip)
 			{
 				if (auto raycastHit = RaycastQuery())
 				{
@@ -843,7 +859,7 @@ namespace tsom
 			Nz::Quaternionf characterRot = characterNode.GetGlobalRotation();
 
 			Nz::EulerAnglesf predictedCameraRotation = m_predictedCameraRotation;
-			if (!m_shipEntity)
+			if (!m_pilotedShip)
 			{
 				predictedCameraRotation.pitch = Nz::Clamp(predictedCameraRotation.pitch + m_incomingCameraRotation.pitch, -89.f, 89.f);
 				predictedCameraRotation.yaw += m_incomingCameraRotation.yaw;
@@ -852,7 +868,7 @@ namespace tsom
 
 			switch (m_cameraMode)
 			{
-				case 0:
+				case CameraMode::Firstperson:
 				{
 					const Nz::Node* environmentNode = characterNode.GetParent();
 					if NAZARA_UNLIKELY(!environmentNode)
@@ -866,61 +882,64 @@ namespace tsom
 					Nz::Quaternionf cameraRotation = environmentNode->GetGlobalRotation() * m_referenceRotation * Nz::Quaternionf(predictedCameraRotation);
 					cameraRotation.Normalize();
 
-					if (m_shipEntity)
+					if (m_pilotedShip)
 						cameraRotation *= m_currentShipRotation;
 
 					cameraNode.SetRotation(cameraRotation);
-
-					auto& cameraComponent = m_cameraEntity.get<Nz::CameraComponent>();
-
-					Nz::DegreeAnglef cameraFov = cameraComponent.GetFOV();
-					if (!cameraFov.ApproxEqual(m_targetCameraFOV))
-					{
-						float factor = (m_targetCameraFOV == Constants::DefaultCameraFOV) ? 2.f * updateTime : 0.5f * updateTime;
-						cameraComponent.UpdateFOV(Nz::Lerp(cameraFov, m_targetCameraFOV, factor));
-					}
 					break;
 				}
 
-				case 1:
-				case 2:
+				case CameraMode::Thirdperson:
+				case CameraMode::ThirdpersonRear:
 				{
-					if (m_shipEntity)
+					Nz::Vector3f sourceCameraPos;
+					Nz::Vector3f targetCameraPos;
+					Nz::Quaternionf targetCameraRot;
+
+					if (m_pilotedShip)
 					{
-						auto& shipNode = m_shipEntity.get<Nz::NodeComponent>();
+						auto& shipNode = m_pilotedShip->exteriorEntity.get<Nz::NodeComponent>();
 
 						Nz::Quaternionf forwardRotation = m_shipReferenceRotation;
-						if (m_cameraMode == 2)
+						if (m_cameraMode == CameraMode::ThirdpersonRear)
 							forwardRotation *= Nz::Quaternionf(Nz::TurnAnglef(0.5f), Nz::Vector3f::Up());
 
 						Nz::Quaternionf cameraRotation = shipNode.GetGlobalRotation() * forwardRotation;
 						cameraRotation *= m_currentShipRotation;
 						cameraRotation.Normalize();
 
-						cameraNode.SetPosition(shipNode.ToGlobalPosition(m_shipAABB.GetCenter()) + cameraRotation * (Nz::Vector3f::Backward() * 2.f + Nz::Vector3f::Up()) * m_shipAABB.GetRadius());
-						cameraNode.SetRotation(cameraRotation * Nz::Quaternionf(Nz::DegreeAnglef(-5.f), Nz::Vector3f::Right()));
+						m_currentCameraDistance = Nz::Lerp(m_currentCameraDistance, m_targetCameraDistance, 2.f * updateTime);
 
-						auto& cameraComponent = m_cameraEntity.get<Nz::CameraComponent>();
-						Nz::DegreeAnglef cameraFov = cameraComponent.GetFOV();
-						if (!cameraFov.ApproxEqual(m_targetCameraFOV))
-						{
-							float factor = (m_targetCameraFOV == Constants::DefaultCameraFOV) ? 2.f * updateTime : 0.5f * updateTime;
-							cameraComponent.UpdateFOV(Nz::Lerp(cameraFov, m_targetCameraFOV, factor));
-						}
+						sourceCameraPos = shipNode.ToGlobalPosition(m_shipAABB.GetCenter());
+
+						targetCameraPos = sourceCameraPos + cameraRotation * (Nz::Vector3f::Backward() * 2.f + Nz::Vector3f::Up()) * m_currentCameraDistance;
+						targetCameraRot = cameraRotation * Nz::Quaternionf(Nz::DegreeAnglef(-5.f), Nz::Vector3f::Right());
 					}
 					else
 					{
-						Nz::Quaternionf cameraRotation = characterRot * Nz::EulerAnglesf(predictedCameraRotation.pitch, (m_cameraMode == 1) ? 0.f : 180.f, 0.f);
-						cameraRotation.Normalize();
+						sourceCameraPos = characterPos;
 
-						cameraNode.SetPosition(characterPos + characterRot * (Nz::Vector3f::Up() * 1.f) + cameraRotation * Nz::Vector3f::Backward() * 1.f);
-						cameraNode.SetRotation(cameraRotation);
+						targetCameraRot = characterRot * Nz::EulerAnglesf(predictedCameraRotation.pitch, (m_cameraMode == CameraMode::Thirdperson) ? 0.f : 180.f, 0.f);
+						targetCameraRot.Normalize();
+
+						targetCameraPos = characterPos + characterRot * (Nz::Vector3f::Up() * 1.f) + targetCameraRot * Nz::Vector3f::Backward() * 1.f;
 					}
+
+					cameraNode.SetPosition(RaycastCamera(sourceCameraPos, targetCameraPos));
+					cameraNode.SetRotation(targetCameraRot);
 					break;
 				}
 
 				default:
 					break;
+			}
+
+			auto& cameraComponent = m_cameraEntity.get<Nz::CameraComponent>();
+			Nz::DegreeAnglef cameraFov = cameraComponent.GetFOV();
+			if (!cameraFov.ApproxEqual(m_targetCameraFOV))
+			{
+				float factor = (m_targetCameraFOV == Constants::DefaultCameraFOV) ? 2.f * updateTime : 0.5f * updateTime;
+				cameraComponent.UpdateFOV(Nz::Lerp(cameraFov, m_targetCameraFOV, factor));
 			}
 
 			if (m_debugOverlay)
@@ -986,7 +1005,7 @@ namespace tsom
 
 		// Raycast
 		entt::handle interactibleEntity;
-		if (m_cameraMode != 2 && !m_shipEntity)
+		if (m_cameraMode != CameraMode::ThirdpersonRear && !m_pilotedShip)
 		{
 			if (auto raycastHit = RaycastQuery())
 			{
@@ -1084,7 +1103,7 @@ namespace tsom
 			m_debugOverlay->label->SetPosition({ 0.f, stateData.canvas->GetHeight() - m_debugOverlay->label->GetHeight() });
 		}
 
-		if (m_shipEntity)
+		if (m_pilotedShip)
 		{
 			float factor = 2.f * updateTime;
 			m_currentShipRotation = Nz::Quaternionf::Slerp(m_currentShipRotation, m_targetShipRotation, factor);
@@ -1117,8 +1136,14 @@ namespace tsom
 
 	void GameState::LayoutWidgets(const Nz::Vector2f& newSize)
 	{
-		m_blockSelectionBar->Resize({ newSize.x, BlockSelectionBar::InventoryTileSize });
-		m_blockSelectionBar->SetPosition({ 0.f, 5.f });
+		float hudNextHeight = 0.f;
+		if (m_blockSelectionBar->IsVisible())
+		{
+			m_blockSelectionBar->Resize({ newSize.x, BlockSelectionBar::InventoryTileSize });
+			m_blockSelectionBar->SetPosition({ 0.f, 5.f });
+
+			hudNextHeight += m_blockSelectionBar->GetPosition().y + m_blockSelectionBar->GetHeight();
+		}
 
 		m_chatBox->Resize(newSize);
 
@@ -1129,9 +1154,64 @@ namespace tsom
 		}
 
 		m_crosshairEntity.get<Nz::NodeComponent>().SetPosition({ newSize.x * 0.5f, newSize.y * 0.5f });
-		m_healthOxygen.entity.get<Nz::NodeComponent>().SetPosition({ newSize.x * 0.5f - m_healthOxygen.entity.get<Nz::GraphicsComponent>().GetAABB().x / 2.f, m_blockSelectionBar->GetPosition().y + m_blockSelectionBar->GetHeight() });
+		m_healthOxygen.entity.get<Nz::NodeComponent>().SetPosition({ newSize.x * 0.5f - m_healthOxygen.entity.get<Nz::GraphicsComponent>().GetAABB().x / 2.f, hudNextHeight });
 
 		m_escapeMenu->Center();
+	}
+
+	Nz::Vector3f GameState::RaycastCamera(const Nz::Vector3f& from, const Nz::Vector3f& to)
+	{
+		auto& physSystem = GetStateData().world->GetSystem<Nz::Physics3DSystem>();
+
+		Nz::Vector3f targetPos = to;
+		auto callback = [&](const Nz::Physics3DSystem::RaycastHit& hitInfo)
+		{
+			targetPos = hitInfo.hitPosition + hitInfo.hitNormal * 0.2f;
+		};
+
+		struct OnlyStatic : Nz::PhysBroadphaseLayerFilter3D
+		{
+			bool ShouldCollide(Nz::PhysBroadphase3D layer) const override
+			{
+				return layer == Constants::BroadphaseStatic;
+			}
+		};
+
+		struct IgnoreShip : Nz::PhysBodyFilter3D
+		{
+			bool ShouldCollide(Nz::UInt32 bodyIndex) const override
+			{
+				entt::handle entity = physicsSystem->GetRigidBodyEntity(bodyIndex);
+				if (!entity)
+					return false;
+
+				ChunkComponent* chunkComponent = entity.try_get<ChunkComponent>();
+				if (!chunkComponent)
+					return false;
+
+				return chunkComponent->parentEntity != shipInteriorEntity;
+			}
+
+			bool ShouldCollideLocked(const Nz::PhysBody3D& body) const override
+			{
+				return ShouldCollide(body.GetBodyIndex());
+			}
+
+			Nz::Physics3DSystem* physicsSystem;
+			entt::handle shipInteriorEntity;
+		};
+
+		OnlyStatic onlyStatic;
+		IgnoreShip ignoreShip;
+		if (m_pilotedShip)
+		{
+			ignoreShip.shipInteriorEntity = m_pilotedShip->interiorEntity;
+			ignoreShip.physicsSystem = &physSystem;
+		}
+
+		physSystem.RaycastQueryFirst(from, to, callback, &onlyStatic, nullptr, (m_pilotedShip) ? &ignoreShip : nullptr);
+
+		return targetPos;
 	}
 
 	auto GameState::RaycastQuery() const -> std::optional<RaycastResult>
@@ -1189,7 +1269,7 @@ namespace tsom
 
 		if (m_isMouseLocked)
 		{
-			if (m_shipEntity && !Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::LAlt))
+			if (m_pilotedShip && !Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::LAlt))
 			{
 				PlayerInputs::Ship& shipInputs = inputPacket.inputs.data.emplace<PlayerInputs::Ship>();
 				shipInputs.moveForward = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::W);
@@ -1222,7 +1302,7 @@ namespace tsom
 			else
 			{
 				PlayerInputs::Character& characterInputs = inputPacket.inputs.data.emplace<PlayerInputs::Character>();
-				if (!m_shipEntity)
+				if (!m_pilotedShip)
 				{
 					characterInputs.crouch = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::LControl);
 					characterInputs.jump = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::Space);
