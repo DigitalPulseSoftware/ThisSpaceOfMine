@@ -26,8 +26,8 @@ if SERVER then
 		local monitor = self:GetComponent("atmosphere_monitor")
 		if monitor.Atmosphere then
 			monitor.Atmosphere:Exchange({
-				[GasType.CarbonDioxyde] = -10,
-				[GasType.Oxygen] = 10
+				[GasType.CarbonDioxyde] = -CONVERSION_RATE,
+				[GasType.Oxygen] = CONVERSION_RATE
 			})
 		end
 	end)

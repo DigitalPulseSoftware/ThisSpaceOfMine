@@ -269,7 +269,7 @@ target("TSOMServer", function ()
 	add_headerfiles("src/Server/**.hpp", "src/Server/**.inl")
 	add_files("src/Server/**.cpp")
 	add_installfiles("serverconfig.lua.default", { prefixdir = "bin" })
-	add_installfiles("(database/**.lua)", { prefixdir = "bin" })
+	add_installfiles("(database/**.sql)", { prefixdir = "bin" })
 	add_installfiles("(scripts/**.lua)", { prefixdir = "bin" })
 
 	add_rpathdirs("@executable_path")
@@ -308,7 +308,6 @@ if not has_config("serveronly") then
 		add_headerfiles("src/Game/**.hpp", "src/Game/**.inl")
 		add_files("src/Game/**.cpp")
 		add_installfiles("gameconfig.lua.default", { prefixdir = "bin" })
-		add_installfiles("(database/**.lua)", { prefixdir = "bin" })
 		add_installfiles("(scripts/**.lua)", { prefixdir = "bin" })
 
 		if is_plat("windows", "mingw") then
