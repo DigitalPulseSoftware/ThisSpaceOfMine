@@ -87,18 +87,34 @@ int ServerMain(int argc, char* argv[])
 	sessionManager.SetDefaultHandler<tsom::InitialSessionHandler>(std::ref(instance));
 
 	std::filesystem::path saveDirectory = Nz::Utf8Path(config.GetStringValue("Save.Directory"));
+	bool isDirectory = std::filesystem::is_directory(saveDirectory);
 
-	if (isMigratingToDatabase && std::filesystem::is_directory(saveDirectory))
+	if (isMigratingToDatabase)
 	{
-		spdlog::warn("first time launching after sqlite switch.");
+		if (isDirectory)
+		{
+			spdlog::warn("first time launching after sqlite switch.");
 
-		MigrateFileToSqlite(instance, saveDirectory);
-		std::filesystem::path migratedSaveDir = saveDirectory;
-		migratedSaveDir += Nz::Utf8Path("_migrated");
+			MigrateFileToSqlite(instance, saveDirectory);
+			std::filesystem::path migratedSaveDir = saveDirectory;
+			migratedSaveDir += Nz::Utf8Path("_migrated");
 
-		std::filesystem::rename(saveDirectory, migratedSaveDir);
+			std::filesystem::rename(saveDirectory, migratedSaveDir);
 
-		spdlog::info("save migrated.");
+			spdlog::info("save migrated.");
+		}
+		else
+		{
+			auto& serverDatabase = instance.GetServerDatabase();
+			serverDatabase.StorePlanet({
+				.id = 1,
+				.generatorName = "alice",
+				.seed = 42,
+				.chunkCount = Nz::Vector3ui(5),
+				.cornerRadius = 16.f,
+				.gravity = 9.81f
+			});
+		}
 	}
 
 	instance.LoadFromDatabase();
