@@ -92,7 +92,7 @@ int ServerMain(int argc, char* argv[])
 	{
 		if (std::filesystem::is_directory(saveDirectory))
 		{
-			spdlog::warn("first time launching after sqlite switch.");
+			spdlog::warn("first time launching after sqlite switch: migrating saves.");
 
 			MigrateFileToSqlite(instance, saveDirectory);
 			std::filesystem::path migratedSaveDir = saveDirectory;
@@ -104,10 +104,11 @@ int ServerMain(int argc, char* argv[])
 		}
 		else
 		{
+			// No save exists, create a default planet
 			auto& serverDatabase = instance.GetServerDatabase();
 			serverDatabase.StorePlanet({
 				.id = 1,
-				.generatorName = "alice",
+				.generatorName = "bob",
 				.seed = 42,
 				.chunkCount = Nz::Vector3ui(5),
 				.cornerRadius = 16.f,
