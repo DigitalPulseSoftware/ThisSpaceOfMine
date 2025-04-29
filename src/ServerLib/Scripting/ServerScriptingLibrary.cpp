@@ -158,7 +158,7 @@ namespace tsom
 	void ServerScriptingLibrary::RegisterServer(sol::state& state)
 	{
 		state.create_named_table("server",
-			"Execute", LuaFunction([this](sol::this_state L, std::string_view command)
+			"Execute", LuaFunction([this](sol::this_state L, std::string_view command, sol::optional<sol::table> params)
 			{
 				auto& fs = m_serverInstance.GetApplication().GetComponent<Nz::FilesystemAppComponent>();
 
@@ -170,7 +170,17 @@ namespace tsom
 					sol::state_view state(L);
 					auto result = state.do_string(scriptContent, filepath, sol::load_mode::text);
 					if (result.valid())
-						commandResult = Nz::Ok(result.get<sol::object>());
+					{
+						sol::protected_function func = result;
+						result = func(params);
+						if (result.valid())
+							commandResult = Nz::Ok(result.get<sol::object>());
+						else
+						{
+							sol::error err = result;
+							commandResult = Nz::Err(err.what());
+						}
+					}
 					else
 					{
 						sol::error err = result;
@@ -183,6 +193,8 @@ namespace tsom
 
 				if (!commandResult)
 					throw std::runtime_error(fmt::format("Failed to execute command {0}: {1}", command, commandResult.GetError()));
+
+				return commandResult.GetValue();
 			}),
 			"FindPlayerByName", LuaFunction([this](std::string_view name)
 			{
