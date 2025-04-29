@@ -138,6 +138,7 @@ namespace tsom
 				ServerEnvironment* environment = nullptr;
 				entt::handle owner;
 				Nz::Bitset<Nz::UInt64> entities;
+				bool isVisible = false;
 			};
 
 			struct EnvironmentCreationData
@@ -145,6 +146,7 @@ namespace tsom
 				ServerEnvironment* environment;
 				entt::handle owner;
 				tsl::hopscotch_map<entt::handle, CreateEntityData, HandlerHasher> createdEntities;
+				EnvironmentId environmentId;
 			};
 
 			struct EnvironmentOwnerUpdate
@@ -183,7 +185,7 @@ namespace tsom
 			std::vector<ChunkData> m_visibleChunks;
 			std::vector<ChunkWithPos> m_orderedChunkList;
 			std::vector<EntityData> m_visibleEntities;
-			std::vector<EnvironmentData> m_visibleEnvironments;
+			std::vector<EnvironmentData> m_environments;
 			std::vector<EnvironmentCreationData> m_createdEnvironments;
 			std::vector<EnvironmentOwnerUpdate> m_environmentOwnerUpdates;
 			std::vector<EnvironmentUpdate> m_environmentUpdates;

@@ -26,7 +26,7 @@ namespace tsom
 		if (auto it = chunkNetworkIndices.find(chunkIndices); it != chunkNetworkIndices.end())
 		{
 			// Chunk still exists, resurrect it
-			m_newlyHiddenChunk.Reset(it->second);
+			m_newlyHiddenChunk.UnboundedReset(it->second);
 			return false;
 		}
 		else
@@ -70,11 +70,9 @@ namespace tsom
 		}
 
 		// If the environment is still pending creation, add it to the creation packet
-		auto envIt = m_environmentIndices.find(entityData.environment);
-		if (envIt == m_environmentIndices.end())
+		auto it = std::find_if(m_createdEnvironments.begin(), m_createdEnvironments.end(), [&](const EnvironmentCreationData& envCreation) { return envCreation.environment == entityData.environment; });
+		if (it != m_createdEnvironments.end())
 		{
-			auto it = std::find_if(m_createdEnvironments.begin(), m_createdEnvironments.end(), [&](const EnvironmentCreationData& envCreation) { return envCreation.environment == entityData.environment; });
-			NazaraAssert(it != m_createdEnvironments.end());
 			EnvironmentCreationData& creationData = *it;
 			creationData.createdEntities.emplace(entity, std::move(entityData));
 		}
@@ -88,7 +86,7 @@ namespace tsom
 		{
 			// Environment exists but its owner may have changed
 			EnvironmentId envId = Nz::Retrieve(m_environmentIndices, &environment);
-			EnvironmentData& envData = m_visibleEnvironments[envId];
+			EnvironmentData& envData = m_environments[envId];
 			if (envData.owner != environmentOwner)
 			{
 				if (auto it = std::find_if(m_environmentOwnerUpdates.begin(), m_environmentOwnerUpdates.end(), [&](const auto& update) { return update.environment == &environment; }); it != m_environmentOwnerUpdates.end())
@@ -107,10 +105,33 @@ namespace tsom
 		}
 		else
 		{
+			// Give an index to the environment before sending it as it may be required for some calls such as UpdateEntityEnvironment
+			std::size_t envIndex = m_freeEnvironmentIds.FindFirst();
+			if (envIndex == m_freeEnvironmentIds.npos)
+			{
+				envIndex = m_freeEnvironmentIds.GetSize();
+				m_freeEnvironmentIds.Resize(envIndex + FreeNetworkIdGrowRate, true);
+			}
+
+			m_freeEnvironmentIds.Set(envIndex, false);
+
+			EnvironmentId envId = Nz::SafeCast<EnvironmentId>(envIndex);
+
+			assert(!m_environmentIndices.contains(&environment));
+			m_environmentIndices[&environment] = envId;
+
+			if (envIndex >= m_environments.size())
+				m_environments.resize(envIndex + 1);
+
+			m_environments[envIndex].environment = &environment;
+			m_environments[envIndex].owner = environmentOwner;
+			m_environments[envIndex].isVisible = false;
+
 			assert(std::find_if(m_createdEnvironments.begin(), m_createdEnvironments.end(), [&](const EnvironmentCreationData& envCreation) { return envCreation.environment == &environment; }) == m_createdEnvironments.end());
 			m_createdEnvironments.push_back({
 				.environment = &environment,
-				.owner = environmentOwner
+				.owner = environmentOwner,
+				.environmentId = envId
 			});
 
 			return true;
@@ -185,7 +206,22 @@ namespace tsom
 	void SessionVisibilityHandler::DestroyEnvironment(ServerEnvironment& environment)
 	{
 		if (auto it = std::find_if(m_createdEnvironments.begin(), m_createdEnvironments.end(), [&](const EnvironmentCreationData& transform) { return transform.environment == &environment; }); it != m_createdEnvironments.end())
+		{
+			// Environment wasn't sent yet but it was given an ID, reset it
+			EnvironmentId envId = it->environmentId;
+
+			auto& visibleEnvironment = m_environments[envId];
+			visibleEnvironment.environment = nullptr;
+			visibleEnvironment.isVisible = false;
+			visibleEnvironment.owner = {};
+			visibleEnvironment.entities.Clear();
+
+			m_environmentIndices.erase(it->environment);
+
+			m_freeEnvironmentIds.Set(envId, true);
+
 			m_createdEnvironments.erase(it);
+		}
 		else
 		{
 			assert(std::find(m_destroyedEnvironments.begin(), m_destroyedEnvironments.end(), &environment) == m_destroyedEnvironments.end());
@@ -234,7 +270,7 @@ namespace tsom
 		// Switch entity to new environmenet
 		auto& entityData = m_visibleEntities[entityIndex];
 
-		auto& previousEnv = m_visibleEnvironments[entityData.envIndex];
+		auto& previousEnv = m_environments[entityData.envIndex];
 		previousEnv.entities.Reset(entityIndex);
 
 		EnvironmentId newEnvIndex = Nz::Retrieve(m_environmentIndices, &newEnvironment);
@@ -243,7 +279,7 @@ namespace tsom
 		entityData.entity = newEntity;
 		entityData.envIndex = newEnvIndex;
 
-		auto& newEnv = m_visibleEnvironments[newEnvIndex];
+		auto& newEnv = m_environments[newEnvIndex];
 		newEnv.entities.UnboundedSet(entityIndex);
 
 		auto envUpdateIt = std::find_if(m_environmentUpdates.begin(), m_environmentUpdates.end(), [&](const EnvironmentUpdate& envUpdate) { return envUpdate.newEntity == oldEntity; });
@@ -486,7 +522,7 @@ namespace tsom
 				Nz::UInt32 entityId = Nz::Retrieve(m_entityIndices, handle);
 				deletePacket.entities.push_back(entityId);
 
-				auto& entityEnv = m_visibleEnvironments[m_visibleEntities[entityId].envIndex];
+				auto& entityEnv = m_environments[m_visibleEntities[entityId].envIndex];
 				entityEnv.entities.Reset(entityId);
 
 				m_freeEntityIds.Set(entityId, true);
@@ -514,10 +550,21 @@ namespace tsom
 	{
 		if (!m_environmentUpdates.empty())
 		{
-			for (const EnvironmentUpdate& envUpdate : m_environmentUpdates)
+			for (auto it = m_environmentUpdates.begin(); it != m_environmentUpdates.end();)
 			{
-				EntityId entityIndex = Nz::Retrieve(m_entityIndices, envUpdate.newEntity);
+				const EnvironmentUpdate& envUpdate = *it;
+
 				EnvironmentId envIndex = Nz::Retrieve(m_environmentIndices, envUpdate.newEnvironment);
+
+				// Environment may not exist yet client-side, defer packet sending
+				// TODO: Defer to the end of the network tick instead of the next network tick
+				if (!m_environments[envIndex].isVisible)
+				{
+					++it;
+					continue;
+				}
+
+				EntityId entityIndex = Nz::Retrieve(m_entityIndices, envUpdate.newEntity);
 
 				Packets::S_EntityEnvironmentUpdate envUpdatePacket;
 				envUpdatePacket.tickIndex = tickIndex;
@@ -525,8 +572,9 @@ namespace tsom
 				envUpdatePacket.newEnvironmentId = envIndex;
 
 				m_networkSession->SendPacket(envUpdatePacket);
+
+				it = m_environmentUpdates.erase(it);
 			}
-			m_environmentUpdates.clear();
 		}
 	}
 
@@ -630,8 +678,8 @@ namespace tsom
 
 				m_freeEnvironmentIds.Set(envId, true);
 
-				auto& visibleEnvironment = m_visibleEnvironments[envId];
-				for (std::size_t entityIndex : visibleEnvironment.entities.IterBits())
+				auto& environmentData = m_environments[envId];
+				for (std::size_t entityIndex : environmentData.entities.IterBits())
 				{
 					auto& entityData = m_visibleEntities[entityIndex];
 					HandleEntityDestruction(entityData.entity);
@@ -644,9 +692,10 @@ namespace tsom
 					entityData.entity = entt::handle{};
 					entityData.envIndex = Nz::MaxValue();
 				}
-				visibleEnvironment.environment = nullptr;
-				visibleEnvironment.owner = {};
-				visibleEnvironment.entities.Clear();
+				environmentData.environment = nullptr;
+				environmentData.owner = {};
+				environmentData.entities.Clear();
+				environmentData.isVisible = false;
 
 				if (auto it = std::find_if(m_environmentOwnerUpdates.begin(), m_environmentOwnerUpdates.end(), [&](const auto& update) { return update.environment == environment; }); it != m_environmentOwnerUpdates.end())
 					m_environmentOwnerUpdates.erase(it);
@@ -696,35 +745,20 @@ namespace tsom
 
 		if (!m_createdEnvironments.empty())
 		{
-			for (EnvironmentCreationData& environment : m_createdEnvironments)
+			for (EnvironmentCreationData& environmentCreationData : m_createdEnvironments)
 			{
-				std::size_t envIndex = m_freeEnvironmentIds.FindFirst();
-				if (envIndex == m_freeEnvironmentIds.npos)
-				{
-					envIndex = m_freeEnvironmentIds.GetSize();
-					m_freeEnvironmentIds.Resize(envIndex + FreeNetworkIdGrowRate, true);
-				}
-
-				m_freeEnvironmentIds.Set(envIndex, false);
-
-				m_environmentIndices[environment.environment] = Nz::SafeCast<EnvironmentId>(envIndex);
-
-				if (envIndex >= m_visibleEnvironments.size())
-					m_visibleEnvironments.resize(envIndex + 1);
-
-				m_visibleEnvironments[envIndex].environment = environment.environment;
-				m_visibleEnvironments[envIndex].owner = environment.owner;
+				m_environments[environmentCreationData.environmentId].isVisible = true;
 
 				EntityId ownerEntityIndex = Nz::MaxValue();
-				if (environment.owner)
-					ownerEntityIndex = Nz::Retrieve(m_entityIndices, environment.owner);
+				if (environmentCreationData.owner)
+					ownerEntityIndex = Nz::Retrieve(m_entityIndices, environmentCreationData.owner);
 
 				Packets::S_EnvironmentCreate createPacket;
-				createPacket.id = Nz::SafeCast<Nz::UInt8>(envIndex);
+				createPacket.id = Nz::SafeCast<Nz::UInt8>(environmentCreationData.environmentId);
 				createPacket.tickIndex = tickIndex;
 				createPacket.ownerEntity = ownerEntityIndex;
 
-				for (auto it = environment.createdEntities.begin(); it != environment.createdEntities.end(); ++it)
+				for (auto it = environmentCreationData.createdEntities.begin(); it != environmentCreationData.createdEntities.end(); ++it)
 					HandleEntityCreation(createPacket.entities, it.key(), std::move(it.value()));
 
 				m_networkSession->SendPacket(createPacket);
@@ -741,10 +775,10 @@ namespace tsom
 			{
 				EnvironmentId envIndex = Nz::Retrieve(m_environmentIndices, ownerUpdate.environment);
 				// It's possible (with two root environment switches at the "same time") that the owner updates to the current owner, dismiss it
-				if (m_visibleEnvironments[envIndex].owner == ownerUpdate.newOwner)
+				if (m_environments[envIndex].owner == ownerUpdate.newOwner)
 					continue;
 
-				m_visibleEnvironments[envIndex].owner = ownerUpdate.newOwner;
+				m_environments[envIndex].owner = ownerUpdate.newOwner;
 
 				EntityId entityIndex = Nz::MaxValue();
 				if (ownerUpdate.newOwner)
@@ -781,7 +815,7 @@ namespace tsom
 
 		m_visibleEntities[entityIndex].entity = entity;
 		m_visibleEntities[entityIndex].envIndex = envIndex;
-		m_visibleEnvironments[envIndex].entities.UnboundedSet(entityIndex);
+		m_environments[envIndex].entities.UnboundedSet(entityIndex);
 
 		m_entityIndices[entity] = entityIndex;
 
