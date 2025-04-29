@@ -260,7 +260,7 @@ namespace tsom
 				m_player->SendChatMessage("warning: your ship won't be saved as you're not authenticated");
 
 				// spawn ship like before saving
-				auto shipEnv = std::make_unique<ServerShipEnvironment>(serverInstance, m_player->GetUuid(), slot);
+				auto shipEnv = std::make_unique<ServerShipEnvironment>(serverInstance, std::nullopt, slot);
 				shipEnv->GenerateShip(true);
 
 				EnvironmentTransform planetToShip(spawnPos, spawnRot);
@@ -286,7 +286,14 @@ namespace tsom
 
 					Nz::NodeComponent& playerNode = playerEntity.get<Nz::NodeComponent>();
 
-					auto shipEnv = std::make_unique<ServerShipEnvironment>(serverInstance, player->GetUuid(), slot);
+					// don't allow to save ship when logged in as dev
+					std::optional<Nz::Uuid> playerUuid;
+					if (!player->HasPermission(PlayerPermission::Dev))
+						playerUuid = player->GetUuid();
+					else
+						player->SendChatMessage("warning: your ship won't be saved (using dev mode)");
+
+					auto shipEnv = std::make_unique<ServerShipEnvironment>(serverInstance, playerUuid, slot);
 
 					if (resultCode == 200)
 					{

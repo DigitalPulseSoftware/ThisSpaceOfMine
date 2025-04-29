@@ -33,9 +33,9 @@ namespace tsom
 			bool Update(Nz::StateMachine& fsm, Nz::Time elapsedTime) override;
 
 		private:
-			void FetchPlayerInfo();
+			void FetchPlayerInfo(bool devMode);
 			void LayoutWidgets(const Nz::Vector2f& newSize) override;
-			void OnCreateOrConnectPressed();
+			void OnCreateOrConnectPressed(bool devMode);
 
 			std::optional<UpdateInfo> m_newVersionInfo;
 			std::shared_ptr<Nz::State> m_nextState;

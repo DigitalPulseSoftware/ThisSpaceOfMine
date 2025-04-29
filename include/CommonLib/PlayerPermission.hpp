@@ -17,8 +17,9 @@ namespace tsom
 	enum class PlayerPermission
 	{
 		Admin,
+		Dev,
 
-		Max = Admin
+		Max = Dev
 	};
 
 	constexpr bool EnableEnumAsNzFlags(PlayerPermission) { return true; }

@@ -12,7 +12,9 @@ namespace tsom
 {
 	GameConfigFile::GameConfigFile()
 	{
+		RegisterBoolOption("Api.DevMode", false);
 		RegisterStringOption("Api.Url");
+
 		RegisterStringOption("Menu.Login", "Mingebag", [](std::string value) -> Nz::Result<std::string, std::string>
 		{
 			if (value.empty())
@@ -58,7 +60,14 @@ namespace tsom
 	ApplicationComponent(app)
 	{
 		std::filesystem::path configPath;
-		if (!IsDevVersion())
+		if (IsDevVersion())
+		{
+			configPath = Nz::Utf8Path(GameConfigFile::FileName);
+			if (!std::filesystem::is_regular_file(configPath))
+				configPath.clear();
+		}
+
+		if (configPath.empty())
 		{
 			configPath = GameConfigFile::GetPath();
 			if (!configPath.empty())
@@ -72,9 +81,6 @@ namespace tsom
 				}
 			}
 		}
-
-		if (configPath.empty())
-			configPath = Nz::Utf8Path(GameConfigFile::FileName);
 
 		if (!std::filesystem::is_regular_file(configPath))
 		{

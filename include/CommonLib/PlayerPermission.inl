@@ -21,6 +21,7 @@ namespace tsom
 		switch (permission)
 		{
 			case PlayerPermission::Admin: return "admin";
+			case PlayerPermission::Dev:   return "dev";
 		}
 
 		NAZARA_UNREACHABLE();

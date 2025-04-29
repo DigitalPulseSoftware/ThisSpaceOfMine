@@ -29,16 +29,16 @@ namespace tsom
 	{
 		auto& gameConfig = GetStateData().app->GetComponent<GameConfigAppComponent>().GetConfig();
 
-		std::string_view playerToken = gameConfig.GetStringValue("Player.Token");
+		bool devMode = gameConfig.GetBoolValue("Api.DevMode");
 
 		m_layout = CreateWidget<Nz::BoxLayout>(Nz::BoxLayoutOrientation::TopToBottom);
 
 		m_createOrConnectButton = m_layout->Add<Nz::ButtonWidget>();
 		m_createOrConnectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Loading player info...", 30, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
 		m_createOrConnectButton->SetMaximumWidth(m_createOrConnectButton->GetPreferredWidth() * 1.5f);
-		ConnectSignal(m_createOrConnectButton->OnButtonTrigger, [this](const Nz::ButtonWidget*)
+		ConnectSignal(m_createOrConnectButton->OnButtonTrigger, [this, devMode](const Nz::ButtonWidget*)
 		{
-			OnCreateOrConnectPressed();
+			OnCreateOrConnectPressed(devMode);
 		});
 
 		m_directConnect = m_layout->Add<Nz::ButtonWidget>();
@@ -63,11 +63,10 @@ namespace tsom
 
 	void PlayState::Enter(Nz::StateMachine& fsm)
 	{
-		WidgetState::Enter(fsm);
-
 		auto& gameConfig = GetStateData().app->GetComponent<GameConfigAppComponent>().GetConfig();
 
 		std::string_view playerToken = gameConfig.GetStringValue("Player.Token");
+		bool devMode = gameConfig.GetBoolValue("Api.DevMode");
 
 		if (!playerToken.empty())
 		{
@@ -75,7 +74,7 @@ namespace tsom
 			m_createOrConnectButton->SetMaximumWidth(m_createOrConnectButton->GetPreferredWidth() * 1.5f);
 			m_createOrConnectButton->Disable();
 
-			FetchPlayerInfo();
+			FetchPlayerInfo(devMode);
 		}
 		else
 		{
@@ -88,8 +87,7 @@ namespace tsom
 			m_directConnect->Enable();
 		}
 
-		// First layout happens in WidgetState::Enter and doesn't take m_createPlayerButton state into account
-		LayoutWidgets(GetStateData().canvas->GetSize());
+		WidgetState::Enter(fsm);
 	}
 
 	bool PlayState::Update(Nz::StateMachine& fsm, Nz::Time elapsedTime)
@@ -109,7 +107,7 @@ namespace tsom
 		return true;
 	}
 
-	void PlayState::FetchPlayerInfo()
+	void PlayState::FetchPlayerInfo(bool devMode)
 	{
 		if (!GetStateData().app->HasComponent<Nz::WebServiceAppComponent>())
 		{
@@ -124,7 +122,7 @@ namespace tsom
 
 		std::string_view playerToken = gameConfig.GetStringValue("Player.Token");
 
-		webService.QueueRequest([&](Nz::WebRequest& request)
+		webService.QueueRequest([&, devMode](Nz::WebRequest& request)
 		{
 			request.SetMethod(Nz::WebRequestMethod::Post);
 			request.SetURL(fmt::format("{}/v1/player/auth", gameConfig.GetStringValue("Api.Url")));
@@ -135,7 +133,7 @@ namespace tsom
 
 			request.SetJSonContent(connectBody.dump());
 
-			request.SetResultCallback([widgetWeak = weak_from_this()](Nz::WebRequestResult&& result)
+			request.SetResultCallback([widgetWeak = weak_from_this(), devMode](Nz::WebRequestResult&& result)
 			{
 				std::shared_ptr<PlayState> playState = std::static_pointer_cast<PlayState>(widgetWeak.lock());
 				if (!playState)
@@ -164,7 +162,7 @@ namespace tsom
 					std::string playerUuid = responseDoc["uuid"];
 					std::string playerNickname = responseDoc["nickname"];
 
-					playState->m_createOrConnectButton->UpdateText(Nz::SimpleTextDrawer::Draw(fmt::format("Play as {}", playerNickname), 36, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
+					playState->m_createOrConnectButton->UpdateText(Nz::SimpleTextDrawer::Draw(fmt::format("Play as {}{}", playerNickname, devMode ? " (DEV)" : ""), 36, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
 					playState->m_createOrConnectButton->Enable();
 				}
 				catch (const std::exception& e)
@@ -186,7 +184,7 @@ namespace tsom
 		m_layout->Center();
 	}
 
-	void PlayState::OnCreateOrConnectPressed()
+	void PlayState::OnCreateOrConnectPressed(bool devMode)
 	{
 		auto& gameConfig = GetStateData().app->GetComponent<GameConfigAppComponent>();
 		std::string_view playerToken = gameConfig.GetConfig().GetStringValue("Player.Token");
@@ -198,7 +196,7 @@ namespace tsom
 
 			std::string_view playerToken = gameConfig.GetStringValue("Player.Token");
 
-			webService.QueueRequest([&](Nz::WebRequest& request)
+			webService.QueueRequest([&, devMode](Nz::WebRequest& request)
 			{
 				request.SetMethod(Nz::WebRequestMethod::Post);
 				request.SetURL(fmt::format("{}/v1/game/connect", gameConfig.GetStringValue("Api.Url")));
@@ -206,6 +204,8 @@ namespace tsom
 
 				nlohmann::json connectBody;
 				connectBody["token"] = playerToken;
+				if (devMode)
+					connectBody["dev"] = true;
 
 				request.SetJSonContent(connectBody.dump());
 
