@@ -16,11 +16,13 @@ namespace tsom::Constants
 	static constexpr Nz::PhysBroadphase3D BroadphaseStatic = 0;
 	static constexpr Nz::PhysBroadphase3D BroadphaseDynamic = 1;
 
-	// Object layers (next free id: 8)
+	// Object layers (next free id: 10)
 	static constexpr Nz::PhysObjectLayer3D ObjectLayerDynamic = 2;
+	static constexpr Nz::PhysObjectLayer3D ObjectLayerDynamicNoCollision = 8;
 	static constexpr Nz::PhysObjectLayer3D ObjectLayerDynamicNoPlayer = 4;
 	static constexpr Nz::PhysObjectLayer3D ObjectLayerDynamicTrigger = 6;
 	static constexpr Nz::PhysObjectLayer3D ObjectLayerPlayer = 3;
+	static constexpr Nz::PhysObjectLayer3D ObjectLayerPlayerOnlyTrigger = 9;
 	static constexpr Nz::PhysObjectLayer3D ObjectLayerStatic = 0;
 	static constexpr Nz::PhysObjectLayer3D ObjectLayerStaticNoPlayer = 1;
 	static constexpr Nz::PhysObjectLayer3D ObjectLayerStaticTrigger = 5;

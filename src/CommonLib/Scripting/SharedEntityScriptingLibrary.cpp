@@ -16,6 +16,7 @@
 #include <ServerLib/ServerPlayer.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Collider3D.hpp>
+#include <Nazara/Physics3D/Components/PhysCharacter3DComponent.hpp>
 #include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
 #include <frozen/string.h>
 #include <frozen/unordered_map.h>
@@ -23,9 +24,11 @@
 
 SOL_BASE_CLASSES(Nz::BoxCollider3D, Nz::Collider3D);
 SOL_BASE_CLASSES(Nz::NodeComponent, Nz::Node);
+SOL_BASE_CLASSES(Nz::PhysCharacter3DComponent, Nz::PhysCharacter3D);
 SOL_BASE_CLASSES(Nz::RigidBody3DComponent, Nz::RigidBody3D);
 SOL_DERIVED_CLASSES(Nz::Collider3D, Nz::BoxCollider3D);
 SOL_DERIVED_CLASSES(Nz::Node, Nz::NodeComponent);
+SOL_DERIVED_CLASSES(Nz::PhysCharacter3D, Nz::PhysCharacter3DComponent);
 SOL_DERIVED_CLASSES(Nz::RigidBody3D, Nz::RigidBody3DComponent);
 
 namespace tsom
@@ -44,6 +47,15 @@ namespace tsom
 		constexpr auto s_components = frozen::make_unordered_map<frozen::string, SharedEntityScriptingLibrary::ComponentEntry>({
 			{
 				"node", SharedEntityScriptingLibrary::ComponentEntry::Default<Nz::NodeComponent>()
+			},
+			{
+				"physicscharacter3d", SharedEntityScriptingLibrary::ComponentEntry{
+					.addComponent = [](sol::this_state L, entt::handle entity, sol::optional<sol::table> parametersOpt) -> sol::object
+					{
+						throw std::runtime_error("physicscharacter3d cannot be added from Lua");
+					},
+					.getComponent = SharedEntityScriptingLibrary::ComponentEntry::DefaultGet<Nz::PhysCharacter3DComponent>()
+				}
 			},
 			{
 				"rigidbody3d", SharedEntityScriptingLibrary::ComponentEntry{
@@ -134,9 +146,11 @@ namespace tsom
 		constants["BroadphaseStatic"] = Constants::BroadphaseStatic;
 		constants["BroadphaseDynamic"] = Constants::BroadphaseDynamic;
 		constants["ObjectLayerDynamic"] = Constants::ObjectLayerDynamic;
+		constants["ObjectLayerDynamicNoCollision"] = Constants::ObjectLayerDynamicNoCollision;
 		constants["ObjectLayerDynamicNoPlayer"] = Constants::ObjectLayerDynamicNoPlayer;
 		constants["ObjectLayerDynamicTrigger"] = Constants::ObjectLayerDynamicTrigger;
 		constants["ObjectLayerPlayer"] = Constants::ObjectLayerPlayer;
+		constants["ObjectLayerPlayerOnlyTrigger"] = Constants::ObjectLayerPlayerOnlyTrigger;
 		constants["ObjectLayerStatic"] = Constants::ObjectLayerStatic;
 		constants["ObjectLayerStaticNoPlayer"] = Constants::ObjectLayerStaticNoPlayer;
 		constants["ObjectLayerStaticTrigger"] = Constants::ObjectLayerStaticTrigger;
@@ -266,6 +280,22 @@ namespace tsom
 			"ToLocalScale", LuaFunction(&Nz::NodeComponent::ToLocalScale)
 		);
 
+		state.new_usertype<Nz::PhysCharacter3DComponent>("PhysCharacter3DComponent",
+			sol::no_constructor,
+			sol::base_classes, sol::bases<Nz::PhysCharacter3D>(),
+			"GetAngularVelocity", LuaFunction(&Nz::PhysCharacter3DComponent::GetAngularVelocity),
+			"GetCollider", LuaFunction(&Nz::PhysCharacter3DComponent::GetCollider),
+			"GetLinearVelocity", LuaFunction(&Nz::PhysCharacter3DComponent::GetLinearVelocity),
+			"GetPosition", LuaFunction(&Nz::PhysCharacter3DComponent::GetPosition),
+			"GetObjectLayer", LuaFunction(&Nz::PhysCharacter3DComponent::GetObjectLayer),
+			"GetRotation", LuaFunction(&Nz::PhysCharacter3DComponent::GetRotation),
+			"SetAngularVelocity", LuaFunction(&Nz::PhysCharacter3DComponent::SetAngularVelocity),
+			"SetLinearVelocity", LuaFunction(&Nz::PhysCharacter3DComponent::SetLinearVelocity),
+			"SetObjectLayer", LuaFunction(&Nz::PhysCharacter3DComponent::SetObjectLayer),
+			"SetRotation", LuaFunction(&Nz::PhysCharacter3DComponent::SetRotation),
+			"TeleportTo", LuaFunction(&Nz::PhysCharacter3DComponent::TeleportTo)
+		);
+
 		state.new_usertype<Nz::RigidBody3DComponent>("Rigidbody3DComponent",
 			sol::no_constructor,
 			sol::base_classes, sol::bases<Nz::RigidBody3D>(),
@@ -276,6 +306,7 @@ namespace tsom
 			"GetLinearDamping", LuaFunction(&Nz::RigidBody3DComponent::GetLinearDamping),
 			"GetLinearVelocity", LuaFunction(&Nz::RigidBody3DComponent::GetLinearVelocity),
 			"GetMass", LuaFunction(&Nz::RigidBody3DComponent::GetMass),
+			"GetObjectLayer", LuaFunction(&Nz::RigidBody3DComponent::GetObjectLayer),
 			"GetPosition", LuaFunction(&Nz::RigidBody3DComponent::GetPosition),
 			"GetRotation", LuaFunction(&Nz::RigidBody3DComponent::GetRotation),
 			"SetAngularDamping", LuaFunction(&Nz::RigidBody3DComponent::SetAngularDamping),

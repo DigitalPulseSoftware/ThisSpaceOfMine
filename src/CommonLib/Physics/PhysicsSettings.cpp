@@ -25,9 +25,11 @@ namespace tsom::Physics
 						return Constants::BroadphaseStatic;
 
 					case Constants::ObjectLayerDynamic:
+					case Constants::ObjectLayerDynamicNoCollision:
 					case Constants::ObjectLayerDynamicNoPlayer:
 					case Constants::ObjectLayerDynamicTrigger:
 					case Constants::ObjectLayerPlayer:
+					case Constants::ObjectLayerPlayerOnlyTrigger:
 						return Constants::BroadphaseDynamic;
 
 					default:
@@ -67,6 +69,12 @@ namespace tsom::Physics
 					if (object1 == Constants::ObjectLayerDynamicNoPlayer || object1 == Constants::ObjectLayerStaticNoPlayer)
 						return false;
 				}
+				else if (object1 == Constants::ObjectLayerDynamicNoCollision || object2 == Constants::ObjectLayerDynamicNoCollision)
+					return false;
+				else if (object1 == Constants::ObjectLayerPlayerOnlyTrigger)
+					return object2 == Constants::ObjectLayerDynamicTrigger || object2 == Constants::ObjectLayerStaticTrigger;
+				else if (object2 == Constants::ObjectLayerPlayerOnlyTrigger)
+					return object1 == Constants::ObjectLayerDynamicTrigger || object1 == Constants::ObjectLayerStaticTrigger;
 
 				return true;
 			}
