@@ -180,7 +180,7 @@ namespace tsom
 			Nz::Boxf planetAABB = env->ComputeBoundingBox();
 
 			Nz::Vector3f planetCenter = planetAABB.GetCenter();
-			Nz::Vector3f spawnPos = planetCenter + planetAABB.GetRadius() * Nz::Vector3f::Up();
+			Nz::Vector3f spawnPos = planetCenter + (planetAABB.GetRadius() + Constants::PlayerColliderHeight * 2.f) * Nz::Vector3f::Up();
 
 			auto callback = [&](const Nz::Physics3DSystem::RaycastHit& hitInfo)
 			{
