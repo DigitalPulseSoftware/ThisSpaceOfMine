@@ -5,6 +5,7 @@
 #include <CommonLib/Scripting/MathScriptingLibrary.hpp>
 #include <CommonLib/Direction.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
+#include <Nazara/Core/Time.hpp>
 #include <Nazara/Math/Box.hpp>
 #include <Nazara/Math/EulerAngles.hpp>
 #include <Nazara/Math/Quaternion.hpp>
@@ -26,6 +27,7 @@ namespace tsom
 		RegisterEulerAngles<float>(state, "EulerAnglesf");
 		RegisterPerlinNoise(state);
 		RegisterQuaternion<float>(state, "Quaternionf");
+		RegisterTime(state);
 		RegisterVector2<float>(state, "Vec2f");
 		RegisterVector2<int>(state, "Vec2i");
 		RegisterVector2<unsigned int>(state, "Vec2ui");
@@ -114,6 +116,29 @@ namespace tsom
 			"w", &Nz::Quaternion<T>::w,
 			sol::meta_function::multiplication, sol::overload(Nz::Overload<const Nz::Quaternion<T>&>(&Nz::Quaternion<T>::operator*), Nz::Overload<const Nz::Vector3<T>&>(&Nz::Quaternion<T>::operator*)),
 			sol::meta_function::to_string, &Nz::Quaternion<T>::ToString
+		);
+	}
+
+	void MathScriptingLibrary::RegisterTime(sol::state& state)
+	{
+		state.new_usertype<Nz::Time>("Time",
+			sol::no_constructor,
+			"AsMicroseconds", &Nz::Time::AsMicroseconds,
+			"AsMilliseconds", &Nz::Time::AsMilliseconds,
+			"AsNanoseconds", &Nz::Time::AsNanoseconds,
+			"AsSeconds", &Nz::Time::AsSeconds<float>,
+			"Milliseconds", &Nz::Time::Milliseconds,
+			"Microseconds", &Nz::Time::Microseconds,
+			"Nanosecond", &Nz::Time::Nanosecond,
+			"Second", &Nz::Time::Second,
+			"Seconds", &Nz::Time::Seconds<float>,
+			"Zero", &Nz::Time::Zero,
+			sol::meta_function::equal_to, [](Nz::Time t1, Nz::Time t2) { return t1 == t2; },
+			sol::meta_function::less_than, [](Nz::Time t1, Nz::Time t2) { return t1 < t2; },
+			sol::meta_function::less_than_or_equal_to, [](Nz::Time t1, Nz::Time t2) { return t1 <= t2; },
+			sol::meta_function::addition, [](Nz::Time t1, Nz::Time t2) { return t1 + t2; },
+			sol::meta_function::subtraction, [](Nz::Time t1, Nz::Time t2) { return t1 - t2; },
+			sol::meta_function::unary_minus, [](Nz::Time t) { return -t; }
 		);
 	}
 

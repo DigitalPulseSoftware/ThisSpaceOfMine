@@ -139,6 +139,9 @@ namespace tsom
 
 	void SharedEntityScriptingLibrary::FillConstants(sol::state& state, sol::table constants)
 	{
+		// Game
+		constants["PlayerOxygenConsumption"] = Constants::PlayerOxygenConsumption;
+
 		// Internal
 		constants["TickDuration"] = Constants::TickDuration;
 

@@ -30,6 +30,9 @@ namespace tsom
 		auto exchangeView = m_registry.view<AtmosphereMonitor, AtmosphereExchanger>(entt::exclude<Nz::DisabledComponent>);
 		for (auto&& [exchangerEntity, exchangerMonitor, exchangerData] : exchangeView.each())
 		{
+			if (exchangerData.tickRate == Nz::Time::Zero())
+				continue; // Disabled
+
 			exchangerData.timeBeforeTick -= elapsedTime;
 			if (exchangerData.timeBeforeTick > Nz::Time::Zero())
 				continue;
