@@ -9,6 +9,7 @@
 #include <ServerLib/ServerPlanetEnvironment.hpp>
 #include <ServerLib/ServerPlayer.hpp>
 #include <ServerLib/ServerShipEnvironment.hpp>
+#include <ServerLib/Components/AtmosphereExchanger.hpp>
 #include <ServerLib/Components/AtmosphereMonitor.hpp>
 #include <ServerLib/Components/ServerEnvironmentSwitchComponent.hpp>
 #include <ServerLib/Components/ServerInteractibleComponent.hpp>
@@ -21,6 +22,9 @@ namespace tsom
 	namespace
 	{
 		constexpr auto s_serverComponents = frozen::make_unordered_map<frozen::string, SharedEntityScriptingLibrary::ComponentEntry>({
+			{
+				"atmosphere_exchanger", SharedEntityScriptingLibrary::ComponentEntry::Default<AtmosphereExchanger>(),
+			},
 			{
 				"atmosphere_monitor", SharedEntityScriptingLibrary::ComponentEntry::Default<AtmosphereMonitor>()
 			}
@@ -142,6 +146,26 @@ namespace tsom
 
 	void ServerEntityScriptingLibrary::RegisterServerComponents(sol::state& state)
 	{
+		state.new_usertype<AtmosphereExchanger>("AtmosphereExchanger",
+			sol::no_constructor,
+			"GetGasModifier", [](const AtmosphereExchanger& exchanger, GasType gasType)
+			{
+				return exchanger.gasModifier[gasType];
+			},
+			"GetTickRate", [](const AtmosphereExchanger& exchanger)
+			{
+				return exchanger.tickRate;
+			},
+			"SetGasModifier", [](AtmosphereExchanger& exchanger, GasType gasType, Nz::Int64 gasModifier)
+			{
+				exchanger.gasModifier[gasType] = gasModifier;
+			},
+			"SetTickRate", [](AtmosphereExchanger& exchanger, Nz::Time tickRate)
+			{
+				exchanger.tickRate = tickRate;
+			}
+		);
+
 		state.new_usertype<AtmosphereMonitor>("AtmosphereMonitor",
 			sol::no_constructor,
 			"Atmosphere", sol::readonly_property(&AtmosphereMonitor::atmosphere));

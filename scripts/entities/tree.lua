@@ -16,21 +16,11 @@ classData:On("init", function (self)
 	end
 
 	if SERVER then
-		self:SetTickInterval(1000)
 		self:AddComponent("atmosphere_monitor")
+		local exchanger = self:AddComponent("atmosphere_exchanger")
+		exchanger:SetGasModifier(GasType.CarbonDioxyde, -CONVERSION_RATE)
+		exchanger:SetGasModifier(GasType.Oxygen, CONVERSION_RATE)
 	end
 end)
-
-if SERVER then
-	classData:On("tick", function (self)
-		local monitor = self:GetComponent("atmosphere_monitor")
-		if monitor.Atmosphere then
-			monitor.Atmosphere:Exchange({
-				[GasType.CarbonDioxyde] = -CONVERSION_RATE,
-				[GasType.Oxygen] = CONVERSION_RATE
-			})
-		end
-	end)
-end
 
 EntityRegistry.RegisterClass("tree", classData)
