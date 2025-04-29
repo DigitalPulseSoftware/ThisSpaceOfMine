@@ -35,9 +35,7 @@ namespace tsom
 		Nz::UInt32 oxygenIndex = m_playerClass->FindProperty("oxygen");
 		Nz::UInt32 deathRpc = m_playerClass->FindClientRpc("death");
 
-		auto& atmosphereExchanger = entity.emplace<AtmosphereExchanger>();
-		atmosphereExchanger.gasModifier[GasType::Oxygen] = -Constants::PlayerOxygenConsumption;
-		atmosphereExchanger.gasModifier[GasType::CarbonDioxyde] = Constants::PlayerOxygenConsumption;
+		auto& atmosphereExchanger = entity.get<AtmosphereExchanger>();
 
 		atmosphereExchanger.OnExchangeFailed.Connect([healthIndex, oxygenIndex, deathRpc](entt::handle playerEntity, AtmosphereExchanger*)
 		{
@@ -94,6 +92,10 @@ namespace tsom
 		auto characterController = player->GetCharacterController();
 
 		entity.emplace<AtmosphereMonitor>();
+
+		auto& atmosphereExchanger = entity.emplace<AtmosphereExchanger>();
+		atmosphereExchanger.gasModifier[GasType::Oxygen] = -Constants::PlayerOxygenConsumption;
+		atmosphereExchanger.gasModifier[GasType::CarbonDioxyde] = Constants::PlayerOxygenConsumption;
 
 		auto& characterComponent = entity.emplace<Nz::PhysCharacter3DComponent>(std::move(characterSettings));
 		characterComponent.SetImpl(characterController);

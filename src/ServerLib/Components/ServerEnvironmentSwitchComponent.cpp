@@ -8,6 +8,7 @@
 #include <CommonLib/Components/ScriptedEntityComponent.hpp>
 #include <CommonLib/Components/TickComponent.hpp>
 #include <ServerLib/ServerEnvironment.hpp>
+#include <ServerLib/Components/AtmosphereExchanger.hpp>
 #include <ServerLib/Components/AtmosphereMonitor.hpp>
 #include <ServerLib/Components/DatabaseComponent.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
@@ -70,6 +71,9 @@ namespace tsom
 
 			newEntity.emplace<Nz::RigidBody3DComponent>(physicsSettings, rigidBodyComponent->GetReplicationMode());
 		}
+
+		if (AtmosphereExchanger* atmosphereExchanger = oldEntity.try_get<AtmosphereExchanger>())
+			newEntity.emplace<AtmosphereExchanger>(*atmosphereExchanger);
 
 		if (AtmosphereMonitor* atmosphereMonitor = oldEntity.try_get<AtmosphereMonitor>())
 			newEntity.emplace<AtmosphereMonitor>(*atmosphereMonitor);
