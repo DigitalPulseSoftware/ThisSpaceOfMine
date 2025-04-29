@@ -29,6 +29,7 @@ namespace tsom
 			ServerDatabase(ServerDatabase&&) = delete;
 			~ServerDatabase() = default;
 
+			Nz::UInt32 CreatePlanet(const Database::Planet& planet);
 			Nz::UInt32 CreatePlanetEntity(const Database::PlanetEntity& planetEntity);
 			void DeletePlanetEntity(Nz::UInt32 planetEntityId);
 
@@ -61,6 +62,7 @@ namespace tsom
 				SQLite::Statement getAllConfigQuery;
 
 				// planet entities
+				SQLite::Statement createPlanetQuery;
 				SQLite::Statement createPlanetEntityQuery;
 				SQLite::Statement deletePlanetEntityQuery;
 				SQLite::Statement getAllPlanetEntitiesQuery;

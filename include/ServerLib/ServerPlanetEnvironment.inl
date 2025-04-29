@@ -4,6 +4,11 @@
 
 namespace tsom
 {
+	inline std::optional<Nz::UInt32> ServerPlanetEnvironment::GetDatabaseId() const
+	{
+		return m_databaseId;
+	}
+
 	inline entt::handle ServerPlanetEnvironment::GetPlanetEntity() const
 	{
 		return m_planetEntity;

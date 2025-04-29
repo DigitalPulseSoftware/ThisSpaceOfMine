@@ -34,6 +34,7 @@ namespace tsom
 			void RegisterEnvironment(sol::state& state);
 			void RegisterPlayer(sol::state& state);
 			void RegisterServer(sol::state& state);
+			void RegisterServerDatabase(sol::state& state);
 
 			std::shared_ptr<bool> m_aliveSignal;
 			ServerEntityScriptingLibrary& m_entityScriptingLibrary;

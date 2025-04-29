@@ -77,8 +77,10 @@ namespace tsom
 			inline Nz::Time GetTickDuration() const;
 			inline Nz::TimerManager& GetTickedTimerManager();
 
+			void LinkDatabaseEnvironments(Nz::UInt32 sourceDatabaseId, Nz::UInt32 destinationDatabaseId, const Nz::Vector3f& position);
 			void LoadFromDatabase();
 
+			void RegisterDatabaseEnvironment(Nz::UInt32 databaseId, std::unique_ptr<ServerEnvironment>&& serverEnvironment);
 			std::unique_ptr<Nz::EnttWorld> RegisterEnvironment(ServerEnvironment* environment);
 
 			inline void ScheduleForNextTick(std::function<void()>&& callback);

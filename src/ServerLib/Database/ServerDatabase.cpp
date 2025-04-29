@@ -14,6 +14,7 @@ namespace tsom
 {
 	ServerDatabase::PreparedStatements::PreparedStatements(SQLite::Database& database) :
 	getAllConfigQuery(database, "SELECT name, value FROM configs"),
+	createPlanetQuery(database, "INSERT INTO planets(generator, seed, chunk_count_x, chunk_count_y, chunk_count_z, corner_radius, gravity) VALUES(?, ?, ?, ?, ?, ?, ?) RETURNING id"),
 	createPlanetEntityQuery(database, "INSERT INTO planet_entities(unique_id, planet_id, class_name, class_version, position_x, position_y, position_z, rotation_x, rotation_y, rotation_z, rotation_w, properties, last_update) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime()) RETURNING id"),
 	deletePlanetEntityQuery(database, "DELETE FROM planet_entities WHERE id = ?"),
 	getAllPlanetEntitiesQuery(database, "SELECT id, unique_id, class_name, class_version, position_x, position_y, position_z, rotation_x, rotation_y, rotation_z, rotation_w, properties FROM planet_entities WHERE planet_id = ?"),
@@ -33,6 +34,23 @@ namespace tsom
 	{
 		Migrate();
 		PrepareQueries();
+	}
+
+	Nz::UInt32 ServerDatabase::CreatePlanet(const Database::Planet& planet)
+	{
+		NAZARA_DEFER({ m_preparedStatements->createPlanetQuery.reset(); });
+
+		m_preparedStatements->createPlanetQuery.bindNoCopy(1, planet.generatorName.data());
+		m_preparedStatements->createPlanetQuery.bind(2, planet.seed);
+		m_preparedStatements->createPlanetQuery.bind(3, planet.chunkCount.x);
+		m_preparedStatements->createPlanetQuery.bind(4, planet.chunkCount.y);
+		m_preparedStatements->createPlanetQuery.bind(5, planet.chunkCount.z);
+		m_preparedStatements->createPlanetQuery.bind(6, planet.cornerRadius);
+		m_preparedStatements->createPlanetQuery.bind(7, planet.gravity);
+
+		m_preparedStatements->createPlanetQuery.executeStep();
+
+		return m_preparedStatements->createPlanetQuery.getColumn(0);
 	}
 
 	Nz::UInt32 ServerDatabase::CreatePlanetEntity(const Database::PlanetEntity& planetEntity)

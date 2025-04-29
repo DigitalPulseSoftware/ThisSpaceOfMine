@@ -154,6 +154,36 @@ namespace tsom
 		m_players.Free(playerIndex);
 	}
 
+	void ServerInstance::LinkDatabaseEnvironments(Nz::UInt32 sourceDatabaseId, Nz::UInt32 destinationDatabaseId, const Nz::Vector3f& position)
+	{
+		auto sourceIt = m_databaseEnvironments.find(sourceDatabaseId);
+		if (sourceIt == m_databaseEnvironments.end())
+		{
+			spdlog::error("LinkDatabaseEnvironments: unknown source database id {}", sourceDatabaseId);
+			return;
+		}
+
+		auto destinationIt = m_databaseEnvironments.find(destinationDatabaseId);
+		if (destinationIt == m_databaseEnvironments.end())
+		{
+			spdlog::error("LinkDatabaseEnvironments: unknown destination database id {}", destinationDatabaseId);
+			return;
+		}
+
+		ServerEnvironment& sourceEnvironment = *sourceIt->second;
+		ServerEnvironment& destinationEnvironment = *destinationIt->second;
+
+		entt::handle switchTriggerEntity = sourceEnvironment.CreateEntity();
+		switchTriggerEntity.emplace<Nz::NodeComponent>(position);
+		switchTriggerEntity.emplace<EnvironmentProxyComponent>().targetEnvironment = &destinationEnvironment;
+		switchTriggerEntity.emplace<NetworkedComponent>();
+
+		auto& enterTrigger = switchTriggerEntity.emplace<EnvironmentEnterTriggerComponent>();
+		enterTrigger.aabb = destinationEnvironment.ComputeBoundingBox().ScaleAroundCenter(2.f);
+		enterTrigger.targetEnvironment = &destinationEnvironment;
+		enterTrigger.updateRoot = true;
+	}
+
 	void ServerInstance::LoadFromDatabase()
 	{
 		ServerConfig databaseConfig = ServerConfig::Load(m_serverDatabase);
@@ -161,38 +191,13 @@ namespace tsom
 		m_databaseEnvironments.clear();
 		m_serverDatabase.GetAllPlanets([&](Database::Planet&& planetData)
 		{
-			m_databaseEnvironments[planetData.id] = std::make_unique<ServerPlanetEnvironment>(*this, planetData.id, std::string(planetData.generatorName), planetData.seed, planetData.chunkCount, 1.f, planetData.cornerRadius);
+			RegisterDatabaseEnvironment(planetData.id, std::make_unique<ServerPlanetEnvironment>(*this, planetData.id, std::string(planetData.generatorName), planetData.seed, planetData.chunkCount, 1.f, planetData.cornerRadius));
 			return true;
 		});
 
 		m_serverDatabase.GetAllPlanetLinks([&](Database::PlanetLink&& planetLink)
 		{
-			auto sourceIt = m_databaseEnvironments.find(planetLink.sourcePlanet);
-			if (sourceIt == m_databaseEnvironments.end())
-			{
-				spdlog::error("Loading database: planet_link entry references unknown planet {}", planetLink.sourcePlanet);
-				return true;
-			}
-
-			auto destinationIt = m_databaseEnvironments.find(planetLink.destinationPlanet);
-			if (destinationIt == m_databaseEnvironments.end())
-			{
-				spdlog::error("Loading database: planet_link entry references unknown planet {}", planetLink.destinationPlanet);
-				return true;
-			}
-
-			ServerEnvironment& sourceEnvironment = *sourceIt->second;
-			ServerEnvironment& destinationEnvironment = *destinationIt->second;
-
-			entt::handle switchTriggerEntity = sourceEnvironment.CreateEntity();
-			switchTriggerEntity.emplace<Nz::NodeComponent>(planetLink.position);
-			switchTriggerEntity.emplace<EnvironmentProxyComponent>().targetEnvironment = &destinationEnvironment;
-			switchTriggerEntity.emplace<NetworkedComponent>();
-
-			auto& enterTrigger = switchTriggerEntity.emplace<EnvironmentEnterTriggerComponent>();
-			enterTrigger.aabb = destinationEnvironment.ComputeBoundingBox().ScaleAroundCenter(2.f);
-			enterTrigger.targetEnvironment = &destinationEnvironment;
-			enterTrigger.updateRoot = true;
+			LinkDatabaseEnvironments(planetLink.sourcePlanet, planetLink.destinationPlanet, planetLink.position);
 			return true;
 		});
 
@@ -201,6 +206,12 @@ namespace tsom
 			ServerEnvironment* planetEnv = it->second.get();
 			SetDefaultSpawnpoint(planetEnv, databaseConfig.defaultSpawnpoint.position, databaseConfig.defaultSpawnpoint.rotation);
 		}
+	}
+
+	void ServerInstance::RegisterDatabaseEnvironment(Nz::UInt32 databaseId, std::unique_ptr<ServerEnvironment>&& serverEnvironment)
+	{
+		NazaraAssert(!m_databaseEnvironments.contains(databaseId));
+		m_databaseEnvironments[databaseId] = std::move(serverEnvironment);
 	}
 
 	std::unique_ptr<Nz::EnttWorld> ServerInstance::RegisterEnvironment(ServerEnvironment* environment)

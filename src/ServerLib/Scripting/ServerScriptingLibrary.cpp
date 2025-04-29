@@ -10,6 +10,7 @@
 #include <ServerLib/ServerPlanetEnvironment.hpp>
 #include <ServerLib/ServerPlayer.hpp>
 #include <ServerLib/ServerShipEnvironment.hpp>
+#include <ServerLib/Database/ServerDatabase.hpp>
 #include <ServerLib/Scripting/ServerEntityScriptingLibrary.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
@@ -30,6 +31,7 @@ namespace tsom
 		state["SERVER"] = true;
 
 		RegisterAtmosphere(state);
+		RegisterServerDatabase(state);
 		RegisterEnvironment(state);
 		RegisterPlayer(state);
 		RegisterServer(state);
@@ -99,8 +101,12 @@ namespace tsom
 		);
 
 		state.new_usertype<ServerPlanetEnvironment>("PlanetEnvironment",
-			sol::no_constructor,
-			sol::base_classes, sol::bases<ServerEnvironment>()
+			sol::base_classes, sol::bases<ServerEnvironment>(),
+			sol::meta_function::construct, sol::factories([this](std::optional<Nz::UInt32> databaseId, std::string generatorName, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, float cellSize, float cornerRadius)
+			{
+				return std::make_unique<ServerPlanetEnvironment>(m_serverInstance, databaseId, std::move(generatorName), seed, chunkCount, cellSize, cornerRadius);
+			}),
+			"GetDatabaseId", LuaFunction(&ServerPlanetEnvironment::GetDatabaseId)
 		);
 
 		state.new_usertype<ServerShipEnvironment>("ShipEnvironment",
@@ -223,6 +229,14 @@ namespace tsom
 
 				return players;
 			}),
+			"LinkDatabaseEnvironments", LuaFunction([this](Nz::UInt32 sourceDatabaseId, Nz::UInt32 destinationDatabaseId, const Nz::Vector3f& position)
+			{
+				m_serverInstance.LinkDatabaseEnvironments(sourceDatabaseId, destinationDatabaseId, position);
+			}),
+			"RegisterDatabaseEnvironment", LuaFunction([this](Nz::UInt32 databaseId, std::unique_ptr<ServerPlanetEnvironment>& environment) //< Since we have to take the unique_ptr by reference we can't take the base type
+			{
+				m_serverInstance.RegisterDatabaseEnvironment(databaseId, std::move(environment));
+			}),
 			"ScheduleForNextTick", LuaFunction([this](sol::protected_function callback)
 			{
 				// It's possible for a ScriptingContext to schedule a callback just before getting destroyed
@@ -239,6 +253,34 @@ namespace tsom
 					}
 				});
 			})
+		);
+	}
+
+	void ServerScriptingLibrary::RegisterServerDatabase(sol::state& state)
+	{
+		state.create_named_table("serverDatabase",
+			"CreatePlanet", [this](sol::stack_table table)
+			{
+				std::string generatorName = table["generatorName"];
+
+				Database::Planet planet;
+				planet.chunkCount = table["chunkCount"];
+				planet.cornerRadius = table["cornerRadius"];
+				planet.generatorName = generatorName;
+				planet.gravity = table["gravity"];
+				planet.seed = table["seed"];
+
+				return m_serverInstance.GetServerDatabase().CreatePlanet(planet);
+			},
+			"StorePlanetLink", [this](sol::stack_table table)
+			{
+				Database::PlanetLink planetLink;
+				planetLink.sourcePlanet = table["sourcePlanet"];
+				planetLink.destinationPlanet = table["destinationPlanet"];
+				planetLink.position = table["position"];
+
+				return m_serverInstance.GetServerDatabase().StorePlanetLink(planetLink);
+			}
 		);
 	}
 }

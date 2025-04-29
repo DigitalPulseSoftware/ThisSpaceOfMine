@@ -34,7 +34,7 @@ namespace tsom
 				{
 					try
 					{
-						return std::invoke(funcPtr, args...);
+						return std::invoke(funcPtr, std::forward<Args>(args)...);
 					}
 					catch (const std::exception& e)
 					{
@@ -54,7 +54,7 @@ namespace tsom
 				{
 					try
 					{
-						return std::invoke(func, args...);
+						return std::invoke(func, std::forward<Args>(args)...);
 					}
 					catch (const std::exception& e)
 					{
@@ -78,10 +78,10 @@ namespace tsom
 							if (!object.IsValid())
 								TriggerLuaError(L, "invalid object");
 
-							return std::invoke(func, *object, args...);
+							return std::invoke(func, *object, std::forward<Args>(args)...);
 						}
 						else
-							return std::invoke(func, object, args...);
+							return std::invoke(func, object, std::forward<Args>(args)...);
 					}
 					catch (const std::exception& e)
 					{
