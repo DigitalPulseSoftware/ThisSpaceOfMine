@@ -66,22 +66,15 @@ namespace tsom
 			{
 				ConfigOption& option = m_options[optionIndex];
 
-				bool hasDefaultDefault = std::visit([](auto&& arg)
+				bool hasDefaultValue = std::visit([](auto&& arg)
 				{
 					return arg.defaultValue.has_value();
 				}, option.data);
 
-				if (!hasDefaultDefault)
+				if (!hasDefaultValue)
 				{
 					spdlog::error("missing config option \"{0}\"", option.name);
 					hasError = true;
-				}
-				else
-				{
-					std::visit([&](auto&& arg)
-					{
-						spdlog::warn("option \"{0}\" has no value, setting it to default value ({1})...", option.name, arg.defaultValue.value());
-					}, option.data);
 				}
 			}
 
