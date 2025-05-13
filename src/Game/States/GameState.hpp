@@ -95,6 +95,7 @@ namespace tsom
 			NazaraSlot(ClientSessionHandler, OnControlledShipFinished, m_onControlledShipFinished);
 			NazaraSlot(ClientSessionHandler, OnDebugDrawLineList, m_onDebugDrawLineList);
 			NazaraSlot(ClientSessionHandler, OnPlayerChatMessage, m_onPlayerChatMessage);
+			NazaraSlot(ClientSessionHandler, OnPlanetEnvironmentRotation, m_onPlanetEnvironmentRotation);
 			NazaraSlot(ClientSessionHandler, OnPlayerJoined, m_onPlayerJoined);
 			NazaraSlot(ClientSessionHandler, OnPlayerLeave, m_onPlayerLeave);
 			NazaraSlot(ClientSessionHandler, OnPlayerNameUpdate, m_onPlayerNameUpdate);
@@ -143,6 +144,7 @@ namespace tsom
 			std::optional<ConsoleExecutor> m_consoleExecutor;
 			std::optional<PilotedShip> m_pilotedShip;
 			std::shared_ptr<DebugOverlay> m_debugOverlay;
+			std::shared_ptr<Nz::MaterialInstance> m_skyboxMaterial;
 			std::vector<InputRotation> m_predictedInputRotations;
 			tsl::hopscotch_map<Nz::UInt64, DebugDrawLines> m_debugDrawLines;
 			entt::handle m_cameraEntity;

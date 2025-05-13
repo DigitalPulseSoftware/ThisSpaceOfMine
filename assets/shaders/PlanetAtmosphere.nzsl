@@ -112,7 +112,7 @@ fn main(input: VertOut) -> FragOut
 			atmosphere.absorptionFalloff,   // how fast the absorption falls off from the absorption height 
 			atmosphere.primarySteps,        // steps in the ray direction 
 			atmosphere.lightSteps           // steps in the light direction
-		);	
+		);
 	}
 
 	let output: FragOut;

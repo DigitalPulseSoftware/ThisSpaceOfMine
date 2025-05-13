@@ -56,6 +56,7 @@
 #include <Nazara/Widgets/SimpleLabelWidget.hpp>
 #include <fmt/ostream.h>
 #include <spdlog/spdlog.h>
+#include <CommonLib/AtmosphereScattering.hpp>
 
 #define DEBUG_ROTATION 0
 
@@ -137,9 +138,13 @@ namespace tsom
 			// Create a new material (custom properties + shaders) for the skybox
 			Nz::MaterialSettings skyboxSettings;
 			skyboxSettings.AddValueProperty<Nz::Color>("BaseColor", Nz::Color::White());
+			skyboxSettings.AddValueProperty<float>("Rotation", 0.f);
+			skyboxSettings.AddValueProperty<Nz::Vector3f>("RotationAxis", Nz::Vector3f::UnitY());
 			skyboxSettings.AddTextureProperty("BaseColorMap", Nz::ImageType::Cubemap);
 			skyboxSettings.AddPropertyHandler(std::make_unique<Nz::TexturePropertyHandler>("BaseColorMap", "HasBaseColorTexture"));
 			skyboxSettings.AddPropertyHandler(std::make_unique<Nz::UniformValuePropertyHandler>("BaseColor"));
+			skyboxSettings.AddPropertyHandler(std::make_unique<Nz::UniformValuePropertyHandler>("Rotation"));
+			skyboxSettings.AddPropertyHandler(std::make_unique<Nz::UniformValuePropertyHandler>("RotationAxis"));
 
 			// Setup only a forward pass (using the SkyboxMaterial module)
 			Nz::MaterialPass forwardPass;
@@ -152,9 +157,9 @@ namespace tsom
 			std::shared_ptr<Nz::Material> skyboxMaterial = std::make_shared<Nz::Material>(std::move(skyboxSettings), "SkyboxMaterial");
 
 			// Instantiate the material to use it, and configure it (texture + cull front faces as the render is from the inside)
-			std::shared_ptr<Nz::MaterialInstance> skyboxMat = skyboxMaterial->Instantiate();
-			skyboxMat->SetTextureProperty("BaseColorMap", filesystem.Open<Nz::TextureAsset>("assets/skybox-space.png", { .sRGB = true }, Nz::CubemapParams{}));
-			skyboxMat->UpdatePassesStates([](Nz::RenderStates& states)
+			m_skyboxMaterial = skyboxMaterial->Instantiate();
+			m_skyboxMaterial->SetTextureProperty("BaseColorMap", filesystem.Open<Nz::TextureAsset>("assets/skybox-space.png", { .sRGB = true }, Nz::CubemapParams{}));
+			m_skyboxMaterial->UpdatePassesStates([](Nz::RenderStates& states)
 			{
 				states.faceCulling = Nz::FaceCulling::Front;
 				return true;
@@ -168,7 +173,7 @@ namespace tsom
 
 			// Setup the model (mesh + material instance)
 			std::shared_ptr<Nz::Model> skyboxModel = std::make_shared<Nz::Model>(std::move(skyboxMeshGfx));
-			skyboxModel->SetMaterial(0, skyboxMat);
+			skyboxModel->SetMaterial(0, m_skyboxMaterial);
 
 			// Attach the model to the entity
 			m_skyboxEntity.emplace<Nz::GraphicsComponent>(std::move(skyboxModel), tsom::Constants::RenderMask3D);
@@ -554,6 +559,23 @@ namespace tsom
 			});
 
 			spdlog::info("{0}: {1}", playerInfo.nickname, message);
+		});
+
+		m_onPlanetEnvironmentRotation.Connect(stateData.sessionHandler->OnPlanetEnvironmentRotation, [this](const Packets::S_PlanetEnvironmentRotation& planetRotation)
+		{
+			Nz::Quaternionf inverseRotation(-planetRotation.rotation, planetRotation.rotationAxis);
+
+			auto& sunLightNode = m_sunLightEntity.get<Nz::NodeComponent>();
+			sunLightNode.SetRotation(inverseRotation * Nz::EulerAnglesf(-30.f, 80.f, 0.f));
+
+			m_skyboxMaterial->SetValueProperty("Rotation", planetRotation.rotation.ToRadians());
+			m_skyboxMaterial->SetValueProperty("RotationAxis", planetRotation.rotationAxis);
+
+			auto view = GetStateData().world->GetRegistry().view<AtmosphereScattering>();
+			for (auto&& [entity, atmosphereScattering] : view.each())
+			{
+				atmosphereScattering.sunDir = inverseRotation * Nz::Vector3f(0.852868497f, 0.5f, 0.150383770f);
+			}
 		});
 
 		m_onPlayerJoined.Connect(stateData.sessionHandler->OnPlayerJoined, [this](const ClientSessionHandler::PlayerInfo& playerInfo)

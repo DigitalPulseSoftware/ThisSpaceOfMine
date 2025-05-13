@@ -28,8 +28,10 @@ namespace tsom::Database
 		std::string_view generatorName;
 		Nz::UInt32 seed;
 		Nz::Vector3ui32 chunkCount;
+		Nz::Vector3f rotationAxis;
 		float cornerRadius;
 		float gravity;
+		float rotationSpeed;
 	};
 
 	struct PlanetChunk

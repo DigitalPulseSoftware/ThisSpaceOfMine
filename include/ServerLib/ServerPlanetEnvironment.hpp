@@ -11,6 +11,7 @@
 #include <CommonLib/Chunk.hpp>
 #include <ServerLib/ServerAtmosphere.hpp>
 #include <ServerLib/ServerEnvironment.hpp>
+#include <Nazara/Math/Angle.hpp>
 #include <filesystem>
 #include <optional>
 
@@ -22,7 +23,9 @@ namespace tsom
 	class TSOM_SERVERLIB_API ServerPlanetEnvironment final : public ServerEnvironment
 	{
 		public:
-			ServerPlanetEnvironment(ServerInstance& serverInstance, std::optional<Nz::UInt32> databaseId, std::string generatorName, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, float cellSize, float cornerRadius = 16.f);
+			struct PlanetParams;
+
+			ServerPlanetEnvironment(ServerInstance& serverInstance, std::optional<Nz::UInt32> databaseId, PlanetParams&& params);
 			ServerPlanetEnvironment(const ServerPlanetEnvironment&) = delete;
 			ServerPlanetEnvironment(ServerPlanetEnvironment&&) = delete;
 			~ServerPlanetEnvironment();
@@ -41,9 +44,22 @@ namespace tsom
 			inline entt::handle GetPlanetEntity() const;
 
 			void OnSave() override;
+			void OnTick(Nz::Time deltaTime) override;
 
 			ServerPlanetEnvironment& operator=(const ServerPlanetEnvironment&) = delete;
 			ServerPlanetEnvironment& operator=(ServerPlanetEnvironment&&) = delete;
+
+			struct PlanetParams
+			{
+				std::string generatorName;
+				Nz::DegreeAnglef rotationSpeed;
+				Nz::UInt32 seed;
+				Nz::Vector3f rotationAxis;
+				Nz::Vector3ui chunkCount;
+				float cellSize;
+				float cornerRadius;
+				float gravity;
+			};
 
 		private:
 			ServerAtmosphere* GetFallbackAtmosphereAtPosition(const Nz::Vector3f& position) override;
@@ -55,6 +71,10 @@ namespace tsom
 			std::optional<Nz::UInt32> m_databaseId;
 			std::unordered_set<ChunkIndices /*chunkIndex*/> m_dirtyChunks;
 			entt::handle m_planetEntity;
+			Nz::DegreeAnglef m_currentRotation;
+			Nz::DegreeAnglef m_rotationSpeed;
+			Nz::Time m_timeBeforeRotationBroadcast;
+			Nz::Vector3f m_rotationAxis;
 	};
 }
 

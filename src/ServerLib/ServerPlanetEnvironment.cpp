@@ -26,9 +26,13 @@ namespace tsom
 {
 	constexpr unsigned int s_chunkVersion = 1;
 
-	ServerPlanetEnvironment::ServerPlanetEnvironment(ServerInstance& serverInstance, std::optional<Nz::UInt32> databaseId, std::string generatorName, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, float cellSize, float cornerRadius) :
+	ServerPlanetEnvironment::ServerPlanetEnvironment(ServerInstance& serverInstance, std::optional<Nz::UInt32> databaseId, PlanetParams&& params) :
 	ServerEnvironment(serverInstance, ServerEnvironmentType::Planet, true),
-	m_databaseId(databaseId)
+	m_databaseId(databaseId),
+	m_currentRotation(0.f),
+	m_rotationSpeed(params.rotationSpeed),
+	m_timeBeforeRotationBroadcast(Nz::Time::Zero()),
+	m_rotationAxis(params.rotationAxis)
 	{
 		m_world->GetRegistry().ctx().emplace<ServerPlanetEnvironment*>(this);
 		m_world->AddSystem<EnvironmentSwitchSystem>();
@@ -42,14 +46,14 @@ namespace tsom
 		std::shared_ptr<const EntityClass> planetClass = serverInstance.GetEntityRegistry().FindClass("planet");
 
 		auto& entityInstance = m_planetEntity.emplace<ClassInstanceComponent>(planetClass);
-		entityInstance.UpdateProperty<EntityPropertyType::Float>("CellSize", cellSize);
-		entityInstance.UpdateProperty<EntityPropertyType::Float>("CornerRadius", cornerRadius);
-		entityInstance.UpdateProperty<EntityPropertyType::Float>("Gravity", 9.81f);
+		entityInstance.UpdateProperty<EntityPropertyType::Float>("CellSize", params.cellSize);
+		entityInstance.UpdateProperty<EntityPropertyType::Float>("CornerRadius", params.cornerRadius);
+		entityInstance.UpdateProperty<EntityPropertyType::Float>("Gravity", params.gravity);
 
 		planetClass->InitAndActivateEntity(m_planetEntity);
 
 		auto& planetComponent = m_planetEntity.get<PlanetComponent>();
-		planetComponent.planet->AddChunks(blockLibrary, chunkCount);
+		planetComponent.planet->AddChunks(blockLibrary, params.chunkCount);
 
 		if (m_databaseId)
 			LoadChunksFromDatabase();
@@ -57,7 +61,7 @@ namespace tsom
 		auto& app = serverInstance.GetApplication();
 		auto& taskScheduler = app.GetComponent<Nz::TaskSchedulerAppComponent>();
 
-		planetComponent.planet->GenerateChunks(blockLibrary, taskScheduler, seed, chunkCount, std::move(generatorName));
+		planetComponent.planet->GenerateChunks(blockLibrary, taskScheduler, params.seed, params.chunkCount, std::move(params.generatorName));
 		taskScheduler.WaitForTasks();
 
 		planetComponent.planet->GeneratePlatform(blockLibrary, Direction::Right, { 65, -18, -39 });
@@ -206,6 +210,39 @@ namespace tsom
 
 		if (PlanetDatabaseSystem* databaseSystem = m_world->TryGetSystem<PlanetDatabaseSystem>())
 			databaseSystem->Save();
+	}
+
+	void ServerPlanetEnvironment::OnTick(Nz::Time deltaTime)
+	{
+		ServerEnvironment::OnTick(deltaTime);
+
+		m_currentRotation += m_rotationSpeed * deltaTime.AsSeconds();
+		m_currentRotation.Normalize();
+
+		m_timeBeforeRotationBroadcast -= deltaTime;
+		if (m_timeBeforeRotationBroadcast < Nz::Time::Zero())
+		{
+			ForEachPlayer([&](ServerPlayer& player)
+			{
+				if (player.GetRootEnvironment() != this)
+					return;
+
+				NetworkSession* session = player.GetSession();
+				if (session)
+				{
+					SessionVisibilityHandler& visibility = player.GetVisibilityHandler();
+
+					Packets::S_PlanetEnvironmentRotation planetRotation;
+					planetRotation.id = visibility.GetEnvironmentId(this);
+					planetRotation.rotation = m_currentRotation;
+					planetRotation.rotationAxis = m_rotationAxis;
+
+					session->SendPacket(planetRotation);
+				}
+			});
+
+			m_timeBeforeRotationBroadcast = Nz::Time::TickDuration(60);
+		}
 	}
 
 	ServerAtmosphere* ServerPlanetEnvironment::GetFallbackAtmosphereAtPosition(const Nz::Vector3f& position)

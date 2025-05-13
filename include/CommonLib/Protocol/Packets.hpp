@@ -301,6 +301,13 @@ namespace tsom
 			Helper::EnvironmentId id;
 		};
 
+		struct S_PlanetEnvironmentRotation
+		{
+			Helper::EnvironmentId id;
+			Nz::DegreeAnglef rotation;
+			Nz::Vector3f rotationAxis;
+		};
+
 		struct S_EnvironmentsUpdateOwner
 		{
 			struct OwnerUpdate
@@ -386,6 +393,7 @@ namespace tsom
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_EntityPropertiesUpdate& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_EnvironmentCreate& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_EnvironmentDestroy& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_PlanetEnvironmentRotation& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_EnvironmentsUpdateOwner& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_GameData& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_NetworkStrings& data);

@@ -457,6 +457,11 @@ namespace tsom
 			playerInfo.textSprite->Update(Nz::SimpleTextDrawer::Draw(playerInfo.nickname, 48, Nz::TextStyle_Regular, (playerInfo.isAuthenticated) ? Nz::Color::White() : Nz::Color::Gray()), 0.01f);
 	}
 
+	void ClientSessionHandler::HandlePacket(Packets::S_PlanetEnvironmentRotation&& planetEnvironmentRotation)
+	{
+		OnPlanetEnvironmentRotation(planetEnvironmentRotation);
+	}
+
 	void ClientSessionHandler::LoadScripts(bool isReloading)
 	{
 		if (!isReloading)

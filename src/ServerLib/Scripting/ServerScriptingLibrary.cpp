@@ -104,7 +104,17 @@ namespace tsom
 			sol::base_classes, sol::bases<ServerEnvironment>(),
 			sol::meta_function::construct, sol::factories([this](std::optional<Nz::UInt32> databaseId, std::string generatorName, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, float cellSize, float cornerRadius)
 			{
-				return std::make_unique<ServerPlanetEnvironment>(m_serverInstance, databaseId, std::move(generatorName), seed, chunkCount, cellSize, cornerRadius);
+				ServerPlanetEnvironment::PlanetParams planetParams;
+				planetParams.cellSize = 1.f;
+				planetParams.chunkCount = chunkCount;
+				planetParams.cornerRadius = cornerRadius;
+				planetParams.generatorName = generatorName;
+				planetParams.gravity = 9.81f;
+				planetParams.rotationAxis = Nz::Vector3f::UnitY();
+				planetParams.rotationSpeed = 10.f;
+				planetParams.seed = seed;
+
+				return std::make_unique<ServerPlanetEnvironment>(m_serverInstance, databaseId, std::move(planetParams));
 			}),
 			"GetDatabaseId", LuaFunction(&ServerPlanetEnvironment::GetDatabaseId)
 		);

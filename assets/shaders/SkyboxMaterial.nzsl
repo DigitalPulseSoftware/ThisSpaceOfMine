@@ -16,7 +16,11 @@ const HasColor = (VertexColorLoc >= 0);
 struct MaterialSettings
 {
 	[tag("BaseColor")]
-	BaseColor: vec4[f32]
+	BaseColor: vec4[f32],
+	[tag("RotationAxis")]
+	RotationAxis: vec3[f32],
+	[tag("Rotation")]
+	Rotation: f32
 }
 
 [tag("Material")]
@@ -76,15 +80,31 @@ struct VertIn
 	color: vec4[f32]
 }
 
+fn RotationMatrix(rotation: f32, axis: vec3[f32]) -> mat4[f32]
+{
+	let s = sin(rotation);
+	let c = cos(rotation);
+	let oc = 1.0 - c;
+
+    return mat4[f32](
+		oc * axis.x * axis.x + c,           oc * axis.x * axis.y - axis.z * s,  oc * axis.z * axis.x + axis.y * s,  0.0,
+		oc * axis.x * axis.y + axis.z * s,  oc * axis.y * axis.y + c,           oc * axis.y * axis.z - axis.x * s,  0.0,
+		oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c,           0.0,
+		0.0,                                0.0,                                0.0,                                1.0
+	);
+}
+
 [entry(vert)]
 fn main(input: VertIn) -> VertOut
 {
     // Set translation part to zero
-    let rotationMat = viewerData.viewMatrix;
-    rotationMat[3].xyz = vec3[f32](0.0, 0.0, 0.0);
+    let viewRotationMat = viewerData.viewMatrix;
+    viewRotationMat[3].xyz = vec3[f32](0.0, 0.0, 0.0);
+
+	let skyboxRotation = RotationMatrix(settings.Rotation, settings.RotationAxis);
 
     let output: VertOut;
-    output.position = viewerData.projectionMatrix * rotationMat * vec4[f32](input.pos, 1.0);
+    output.position = viewerData.projectionMatrix * viewRotationMat * skyboxRotation * vec4[f32](input.pos, 1.0);
 	output.uvw = input.pos;
 
 	const if (HasColor)

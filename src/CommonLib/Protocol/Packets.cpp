@@ -380,6 +380,13 @@ namespace tsom
 			serializer &= data.id;
 		}
 
+		void Serialize(PacketSerializer& serializer, S_PlanetEnvironmentRotation& data)
+		{
+			serializer &= data.id;
+			serializer &= data.rotation;
+			serializer &= data.rotationAxis;
+		}
+
 		void Serialize(PacketSerializer& serializer, S_EnvironmentsUpdateOwner& data)
 		{
 			serializer &= data.tickIndex;

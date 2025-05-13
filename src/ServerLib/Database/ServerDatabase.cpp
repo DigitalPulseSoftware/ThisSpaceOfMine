@@ -14,15 +14,15 @@ namespace tsom
 {
 	ServerDatabase::PreparedStatements::PreparedStatements(SQLite::Database& database) :
 	getAllConfigQuery(database, "SELECT name, value FROM configs"),
-	createPlanetQuery(database, "INSERT INTO planets(generator, seed, chunk_count_x, chunk_count_y, chunk_count_z, corner_radius, gravity) VALUES(?, ?, ?, ?, ?, ?, ?) RETURNING id"),
+	createPlanetQuery(database, "INSERT INTO planets(generator, seed, chunk_count_x, chunk_count_y, chunk_count_z, corner_radius, gravity, rotation_axis_x, rotation_axis_y, rotation_axis_z, rotation_speed) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id"),
 	createPlanetEntityQuery(database, "INSERT INTO planet_entities(unique_id, planet_id, class_name, class_version, position_x, position_y, position_z, rotation_x, rotation_y, rotation_z, rotation_w, properties, last_update) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime()) RETURNING id"),
 	deletePlanetEntityQuery(database, "DELETE FROM planet_entities WHERE id = ?"),
 	getAllPlanetEntitiesQuery(database, "SELECT id, unique_id, class_name, class_version, position_x, position_y, position_z, rotation_x, rotation_y, rotation_z, rotation_w, properties FROM planet_entities WHERE planet_id = ?"),
 	partialUpdatePlanetEntityQuery(database, "UPDATE planet_entities SET class_version = ?, position_x = ?, position_y = ?, position_z = ?, rotation_x = ?, rotation_y = ?, rotation_z = ?, rotation_w = ?, properties = ?, last_update = datetime() WHERE id = ?"),
-	getAllPlanetQuery(database, "SELECT id, generator, seed, chunk_count_x, chunk_count_y, chunk_count_z, corner_radius, gravity FROM planets"),
+	getAllPlanetQuery(database, "SELECT id, generator, seed, chunk_count_x, chunk_count_y, chunk_count_z, corner_radius, gravity, rotation_axis_x, rotation_axis_y, rotation_axis_z, rotation_speed FROM planets"),
 	getAllPlanetLinkQuery(database, "SELECT source_planet_id, destination_planet_id, position_x, position_y, position_z FROM planet_links"),
 	getPlanetChunkQuery(database, "SELECT position_x, position_y, position_z, version, chunk_data FROM planet_chunks WHERE planet_id = ?"),
-	storePlanetQuery(database, "REPLACE INTO planets(id, generator, seed, chunk_count_x, chunk_count_y, chunk_count_z, corner_radius, gravity) VALUES(?, ?, ?, ?, ?, ?, ?, ?)"),
+	storePlanetQuery(database, "REPLACE INTO planets(id, generator, seed, chunk_count_x, chunk_count_y, chunk_count_z, corner_radius, gravity, rotation_axis_x, rotation_axis_y, rotation_axis_z, rotation_speed) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"),
 	storePlanetChunkQuery(database, "REPLACE INTO planet_chunks(planet_id, position_x, position_y, position_z, version, chunk_data, last_update) VALUES(?, ?, ?, ?, ?, ?, datetime())"),
 	storePlanetLinkQuery(database, "REPLACE INTO planet_links(source_planet_id, destination_planet_id, position_x, position_y, position_z) VALUES(?, ?, ?, ?, ?)")
 	{
@@ -41,12 +41,16 @@ namespace tsom
 		NAZARA_DEFER({ m_preparedStatements->createPlanetQuery.reset(); });
 
 		m_preparedStatements->createPlanetQuery.bindNoCopy(1, planet.generatorName.data());
-		m_preparedStatements->createPlanetQuery.bind(2, planet.seed);
-		m_preparedStatements->createPlanetQuery.bind(3, planet.chunkCount.x);
-		m_preparedStatements->createPlanetQuery.bind(4, planet.chunkCount.y);
-		m_preparedStatements->createPlanetQuery.bind(5, planet.chunkCount.z);
-		m_preparedStatements->createPlanetQuery.bind(6, planet.cornerRadius);
-		m_preparedStatements->createPlanetQuery.bind(7, planet.gravity);
+		m_preparedStatements->createPlanetQuery.bind(2,  planet.seed);
+		m_preparedStatements->createPlanetQuery.bind(3,  planet.chunkCount.x);
+		m_preparedStatements->createPlanetQuery.bind(4,  planet.chunkCount.y);
+		m_preparedStatements->createPlanetQuery.bind(5,  planet.chunkCount.z);
+		m_preparedStatements->createPlanetQuery.bind(6,  planet.cornerRadius);
+		m_preparedStatements->createPlanetQuery.bind(7,  planet.gravity);
+		m_preparedStatements->createPlanetQuery.bind(8,  planet.rotationAxis.x);
+		m_preparedStatements->createPlanetQuery.bind(9,  planet.rotationAxis.y);
+		m_preparedStatements->createPlanetQuery.bind(10, planet.rotationAxis.z);
+		m_preparedStatements->createPlanetQuery.bind(11, planet.rotationSpeed);
 
 		m_preparedStatements->createPlanetQuery.executeStep();
 
@@ -112,6 +116,10 @@ namespace tsom
 			planet.chunkCount.z = m_preparedStatements->getAllPlanetQuery.getColumn(5);
 			planet.cornerRadius = Nz::SafeCaster(m_preparedStatements->getAllPlanetQuery.getColumn(6).getDouble());
 			planet.gravity = Nz::SafeCaster(m_preparedStatements->getAllPlanetQuery.getColumn(7).getDouble());
+			planet.rotationAxis.x = Nz::SafeCaster(m_preparedStatements->getAllPlanetQuery.getColumn(8).getDouble());
+			planet.rotationAxis.y = Nz::SafeCaster(m_preparedStatements->getAllPlanetQuery.getColumn(9).getDouble());
+			planet.rotationAxis.z = Nz::SafeCaster(m_preparedStatements->getAllPlanetQuery.getColumn(10).getDouble());
+			planet.rotationSpeed = Nz::SafeCaster(m_preparedStatements->getAllPlanetQuery.getColumn(11).getDouble());
 
 			if (!callback(std::move(planet)))
 				break;
@@ -274,6 +282,10 @@ namespace tsom
 		m_preparedStatements->storePlanetQuery.bind(6, planet.chunkCount.z);
 		m_preparedStatements->storePlanetQuery.bind(7, planet.cornerRadius);
 		m_preparedStatements->storePlanetQuery.bind(8, planet.gravity);
+		m_preparedStatements->storePlanetQuery.bind(9, planet.rotationAxis.x);
+		m_preparedStatements->storePlanetQuery.bind(10, planet.rotationAxis.y);
+		m_preparedStatements->storePlanetQuery.bind(11, planet.rotationAxis.z);
+		m_preparedStatements->storePlanetQuery.bind(12, planet.rotationSpeed);
 
 		m_preparedStatements->storePlanetQuery.exec();
 	}

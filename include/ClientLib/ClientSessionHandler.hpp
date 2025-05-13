@@ -68,6 +68,7 @@ namespace tsom
 			void HandlePacket(Packets::S_NetworkStrings&& networkStrings);
 			void HandlePacket(Packets::S_PilotShip&& pilotShip);
 			void HandlePacket(Packets::S_PilotShipFinish&& pilotShipFinish);
+			void HandlePacket(Packets::S_PlanetEnvironmentRotation&& planetEnvironmentRotation);
 			void HandlePacket(Packets::S_PlayerJoin&& playerJoin);
 			void HandlePacket(Packets::S_PlayerLeave&& playerLeave);
 			void HandlePacket(Packets::S_PlayerNameUpdate&& playerNameUpdate);
@@ -82,6 +83,7 @@ namespace tsom
 			NazaraSignal(OnControlledShip, entt::handle /*controlledShip*/, entt::handle /*controlledShipExterior*/, const Nz::Quaternionf& /*referenceRotation*/);
 			NazaraSignal(OnControlledShipFinished);
 			NazaraSignal(OnDebugDrawLineList, const Packets::S_DebugDrawLineList& /*debugDrawLineList*/);
+			NazaraSignal(OnPlanetEnvironmentRotation, const Packets::S_PlanetEnvironmentRotation& /*planetEnvironmentRotation*/);
 			NazaraSignal(OnPlayerChatMessage, const std::string& /*message*/, const PlayerInfo& /*playerInfo*/);
 			NazaraSignal(OnPlayerJoined, const PlayerInfo& /*playerInfo*/);
 			NazaraSignal(OnPlayerLeave, const PlayerInfo& /*playerInfo*/);
