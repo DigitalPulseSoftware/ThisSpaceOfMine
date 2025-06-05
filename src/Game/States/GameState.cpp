@@ -79,7 +79,11 @@ namespace tsom
 		{
 			auto& cameraNode = m_cameraEntity.emplace<Nz::NodeComponent>();
 
+#ifdef TSOM_DEV_TOOLS
+			auto passList = filesystem.Load<Nz::PipelinePassList>(stateData.imgui ? "assets/3d_dev.passlist" : "assets/3d.passlist");
+#else
 			auto passList = filesystem.Load<Nz::PipelinePassList>("assets/3d.passlist");
+#endif
 
 			auto& cameraComponent = m_cameraEntity.emplace<Nz::CameraComponent>(stateData.renderTarget, std::move(passList));
 			cameraComponent.EnableInfiniteZFar(true);

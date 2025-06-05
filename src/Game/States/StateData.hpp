@@ -25,6 +25,7 @@ namespace tsom
 	class ClientBlockLibrary;
 	class ClientSessionHandler;
 	class ConnectionState;
+	class ImGuiRuntime;
 	class NetworkSession;
 
 	struct StateData : std::enable_shared_from_this<StateData>
@@ -39,6 +40,10 @@ namespace tsom
 		ClientBlockLibrary* blockLibrary = nullptr;
 		ClientSessionHandler* sessionHandler = nullptr;
 		NetworkSession* networkSession = nullptr;
+
+#ifdef TSOM_DEV_TOOLS
+		ImGuiRuntime* imgui = nullptr;
+#endif
 	};
 }
 

@@ -77,7 +77,6 @@ namespace tsom
 			entt::handle m_planetParentEntity;
 			entt::handle m_skyboxEntity;
 			entt::handle m_sunLightEntity;
-			Nz::ImGuiPlugin* m_imgui;
 			Nz::EulerAnglesf m_cameraRotation;
 			AtmosphereScattering m_atmosphereSettings;
 			PlanetSettings m_planetSettings;

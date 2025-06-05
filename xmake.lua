@@ -8,6 +8,7 @@ option("commonlib_static", { default = false, defines = "TSOM_COMMONLIB_STATIC"}
 option("clientlib_static", { default = false, defines = "TSOM_CLIENTLIB_STATIC"})
 option("serverlib_static", { default = false, defines = "TSOM_SERVERLIB_STATIC"})
 option("serveronly", { default = false })
+option("dev_tools", { default = false, defines = "TSOM_DEV_TOOLS" })
 
 -- Simple rule to make targets inherit their version from CommonLib version (which is extracted from git in on_config callback)
 rule("inherit_version", function ()
@@ -115,6 +116,7 @@ target("CommonLib", function ()
 	add_defines("TSOM_COMMONLIB_BUILD")
 	add_defines("SOL_SAFE_USERTYPE", { public = true })
 	add_options("commonlib_static")
+	add_options("dev_tools", { public = true })
 
 	add_packages("nazaraengine", { components = { "physics3d", "network" }, public = true })
 	add_packages("concurrentqueue", "cppcodec", "cpp-semver", "fast_float", "fmt", "hopscotch-map", "nlohmann_json", "sol2", "spdlog", { public = true })

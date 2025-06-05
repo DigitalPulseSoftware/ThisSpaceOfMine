@@ -16,6 +16,10 @@
 #include <NazaraUtils/Prerequisites.hpp>
 #include <optional>
 
+#ifdef TSOM_DEV_TOOLS
+#include <ClientLib/ImGuiRuntime.hpp>
+#endif
+
 namespace Nz
 {
 	class EnttWorld;
@@ -54,6 +58,9 @@ namespace tsom
 
 			std::optional<Nz::Canvas> m_canvas;
 			std::optional<ClientBlockLibrary> m_blockLibrary;
+#ifdef TSOM_DEV_TOOLS
+			std::optional<ImGuiRuntime> m_imguiRuntime;
+#endif
 			Nz::StateMachine m_stateMachine;
 	};
 }

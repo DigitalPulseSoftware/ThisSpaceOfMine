@@ -42,26 +42,17 @@ namespace tsom
 	{
 		auto& stateData = GetStateData();
 
-		auto& pluginManager = stateData.app->GetComponent<Nz::PluginManagerAppComponent>();
-		m_imgui = &pluginManager.Load<Nz::ImGuiPlugin>();
-
-		IMGUI_CHECKVERSION();
-		m_imguiContext = ImGui::CreateContext();
-		ImGuiIO& io = ImGui::GetIO();
-
-		m_imgui->SetupContext(m_imguiContext, *stateData.window);
-		m_imgui->SetupRenderer(m_imguiContext, *stateData.swapchain);
-
-		Nz::Graphics* graphics = Nz::Graphics::Instance();
-		Nz::ImGuiPipelinePass::RegisterPass(graphics->GetFramePipelinePassRegistry(), *m_imgui, m_imguiContext);
-
 		auto& filesystem = stateData.app->GetComponent<Nz::FilesystemAppComponent>();
 
 		m_cameraEntity = CreateEntity();
 		{
 			auto& cameraNode = m_cameraEntity.emplace<Nz::NodeComponent>(Nz::Vector3f(0.f, 150.f, -75.f), m_cameraRotation);
 
-			auto passList = filesystem.Load<Nz::PipelinePassList>("assets/3d_planeteditor.passlist");
+#ifdef TSOM_DEV_TOOLS
+			auto passList = filesystem.Load<Nz::PipelinePassList>(stateData.imgui ? "assets/3d_dev.passlist" : "assets/3d.passlist");
+#else
+			auto passList = filesystem.Load<Nz::PipelinePassList>("assets/3d.passlist");
+#endif
 
 			auto& cameraComponent = m_cameraEntity.emplace<Nz::CameraComponent>(stateData.renderTarget, std::move(passList));
 			cameraComponent.EnableInfiniteZFar(true);
@@ -209,13 +200,9 @@ namespace tsom
 	PlanetEditorState::~PlanetEditorState()
 	{
 		auto& stateData = GetStateData();
-		auto& taskScheduler = stateData.app->GetComponent<Nz::TaskSchedulerAppComponent>();
-
-		m_imgui->ShutdownRenderer(m_imguiContext);
-		m_imgui->ShutdownContext(m_imguiContext);
-		ImGui::DestroyContext(m_imguiContext);
 
 		// In case previous chunks were still generating
+		auto& taskScheduler = stateData.app->GetComponent<Nz::TaskSchedulerAppComponent>();
 		taskScheduler.WaitForTasks();
 	}
 
@@ -304,118 +291,115 @@ namespace tsom
 			cameraNode.SetPosition(cameraPos);
 		}
 
-		m_imgui->NewFrame(m_imguiContext, elapsedTime);
-
-		ImGui::NewFrame();
-
-		ImGui::SetNextWindowPos({ 60, 60 }, ImGuiCond_FirstUseEver);
-
-		if (ImGui::Begin("Planet settings", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+		if (stateData.imgui)
 		{
-			ImGui::Text("Press F1 to lock/unlock mouse");
-			ImGui::Separator();
+			ImGui::SetNextWindowPos({ 60, 60 }, ImGuiCond_FirstUseEver);
 
-			ImGui::SliderFloat("Corner radius", &m_planetSettings.cornerRadius, 0.f, 250.f);
-
-			int chunkCount[3] = {
-				int(m_planetSettings.chunkCount.x),
-				int(m_planetSettings.chunkCount.y),
-				int(m_planetSettings.chunkCount.z)
-			};
-			if (ImGui::InputInt3("Chunk count", chunkCount))
-				m_planetSettings.chunkCount = Nz::Vector3ui(std::max(chunkCount[0], 0), std::max(chunkCount[1], 0), std::max(chunkCount[2], 0));
-
-			int seed = m_planetSettings.seed;
-			if (ImGui::InputInt("Seed", &seed))
-				m_planetSettings.seed = std::max(seed, 0);
-
-			ImGui::InputText("Generator name", &m_planetSettings.scriptName);
-
-			ImGui::Separator();
-
-			if (ImGui::Button("Update planet"))
-				RefreshPlanet();
-		}
-		ImGui::End();
-
-		ImGui::SetNextWindowPos({ 60, 300 }, ImGuiCond_FirstUseEver);
-
-		if (ImGui::Begin("Atmosphere scattering settings", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
-		{
-			AtmosphereScattering& atmosphereScattering = m_atmosphereEntity.get<AtmosphereScattering>();
-
-			ImGui::Text("Planet and sun parameters");
-			ImGui::Text("(drag or ctrl+click to set a value)");
-
-			float sunDir[] = { atmosphereScattering.sunDir.x, atmosphereScattering.sunDir.y, atmosphereScattering.sunDir.z };
-			if (ImGui::SliderFloat3("Sun direction", sunDir, -1.f, 1.f))
+			if (ImGui::Begin("Planet settings", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 			{
-				atmosphereScattering.sunDir = Nz::Vector3f(sunDir[0], sunDir[1], sunDir[2]);
-				atmosphereScattering.sunDir.Normalize();
+				ImGui::Text("Press F1 to lock/unlock mouse");
+				ImGui::Separator();
 
-				m_sunLightEntity.get<Nz::NodeComponent>().SetRotation(Nz::Quaternionf::RotationBetween(Nz::Vector3f::Forward(), -atmosphereScattering.sunDir));
+				ImGui::SliderFloat("Corner radius", &m_planetSettings.cornerRadius, 0.f, 250.f);
+
+				int chunkCount[3] = {
+					int(m_planetSettings.chunkCount.x),
+					int(m_planetSettings.chunkCount.y),
+					int(m_planetSettings.chunkCount.z)
+				};
+				if (ImGui::InputInt3("Chunk count", chunkCount))
+					m_planetSettings.chunkCount = Nz::Vector3ui(std::max(chunkCount[0], 0), std::max(chunkCount[1], 0), std::max(chunkCount[2], 0));
+
+				int seed = m_planetSettings.seed;
+				if (ImGui::InputInt("Seed", &seed))
+					m_planetSettings.seed = std::max(seed, 0);
+
+				ImGui::InputText("Generator name", &m_planetSettings.scriptName);
+
+				ImGui::Separator();
+
+				if (ImGui::Button("Update planet"))
+					RefreshPlanet();
 			}
+			ImGui::End();
 
-			float sunIntensity[] = { atmosphereScattering.sunIntensity.x, atmosphereScattering.sunIntensity.y, atmosphereScattering.sunIntensity.z };
-			if (ImGui::DragFloat3("Sun intensity", sunIntensity))
-				atmosphereScattering.sunIntensity = Nz::Vector3f(sunIntensity[0], sunIntensity[1], sunIntensity[2]);
+			ImGui::SetNextWindowPos({ 60, 300 }, ImGuiCond_FirstUseEver);
 
-			float planetDimensions[] = { atmosphereScattering.planetDimensions.x, atmosphereScattering.planetDimensions.y, atmosphereScattering.planetDimensions.z };
-			if (ImGui::DragFloat3("Planet dimensions", planetDimensions, 1.0f, 0.0f, 200.f))
-				atmosphereScattering.planetDimensions = Nz::Vector3f(planetDimensions[0], planetDimensions[1], planetDimensions[2]);
+			if (ImGui::Begin("Atmosphere scattering settings", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+			{
+				AtmosphereScattering& atmosphereScattering = m_atmosphereEntity.get<AtmosphereScattering>();
 
-			ImGui::DragFloat("Atmosphere max height", &atmosphereScattering.atmosphereMaxHeight, 1.0f, 0.0f, 1000.f);
-			ImGui::DragFloat("Planet corner radius", &atmosphereScattering.planetCornerRadius, 1.0f, 0.0f, 128.f);
+				ImGui::Text("Planet and sun parameters");
+				ImGui::Text("(drag or ctrl+click to set a value)");
 
-			ImGui::Separator();
+				float sunDir[] = { atmosphereScattering.sunDir.x, atmosphereScattering.sunDir.y, atmosphereScattering.sunDir.z };
+				if (ImGui::SliderFloat3("Sun direction", sunDir, -1.f, 1.f))
+				{
+					atmosphereScattering.sunDir = Nz::Vector3f(sunDir[0], sunDir[1], sunDir[2]);
+					atmosphereScattering.sunDir.Normalize();
 
-			ImGui::Text("Scattering coefficients");
+					m_sunLightEntity.get<Nz::NodeComponent>().SetRotation(Nz::Quaternionf::RotationBetween(Nz::Vector3f::Forward(), -atmosphereScattering.sunDir));
+				}
 
-			float rayleighBeta[] = { atmosphereScattering.rayleighBeta.x, atmosphereScattering.rayleighBeta.y, atmosphereScattering.rayleighBeta.z };
-			if (ImGui::DragFloat3("Rayleigh beta", rayleighBeta, 0.000001f, 0.f, 1.f, "%.6f"))
-				atmosphereScattering.rayleighBeta = Nz::Vector3f(rayleighBeta[0], rayleighBeta[1], rayleighBeta[2]);
+				float sunIntensity[] = { atmosphereScattering.sunIntensity.x, atmosphereScattering.sunIntensity.y, atmosphereScattering.sunIntensity.z };
+				if (ImGui::DragFloat3("Sun intensity", sunIntensity))
+					atmosphereScattering.sunIntensity = Nz::Vector3f(sunIntensity[0], sunIntensity[1], sunIntensity[2]);
 
-			float mieBeta[] = { atmosphereScattering.mieBeta.x, atmosphereScattering.mieBeta.y, atmosphereScattering.mieBeta.z };
-			if (ImGui::DragFloat3("Mie beta", mieBeta, 0.000001f, 0.f, 1.f, "%.6f"))
-				atmosphereScattering.mieBeta = Nz::Vector3f(mieBeta[0], mieBeta[1], mieBeta[2]);
+				float planetDimensions[] = { atmosphereScattering.planetDimensions.x, atmosphereScattering.planetDimensions.y, atmosphereScattering.planetDimensions.z };
+				if (ImGui::DragFloat3("Planet dimensions", planetDimensions, 1.0f, 0.0f, 200.f))
+					atmosphereScattering.planetDimensions = Nz::Vector3f(planetDimensions[0], planetDimensions[1], planetDimensions[2]);
 
-			float ambientBeta[] = { atmosphereScattering.ambientBeta.x, atmosphereScattering.ambientBeta.y, atmosphereScattering.ambientBeta.z };
-			if (ImGui::DragFloat3("Ambient beta", ambientBeta, 0.000001f, 0.f, 1.f, "%.6f"))
-				atmosphereScattering.ambientBeta = Nz::Vector3f(ambientBeta[0], ambientBeta[1], ambientBeta[2]);
+				ImGui::DragFloat("Atmosphere max height", &atmosphereScattering.atmosphereMaxHeight, 1.0f, 0.0f, 1000.f);
+				ImGui::DragFloat("Planet corner radius", &atmosphereScattering.planetCornerRadius, 1.0f, 0.0f, 128.f);
 
-			float absorptionBeta[] = { atmosphereScattering.absorptionBeta.x, atmosphereScattering.absorptionBeta.y, atmosphereScattering.absorptionBeta.z };
-			if (ImGui::DragFloat3("Absorption beta", absorptionBeta, 0.000001f, 0.f, 1.f, "%.6f"))
-				atmosphereScattering.absorptionBeta = Nz::Vector3f(absorptionBeta[0], absorptionBeta[1], absorptionBeta[2]);
+				ImGui::Separator();
 
-			ImGui::DragFloat("Mie scattering", &atmosphereScattering.mieScattering, 0.001f, 0.f, 1.f);
+				ImGui::Text("Scattering coefficients");
 
-			ImGui::Separator();
+				float rayleighBeta[] = { atmosphereScattering.rayleighBeta.x, atmosphereScattering.rayleighBeta.y, atmosphereScattering.rayleighBeta.z };
+				if (ImGui::DragFloat3("Rayleigh beta", rayleighBeta, 0.000001f, 0.f, 1.f, "%.6f"))
+					atmosphereScattering.rayleighBeta = Nz::Vector3f(rayleighBeta[0], rayleighBeta[1], rayleighBeta[2]);
 
-			ImGui::Text("Scattering heights");
+				float mieBeta[] = { atmosphereScattering.mieBeta.x, atmosphereScattering.mieBeta.y, atmosphereScattering.mieBeta.z };
+				if (ImGui::DragFloat3("Mie beta", mieBeta, 0.000001f, 0.f, 1.f, "%.6f"))
+					atmosphereScattering.mieBeta = Nz::Vector3f(mieBeta[0], mieBeta[1], mieBeta[2]);
 
-			ImGui::DragFloat("Rayleigh height", &atmosphereScattering.rayleighHeight, 0.1f, 0.f, Nz::MaxValue());
-			ImGui::DragFloat("Mie height", &atmosphereScattering.mieHeight, 0.1f, 0.f, Nz::MaxValue());
-			ImGui::DragFloat("Absorption height", &atmosphereScattering.heightAbsorption, 0.1f, 0.f, Nz::MaxValue());
-			ImGui::DragFloat("Absorption falloff", &atmosphereScattering.absorptionFalloff, 0.1f, 0.f, Nz::MaxValue());
+				float ambientBeta[] = { atmosphereScattering.ambientBeta.x, atmosphereScattering.ambientBeta.y, atmosphereScattering.ambientBeta.z };
+				if (ImGui::DragFloat3("Ambient beta", ambientBeta, 0.000001f, 0.f, 1.f, "%.6f"))
+					atmosphereScattering.ambientBeta = Nz::Vector3f(ambientBeta[0], ambientBeta[1], ambientBeta[2]);
 
-			ImGui::Separator();
+				float absorptionBeta[] = { atmosphereScattering.absorptionBeta.x, atmosphereScattering.absorptionBeta.y, atmosphereScattering.absorptionBeta.z };
+				if (ImGui::DragFloat3("Absorption beta", absorptionBeta, 0.000001f, 0.f, 1.f, "%.6f"))
+					atmosphereScattering.absorptionBeta = Nz::Vector3f(absorptionBeta[0], absorptionBeta[1], absorptionBeta[2]);
 
-			int primaryStepCount = atmosphereScattering.primarySteps;
-			if (ImGui::SliderInt("Primary steps", &primaryStepCount, 1, 32))
-				atmosphereScattering.primarySteps = primaryStepCount;
+				ImGui::DragFloat("Mie scattering", &atmosphereScattering.mieScattering, 0.001f, 0.f, 1.f);
 
-			int lightStepCount = atmosphereScattering.lightSteps;
-			if (ImGui::SliderInt("Light steps", &lightStepCount, 1, 16))
-				atmosphereScattering.lightSteps = lightStepCount;
+				ImGui::Separator();
 
-			ImGui::Separator();
+				ImGui::Text("Scattering heights");
 
-			if (ImGui::Button("Reset values"))
-				atmosphereScattering = AtmosphereScattering{};
+				ImGui::DragFloat("Rayleigh height", &atmosphereScattering.rayleighHeight, 0.1f, 0.f, Nz::MaxValue());
+				ImGui::DragFloat("Mie height", &atmosphereScattering.mieHeight, 0.1f, 0.f, Nz::MaxValue());
+				ImGui::DragFloat("Absorption height", &atmosphereScattering.heightAbsorption, 0.1f, 0.f, Nz::MaxValue());
+				ImGui::DragFloat("Absorption falloff", &atmosphereScattering.absorptionFalloff, 0.1f, 0.f, Nz::MaxValue());
+
+				ImGui::Separator();
+
+				int primaryStepCount = atmosphereScattering.primarySteps;
+				if (ImGui::SliderInt("Primary steps", &primaryStepCount, 1, 32))
+					atmosphereScattering.primarySteps = primaryStepCount;
+
+				int lightStepCount = atmosphereScattering.lightSteps;
+				if (ImGui::SliderInt("Light steps", &lightStepCount, 1, 16))
+					atmosphereScattering.lightSteps = lightStepCount;
+
+				ImGui::Separator();
+
+				if (ImGui::Button("Reset values"))
+					atmosphereScattering = AtmosphereScattering{};
+			}
+			ImGui::End();
 		}
-		ImGui::End();
-
-		ImGui::Render();
 
 		return true;
 	}

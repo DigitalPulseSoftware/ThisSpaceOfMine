@@ -76,6 +76,10 @@ namespace tsom
 			auto& world = SetupWorld();
 			auto& swapchain = SetupSwapchain(world, window);
 
+#ifdef TSOM_DEV_TOOLS
+			m_imguiRuntime.emplace(GetApp(), window, swapchain);
+#endif
+
 			// TODO: Find a better place
 			tsom::AtmosphereScatteringPipelinePass::Register(world);
 
@@ -92,6 +96,7 @@ namespace tsom
 			stateData->window = &window;
 			stateData->swapchain = &swapchain;
 			stateData->world = &world;
+			stateData->imgui = &m_imguiRuntime.value();
 
 			// Window may be destroyed before application ends, be sure to not get a dangling pointer
 			m_onWindowDestruction.Connect(window.GetEventHandler().OnDestruction, [stateData](const Nz::WindowEventHandler*)
@@ -122,8 +127,18 @@ namespace tsom
 
 	void GameAppComponent::Update(Nz::Time elapsedTime)
 	{
+#ifdef TSOM_DEV_TOOLS
+		if (m_imguiRuntime)
+			m_imguiRuntime->BeginFrame(elapsedTime);
+#endif
+
 		if (!m_stateMachine.Update(elapsedTime))
 			GetApp().Quit();
+
+#ifdef TSOM_DEV_TOOLS
+		if (m_imguiRuntime)
+			m_imguiRuntime->EndFrame();
+#endif
 	}
 
 	bool GameAppComponent::CheckAssets()
