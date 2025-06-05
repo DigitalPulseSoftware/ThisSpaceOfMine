@@ -4,4 +4,8 @@
 
 namespace tsom
 {
+	inline ImGuiContext* ImGuiRuntime::GetContext()
+	{
+		return m_imguiContext;
+	}
 }

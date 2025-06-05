@@ -33,6 +33,8 @@ namespace tsom
 			void BeginFrame(Nz::Time elapsedTime);
 			void EndFrame();
 
+			inline ImGuiContext* GetContext();
+
 			ImGuiRuntime& operator=(const ImGuiRuntime&) = delete;
 			ImGuiRuntime& operator=(ImGuiRuntime&&) = delete;
 

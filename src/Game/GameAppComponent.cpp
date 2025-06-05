@@ -40,6 +40,10 @@
 #include <spdlog/spdlog.h>
 #include <charconv>
 
+#ifdef TSOM_DEV_TOOLS
+#include <imgui.h>
+#endif
+
 namespace tsom
 {
 	GameAppComponent::GameAppComponent(Nz::ApplicationBase& app) :
@@ -132,7 +136,11 @@ namespace tsom
 	{
 #ifdef TSOM_DEV_TOOLS
 		if (m_imguiRuntime)
+		{
 			m_imguiRuntime->BeginFrame(elapsedTime);
+
+			ImGui::SetCurrentContext(m_imguiRuntime->GetContext());
+		}
 #endif
 
 		if (!m_stateMachine.Update(elapsedTime))
