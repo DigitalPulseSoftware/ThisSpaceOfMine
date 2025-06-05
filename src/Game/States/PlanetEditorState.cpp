@@ -291,6 +291,7 @@ namespace tsom
 			cameraNode.SetPosition(cameraPos);
 		}
 
+#ifdef TSOM_DEV_TOOLS
 		if (stateData.imgui)
 		{
 			ImGui::SetNextWindowPos({ 60, 60 }, ImGuiCond_FirstUseEver);
@@ -400,6 +401,7 @@ namespace tsom
 			}
 			ImGui::End();
 		}
+#endif
 
 		return true;
 	}

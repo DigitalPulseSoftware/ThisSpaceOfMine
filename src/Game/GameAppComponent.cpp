@@ -96,7 +96,10 @@ namespace tsom
 			stateData->window = &window;
 			stateData->swapchain = &swapchain;
 			stateData->world = &world;
+
+#ifdef TSOM_DEV_TOOLS
 			stateData->imgui = &m_imguiRuntime.value();
+#endif
 
 			// Window may be destroyed before application ends, be sure to not get a dangling pointer
 			m_onWindowDestruction.Connect(window.GetEventHandler().OnDestruction, [stateData](const Nz::WindowEventHandler*)
