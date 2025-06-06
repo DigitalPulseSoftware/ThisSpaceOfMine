@@ -6,20 +6,17 @@
 #include <ClientLib/ClientChunkEntities.hpp>
 #include <ClientLib/EscapeMenu.hpp>
 #include <ClientLib/RenderConstants.hpp>
-#include <ClientLib/Components/VisualEntityComponent.hpp>
 #include <CommonLib/Planet.hpp>
 #include <Game/GameConfigAppComponent.hpp>
 #include <Game/States/StateData.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
-#include <Nazara/Core/PluginManagerAppComponent.hpp>
 #include <Nazara/Core/Primitive.hpp>
 #include <Nazara/Core/TaskSchedulerAppComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Graphics/DirectionalLight.hpp>
 #include <Nazara/Graphics/GraphicalMesh.hpp>
 #include <Nazara/Graphics/Graphics.hpp>
-#include <Nazara/Graphics/ImGuiPipelinePass.hpp>
 #include <Nazara/Graphics/Material.hpp>
 #include <Nazara/Graphics/MaterialInstance.hpp>
 #include <Nazara/Graphics/Model.hpp>
@@ -30,7 +27,6 @@
 #include <Nazara/Graphics/PropertyHandler/TexturePropertyHandler.hpp>
 #include <Nazara/Graphics/PropertyHandler/UniformValuePropertyHandler.hpp>
 #include <Nazara/Platform/Window.hpp>
-#include <Nazara/Renderer/Plugins/ImGuiPlugin.hpp>
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
 
@@ -177,7 +173,6 @@ namespace tsom
 
 		m_planetParentEntity = stateData.world->CreateEntity();
 		m_planetParentEntity.emplace<Nz::NodeComponent>();
-		m_planetParentEntity.emplace<VisualEntityComponent>().visualEntity = m_planetParentEntity;
 
 		m_planet = std::make_unique<Planet>(*stateData.app, 1.f, 16.f, 9.81f);
 		for (std::size_t layerIndex = 0; layerIndex < m_planetEntities.size(); ++layerIndex)

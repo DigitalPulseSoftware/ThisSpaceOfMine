@@ -12,11 +12,8 @@
 #include <ClientLib/Components/ClientEntityNetworkIndex.hpp>
 #include <ClientLib/Components/ClientInteractibleComponent.hpp>
 #include <ClientLib/Components/EnvironmentComponent.hpp>
-#include <ClientLib/Components/VisualEntityComponent.hpp>
 #include <ClientLib/Systems/AnimationSystem.hpp>
 #include <ClientLib/Systems/CameraFollowerSystem.hpp>
-#include <CommonLib/AtmosphereScattering.hpp>
-#include <CommonLib/DeformedChunk.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/NetworkSession.hpp>
@@ -34,20 +31,13 @@
 #include <Nazara/Core/PrimitiveList.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Graphics/DirectionalLight.hpp>
-#include <Nazara/Graphics/FramePipeline.hpp>
 #include <Nazara/Graphics/Material.hpp>
 #include <Nazara/Graphics/MaterialInstance.hpp>
 #include <Nazara/Graphics/Model.hpp>
 #include <Nazara/Graphics/PipelinePassList.hpp>
-#include <Nazara/Graphics/PointLight.hpp>
 #include <Nazara/Graphics/SpotLight.hpp>
-#include <Nazara/Graphics/TextureAsset.hpp>
 #include <Nazara/Graphics/Components/CameraComponent.hpp>
 #include <Nazara/Graphics/Components/LightComponent.hpp>
-#include <Nazara/Graphics/PropertyHandler/TexturePropertyHandler.hpp>
-#include <Nazara/Graphics/PropertyHandler/UniformValuePropertyHandler.hpp>
-#include <Nazara/Graphics/Systems/RenderSystem.hpp>
-#include <Nazara/Math/Ray.hpp>
 #include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <Nazara/Platform/Window.hpp>
@@ -55,7 +45,6 @@
 #include <Nazara/TextRenderer/RichTextBuilder.hpp>
 #include <Nazara/Widgets/LabelWidget.hpp>
 #include <Nazara/Widgets/SimpleLabelWidget.hpp>
-#include <fmt/ostream.h>
 #include <spdlog/spdlog.h>
 
 #define DEBUG_ROTATION 0
@@ -157,11 +146,6 @@ namespace tsom
 
 			auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
 			cameraNode.SetRotation(cameraRotation);
-
-			// Update visual entity as well
-			auto& entityVisualComp = m_controlledEntity.get<VisualEntityComponent>();
-			auto& visualNode = entityVisualComp.visualEntity.get<Nz::NodeComponent>();
-			visualNode.CopyLocalTransform(characterNode);
 
 #if DEBUG_ROTATION
 			Nz::EulerAnglesf err = m_predictedCameraRotation - currentRotation;
@@ -547,8 +531,7 @@ namespace tsom
 
 					chunkEntitiesPtr->ForEachChunk([&](const ChunkIndices& chunkIndices, entt::handle chunkEntity)
 					{
-						auto& chunkVisual = chunkEntity.get<VisualEntityComponent>();
-						auto& chunkGfx = chunkVisual.visualEntity.get<Nz::GraphicsComponent>();
+						auto& chunkGfx = chunkEntity.get<Nz::GraphicsComponent>();
 						if (m_shipAABB.IsValid())
 							m_shipAABB.ExtendTo(chunkGfx.GetAABB());
 						else

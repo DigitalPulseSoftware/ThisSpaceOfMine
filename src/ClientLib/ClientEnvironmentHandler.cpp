@@ -13,8 +13,6 @@
 #include <ClientLib/Components/EnvironmentComponent.hpp>
 #include <ClientLib/Components/NetworkInterpolationComponent.hpp>
 #include <ClientLib/Components/PhysicsInterpolationComponent.hpp>
-#include <ClientLib/Components/TransformCopyComponent.hpp>
-#include <ClientLib/Components/VisualEntityComponent.hpp>
 #include <ClientLib/Entities/ClientChunkClassLibrary.hpp>
 #include <ClientLib/Entities/ClientEntityClassLibrary.hpp>
 #include <ClientLib/Scripting/ClientAssetScriptingLibrary.hpp>
@@ -130,7 +128,7 @@ namespace tsom
 			}
 			else
 			{
-				auto& rootNode = env.visualRootEntity.get<Nz::NodeComponent>();
+				auto& rootNode = env.rootEntity.get<Nz::NodeComponent>();
 
 				// Slow path, transform lines
 				for (std::size_t i = 0; i < debugDrawLines.vertices.size(); i += 2)
@@ -199,7 +197,7 @@ namespace tsom
 			}
 			else
 			{
-				auto& visualNode = environment.visualRootEntity.get<Nz::NodeComponent>();
+				auto& visualNode = environment.rootEntity.get<Nz::NodeComponent>();
 				visualNode.SetRotation(Nz::Quaternionf(environment.rotation, environment.rotationAxis));
 			}
 		}
@@ -371,10 +369,6 @@ namespace tsom
 		entityData.environmentIndex = environmentUpdate.newEnvironmentId;
 		if (NetworkInterpolationComponent* movementInterpolation = entityData.entity.try_get<NetworkInterpolationComponent>())
 			movementInterpolation->UpdateRoot(oldEnvironment.rootEntity.get<Nz::NodeComponent>(), newEnvironment.rootEntity.get<Nz::NodeComponent>());
-
-		auto& entityVisualComp = entityData.entity.get<VisualEntityComponent>();
-		auto& visualNode = entityVisualComp.visualEntity.get<Nz::NodeComponent>();
-		visualNode.SetParent(newEnvironment.visualRootEntity, true);
 	}
 
 	void ClientEnvironmentHandler::HandlePacket(Packets::S_EntityProcedureCall& procedureCall)
@@ -411,9 +405,6 @@ namespace tsom
 		environment.rootEntity = m_world.CreateEntity();
 		environment.rootEntity.emplace<Nz::NodeComponent>();
 
-		environment.visualRootEntity = m_world.CreateEntity();
-		environment.visualRootEntity.emplace<Nz::NodeComponent>();
-
 		if (envCreate.ownerEntity != Nz::MaxValue<Packets::Helper::EntityId>())
 		{
 			assert(m_entities[envCreate.ownerEntity]);
@@ -422,7 +413,6 @@ namespace tsom
 			auto& ownerNode = ownerEntity.entity.get<Nz::NodeComponent>();
 
 			environment.rootEntity.get<Nz::NodeComponent>().SetParent(ownerNode);
-			environment.visualRootEntity.get<Nz::NodeComponent>().SetParent(ownerNode);
 		}
 		else
 		{
@@ -474,14 +464,12 @@ namespace tsom
 			NazaraAssert(ownerUpdate.environment < m_environments.size() && m_environments[ownerUpdate.environment]);
 			auto& envData = *m_environments[ownerUpdate.environment];
 			envData.isRoot = (ownerNode == nullptr);
-			envData.rootEntity.get<Nz::NodeComponent>().SetParent(ownerNode);
-			envData.visualRootEntity.get<Nz::NodeComponent>().SetParent(ownerNode);
+
+			auto& envNode = envData.rootEntity.get<Nz::NodeComponent>();
+			envNode.SetParent(ownerNode);
 
 			if (envData.isRoot)
-			{
-				auto& visualNode = envData.visualRootEntity.get<Nz::NodeComponent>();
-				visualNode.SetRotation(Nz::Quaternionf::Identity());
-			}
+				envNode.SetRotation(Nz::Quaternionf::Identity());
 		}
 	}
 
@@ -543,23 +531,6 @@ namespace tsom
 		auto& entityNetId = entity.emplace<ClientEntityNetworkIndex>();
 		entityNetId.networkIndex = entityData.entityId;
 
-		// Create visual entity
-		entt::handle visualEntity = m_world.CreateEntity();
-
-		auto& visualNode = visualEntity.emplace<Nz::NodeComponent>(entityData.initialStates.position, entityData.initialStates.rotation);
-
-		if (entityData.entityFlags.Test(Packets::Helper::EntityFlags::CancelEnvironmentRotation))
-			visualNode.SetParent(m_rootTransform);
-		else
-			visualNode.SetParent(environment.visualRootEntity);
-
-		// Bind visual entity to logical entity
-		auto& entityVisualComp = entity.emplace<VisualEntityComponent>();
-		entityVisualComp.visualEntity = visualEntity;
-
-		auto& entityOwnerComp = entity.emplace<EntityOwnerComponent>();
-		entityOwnerComp.Register(visualEntity);
-
 		std::string entityClassName = m_sessionHandler.GetSession()->GetStringStore().GetString(entityData.entityClass);
 		if (std::shared_ptr<const EntityClass> entityClass = m_entityRegistry.FindClass(entityClassName))
 		{
@@ -591,25 +562,19 @@ namespace tsom
 		// Since we make use of parenting for environments, we need to make replication happen in global space
 		if (Nz::RigidBody3DComponent* rigidBody = entity.try_get<Nz::RigidBody3DComponent>())
 		{
-			if (rigidBody->GetReplicationMode() != Nz::PhysicsReplication3D::None)
-			{
-				auto& referencedInterp = visualEntity.emplace<ReferencedPhysicsInterpolationComponent>();
-				referencedInterp.referenceEntity = entity;
-			}
-
 			switch (rigidBody->GetReplicationMode())
 			{
+				case Nz::PhysicsReplication3D::Custom:
+				case Nz::PhysicsReplication3D::Global:
 				case Nz::PhysicsReplication3D::Local:
-					rigidBody->SetReplicationMode(Nz::PhysicsReplication3D::Global);
+					entity.emplace<PhysicsInterpolationComponent>();
 					break;
 
 				case Nz::PhysicsReplication3D::LocalOnce:
 					rigidBody->SetReplicationMode(Nz::PhysicsReplication3D::GlobalOnce);
 					break;
 
-				case Nz::PhysicsReplication3D::Custom:
 				case Nz::PhysicsReplication3D::CustomOnce:
-				case Nz::PhysicsReplication3D::Global:
 				case Nz::PhysicsReplication3D::GlobalOnce:
 				case Nz::PhysicsReplication3D::None:
 					break;
@@ -624,21 +589,17 @@ namespace tsom
 
 		entity.emplace<Nz::RigidBody3DComponent>(physSettings, Nz::PhysicsReplication3D::None);
 
-		auto& visualEntityComp = entity.get<VisualEntityComponent>();
-
-		entt::handle& visualEntity = visualEntityComp.visualEntity;
-
 		Nz::UInt32 playerRenderMask = (entityData.controllingPlayerId == m_sessionHandler.GetLocalPlayerIndex()) ? tsom::Constants::RenderMaskLocalPlayer : tsom::Constants::RenderMaskOtherPlayer;
 
-		auto& gfx = visualEntity.emplace<Nz::GraphicsComponent>();
+		auto& gfx = entity.emplace<Nz::GraphicsComponent>();
 		gfx.AttachRenderable(m_playerModel, playerRenderMask);
 
 		// Skeleton & animations
 		std::shared_ptr<Nz::Skeleton> skeleton = std::make_shared<Nz::Skeleton>(m_playerAnimAssets->referenceSkeleton);
 
-		auto& skeletonComponent = visualEntity.emplace<Nz::SkeletonComponent>(skeleton);
+		auto& skeletonComponent = entity.emplace<Nz::SkeletonComponent>(skeleton);
 
-		visualEntity.emplace<AnimationComponent>(skeleton, std::make_shared<PlayerAnimationController>(visualEntity, m_playerAnimAssets));
+		entity.emplace<AnimationComponent>(skeleton, std::make_shared<PlayerAnimationController>(entity, m_playerAnimAssets));
 
 		// Floating name
 		std::shared_ptr<Nz::TextSprite> textSprite = std::make_shared<Nz::TextSprite>(Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic, Nz::MaterialInstancePreset::ReverseZ | Nz::MaterialInstancePreset::AlphaBlended));
@@ -652,23 +613,23 @@ namespace tsom
 		entt::handle frontTextEntity = m_world.CreateEntity();
 		{
 			auto& textNode = frontTextEntity.emplace<Nz::NodeComponent>();
-			textNode.SetParent(visualEntity);
+			textNode.SetParent(entity);
 			textNode.SetPosition({ -textSprite->GetAABB().width * 0.5f, 1.5f, 0.f });
 
 			frontTextEntity.emplace<Nz::GraphicsComponent>(textSprite, playerRenderMask);
 		}
-		visualEntity.get_or_emplace<EntityOwnerComponent>().Register(frontTextEntity);
+		entity.get_or_emplace<EntityOwnerComponent>().Register(frontTextEntity);
 
 		entt::handle backTextEntity = m_world.CreateEntity();
 		{
 			auto& textNode = backTextEntity.emplace<Nz::NodeComponent>();
-			textNode.SetParent(visualEntity);
+			textNode.SetParent(entity);
 			textNode.SetPosition({ textSprite->GetAABB().width * 0.5f, 1.5f, 0.f });
 			textNode.SetRotation(Nz::EulerAnglesf(0.f, Nz::TurnAnglef(0.5f), 0.f));
 
 			backTextEntity.emplace<Nz::GraphicsComponent>(textSprite, playerRenderMask);
 		}
-		visualEntity.get_or_emplace<EntityOwnerComponent>().Register(backTextEntity);
+		entity.get_or_emplace<EntityOwnerComponent>().Register(backTextEntity);
 
 		if (entityData.controllingPlayerId == m_sessionHandler.GetLocalPlayerIndex())
 		{
@@ -676,10 +637,7 @@ namespace tsom
 			OnControlledEntityChanged(entity);
 		}
 		else
-		{
 			entity.emplace<NetworkInterpolationComponent>(m_lastTickIndex);
-			visualEntity.emplace<TransformCopyComponent>().referenceEntity = entity;
-		}
 
 		if (playerInfo)
 			playerInfo->textSprite = std::move(textSprite);

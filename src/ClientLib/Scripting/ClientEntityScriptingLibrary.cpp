@@ -5,7 +5,6 @@
 #include <ClientLib/Scripting/ClientEntityScriptingLibrary.hpp>
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Components/ClientInteractibleComponent.hpp>
-#include <ClientLib/Components/VisualEntityComponent.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
 #include <Nazara/Graphics/Components/GraphicsComponent.hpp>
 #include <frozen/string.h>
@@ -26,16 +25,8 @@ namespace tsom
 		constexpr auto s_clientComponents = frozen::make_unordered_map<frozen::string, SharedEntityScriptingLibrary::ComponentEntry>({
 			{
 				"graphics", SharedEntityScriptingLibrary::ComponentEntry{
-					.addComponent = [](sol::this_state L, entt::handle entity, sol::optional<sol::table> parametersOpt)
-					{
-						auto& visualEntityComp = entity.get<VisualEntityComponent>();
-						return sol::make_object(L, &visualEntityComp.visualEntity.emplace<Nz::GraphicsComponent>());
-					},
-					.getComponent = [](sol::this_state L, entt::handle entity)
-					{
-						auto& visualEntityComp = entity.get<VisualEntityComponent>();
-						return sol::make_object(L, &visualEntityComp.visualEntity.get<Nz::GraphicsComponent>());
-					}
+					.addComponent = SharedEntityScriptingLibrary::ComponentEntry::DefaultAdd<Nz::GraphicsComponent>(),
+					.getComponent = SharedEntityScriptingLibrary::ComponentEntry::DefaultGet<Nz::GraphicsComponent>()
 				}
 			}
 		});

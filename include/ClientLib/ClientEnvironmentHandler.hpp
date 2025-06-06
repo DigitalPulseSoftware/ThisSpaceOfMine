@@ -100,7 +100,6 @@ namespace tsom
 			{
 				Nz::Bitset<Nz::UInt64> entities;
 				entt::handle rootEntity;
-				entt::handle visualRootEntity;
 				GravityController* gravityController;
 				Nz::DegreeAnglef rotation = Nz::DegreeAnglef::Zero();
 				Nz::Vector3f rotationAxis = Nz::Vector3f::UnitY();
