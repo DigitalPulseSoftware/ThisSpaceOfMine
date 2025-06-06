@@ -6,24 +6,6 @@
 
 namespace tsom
 {
-	inline entt::handle ClientSessionHandler::GetControlledEntity() const
-	{
-		return m_playerControlledEntity;
-	}
-
-	inline const GravityController* ClientSessionHandler::GetGravityController(std::size_t environmentIndex) const
-	{
-		if (environmentIndex > m_environments.size() || !m_environments[environmentIndex])
-			return nullptr;
-
-		return m_environments[environmentIndex]->gravityController;
-	}
-
-	inline ScriptingContext& ClientSessionHandler::GetScriptingContext()
-	{
-		return m_scriptingContext;
-	}
-
 	inline auto ClientSessionHandler::FetchPlayerInfo(PlayerIndex playerIndex) -> PlayerInfo*
 	{
 		if (playerIndex >= m_players.size() || !m_players[playerIndex])
@@ -38,5 +20,10 @@ namespace tsom
 			return nullptr;
 
 		return &m_players[playerIndex].value();
+	}
+
+	inline Nz::UInt16 ClientSessionHandler::GetLocalPlayerIndex() const
+	{
+		return m_localPlayerIndex;
 	}
 }

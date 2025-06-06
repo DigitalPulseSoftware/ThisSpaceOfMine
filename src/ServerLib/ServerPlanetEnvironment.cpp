@@ -203,7 +203,7 @@ namespace tsom
 					.position = chunkIndices,
 					.version = s_chunkVersion,
 					.chunkData = std::span(byteArray.GetBuffer(), byteArray.GetSize())
-					});
+				});
 			}
 			m_dirtyChunks.clear();
 		}
@@ -224,9 +224,6 @@ namespace tsom
 		{
 			ForEachPlayer([&](ServerPlayer& player)
 			{
-				if (player.GetRootEnvironment() != this)
-					return;
-
 				NetworkSession* session = player.GetSession();
 				if (session)
 				{

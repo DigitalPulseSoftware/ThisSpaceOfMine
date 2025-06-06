@@ -4,6 +4,7 @@
 
 #include <ClientLib/Scripting/ClientScriptingLibrary.hpp>
 #include <ClientLib/ClientAssetLibraryAppComponent.hpp>
+#include <ClientLib/ClientEnvironmentHandler.hpp>
 #include <ClientLib/ClientSessionHandler.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
 #include <Nazara/Graphics/Model.hpp>
@@ -46,7 +47,7 @@ namespace tsom
 
 		scriptsLibrary["Reload"] = LuaFunction([this]
 		{
-			m_sessionHandler.LoadScripts(true);
+			m_environmentHandler.LoadScripts(true);
 		});
 	}
 }

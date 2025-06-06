@@ -17,12 +17,13 @@ namespace Nz
 
 namespace tsom
 {
+	class ClientEnvironmentHandler;
 	class ClientSessionHandler;
 
 	class TSOM_CLIENTLIB_API ClientScriptingLibrary final : public ScriptingLibrary
 	{
 		public:
-			inline ClientScriptingLibrary(Nz::ApplicationBase& app, ClientSessionHandler& sessionHandler);
+			inline ClientScriptingLibrary(Nz::ApplicationBase& app, ClientEnvironmentHandler& clientEnvironmentHandler, ClientSessionHandler& sessionHandler);
 			ClientScriptingLibrary(const ClientScriptingLibrary&) = delete;
 			ClientScriptingLibrary(ClientScriptingLibrary&&) = delete;
 			~ClientScriptingLibrary() = default;
@@ -37,6 +38,7 @@ namespace tsom
 			void RegisterScripts(sol::state& state);
 
 			Nz::ApplicationBase& m_app;
+			ClientEnvironmentHandler& m_environmentHandler;
 			ClientSessionHandler& m_sessionHandler;
 	};
 }

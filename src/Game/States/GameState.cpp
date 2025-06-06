@@ -15,6 +15,7 @@
 #include <ClientLib/Components/VisualEntityComponent.hpp>
 #include <ClientLib/Systems/AnimationSystem.hpp>
 #include <ClientLib/Systems/CameraFollowerSystem.hpp>
+#include <CommonLib/AtmosphereScattering.hpp>
 #include <CommonLib/DeformedChunk.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/InternalConstants.hpp>
@@ -56,7 +57,6 @@
 #include <Nazara/Widgets/SimpleLabelWidget.hpp>
 #include <fmt/ostream.h>
 #include <spdlog/spdlog.h>
-#include <CommonLib/AtmosphereScattering.hpp>
 
 #define DEBUG_ROTATION 0
 
@@ -97,6 +97,7 @@ namespace tsom
 
 			m_targetCameraFOV = cameraComponent.GetFOV();
 		}
+		m_environmentHandler.emplace(*stateData.app, *stateData.sessionHandler, *stateData.world, m_cameraEntity, *stateData.blockLibrary);
 
 		m_crosshairEntity = CreateEntity();
 		{
@@ -117,74 +118,8 @@ namespace tsom
 			m_healthOxygen.entity.emplace<Nz::GraphicsComponent>(m_healthOxygen.textSprite, tsom::Constants::RenderMask2D);
 		}
 
-		m_sunLightEntity = CreateEntity();
-		{
-			m_sunLightEntity.emplace<Nz::NodeComponent>(Nz::Vector3f::Zero(), Nz::EulerAnglesf(-30.f, 80.f, 0.f));
 
-			auto& lightComponent = m_sunLightEntity.emplace<Nz::LightComponent>();
-			auto& dirLight = lightComponent.AddLight<Nz::DirectionalLight>(tsom::Constants::RenderMask3D);
-			dirLight.UpdateAmbientFactor(0.05f);
-			dirLight.EnableShadowCasting(true);
-			dirLight.UpdateShadowMapSize(2048);
-			dirLight.UpdateEnergy(5.f);
-			dirLight.EnableFixedShadowCascadSplit(true);
-
-			float splitFactors[] = { 0.002f, 0.006f, 0.02f };
-			dirLight.UpdateShadowCascadeFixedSplitFactors(splitFactors);
-		}
-
-		m_skyboxEntity = CreateEntity();
-		{
-			// Create a new material (custom properties + shaders) for the skybox
-			Nz::MaterialSettings skyboxSettings;
-			skyboxSettings.AddValueProperty<Nz::Color>("BaseColor", Nz::Color::White());
-			skyboxSettings.AddValueProperty<float>("Rotation", 0.f);
-			skyboxSettings.AddValueProperty<Nz::Vector3f>("RotationAxis", Nz::Vector3f::UnitY());
-			skyboxSettings.AddTextureProperty("BaseColorMap", Nz::ImageType::Cubemap);
-			skyboxSettings.AddPropertyHandler(std::make_unique<Nz::TexturePropertyHandler>("BaseColorMap", "HasBaseColorTexture"));
-			skyboxSettings.AddPropertyHandler(std::make_unique<Nz::UniformValuePropertyHandler>("BaseColor"));
-			skyboxSettings.AddPropertyHandler(std::make_unique<Nz::UniformValuePropertyHandler>("Rotation"));
-			skyboxSettings.AddPropertyHandler(std::make_unique<Nz::UniformValuePropertyHandler>("RotationAxis"));
-
-			// Setup only a forward pass (using the SkyboxMaterial module)
-			Nz::MaterialPass forwardPass;
-			forwardPass.states.depthBuffer = true;
-			forwardPass.states.depthCompare = Nz::RendererComparison::GreaterOrEqual;
-			forwardPass.shaders.push_back(std::make_shared<Nz::UberShader>(nzsl::ShaderStageType::Fragment | nzsl::ShaderStageType::Vertex, "SkyboxMaterial"));
-			skyboxSettings.AddPass("ForwardPass", forwardPass);
-
-			// Finalize the material (using SkyboxMaterial module as a reference for shader reflection)
-			std::shared_ptr<Nz::Material> skyboxMaterial = std::make_shared<Nz::Material>(std::move(skyboxSettings), "SkyboxMaterial");
-
-			// Instantiate the material to use it, and configure it (texture + cull front faces as the render is from the inside)
-			m_skyboxMaterial = skyboxMaterial->Instantiate();
-			m_skyboxMaterial->SetTextureProperty("BaseColorMap", filesystem.Open<Nz::TextureAsset>("assets/skybox-space.png", { .sRGB = true }, Nz::CubemapParams{}));
-			m_skyboxMaterial->UpdatePassesStates([](Nz::RenderStates& states)
-			{
-				states.faceCulling = Nz::FaceCulling::Front;
-				return true;
-			});
-
-			// Create a cube mesh with only position
-			Nz::MeshParams meshPrimitiveParams;
-			meshPrimitiveParams.vertexDeclaration = Nz::VertexDeclaration::Get(Nz::VertexLayout::XYZ);
-
-			std::shared_ptr<Nz::GraphicalMesh> skyboxMeshGfx = Nz::GraphicalMesh::Build(Nz::Primitive::Box(Nz::Vector3f::Unit() * 10.f, Nz::Vector2ui(0u), Nz::Matrix4f::Identity(), Nz::Rectf(0.f, 0.f, 1.f, 1.f)), meshPrimitiveParams);
-
-			// Setup the model (mesh + material instance)
-			std::shared_ptr<Nz::Model> skyboxModel = std::make_shared<Nz::Model>(std::move(skyboxMeshGfx));
-			skyboxModel->SetMaterial(0, m_skyboxMaterial);
-
-			// Attach the model to the entity
-			m_skyboxEntity.emplace<Nz::GraphicsComponent>(std::move(skyboxModel), tsom::Constants::RenderMask3D);
-
-			// Setup entity position and attach it to the camera (position only, camera rotation does not impact skybox)
-			auto& skyboxNode = m_skyboxEntity.emplace<Nz::NodeComponent>();
-			skyboxNode.SetInheritRotation(false);
-			skyboxNode.SetParent(m_cameraEntity);
-		}
-
-		m_onControlledEntityStateUpdate.Connect(stateData.sessionHandler->OnControlledEntityStateUpdate, [&](InputIndex inputIndex, const Packets::S_EntitiesStateUpdate::ControlledCharacter& characterStates)
+		m_environmentHandler->OnControlledEntityStateUpdate.Connect([&](InputIndex inputIndex, const Packets::S_EntitiesStateUpdate::ControlledCharacter& characterStates)
 		{
 			if (!m_controlledEntity)
 				return;
@@ -252,8 +187,8 @@ namespace tsom
 
 		m_blockSelectionBar = CreateWidget<BlockSelectionBar>(*stateData.blockLibrary);
 
-		m_controlledEntity = stateData.sessionHandler->GetControlledEntity();
-		m_onControlledEntityChanged.Connect(stateData.sessionHandler->OnControlledEntityChanged, [&](entt::handle entity)
+		m_controlledEntity = m_environmentHandler->GetControlledEntity();
+		m_environmentHandler->OnControlledEntityChanged.Connect([&](entt::handle entity)
 		{
 			m_controlledEntity = entity;
 			if (m_controlledEntity)
@@ -305,7 +240,7 @@ namespace tsom
 		m_localConsole->SetBackgroundColor(Nz::Color(0.f, 0.f, 0.33f, 0.5f));
 		m_localConsole->SetRenderLayerOffset(1);
 
-		m_consoleExecutor.emplace(stateData.sessionHandler->GetScriptingContext());
+		m_consoleExecutor.emplace(m_environmentHandler->GetScriptingContext());
 		m_localConsole->OnCommand.Connect([this](std::string_view command)
 		{
 			m_consoleExecutor->Execute(command, "client console");
@@ -529,23 +464,6 @@ namespace tsom
 				m_remoteConsole->PrintMessage(std::string(message), color);
 		});
 
-		m_onDebugDrawLineList.Connect(stateData.sessionHandler->OnDebugDrawLineList, [this](const Packets::S_DebugDrawLineList& debugDrawLinePacket)
-		{
-			auto& debugDrawLines = m_debugDrawLines[debugDrawLinePacket.uniqueHash];
-			debugDrawLines.color = debugDrawLinePacket.color;
-			debugDrawLines.duration = Nz::Time::Seconds(debugDrawLinePacket.duration);
-			debugDrawLines.environmentId = debugDrawLinePacket.environmentId;
-			debugDrawLines.vertices.clear();
-
-			if (!debugDrawLinePacket.indices.empty())
-			{
-				for (Nz::UInt16 index : debugDrawLinePacket.indices)
-					debugDrawLines.vertices.push_back(debugDrawLinePacket.vertices[index]);
-			}
-			else
-				debugDrawLines.vertices = debugDrawLinePacket.vertices;
-		});
-
 		m_onPlayerChatMessage.Connect(stateData.sessionHandler->OnPlayerChatMessage, [this](const std::string& message, const ClientSessionHandler::PlayerInfo& playerInfo)
 		{
 			m_chatBox->PrintMessage({
@@ -561,23 +479,6 @@ namespace tsom
 			spdlog::info("{0}: {1}", playerInfo.nickname, message);
 		});
 
-		m_onPlanetEnvironmentRotation.Connect(stateData.sessionHandler->OnPlanetEnvironmentRotation, [this](const Packets::S_PlanetEnvironmentRotation& planetRotation)
-		{
-			Nz::Quaternionf inverseRotation(-planetRotation.rotation, planetRotation.rotationAxis);
-
-			auto& sunLightNode = m_sunLightEntity.get<Nz::NodeComponent>();
-			sunLightNode.SetRotation(inverseRotation * Nz::EulerAnglesf(-30.f, 80.f, 0.f));
-
-			m_skyboxMaterial->SetValueProperty("Rotation", planetRotation.rotation.ToRadians());
-			m_skyboxMaterial->SetValueProperty("RotationAxis", planetRotation.rotationAxis);
-
-			auto view = GetStateData().world->GetRegistry().view<AtmosphereScattering>();
-			for (auto&& [entity, atmosphereScattering] : view.each())
-			{
-				atmosphereScattering.sunDir = inverseRotation * Nz::Vector3f(0.852868497f, 0.5f, 0.150383770f);
-			}
-		});
-
 		m_onPlayerJoined.Connect(stateData.sessionHandler->OnPlayerJoined, [this](const ClientSessionHandler::PlayerInfo& playerInfo)
 		{
 			m_chatBox->PrintMessage({
@@ -587,7 +488,7 @@ namespace tsom
 					{ Chatbox::ColorItem{ Nz::Color::White() } },
 					{ Chatbox::TextItem{ " joined the server" } }
 				}
-				});
+			});
 
 			spdlog::info("{0} joined the server", playerInfo.nickname);
 		});
@@ -622,7 +523,7 @@ namespace tsom
 			spdlog::info("{0} renamed to {1}", playerInfo.nickname, newNickname);
 		});
 
-		m_onControlledShip.Connect(stateData.sessionHandler->OnControlledShip, [this](entt::handle shipEntity, entt::handle shipExteriorEntity, const Nz::Quaternionf& referenceRotation)
+		m_environmentHandler->OnPilotShip.Connect([this](entt::handle shipEntity, entt::handle shipExteriorEntity, const Nz::Quaternionf& referenceRotation)
 		{
 			m_pilotedShip = PilotedShip{
 				.exteriorEntity = shipExteriorEntity,
@@ -660,7 +561,7 @@ namespace tsom
 			LayoutWidgets(Nz::Vector2f(GetStateData().renderTarget->GetSize()));
 		});
 
-		m_onControlledShipFinished.Connect(stateData.sessionHandler->OnControlledShipFinished, [this]
+		m_environmentHandler->OnStopPilotingShip.Connect([this]
 		{
 			m_pilotedShip = {};
 			m_blockSelectionBar->Show();
@@ -807,6 +708,12 @@ namespace tsom
 		if (!stateData.networkSession)
 			return true;
 
+#ifdef TSOM_DEV_TOOLS
+		m_environmentHandler->Update(elapsedTime, stateData.imgui);
+#else
+		m_environmentHandler->Update(elapsedTime, nullptr);
+#endif
+
 		m_timerManager.Update(elapsedTime);
 		m_chatBox->Update();
 
@@ -820,62 +727,13 @@ namespace tsom
 			OnTick(m_tickDuration, m_tickAccumulator < m_tickDuration);
 		}
 
-		Nz::DebugDrawer* debugDrawer = m_cameraEntity.get<Nz::CameraComponent>().AccessDebugDrawer();
-		for (auto it = m_debugDrawLines.begin(); it != m_debugDrawLines.end();)
-		{
-			DebugDrawLines& debugDrawLines = it.value();
-			debugDrawLines.duration -= elapsedTime;
-			if (debugDrawLines.duration < Nz::Time::Zero())
-			{
-				it = m_debugDrawLines.erase(it);
-				continue;
-			}
-
-			const Nz::Node* rootNode = stateData.sessionHandler->GetEnvironmentNode(debugDrawLines.environmentId);
-			if (rootNode->GetGlobalPosition().ApproxEqual(Nz::Vector3f::Zero()) && rootNode->GetGlobalRotation().ApproxEqual(Nz::Quaternionf::Identity()) && rootNode->GetGlobalScale().ApproxEqual(Nz::Vector3f::Unit()))
-			{
-				// Fast path, environment node has no transformation (root environment)
-				debugDrawer->DrawLines(debugDrawLines.vertices, debugDrawLines.color);
-			}
-			else
-			{
-				// Slow path, transform lines
-				for (std::size_t i = 0; i < debugDrawLines.vertices.size(); i += 2)
-					debugDrawer->DrawLine(rootNode->ToGlobalPosition(debugDrawLines.vertices[i]), rootNode->ToGlobalPosition(debugDrawLines.vertices[i + 1]), debugDrawLines.color);
-			}
-
-			++it;
-		}
-		//debugDrawer->DrawLine(Nz::Vector3f::Zero(), Nz::Vector3f::Forward() * 20.f, Nz::Color::Green());
-		//debugDrawer->DrawLine(Nz::Vector3f::Zero(), Nz::Vector3f::Left() * 20.f, Nz::Color::Green());
-		//debugDrawer->DrawLine(Nz::Vector3f::Left() * 20.f, Nz::Vector3f::Left() * 20.f + Nz::Vector3f::Forward() * 10.f, Nz::Color::Green());
-		//debugDrawer->DrawLine(Nz::Vector3f::Forward() * 20.f, Nz::Vector3f::Left() * 20.f + Nz::Vector3f::Forward() * 10.f, Nz::Color::Green());
-
-		//debugDrawer->DrawBox(Nz::Boxf(Nz::Vector3f(-1.f), Nz::Vector3f(2.f)), Nz::Color::Blue());
-		//debugDrawer->DrawBox(Nz::Boxf(Nz::Vector3f(Nz::Vector3f(m_planet->GetGridDimensions()) * -0.5f * m_planet->GetTileSize()), Nz::Vector3f(Nz::Vector3f(m_planet->GetGridDimensions()) * m_planet->GetTileSize())), Nz::Color::Green());
-		//debugDrawer->DrawFrustum(m_camera.get<Nz::CameraComponent>().GetViewerInsta, Nz::Color::Blue());
-
 		float cameraSpeed = (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::LShift)) ? 50.f : 10.f;
 		float updateTime = elapsedTime.AsSeconds();
 
 		auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
 
-#if 0
-		if (Chunk* chunk = m_planet->GetChunkByPosition(cameraNode.GetPosition()))
-		{
-			Nz::Vector3f chunkOffset = m_planet->GetChunkOffset(chunk->GetIndices());
-			Nz::Boxf aabb(chunkOffset, Nz::Vector3f(Planet::ChunkSize) * m_planet->GetTileSize());
-			debugDrawer->DrawBox(aabb, Nz::Color::Blue());
-
-			for (const Nz::Vector3f& corner : aabb.GetCorners())
-			{
-				if (DeformedChunk::DeformPosition(corner, m_planet->GetCenter(), m_planet->GetCornerRadius()).ApproxEqual(corner, 0.001f))
-					debugDrawer->DrawBox(Nz::Boxf(corner - Nz::Vector3f(0.5f), Nz::Vector3f(1.f)), Nz::Color::Red());
-				else
-					debugDrawer->DrawBox(Nz::Boxf(corner - Nz::Vector3f(0.5f), Nz::Vector3f(1.f)), Nz::Color::Green());
-			}
-		}
-#endif
+		Nz::DebugDrawer* debugDrawer = m_cameraEntity.get<Nz::CameraComponent>().AccessDebugDrawer();
+		m_environmentHandler->Draw(elapsedTime, debugDrawer);
 
 		if (m_controlledEntity)
 		{
@@ -982,7 +840,7 @@ namespace tsom
 					EnvironmentComponent& characterEnv = m_controlledEntity.get<EnvironmentComponent>();
 
 					m_debugOverlay->textDrawer.AppendText(fmt::format("Current environment: #{}\n", characterEnv.environmentIndex));
-					if (const GravityController* gravityController = stateData.sessionHandler->GetGravityController(characterEnv.environmentIndex))
+					if (const GravityController* gravityController = m_environmentHandler->GetGravityController(characterEnv.environmentIndex))
 					{
 						GravityForce gravityForce = gravityController->ComputeGravity(localPos);
 						m_debugOverlay->textDrawer.AppendText(fmt::format("Current gravity: {0} x {1:.3f};{2:.3f};{3:.3f} ({4:.2f}%)\n", gravityForce.acceleration, gravityForce.direction.x, gravityForce.direction.y, gravityForce.direction.z, gravityForce.factor * 100.f));
@@ -1121,7 +979,7 @@ namespace tsom
 		else
 			m_interactionLabel->Hide();
 
-		m_controlledEntity = stateData.sessionHandler->GetControlledEntity();
+		m_controlledEntity = m_environmentHandler->GetControlledEntity();
 
 		if (m_debugOverlay)
 		{

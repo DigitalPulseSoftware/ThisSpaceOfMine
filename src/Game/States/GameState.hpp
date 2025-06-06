@@ -8,6 +8,7 @@
 #define TSOM_GAME_STATES_GAMESTATE_HPP
 
 #include <ClientLib/ClientChunkEntities.hpp>
+#include <ClientLib/ClientEnvironmentHandler.hpp>
 #include <ClientLib/ClientSessionHandler.hpp>
 #include <CommonLib/ConsoleExecutor.hpp>
 #include <CommonLib/NetworkReactor.hpp>
@@ -89,13 +90,7 @@ namespace tsom
 			NazaraSlot(ClassInstanceComponent, OnPropertyUpdate, m_controlledEntityPropertyUpdate);
 			NazaraSlot(ClientSessionHandler, OnChatMessage, m_onChatMessage);
 			NazaraSlot(ClientSessionHandler, OnConsoleOutput, m_onConsoleOutput);
-			NazaraSlot(ClientSessionHandler, OnControlledEntityChanged, m_onControlledEntityChanged);
-			NazaraSlot(ClientSessionHandler, OnControlledEntityStateUpdate, m_onControlledEntityStateUpdate);
-			NazaraSlot(ClientSessionHandler, OnControlledShip, m_onControlledShip);
-			NazaraSlot(ClientSessionHandler, OnControlledShipFinished, m_onControlledShipFinished);
-			NazaraSlot(ClientSessionHandler, OnDebugDrawLineList, m_onDebugDrawLineList);
 			NazaraSlot(ClientSessionHandler, OnPlayerChatMessage, m_onPlayerChatMessage);
-			NazaraSlot(ClientSessionHandler, OnPlanetEnvironmentRotation, m_onPlanetEnvironmentRotation);
 			NazaraSlot(ClientSessionHandler, OnPlayerJoined, m_onPlayerJoined);
 			NazaraSlot(ClientSessionHandler, OnPlayerLeave, m_onPlayerLeave);
 			NazaraSlot(ClientSessionHandler, OnPlayerNameUpdate, m_onPlayerNameUpdate);
@@ -104,15 +99,6 @@ namespace tsom
 			NazaraSlot(Nz::Canvas, OnUnhandledMouseButtonPressed, m_mouseButtonReleasedSlot);
 			NazaraSlot(Nz::Canvas, OnUnhandledMouseMoved, m_mouseMovedSlot);
 			NazaraSlot(Nz::Canvas, OnUnhandledMouseWheelMoved, m_mouseWheelMovedSlot);
-
-			struct DebugDrawLines
-			{
-				std::size_t environmentId;
-				std::vector<Nz::Vector3f> vertices;
-				Nz::Color color;
-				Nz::Quaternionf rotation;
-				Nz::Time duration;
-			};
 
 			struct DebugOverlay
 			{
@@ -141,17 +127,14 @@ namespace tsom
 				entt::handle interiorEntity;
 			};
 
+			std::optional<ClientEnvironmentHandler> m_environmentHandler;
 			std::optional<ConsoleExecutor> m_consoleExecutor;
 			std::optional<PilotedShip> m_pilotedShip;
 			std::shared_ptr<DebugOverlay> m_debugOverlay;
-			std::shared_ptr<Nz::MaterialInstance> m_skyboxMaterial;
 			std::vector<InputRotation> m_predictedInputRotations;
-			tsl::hopscotch_map<Nz::UInt64, DebugDrawLines> m_debugDrawLines;
 			entt::handle m_cameraEntity;
 			entt::handle m_controlledEntity;
 			entt::handle m_crosshairEntity;
-			entt::handle m_skyboxEntity;
-			entt::handle m_sunLightEntity;
 			Nz::Boxf m_shipAABB;
 			Nz::DegreeAnglef m_targetCameraFOV;
 			Nz::EulerAnglesf m_incomingCameraRotation;  //< Accumulated rotation from inputs (will be applied on inputs)
