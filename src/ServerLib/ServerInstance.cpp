@@ -9,6 +9,7 @@
 #include <CommonLib/Scripting/SharedScriptingLibrary.hpp>
 #include <ServerLib/ServerConfig.hpp>
 #include <ServerLib/ServerPlanetEnvironment.hpp>
+#include <ServerLib/Components/CancelEnvironmentRotation.hpp>
 #include <ServerLib/Components/EnvironmentEnterTriggerComponent.hpp>
 #include <ServerLib/Components/EnvironmentProxyComponent.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
@@ -177,6 +178,7 @@ namespace tsom
 		switchTriggerEntity.emplace<Nz::NodeComponent>(position);
 		switchTriggerEntity.emplace<EnvironmentProxyComponent>().targetEnvironment = &destinationEnvironment;
 		switchTriggerEntity.emplace<NetworkedComponent>();
+		switchTriggerEntity.emplace<CancelEnvironmentRotation>();
 
 		auto& enterTrigger = switchTriggerEntity.emplace<EnvironmentEnterTriggerComponent>();
 		enterTrigger.aabb = destinationEnvironment.ComputeBoundingBox().ScaleAroundCenter(2.f);

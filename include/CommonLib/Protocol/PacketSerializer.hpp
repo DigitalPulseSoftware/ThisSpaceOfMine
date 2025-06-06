@@ -40,6 +40,7 @@ namespace tsom
 
 			template<typename DataType> void Serialize(DataType& data);
 			template<EnumType E> void Serialize(E& data);
+			template<typename E> void Serialize(Nz::Flags<E>& flags);
 			template<typename Value, typename Error> void Serialize(Nz::Result<Value, Error>& result);
 			template<typename Error> void Serialize(Nz::Result<void, Error>& result);
 			template<typename DataType> void Serialize(std::optional<DataType>& opt);

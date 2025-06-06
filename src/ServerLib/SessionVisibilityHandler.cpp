@@ -10,6 +10,7 @@
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Components/PlanetComponent.hpp>
 #include <CommonLib/Components/ShipComponent.hpp>
+#include <ServerLib/Components/CancelEnvironmentRotation.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <NazaraUtils/Algorithm.hpp>
 
@@ -797,7 +798,7 @@ namespace tsom
 		}
 	}
 
-	void SessionVisibilityHandler::HandleEntityCreation(std::vector<Packets::Helper::EntityData>& entities, entt::handle entity, CreateEntityData&& createEntityData)
+	void SessionVisibilityHandler::HandleEntityCreation(Nz::HybridVector<Packets::Helper::EntityData, 4>& entities, entt::handle entity, CreateEntityData&& createEntityData)
 	{
 		std::size_t entityIndex = m_freeEntityIds.FindFirst();
 		if (entityIndex == m_freeEntityIds.npos)
@@ -828,6 +829,9 @@ namespace tsom
 		entityData.initialStates.rotation = createEntityData.initialRotation;
 		entityData.playerControlled = createEntityData.playerControlledData;
 		entityData.properties = std::move(createEntityData.entityProperties);
+
+		if (entity.any_of<CancelEnvironmentRotation>())
+			entityData.entityFlags |= Packets::Helper::EntityFlags::CancelEnvironmentRotation;
 
 		if (createEntityData.isMoving && entity != m_controlledEntity)
 			m_movingEntities.emplace(entity);

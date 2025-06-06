@@ -114,6 +114,25 @@ namespace tsom
 			Serialize(static_cast<UT>(data));
 	}
 
+	template<typename E>
+	void PacketSerializer::Serialize(Nz::Flags<E>& flags)
+	{
+		using BitField = Nz::Flags<E>::BitField;
+
+		if (!IsWriting())
+		{
+			CompressedUnsigned<Nz::UInt64> flagValue;
+			Serialize(flagValue);
+
+			flags = Nz::Flags<E>(static_cast<BitField>(flagValue));
+		}
+		else
+		{
+			CompressedUnsigned<Nz::UInt64> flagValue(static_cast<Nz::UInt64>(flags));
+			Serialize(flagValue);
+		}
+	}
+
 	template<typename Value, typename Error>
 	void PacketSerializer::Serialize(Nz::Result<Value, Error>& result)
 	{

@@ -37,6 +37,7 @@ namespace tsom
 			{
 				serializer &= data.environmentId;
 				serializer &= data.entityId;
+				serializer &= data.entityFlags;
 				Serialize(serializer, data.initialStates);
 
 				serializer.SerializePresence(data.playerControlled);

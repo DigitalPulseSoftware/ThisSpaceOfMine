@@ -70,7 +70,7 @@ namespace tsom
 				Nz::Quaternionf initialRotation;
 				Nz::Vector3f initialPosition;
 				std::optional<Packets::Helper::PlayerControlledData> playerControlledData;
-				std::vector<EntityProperty> entityProperties;
+				Nz::HybridVector<EntityProperty, 8> entityProperties;
 				bool isMoving;
 			};
 
@@ -88,7 +88,7 @@ namespace tsom
 			void DispatchEntitiesStates(Nz::UInt16 tickIndex);
 			void DispatchEnvironments(Nz::UInt16 tickIndex);
 
-			void HandleEntityCreation(std::vector<Packets::Helper::EntityData>& entities, entt::handle entity, CreateEntityData&& createEntityData);
+			void HandleEntityCreation(Nz::HybridVector<Packets::Helper::EntityData, 4>& entities, entt::handle entity, CreateEntityData&& createEntityData);
 			void HandleEntityDestruction(entt::handle entity);
 
 			static constexpr std::size_t MaxConcurrentChunkUpdate = 3;

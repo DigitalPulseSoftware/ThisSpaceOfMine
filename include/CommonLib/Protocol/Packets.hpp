@@ -63,6 +63,15 @@ namespace tsom
 			using EntityId = Nz::UInt16;
 			using EnvironmentId = Nz::UInt8;
 
+			enum class EntityFlags
+			{
+				CancelEnvironmentRotation,
+
+				Max = CancelEnvironmentRotation
+			};
+
+			constexpr bool EnableEnumAsNzFlags(EntityFlags) { return true; }
+
 			struct EntityState
 			{
 				Nz::Quaternionf rotation;
@@ -78,9 +87,10 @@ namespace tsom
 			{
 				EnvironmentId environmentId;
 				EntityId entityId;
+				Nz::Flags<EntityFlags> entityFlags;
 				EntityState initialStates;
 				std::optional<PlayerControlledData> playerControlled;
-				std::vector<EntityProperty> properties;
+				Nz::HybridVector<EntityProperty, 8> properties;
 				CompressedUnsigned<Nz::UInt32> entityClass;
 			};
 
@@ -213,7 +223,7 @@ namespace tsom
 			Nz::UInt16 tickIndex;
 			Helper::ChunkId chunkId;
 			Helper::EntityId entityId;
-			std::vector<BlockUpdate> updates;
+			Nz::HybridVector<BlockUpdate, 8> updates;
 		};
 
 		struct S_DebugDrawLineList
@@ -229,13 +239,13 @@ namespace tsom
 		struct S_EntitiesCreation
 		{
 			Nz::UInt16 tickIndex;
-			std::vector<Helper::EntityData> entities;
+			Nz::HybridVector<Helper::EntityData, 4> entities;
 		};
 
 		struct S_EntitiesDelete
 		{
 			Nz::UInt16 tickIndex;
-			std::vector<Helper::EntityId> entities;
+			Nz::HybridVector<Helper::EntityId, 8> entities;
 		};
 
 		struct S_EntitiesStateUpdate
@@ -292,7 +302,7 @@ namespace tsom
 			Nz::UInt16 tickIndex;
 			Helper::EnvironmentId id;
 			Helper::EntityId ownerEntity;
-			std::vector<Helper::EntityData> entities;
+			Nz::HybridVector<Helper::EntityData, 4> entities;
 		};
 
 		struct S_EnvironmentDestroy
