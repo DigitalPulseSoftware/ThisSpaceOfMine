@@ -20,7 +20,6 @@
 #include <Nazara/Renderer/GpuSwitch.hpp>
 #include <Nazara/Widgets/Widgets.hpp>
 #include <Main/Main.hpp>
-#include <fmt/ostream.h>
 #include <spdlog/spdlog.h>
 
 NAZARA_REQUEST_DEDICATED_GPU()

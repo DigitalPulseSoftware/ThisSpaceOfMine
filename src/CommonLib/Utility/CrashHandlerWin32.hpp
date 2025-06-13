@@ -29,12 +29,12 @@ namespace tsom
 			~CrashHandlerWin32();
 
 			bool Install() override;
-			void HandleUnhandledException(const std::exception* e) override;
+			void HandleUnhandledException(const std::exception* e, const cpptrace::stacktrace& stacktrace) override;
 			void Uninstall() override;
 
 		private:
 			void GenerateCrashdump(const wchar_t* filename, EXCEPTION_POINTERS* e);
-			void GenerateCrashlog(const wchar_t* filename, std::string_view errorMessage, EXCEPTION_POINTERS* e, DWORD crashedThread);
+			void GenerateCrashlog(const wchar_t* filename, std::string_view errorMessage, EXCEPTION_POINTERS* e, DWORD crashedThread, const cpptrace::stacktrace& stacktrace);
 
 			static std::array<wchar_t, MAX_PATH> GetCrashdumpFilename();
 			static std::string GetErrorMessage(EXCEPTION_RECORD* record);

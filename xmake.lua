@@ -24,6 +24,7 @@ add_requires("nazaraengine >=2025.02.25", { debug = is_mode("debug"), configs = 
 add_requires(
 	"concurrentqueue",
 	"cppcodec",
+	"cpptrace",
 	"cpp-semver",
 	"fast_float",
 	"frozen",
@@ -58,13 +59,11 @@ if has_config("serveronly") then
 	})
 end
 
-if is_plat("windows") then
-	add_requires("stackwalker a5b5c2b6b542d50060f627c0a9276947e541629d")
-elseif is_plat("macosx") then
+if is_plat("macosx") then
 	add_requires("moltenvk[shared]")
 end
 
-add_requireconfs("fmt", "stackwalker", { debug = is_mode("debug") })
+add_requireconfs("fmt", { debug = is_mode("debug") })
 
 -- Don't link with system-installed libs on CI
 if os.getenv("CI") then
@@ -120,11 +119,7 @@ target("CommonLib", function ()
 
 	add_packages("nazaraengine", { components = { "physics3d", "network" }, public = true })
 	add_packages("concurrentqueue", "cppcodec", "cpp-semver", "fast_float", "fmt", "hopscotch-map", "nlohmann_json", "sol2", "spdlog", { public = true })
-	add_packages("frozen", "libsodium", "lz4", "perlinnoise")
-
-	if is_plat("windows") then
-		add_packages("stackwalker")
-	end
+	add_packages("cpptrace", "frozen", "libsodium", "lz4", "perlinnoise")
 
 	on_config(function (target, opt)
 		import("core.base.semver")
@@ -258,6 +253,7 @@ target("Main", function ()
 	add_headerfiles("src/Main/**.hpp", "src/Main/**.inl")
 	add_files("src/Main/**.cpp")
 	add_packages("nazaraengine", { components = { "core" }, public = true })
+	add_packages("cpptrace")
 end)
 
 target("TSOMServer", function ()
