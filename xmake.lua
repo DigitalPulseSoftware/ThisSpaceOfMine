@@ -67,7 +67,7 @@ add_requireconfs("fmt", { debug = is_mode("debug") })
 
 -- Don't link with system-installed libs on CI
 if os.getenv("CI") then
-	add_requireconfs("*", "sqlitecpp.sqlite3", { system = false })
+	add_requireconfs("**", { system = false })
 end
 
 add_rules("mode.debug", "mode.releasedbg", "mode.release")
