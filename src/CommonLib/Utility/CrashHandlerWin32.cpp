@@ -8,18 +8,14 @@
 
 #include <CommonLib/Utility/CrashHandlerWin32.hpp>
 #include <Nazara/Core/Error.hpp>
-#include <spdlog/spdlog.h>
+#include <cpptrace/cpptrace.hpp>
+#include <fmt/core.h>
 #include <array>
 #include <cstring>
 #include <cstdio>
 #include <cwchar>
 #include <functional>
 #include <fstream>
-
-#if __has_include(<StackWalker.h>)
-#define TSOM_HAS_STACKWALKER
-#include <StackWalker.h>
-#endif
 
 namespace tsom
 {
@@ -39,49 +35,6 @@ namespace tsom
 			}
 		};
 
-#ifdef TSOM_HAS_STACKWALKER
-		struct CallbackWalker : StackWalker
-		{
-			using StackWalker::StackWalker;
-			using StackWalker::CallstackEntryType;
-			using StackWalker::CallstackEntry;
-
-			using SymInitCallback = std::function<void(const char* searchPath, DWORD symOptions, const char* userName)>;
-			using LoadModuleCallback = std::function<void(const char* img, const char* mod, DWORD64 baseAddr, DWORD size, DWORD result, const char* symType, const char* pdbName, ULONGLONG fileVersion)>;
-			using CallstackEntryCallback = std::function<void(CallstackEntryType eType, CallstackEntry& entry)>;
-			using DbgHelpErrCallback = std::function<void(const char* szFuncName, DWORD gle, DWORD64 addr)>;
-
-			void OnSymInit(LPCSTR szSearchPath, DWORD symOptions, LPCSTR szUserName) override
-			{
-				if (symInitCallback)
-					symInitCallback(szSearchPath, symOptions, szUserName);
-			}
-
-			void OnLoadModule(LPCSTR img, LPCSTR mod, DWORD64 baseAddr, DWORD size, DWORD result, LPCSTR symType, LPCSTR pdbName, ULONGLONG fileVersion) override
-			{
-				if (loadModuleCallback)
-					loadModuleCallback(img, mod, baseAddr, size, result, symType, pdbName, fileVersion);
-			}
-
-			void OnCallstackEntry(CallstackEntryType eType, CallstackEntry& entry) override
-			{
-				if (callstackEntryCallback)
-					callstackEntryCallback(eType, entry);
-			}
-
-			void OnDbgHelpErr(LPCSTR szFuncName, DWORD gle, DWORD64 addr) override
-			{
-				if (dbgHelpErrCallback)
-					dbgHelpErrCallback(szFuncName, gle, addr);
-			}
-
-			SymInitCallback symInitCallback;
-			LoadModuleCallback loadModuleCallback;
-			CallstackEntryCallback callstackEntryCallback;
-			DbgHelpErrCallback dbgHelpErrCallback;
-		};
-#endif
-
 		using WinHandle = std::unique_ptr<std::remove_pointer_t<HANDLE>, HandleCloser>;
 	}
 
@@ -96,16 +49,16 @@ namespace tsom
 	{
 		if (!MiniDumpWriteDump)
 		{
-			if (!m_windbg.Load("Dbghelp.dll"))
+			if (!m_windbg.Load("dbghelp.dll"))
 			{
-				fprintf(stderr, "failed to load Dbghelp.dll: %s\nCrashDump will not be generated.\n", m_windbg.GetLastError().data());
+				fprintf(stderr, "failed to load dbghelp.dll: %s\nCrash dumps won't be generated.\n", m_windbg.GetLastError().data());
 				return false;
 			}
 
 			MiniDumpWriteDump = reinterpret_cast<MiniDumpWriteDumpFn>(m_windbg.GetSymbol("MiniDumpWriteDump"));
 			if (!MiniDumpWriteDump)
 			{
-				fprintf(stderr, "failed to load MiniDumpWriteDump or StackWalk64 symbol from Dbghelp.dll\nCrashDump will not be generated.\n");
+				fprintf(stderr, "failed to load MiniDumpWriteDump symbol from dbghelp.dll\nCrash dumps won't be generated.\n");
 				return false;
 			}
 		}
@@ -117,14 +70,14 @@ namespace tsom
 		return true;
 	}
 
-	void CrashHandlerWin32::HandleUnhandledException(const std::exception* e)
+	void CrashHandlerWin32::HandleUnhandledException(const std::exception* e, const cpptrace::stacktrace& stacktrace)
 	{
 		std::array<wchar_t, MAX_PATH> filename = GetCrashdumpFilename();
 		std::wcscat(filename.data(), L".log");
 
 		std::string errorMessage = (e) ? fmt::format("Unhandled C++ exception {}: {}", typeid(*e).name(), e->what()) : "Unhandled unknown C++ exception";
 
-		GenerateCrashlog(filename.data(), errorMessage, nullptr, GetCurrentThreadId());
+		GenerateCrashlog(filename.data(), errorMessage, nullptr, GetCurrentThreadId(), stacktrace);
 	}
 
 	void CrashHandlerWin32::Uninstall()
@@ -162,7 +115,7 @@ namespace tsom
 			std::fprintf(stderr, "CrashDump: MiniDumpWriteDump failed: %u (%s)\n", GetLastError(), Nz::Error::GetLastSystemError().data());
 	}
 
-	void CrashHandlerWin32::GenerateCrashlog(const wchar_t* filename, std::string_view errorMessage, EXCEPTION_POINTERS* e, DWORD /*crashedThread*/)
+	void CrashHandlerWin32::GenerateCrashlog(const wchar_t* filename, std::string_view errorMessage, EXCEPTION_POINTERS* e, DWORD /*crashedThread*/, const cpptrace::stacktrace& stacktrace)
 	{
 		std::fstream dumpFile(filename, std::ios_base::out | std::ios_base::trunc);
 		if (!dumpFile)
@@ -178,80 +131,7 @@ namespace tsom
 
 		dumpFile << std::flush;
 
-#ifdef TSOM_HAS_STACKWALKER
-		std::ostringstream callstackStream;
-		callstackStream << std::fixed;
-
-		std::ostringstream moduleStream;
-		moduleStream << std::fixed;
-
-		CallbackWalker stackLogger;
-		stackLogger.symInitCallback = [&](const char* searchPath, DWORD symOptions, const char* /*userName*/)
-		{
-			moduleStream << "SymInit:\n";
-			moduleStream << " - SearchPath: " << searchPath << "\n";
-			moduleStream << " - SymOptions: " << symOptions << "\n";
-			moduleStream << "\n";
-			moduleStream << "Modules:\n";
-		};
-
-		stackLogger.loadModuleCallback = [&](const char* img, const char* mod, DWORD64 baseAddr, DWORD size, DWORD result, const char* symType, const char* pdbName, ULONGLONG fileVersion)
-		{
-			moduleStream << " - " << img << ":" << mod << " (" << reinterpret_cast<void*>(static_cast<std::uintptr_t>(baseAddr)) << ")";
-			moduleStream << ", size: " << size << " (result: " << result << "), SymType: " << symType << ", PDB: " << pdbName;
-
-			if (fileVersion != 0)
-			{
-				DWORD v4 = ((fileVersion >>  0) & 0xFFFF);
-				DWORD v3 = ((fileVersion >> 16) & 0xFFFF);
-				DWORD v2 = ((fileVersion >> 32) & 0xFFFF);
-				DWORD v1 = ((fileVersion >> 48) & 0xFFFF);
-				moduleStream << "fileVersion: " << v1 << "." << v2 << "." << v3 << "." << v4;
-			}
-
-			moduleStream << "\n";
-		};
-
-		stackLogger.callstackEntryCallback = [&](CallbackWalker::CallstackEntryType /*eType*/, CallbackWalker::CallstackEntry& entry)
-		{
-			const char* functionName;
-			if (entry.undFullName[0])
-				functionName = entry.undFullName;
-			else if (entry.undName[0])
-				functionName = entry.undName;
-			else if (entry.name[0])
-				functionName = entry.name;
-			else
-				functionName = nullptr;
-
-			callstackStream << " - " << entry.moduleName << "!";
-			if (functionName)
-				callstackStream << functionName << '+' << std::hex << entry.offsetFromSmybol;
-			else
-				callstackStream << std::hex << entry.offset;
-
-			if (entry.lineFileName[0])
-				callstackStream << " (" << entry.lineFileName << ":" << std::dec << entry.lineNumber << ")";
-
-			callstackStream << "\n";
-		};
-
-		/*stackLogger.dbgHelpErrCallback = [&](LPCSTR szFuncName, DWORD gle, DWORD64 addr)
-		{
-			callstackStream << "ERROR: " << szFuncName << ", GetLastError: " << std::hex << gle << " (Address: " << reinterpret_cast<void*>(static_cast<std::uintptr_t>(addr)) << ")\n";
-		};*/
-
-		stackLogger.ShowCallstack(GetCurrentThread(), e ? e->ContextRecord : nullptr);
-
-		dumpFile << "Callstack:\n";
-		dumpFile << callstackStream.str();
-		dumpFile << "\n\n";
-		dumpFile << "Modules info:\n";
-		dumpFile << moduleStream.str();
-#else
-		NazaraUnused(e);
-		dumpFile << "StackWalker support not built, no callstack and module info could be generated.\n";
-#endif
+		stacktrace.print(dumpFile, false);
 
 		dumpFile.close();
 		std::fprintf(stderr, "Unhandled exception triggered: Callstack file %ls generated\n", filename);
@@ -333,7 +213,7 @@ namespace tsom
 		std::string errorMessage = GetErrorMessage(e->ExceptionRecord);
 
 		std::memcpy(&filename[filenameLength], L".log", 5 * sizeof(wchar_t));
-		s_crashHandler->GenerateCrashlog(filename.data(), "Unhandled SEH " + errorMessage, e, GetCurrentThreadId());
+		s_crashHandler->GenerateCrashlog(filename.data(), "Unhandled SEH " + errorMessage, e, GetCurrentThreadId(), cpptrace::generate_trace());
 
 		return EXCEPTION_EXECUTE_HANDLER;
 	}

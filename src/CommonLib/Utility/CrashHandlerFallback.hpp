@@ -20,7 +20,7 @@ namespace tsom
 
 			bool Install() override;
 
-			void HandleUnhandledException(const std::exception* e) override;
+			void HandleUnhandledException(const std::exception* e, const cpptrace::stacktrace& stacktrace) override;
 
 			void Uninstall() override;
 	};

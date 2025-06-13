@@ -5,7 +5,7 @@
 #include <Main/Main.hpp>
 #include <CommonLib/Version.hpp>
 #include <CommonLib/Utility/CrashHandler.hpp>
-#include <spdlog/spdlog.h>
+#include <cpptrace/from_current.hpp>
 #include <spdlog/spdlog.h>
 #include <cstdio>
 #include <exception>
@@ -41,22 +41,24 @@ int TSOMEntry(int argc, char* argv[], int(*mainFunc)(int argc, char* argv[]))
 	std::unique_ptr<tsom::CrashHandler> crashHandler = tsom::CrashHandler::PlatformCrashHandler();
 	crashHandler->Install();
 
-	try
+	int retCode = EXIT_FAILURE;
+	cpptrace::try_catch(
+	[&]
 	{
-		return mainFunc(argc, argv);
-	}
-	catch (const std::exception& e)
+		retCode = mainFunc(argc, argv);
+	},
+	[&](const std::exception& e)
 	{
 		spdlog::critical("unhandled exception: {0}", e.what());
-		crashHandler->HandleUnhandledException(&e);
-		return EXIT_FAILURE;
-	}
-	catch (...)
+		crashHandler->HandleUnhandledException(&e, cpptrace::from_current_exception());
+	},
+	[&](/*...*/)
 	{
 		spdlog::critical("unhandled non-standard exception");
-		crashHandler->HandleUnhandledException(nullptr);
-		return EXIT_FAILURE;
-	}
+		crashHandler->HandleUnhandledException(nullptr, cpptrace::from_current_exception());
+	});
+
+	return retCode;
 }
 
 //TODO: Handle WinMain

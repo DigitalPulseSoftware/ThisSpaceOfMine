@@ -8,6 +8,7 @@
 #define TSOM_COMMONLIB_UTILITY_CRASHHANDLER_HPP
 
 #include <CommonLib/Export.hpp>
+#include <cpptrace/forward.hpp>
 #include <iosfwd>
 #include <memory>
 
@@ -21,7 +22,7 @@ namespace tsom
 
 			virtual bool Install() = 0;
 
-			virtual void HandleUnhandledException(const std::exception* e) = 0;
+			virtual void HandleUnhandledException(const std::exception* e, const cpptrace::stacktrace& stacktrace) = 0;
 
 			virtual void Uninstall() = 0;
 

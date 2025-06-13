@@ -3,6 +3,7 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/Utility/CrashHandlerFallback.hpp>
+#include <cpptrace/cpptrace.hpp>
 #include <spdlog/spdlog.h>
 #include <ctime>
 #include <fstream>
@@ -15,7 +16,7 @@ namespace tsom
 		return false;
 	}
 
-	void CrashHandlerFallback::HandleUnhandledException(const std::exception* e)
+	void CrashHandlerFallback::HandleUnhandledException(const std::exception* e, const cpptrace::stacktrace& stacktrace)
 	{
 		std::time_t currentTime = std::time(nullptr);
 		std::tm* time = std::localtime(&currentTime);
@@ -35,6 +36,8 @@ namespace tsom
 			dumpFile << "Unhandled C++ exception " << typeid(*e).name() << e->what();
 		else
 			dumpFile << "Unhandled unknown C++ exception";
+
+		stacktrace.print(dumpFile, true);
 	}
 
 	void CrashHandlerFallback::Uninstall()
