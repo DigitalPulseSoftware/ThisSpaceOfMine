@@ -118,6 +118,10 @@ namespace tsom
 				LuaFunction([](Nz::MaterialInstance& matInstance, std::string_view propertyName, float propertyValue)
 				{
 					matInstance.SetValueProperty(propertyName, propertyValue);
+				}),
+				LuaFunction([](Nz::MaterialInstance& matInstance, std::string_view propertyName, const Nz::Color& propertyValue)
+				{
+					matInstance.SetValueProperty(propertyName, propertyValue);
 				})
 			),
 

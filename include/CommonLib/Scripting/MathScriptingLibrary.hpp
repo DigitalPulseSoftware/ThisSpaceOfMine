@@ -27,6 +27,7 @@ namespace tsom
 
 		private:
 			template<typename T> void RegisterBox(sol::state& state, const char* name);
+			void RegisterColor(sol::state& state);
 			template<typename T> void RegisterEulerAngles(sol::state& state, const char* name);
 			void RegisterPerlinNoise(sol::state& state);
 			template<typename T> void RegisterQuaternion(sol::state& state, const char* name);

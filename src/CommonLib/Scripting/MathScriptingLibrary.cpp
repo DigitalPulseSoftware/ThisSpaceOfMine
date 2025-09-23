@@ -24,6 +24,7 @@ namespace tsom
 		RegisterBox<float>(state, "Boxf");
 		RegisterBox<int>(state, "Boxi");
 		RegisterBox<unsigned int>(state, "Boxui");
+		RegisterColor(state);
 		RegisterEulerAngles<float>(state, "EulerAnglesf");
 		RegisterPerlinNoise(state);
 		RegisterQuaternion<float>(state, "Quaternionf");
@@ -50,6 +51,18 @@ namespace tsom
 			"height", &Nz::Box<T>::height,
 			"depth", &Nz::Box<T>::depth,
 			sol::meta_function::to_string, &Nz::Box<T>::ToString
+		);
+	}
+
+	void MathScriptingLibrary::RegisterColor(sol::state& state)
+	{
+		state.new_usertype<Nz::Color>("Color",
+			sol::call_constructor, sol::constructors<Nz::Color(float), Nz::Color(float, float, float), Nz::Color(float, float, float, float)>(),
+			"r", &Nz::Color::r,
+			"g", &Nz::Color::g,
+			"b", &Nz::Color::b,
+			"a", &Nz::Color::a,
+			sol::meta_function::to_string, &Nz::Color::ToString
 		);
 	}
 
