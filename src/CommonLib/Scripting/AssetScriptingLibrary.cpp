@@ -98,6 +98,16 @@ namespace tsom
 	{
 		state.new_usertype<Nz::Primitive>("Primitive",
 			sol::no_constructor,
+			"Box", sol::overload(
+				[](const Nz::Vector3f& lengths)
+				{
+					return Nz::Primitive::Box(lengths);
+				},
+				[](const Nz::Vector3f& lengths, const Nz::Vector3ui& subdivisions, const Nz::Vector3f& position, const Nz::Quaternionf& rotation)
+				{
+					return Nz::Primitive::Box(lengths, subdivisions, position);
+				}
+			),
 			"IcoSphere", sol::overload(
 				[](float size, unsigned int recursionLevel, const Nz::Vector3f& position)
 				{
