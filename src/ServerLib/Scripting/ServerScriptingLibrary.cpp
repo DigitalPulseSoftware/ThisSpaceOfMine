@@ -4,16 +4,19 @@
 
 #include <ServerLib/Scripting/ServerScriptingLibrary.hpp>
 #include <CommonLib/CharacterController.hpp>
+#include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
 #include <ServerLib/ServerAtmosphere.hpp>
 #include <ServerLib/ServerInstance.hpp>
 #include <ServerLib/ServerPlanetEnvironment.hpp>
 #include <ServerLib/ServerPlayer.hpp>
 #include <ServerLib/ServerShipEnvironment.hpp>
+#include <ServerLib/Components/NetworkedComponent.hpp>
 #include <ServerLib/Database/ServerDatabase.hpp>
 #include <ServerLib/Scripting/ServerEntityScriptingLibrary.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
+#include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <NazaraUtils/FunctionTraits.hpp>
 #include <sol/state.hpp>
@@ -76,6 +79,33 @@ namespace tsom
 
 		state.new_usertype<ServerEnvironment>("Environment",
 			sol::no_constructor,
+
+			"CreateEntity", LuaFunction([&](ServerEnvironment* environment, std::string_view entityType, std::optional<sol::stack_table> parameters, sol::this_state L)
+			{
+				std::shared_ptr<const EntityClass> entityClass = m_serverInstance.GetEntityRegistry().FindClass(entityType);
+				if (!entityClass)
+					TriggerLuaArgError(L, 1, fmt::format("unknown entity class {}", entityType));
+
+				Nz::Vector3f position = Nz::Vector3f::Zero();
+				Nz::Quaternionf rotation = Nz::Quaternionf::Identity();
+
+				if (parameters)
+				{
+					position = parameters->get_or("position", position);
+					rotation = parameters->get_or("rotation", rotation);
+				}
+
+				entt::handle entity = environment->CreateEntity();
+
+				entity.emplace<Nz::NodeComponent>(position, rotation);
+				entity.emplace<NetworkedComponent>();
+				entity.emplace<ClassInstanceComponent>(entityClass);
+
+				entityClass->InitAndActivateEntity(entity);
+
+				sol::state_view stateView(L);
+				return m_entityScriptingLibrary.ToEntityTable(stateView, entity);
+			}),
 
 			"GetAllAtmospheres", LuaFunction([](ServerEnvironment* environment, sol::this_state L)
 			{
