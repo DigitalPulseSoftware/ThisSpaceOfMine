@@ -8,6 +8,7 @@
 #include <ServerLib/Components/AtmosphereCarrier.hpp>
 #include <ServerLib/Debug/DebugDrawBroadcaster.hpp>
 #include <ServerLib/Systems/AtmosphereSystem.hpp>
+#include <ServerLib/Systems/DistributionSystem.hpp>
 #include <ServerLib/Systems/EnvironmentProxySystem.hpp>
 #include <ServerLib/Systems/NetworkedEntitiesSystem.hpp>
 #include <Nazara/Core/Components/DisabledComponent.hpp>
@@ -31,6 +32,7 @@ namespace tsom
 		registry.ctx().insert_or_assign<ServerEnvironment*>(this);
 
 		m_world->AddSystem<AtmosphereSystem>();
+		m_world->AddSystem<DistributionSystem>();
 		m_world->AddSystem<EnvironmentProxySystem>();
 		m_world->AddSystem<NetworkedEntitiesSystem>(*this);
 		m_world->AddSystem<TickSystem>();
