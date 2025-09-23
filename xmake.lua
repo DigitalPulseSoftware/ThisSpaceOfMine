@@ -39,8 +39,6 @@ add_requires(
 	"sqlitecpp[sqlite3_external]"
 )
 
-add_requireconfs("spdlog")
-
 if has_config("serveronly") then
 	add_requireconfs("nazaraengine", {
 		debug = is_mode("debug"),
