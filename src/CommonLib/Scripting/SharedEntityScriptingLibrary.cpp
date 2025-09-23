@@ -126,15 +126,17 @@ namespace tsom
 	sol::table SharedEntityScriptingLibrary::ToEntityTable(sol::state_view& state, entt::handle entity)
 	{
 		if (ScriptedEntityComponent* scriptedComponent = entity.try_get<ScriptedEntityComponent>())
-			return scriptedComponent->entityTable;
-		else
 		{
-			sol::table entityTable = state.create_table();
-			entityTable["_Entity"] = EntityReference(entity);
-			entityTable[sol::metatable_key] = m_entityMetatable;
-
-			return entityTable;
+			if (scriptedComponent->entityTable.lua_state() == state)
+				return scriptedComponent->entityTable;
 		}
+
+		//TODO: Expose the correct class metatable in this state if possible
+		sol::table entityTable = state.create_table();
+		entityTable["_Entity"] = EntityReference(entity);
+		entityTable[sol::metatable_key] = m_entityMetatable;
+
+		return entityTable;
 	}
 
 	void SharedEntityScriptingLibrary::FillConstants(sol::state& state, sol::table constants)
