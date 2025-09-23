@@ -43,6 +43,9 @@ namespace tsom
 	inline void ClassInstanceComponent::UpdateProperty(Nz::UInt32 propertyIndex, EntityProperty&& value)
 	{
 		assert(propertyIndex < m_properties.size());
+		if (m_properties[propertyIndex] == value)
+			return;
+
 		OnPropertyUpdate(this, propertyIndex, value);
 		m_properties[propertyIndex] = std::move(value);
 	}

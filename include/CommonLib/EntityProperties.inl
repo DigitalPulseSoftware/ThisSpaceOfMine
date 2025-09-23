@@ -79,6 +79,24 @@ namespace tsom
 	}
 
 	template<EntityPropertyType P>
+	bool EntityPropertyArrayValue<P>::operator==(const EntityPropertyArrayValue& rhs) const
+	{
+		if (m_size != rhs.m_size)
+			return false;
+
+		if (!std::equal(&m_arrayData[0], &m_arrayData[m_size - 1], &rhs.m_arrayData[0], &rhs.m_arrayData[m_size - 1]))
+			return false;
+
+		return true;
+	}
+
+	template<EntityPropertyType P>
+	bool EntityPropertyArrayValue<P>::operator!=(const EntityPropertyArrayValue& rhs) const
+	{
+		return !operator==(rhs);
+	}
+
+	template<EntityPropertyType P>
 	auto EntityPropertyArrayValue<P>::begin() -> UnderlyingType*
 	{
 		return &m_arrayData[0];
@@ -156,5 +174,17 @@ namespace tsom
 	EntityPropertySingleValue<P>::operator const UnderlyingType& () const&
 	{
 		return value;
+	}
+
+	template<EntityPropertyType P>
+	bool EntityPropertySingleValue<P>::operator==(const EntityPropertySingleValue& rhs) const
+	{
+		return value == rhs.value;
+	}
+
+	template<EntityPropertyType P>
+	bool EntityPropertySingleValue<P>::operator!=(const EntityPropertySingleValue& rhs) const
+	{
+		return value != rhs.value;
 	}
 }

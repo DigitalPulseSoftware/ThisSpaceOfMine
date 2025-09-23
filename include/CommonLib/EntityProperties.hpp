@@ -63,6 +63,9 @@ namespace tsom
 			UnderlyingType& operator[](std::size_t i);
 			const UnderlyingType& operator[](std::size_t i) const;
 
+			bool operator==(const EntityPropertyArrayValue& rhs) const;
+			bool operator!=(const EntityPropertyArrayValue& rhs) const;
+
 			// To allow range-for loops
 			UnderlyingType* begin();
 			const UnderlyingType* begin() const;
@@ -95,6 +98,9 @@ namespace tsom
 
 		operator UnderlyingType&() &;
 		operator const UnderlyingType&() const &;
+
+		bool operator==(const EntityPropertySingleValue& rhs) const;
+		bool operator!=(const EntityPropertySingleValue& rhs) const;
 
 		EntityPropertySingleValue& operator=(const EntityPropertySingleValue&) = default;
 		EntityPropertySingleValue& operator=(EntityPropertySingleValue&&) noexcept = default;
