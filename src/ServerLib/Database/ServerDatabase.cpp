@@ -194,7 +194,7 @@ namespace tsom
 		{
 			SQLite::Statement query(m_database, "SELECT name FROM migration");
 			while (query.executeStep())
-				migrated.insert(query.getColumn(0));
+				migrated.insert(query.getColumn(0).getText());
 		}
 
 		std::vector<std::string> remainingMigrationScripts;
