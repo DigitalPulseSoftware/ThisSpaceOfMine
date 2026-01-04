@@ -12,49 +12,16 @@
 namespace tsom
 {
 	PlanetDatabaseSystem::PlanetDatabaseSystem(entt::registry& registry, ServerDatabase& database, Nz::UInt32 databaseId) :
-	m_databaseObserver(registry, entt::collector.group<Nz::NodeComponent, DatabaseComponent, ClassInstanceComponent>()),
+	m_databaseObserver(registry),
 	m_registry(registry),
 	m_database(database),
 	m_databaseId(databaseId)
 	{
-	}
-
-	PlanetDatabaseSystem::~PlanetDatabaseSystem()
-	{
-		m_databaseObserver.disconnect();
-	}
-
-	void PlanetDatabaseSystem::Save()
-	{
-		// Register new entities (which may already exist in database)
-		for (auto&& [entity, databaseId] : m_trackedEntities)
-		{
-			if (m_registry.valid(entity))
-			{
-				// Update entity (TODO: Only update when required)
-				m_pendingUpdates.push_back({
-					.operation = DatabaseOperation::Update,
-					.entity = entity,
-					.databaseId = databaseId
-				});
-			}
-			else
-			{
-				// Entity has been destroyed
-				m_pendingUpdates.push_back({
-					.operation = DatabaseOperation::Destroy,
-					.databaseId = databaseId
-				});
-			}
-		}
-
-		m_databaseObserver.each([&](entt::entity entity)
+		m_databaseObserver.OnEntityAdded.Connect([&](entt::entity entity)
 		{
 			DatabaseComponent& entityDatabase = m_registry.get<DatabaseComponent>(entity);
 			if (entityDatabase.planetDatabaseId)
 			{
-				m_trackedEntities.emplace(entity, *entityDatabase.planetDatabaseId);
-
 				// Entity was unknown, be conservative and update it
 				m_pendingUpdates.push_back({
 					.operation = DatabaseOperation::Update,
@@ -71,13 +38,33 @@ namespace tsom
 			}
 		});
 
+		m_databaseObserver.OnEntityRemove.Connect([&](entt::entity entity)
+		{
+			DatabaseComponent& entityDatabase = m_registry.get<DatabaseComponent>(entity);
+			if (entityDatabase.planetDatabaseId)
+			{
+				m_pendingUpdates.push_back({
+					.operation = DatabaseOperation::Destroy,
+					.databaseId = databaseId
+				});
+			}
+		});
+	}
+
+	void PlanetDatabaseSystem::Save()
+	{
 		if (m_pendingUpdates.empty())
 			return;
 
 		m_database.Transaction([&](ServerDatabase& database)
 		{
+			bool commitTransaction = false;
+
 			for (DatabaseUpdate& update : m_pendingUpdates)
 			{
+				if (update.operation != DatabaseOperation::Destroy && !m_registry.valid(update.entity))
+					continue;
+
 				switch (update.operation)
 				{
 					case DatabaseOperation::Create:
@@ -99,7 +86,6 @@ namespace tsom
 						planetEntity.properties = entityClass->PropertiesToJson(classInstance.GetProperties());
 
 						entityDatabase.planetDatabaseId = m_database.CreatePlanetEntity(planetEntity);
-						m_trackedEntities.emplace(update.entity, *entityDatabase.planetDatabaseId);
 						break;
 					}
 
@@ -127,10 +113,12 @@ namespace tsom
 						break;
 					}
 				}
+
+				commitTransaction = true;
 			}
 			m_pendingUpdates.clear();
 
-			return true;
+			return commitTransaction;
 		});
 	}
 }

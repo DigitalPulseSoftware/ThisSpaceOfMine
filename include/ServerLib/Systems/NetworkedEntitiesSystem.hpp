@@ -10,12 +10,18 @@
 #include <ServerLib/Export.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <ServerLib/SessionVisibilityHandler.hpp>
+#include <Nazara/Core/EnttObserver.hpp>
 #include <Nazara/Core/Time.hpp>
 #include <NazaraUtils/FunctionRef.hpp>
 #include <NazaraUtils/TypeList.hpp>
 #include <entt/entt.hpp>
 #include <tsl/hopscotch_map.h>
 #include <tsl/hopscotch_set.h>
+
+namespace Nz
+{
+	class DisabledComponent;
+}
 
 namespace tsom
 {
@@ -31,7 +37,7 @@ namespace tsom
 			NetworkedEntitiesSystem(entt::registry& registry, ServerEnvironment& environment);
 			NetworkedEntitiesSystem(const NetworkedEntitiesSystem&) = delete;
 			NetworkedEntitiesSystem(NetworkedEntitiesSystem&&) = delete;
-			~NetworkedEntitiesSystem();
+			~NetworkedEntitiesSystem() = default;
 
 			void CreateAllEntities(SessionVisibilityHandler& visibility) const;
 
@@ -46,7 +52,6 @@ namespace tsom
 		private:
 			SessionVisibilityHandler::CreateEntityData BuildCreateEntityData(entt::entity entity) const;
 			void CreateEntity(SessionVisibilityHandler& visibility, entt::handle entity, const SessionVisibilityHandler::CreateEntityData& createData) const;
-			void OnNetworkedDestroy(entt::registry& registry, entt::entity entity);
 
 			struct EntityData
 			{
@@ -54,11 +59,8 @@ namespace tsom
 				NazaraSlot(ClassInstanceComponent, OnPropertyUpdate, onPropertyUpdate);
 			};
 
-			tsl::hopscotch_map<entt::entity, EntityData> m_networkedEntities;
-			entt::observer m_networkedConstructObserver;
-			entt::scoped_connection m_disabledConstructConnection;
-			entt::scoped_connection m_networkedDestroyConnection;
-			entt::scoped_connection m_nodeDestroyConnection;
+			entt::storage<void> m_pendingEntities;
+			Nz::EnttObserver<Nz::TypeList<class NetworkedComponent>, Nz::TypeList<Nz::DisabledComponent>, EntityData> m_networkedEntities;
 			entt::registry& m_registry;
 			ServerEnvironment& m_environment;
 	};

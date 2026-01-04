@@ -8,12 +8,14 @@
 #define TSOM_CLIENTLIB_SYSTEMS_NETWORKMOVEMENTINTERPOLATIONSYSTEM_HPP
 
 #include <ClientLib/Export.hpp>
+#include <Nazara/Core/EnttObserver.hpp>
 #include <Nazara/Core/Time.hpp>
 #include <NazaraUtils/TypeList.hpp>
 #include <entt/entt.hpp>
 
 namespace Nz
 {
+	class DisabledComponent;
 	class NodeComponent;
 }
 
@@ -29,7 +31,7 @@ namespace tsom
 			NetworkMovementInterpolationSystem(entt::registry& registry, Nz::Time movementTickDuration, std::size_t targetMovementPoints = 4);
 			NetworkMovementInterpolationSystem(const NetworkMovementInterpolationSystem&) = delete;
 			NetworkMovementInterpolationSystem(NetworkMovementInterpolationSystem&&) = delete;
-			~NetworkMovementInterpolationSystem();
+			~NetworkMovementInterpolationSystem() = default;
 
 			void Update(Nz::Time elapsedTime);
 
@@ -37,8 +39,8 @@ namespace tsom
 			NetworkMovementInterpolationSystem& operator=(NetworkMovementInterpolationSystem&&) = delete;
 
 		private:
-			entt::observer m_interpolatedObserver;
 			std::size_t m_targetMovementPoints;
+			Nz::EnttObserver<Nz::TypeList<Nz::NodeComponent, class NetworkInterpolationComponent>, Nz::TypeList<Nz::DisabledComponent>> m_interpolatedObserver;
 			Nz::Time m_movementTickDuration;
 			entt::registry& m_registry;
 	};
