@@ -227,289 +227,30 @@ namespace tsom
 			callback(chunkIndices, *chunkData.chunk);
 	}
 
-	void Planet::GenerateChunk(const BlockLibrary& blockLibrary, Chunk& chunk, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount)
+	void Planet::GenerateChunk(const BlockLibrary& blockLibrary, Chunk& chunk, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, std::string scriptName)
 	{
-		constexpr std::size_t freeSpace = 30;
-
 		ChunkIndices chunkIndices = chunk.GetIndices();
-		Nz::UInt32 chunkSeed = seed + static_cast<Nz::UInt32>(chunkIndices.x) + static_cast<Nz::UInt32>(chunkIndices.y) + static_cast<Nz::UInt32>(chunkIndices.z);
 
-		std::minstd_rand rand(chunkSeed);
-		std::bernoulli_distribution dis(0.9);
+		ScriptingContext scriptingContext = ScriptingContext(m_app);
+		scriptingContext.RegisterLibrary<MathScriptingLibrary>();
+		scriptingContext.RegisterLibrary<ChunkScriptingLibrary>();
 
-		BlockIndex dirtBlockIndex = blockLibrary.GetBlockIndex("dirt");
-		BlockIndex grassBlockIndex = blockLibrary.GetBlockIndex("grass");
-		BlockIndex stoneBlockIndex = blockLibrary.GetBlockIndex("stone");
-		BlockIndex stoneMossyBlockIndex = blockLibrary.GetBlockIndex("stone_mossy");
-		BlockIndex snowBlockIndex = blockLibrary.GetBlockIndex("snow");
+		Nz::Result execResult = scriptingContext.LoadFile(fmt::format("scripts/planets/{}.lua", scriptName));
+		if (!execResult)
+			return;
 
-		Nz::Vector3i maxHeight((Nz::Vector3i(chunkCount) + Nz::Vector3i(1)) / 2);
-		maxHeight *= int(Planet::ChunkSize);
+		sol::protected_function generationFunction = execResult.GetValue();
 
 		chunk.LockWrite();
 		NAZARA_DEFER({ chunk.UnlockWrite(); });
 
-		chunk.Reset([&](BlockIndex* blockIndices)
+		auto result = generationFunction(chunk, seed, chunkCount);
+		if (!result.valid())
 		{
-			// Fill all blocks based on their depth
-			ChunkIndices chunkIndices = chunk.GetIndices();
-
-			double heightScale = 1.5f * m_tileSize;
-			double scale = 0.02f * m_tileSize;
-
-			siv::PerlinNoise perlin;
-
-			BlockIndex* blockIndexPtr = blockIndices;
-#if 0
-			for (unsigned int z = 0; z < Planet::ChunkSize; ++z)
-			{
-				for (unsigned int y = 0; y < Planet::ChunkSize; ++y)
-				{
-					for (unsigned int x = 0; x < Planet::ChunkSize; ++x)
-					{
-						Nz::Vector3i blockPos = GetBlockIndices(chunkIndices, { x, y, z });
-						float distToSurface = sdRoundBox(Nz::Vector3f(blockPos), Nz::Vector3f(80.f, 80.f, 80.f), m_cornerRadius);
-
-						if (distToSurface <= 0.f)
-							*blockIndexPtr++ = dirtBlockIndex;
-						else
-							*blockIndexPtr++ = EmptyBlockIndex;
-					}
-				}
-			}
-			#endif
-
-			#if 1
-			for (unsigned int z = 0; z < Planet::ChunkSize; ++z)
-			{
-				for (unsigned int y = 0; y < Planet::ChunkSize; ++y)
-				{
-					for (unsigned int x = 0; x < Planet::ChunkSize; ++x)
-					{
-						Nz::Vector3i blockPos = GetBlockIndices(chunkIndices, { x, y, z });
-						unsigned int depth = Nz::SafeCaster(std::min({
-							maxHeight.x - std::abs(blockPos.x),
-							maxHeight.y - std::abs(blockPos.z),
-							maxHeight.z - std::abs(blockPos.y)
-						}));
-
-						if (depth < freeSpace)
-						{
-							*blockIndexPtr++ = EmptyBlockIndex;
-							continue;
-						}
-
-						depth -= freeSpace;
-
-						BlockIndices mapPos = GetBlockIndices(chunkIndices, { x, y, z });
-						double presence = perlin.normalizedOctave3D_01(mapPos.x * scale, mapPos.y * scale, mapPos.z * scale, 4);
-
-						if (depth < 20)
-							presence *= std::max(double(depth) / 20.0, 1.0);
-
-						presence += double(depth) / std::max({ maxHeight.x, maxHeight.y, maxHeight.z });
-
-						BlockIndex blockIndex;
-						if (presence > 0.6)
-						{
-							if (depth <= 6 * 2)
-								blockIndex = snowBlockIndex;
-							else if (depth <= 18 * 2)
-								blockIndex = dirtBlockIndex;
-							else
-								blockIndex = (dis(rand)) ? stoneBlockIndex : stoneMossyBlockIndex;
-						}
-						else
-							blockIndex = EmptyBlockIndex;
-
-						if (std::abs(blockPos.x) <= 2 && std::abs(blockPos.z) <= 2)
-							blockIndex = EmptyBlockIndex;
-
-						if (blockIndex != InvalidBlockIndex)
-							*blockIndexPtr++ = blockIndex;
-
-						#if 0
-
-						depth -= freeSpace;
-
-						BlockIndex blockIndex;
-						if (depth <= 6 * 2)
-							blockIndex = snowBlockIndex;
-						else if (depth <= 18 * 2)
-							blockIndex = dirtBlockIndex;
-						else
-							blockIndex = (dis(rand)) ? stoneBlockIndex : stoneMossyBlockIndex;
-
-						if (std::abs(blockPos.x) <= 2 && std::abs(blockPos.z) <= 2)
-							blockIndex = EmptyBlockIndex;
-
-						if (blockIndex != InvalidBlockIndex)
-							*blockIndexPtr++ = blockIndex;
-						#endif
-					}
-				}
-			}
-			#endif
-
-			#if 0
-			Nz::EnumArray<Direction, siv::PerlinNoise> perlin;
-			for (auto&& [dir, noise] : perlin.iter_kv())
-				noise.reseed(seed + static_cast<unsigned int>(dir));
-
-			double heightScale = 1.5f * m_tileSize;
-			double scale = 0.02f * m_tileSize;
-
-			// +X
-			for (unsigned int y = 0; y < Planet::ChunkSize; ++y)
-			{
-				for (unsigned int x = 0; x < Planet::ChunkSize; ++x)
-				{
-					BlockIndices mapPos = GetBlockIndices(chunkIndices, { 0, x, y });
-					double height = perlin[Direction::Right].normalizedOctave2D_01(mapPos.y * scale, mapPos.z * scale, 4) * heightScale;
-
-					int terrainDepth = std::round(std::min<double>(height * (maxHeight.x / 2 - freeSpace) + freeSpace, maxHeight.x / 2));
-					int blockDepth = maxHeight.x - mapPos.x + 1;
-					if (blockDepth < terrainDepth)
-						continue;
-
-					unsigned int startHeight = Nz::SafeCaster(blockDepth - terrainDepth);
-					if (startHeight >= Planet::ChunkSize)
-						continue;
-
-					if (BlockIndex& blockType = blockIndices[chunk.GetBlockLocalIndex({ startHeight, x, y })]; blockType == dirtBlockIndex)
-						blockType = grassBlockIndex;
-
-					for (unsigned int height = startHeight + 1; height < Planet::ChunkSize; ++height)
-						blockIndices[chunk.GetBlockLocalIndex({ height, x, y })] = EmptyBlockIndex;
-				}
-			}
-
-			// -X
-			for (unsigned int y = 0; y < Planet::ChunkSize; ++y)
-			{
-				for (unsigned int x = 0; x < Planet::ChunkSize; ++x)
-				{
-					BlockIndices mapPos = GetBlockIndices(chunkIndices, { Planet::ChunkSize - 1, x, y });
-					double height = perlin[Direction::Left].normalizedOctave2D_01(mapPos.y * scale, mapPos.z * scale, 4) * heightScale;
-
-					int terrainDepth = std::round(std::min<double>(height * (maxHeight.x / 2 - freeSpace) + freeSpace, maxHeight.x / 2));
-					int blockDepth = maxHeight.x + mapPos.x + 1;
-					if (blockDepth < terrainDepth)
-						continue;
-
-					unsigned int startHeight = Nz::SafeCast<unsigned int>(blockDepth - terrainDepth);
-					if (startHeight >= Planet::ChunkSize)
-						continue;
-
-					if (BlockIndex& blockType = blockIndices[chunk.GetBlockLocalIndex({ Planet::ChunkSize - startHeight - 1, x, y })]; blockType == dirtBlockIndex)
-						blockType = grassBlockIndex;
-
-					for (unsigned int height = startHeight + 1; height < Planet::ChunkSize; ++height)
-						blockIndices[chunk.GetBlockLocalIndex({ Planet::ChunkSize - height - 1, x, y })] = EmptyBlockIndex;
-				}
-			}
-
-			// +Y
-			for (unsigned int z = 0; z < Planet::ChunkSize; ++z)
-			{
-				for (unsigned int x = 0; x < Planet::ChunkSize; ++x)
-				{
-					BlockIndices mapPos = GetBlockIndices(chunkIndices, { x, z, 0 });
-					double height = perlin[Direction::Up].normalizedOctave2D_01(mapPos.x * scale, mapPos.z * scale, 4) * heightScale;
-
-					int terrainDepth = std::round(std::min<double>(height * (maxHeight.y / 2 - freeSpace) + freeSpace, maxHeight.y / 2));
-					int blockDepth = maxHeight.y - mapPos.y + 1;
-					if (blockDepth < terrainDepth)
-						continue;
-
-					unsigned int startHeight = Nz::SafeCaster(blockDepth - terrainDepth);
-					if (startHeight >= Planet::ChunkSize)
-						continue;
-
-					if (BlockIndex& blockType = blockIndices[chunk.GetBlockLocalIndex({ x, z, startHeight })]; blockType == dirtBlockIndex)
-						blockType = grassBlockIndex;
-
-					for (unsigned int height = startHeight + 1; height < Planet::ChunkSize; ++height)
-						blockIndices[chunk.GetBlockLocalIndex({ x, z, height })] = EmptyBlockIndex;
-				}
-			}
-
-			// -Y
-			for (unsigned int z = 0; z < Planet::ChunkSize; ++z)
-			{
-				for (unsigned int x = 0; x < Planet::ChunkSize; ++x)
-				{
-					BlockIndices mapPos = GetBlockIndices(chunkIndices, { x, z, Planet::ChunkSize - 1 });
-					double height = perlin[Direction::Down].normalizedOctave2D_01(mapPos.x * scale, mapPos.z * scale, 4) * heightScale;
-
-					int terrainDepth = std::round(std::min<double>(height * (maxHeight.y / 2 - freeSpace) + freeSpace, maxHeight.y / 2));
-					int blockDepth = maxHeight.y + mapPos.y + 1;
-					if (blockDepth < terrainDepth)
-						continue;
-
-					unsigned int startHeight = Nz::SafeCast<unsigned int>(blockDepth - terrainDepth);
-					if (startHeight >= Planet::ChunkSize)
-						continue;
-
-					if (BlockIndex& blockType = blockIndices[chunk.GetBlockLocalIndex({ x, z, Planet::ChunkSize - startHeight - 1 })]; blockType == dirtBlockIndex)
-						blockType = grassBlockIndex;
-
-					for (unsigned int height = startHeight + 1; height < Planet::ChunkSize; ++height)
-						blockIndices[chunk.GetBlockLocalIndex({ x, z, Planet::ChunkSize - height - 1 })] = EmptyBlockIndex;
-				}
-			}
-
-			// +Z
-			for (unsigned int y = 0; y < Planet::ChunkSize; ++y)
-			{
-				for (unsigned int x = 0; x < Planet::ChunkSize; ++x)
-				{
-					BlockIndices mapPos = GetBlockIndices(chunkIndices, { x, 0, y });
-					double height = perlin[Direction::Back].normalizedOctave2D_01(mapPos.x * scale, mapPos.y * scale, 4) * heightScale;
-
-					int terrainDepth = std::round(std::min<double>(height * (maxHeight.z / 2 - freeSpace) + freeSpace, maxHeight.z / 2));
-					int blockDepth = maxHeight.z - mapPos.z + 1;
-					if (blockDepth < terrainDepth)
-						continue;
-
-					unsigned int startHeight = Nz::SafeCaster(blockDepth - terrainDepth);
-					if (startHeight >= Planet::ChunkSize)
-						continue;
-
-					if (BlockIndex& blockType = blockIndices[chunk.GetBlockLocalIndex({ x, startHeight, y })]; blockType == dirtBlockIndex)
-						blockType = grassBlockIndex;
-
-					for (unsigned int height = startHeight + 1; height < Planet::ChunkSize; ++height)
-						blockIndices[chunk.GetBlockLocalIndex({ x, height, y })] = EmptyBlockIndex;
-				}
-			}
-
-			// -Z
-			for (unsigned int y = 0; y < Planet::ChunkSize; ++y)
-			{
-				for (unsigned int x = 0; x < Planet::ChunkSize; ++x)
-				{
-					BlockIndices mapPos = GetBlockIndices(chunkIndices, { x, Planet::ChunkSize - 1, y });
-					double height = perlin[Direction::Front].normalizedOctave2D_01(mapPos.x * scale, mapPos.y * scale, 4) * heightScale;
-
-					int terrainDepth = std::round(std::min<double>(height * (maxHeight.z / 2 - freeSpace) + freeSpace, maxHeight.z / 2));
-					int blockDepth = maxHeight.z + mapPos.z + 1;
-					if (blockDepth < terrainDepth)
-						continue;
-
-					unsigned int startHeight = Nz::SafeCaster(blockDepth - terrainDepth);
-					if (startHeight >= Planet::ChunkSize)
-						continue;
-
-					if (BlockIndex& blockType = blockIndices[chunk.GetBlockLocalIndex({ x, Planet::ChunkSize - startHeight - 1, y })]; blockType == dirtBlockIndex)
-						blockType = grassBlockIndex;
-
-					for (unsigned int height = startHeight + 1; height < Planet::ChunkSize; ++height)
-						blockIndices[chunk.GetBlockLocalIndex({ x, Planet::ChunkSize - height - 1, y })] = EmptyBlockIndex;
-				}
-			}
-			#endif
-		});
+			sol::error err = result;
+			spdlog::error("chunk {};{};{} failed to generate: {}", chunkIndices.x, chunkIndices.y, chunkIndices.z, err.what());
+			return;
+		}
 	}
 
 	void Planet::GenerateChunks(const BlockLibrary& blockLibrary, Nz::TaskScheduler& taskScheduler, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, std::string scriptName)
