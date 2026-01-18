@@ -90,8 +90,6 @@ namespace tsom
 	{
 		for (auto it = m_updateJobs.begin(); it != m_updateJobs.end(); ++it)
 		{
-			//FIXME: If applyFunc inserts a new job it will invalidate the iterators
-
 			UpdateJob& job = *it->second;
 			if (!job.HasFinished())
 				continue;
@@ -112,15 +110,16 @@ namespace tsom
 
 			if (canExecute)
 			{
-				job.applyFunc(it->first, std::move(job));
-
-				// Don't remove jobs immediatly to be able to detect dependencies errors
-				m_finishedJobs.push_back(it->first);
+				// Don't remove jobs immediately to be able to detect dependencies errors
+				m_finishedJobs.emplace_back(FinishedJob{ it->first, it->second });
 			}
 		}
 
-		for (const ChunkIndices& indices : m_finishedJobs)
+		for (auto&& [indices, job] : m_finishedJobs)
+		{
+			job->applyFunc(indices, std::move(*job));
 			m_updateJobs.erase(indices);
+		}
 		m_finishedJobs.clear();
 
 		for (auto&& [chunkIndices, neighborMask] : m_invalidatedChunks)
@@ -131,6 +130,7 @@ namespace tsom
 
 	void ChunkEntities::CreateChunkEntity(const ChunkIndices& chunkIndices, Chunk& chunk)
 	{
+		std::unique_lock chunkLock(m_chunkLock);
 		entt::handle chunkEntity = m_world.CreateEntity();
 
 		auto& nodeComponent = chunkEntity.emplace<Nz::NodeComponent>(m_chunkContainer.GetChunkOffset(chunkIndices));
@@ -168,6 +168,7 @@ namespace tsom
 
 	void ChunkEntities::DestroyChunkEntity(const ChunkIndices& chunkIndices)
 	{
+		std::unique_lock chunkLock(m_chunkLock);
 		if (auto it = m_updateJobs.find(chunkIndices); it != m_updateJobs.end())
 		{
 			UpdateJob& job = *it->second;

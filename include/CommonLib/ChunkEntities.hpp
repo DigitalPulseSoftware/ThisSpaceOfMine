@@ -15,6 +15,7 @@
 #include <tsl/hopscotch_map.h>
 #include <tsl/hopscotch_set.h>
 #include <atomic>
+#include <mutex>
 #include <vector>
 
 namespace Nz
@@ -76,14 +77,21 @@ namespace tsom
 				std::shared_ptr<Nz::Collider3D> collider;
 			};
 
+			struct FinishedJob
+			{
+				ChunkIndices chunkIndices;
+				std::shared_ptr<UpdateJob> job;
+			};
+
 			NazaraSlot(ChunkContainer, OnChunkLayerAdded, m_onChunkAdded);
 			NazaraSlot(ChunkContainer, OnChunkLayerRemove, m_onChunkRemove);
 			NazaraSlot(ChunkContainer, OnChunkUpdated, m_onChunkUpdated);
 			NazaraSlot(Nz::Node, OnNodeInvalidation, m_onParentNodeInvalidated);
 
+			std::mutex m_chunkLock;
 			std::mutex m_invalidatedChunkMutex;
 			std::size_t m_layerIndex;
-			std::vector<ChunkIndices> m_finishedJobs;
+			std::vector<FinishedJob> m_finishedJobs;
 			entt::handle m_parentEntity;
 			tsl::hopscotch_map<ChunkIndices, DirectionMask> m_invalidatedChunks;
 			tsl::hopscotch_map<ChunkIndices, std::shared_ptr<UpdateJob>> m_updateJobs;
