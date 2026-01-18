@@ -8,6 +8,7 @@
 #define TSOM_SERVERLIB_SYSTEMS_ENVIRONMENTPROXYSYSTEM_HPP
 
 #include <ServerLib/Export.hpp>
+#include <Nazara/Core/EnttObserver.hpp>
 #include <Nazara/Core/Time.hpp>
 #include <NazaraUtils/TypeList.hpp>
 #include <entt/entt.hpp>
@@ -32,17 +33,15 @@ namespace tsom
 			EnvironmentProxySystem(entt::registry& registry);
 			EnvironmentProxySystem(const EnvironmentProxySystem&) = delete;
 			EnvironmentProxySystem(EnvironmentProxySystem&&) = delete;
-			~EnvironmentProxySystem();
+			~EnvironmentProxySystem() = default;
 
 			void AddEnvironmentRecursively(ServerPlayer* player);
-
-			void Update(Nz::Time elapsedTime);
 
 			EnvironmentProxySystem& operator=(const EnvironmentProxySystem&) = delete;
 			EnvironmentProxySystem& operator=(EnvironmentProxySystem&&) = delete;
 
 		private:
-			entt::observer m_observer;
+			Nz::EnttObserver<Nz::TypeList<Nz::NodeComponent, class EnvironmentProxyComponent>> m_observer;
 			entt::registry& m_registry;
 	};
 }

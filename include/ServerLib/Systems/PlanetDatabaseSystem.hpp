@@ -8,6 +8,7 @@
 #define TSOM_SERVERLIB_SYSTEMS_PLANETDATABASESYSTEM_HPP
 
 #include <ServerLib/Export.hpp>
+#include <Nazara/Core/EnttObserver.hpp>
 #include <Nazara/Core/Time.hpp>
 #include <NazaraUtils/TypeList.hpp>
 #include <entt/entt.hpp>
@@ -33,7 +34,7 @@ namespace tsom
 			PlanetDatabaseSystem(entt::registry& registry, ServerDatabase& database, Nz::UInt32 databaseId);
 			PlanetDatabaseSystem(const PlanetDatabaseSystem&) = delete;
 			PlanetDatabaseSystem(PlanetDatabaseSystem&&) = delete;
-			~PlanetDatabaseSystem();
+			~PlanetDatabaseSystem() = default;
 
 			void Save();
 
@@ -55,9 +56,8 @@ namespace tsom
 				Nz::UInt32 databaseId; // Only for Update/Destroy
 			};
 
-			entt::observer m_databaseObserver;
+			Nz::EnttObserver<Nz::TypeList<Nz::NodeComponent, class DatabaseComponent, class ClassInstanceComponent>> m_databaseObserver;
 			std::vector<DatabaseUpdate> m_pendingUpdates;
-			tsl::hopscotch_map<entt::entity, Nz::UInt32> m_trackedEntities;
 			entt::registry& m_registry;
 			ServerDatabase& m_database;
 			Nz::UInt32 m_databaseId;
