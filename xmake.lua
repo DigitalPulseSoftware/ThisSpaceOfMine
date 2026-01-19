@@ -28,7 +28,7 @@ add_requires(
 	"cpp-semver",
 	"fast_float",
 	"frozen",
-	"libsodium",
+	"libsodium 1.0.20",
 	"lz4",
 	"hopscotch-map",
 	"nazarautils",
