@@ -250,7 +250,9 @@ namespace tsom
 			if (!chunk)
 				chunk = &planet.AddChunk(blockLibrary, planetChunk.position);
 
+			chunk->LockWrite();
 			chunk->Deserialize(byteStream);
+			chunk->UnlockWrite();
 
 			return true;
 		});
