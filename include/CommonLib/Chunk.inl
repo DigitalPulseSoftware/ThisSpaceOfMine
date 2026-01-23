@@ -179,6 +179,16 @@ namespace tsom
 		m_mutex.lock();
 	}
 
+	inline bool Chunk::TryLockRead() const
+	{
+		return m_mutex.try_lock_shared();
+	}
+
+	inline bool Chunk::TryLockWrite()
+	{
+		return m_mutex.try_lock();
+	}
+
 	inline void Chunk::UnlockRead() const
 	{
 		m_mutex.unlock_shared();

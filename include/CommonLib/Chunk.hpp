@@ -95,6 +95,9 @@ namespace tsom
 
 			virtual void Serialize(Nz::ByteStream& byteStream) const;
 
+			inline bool TryLockRead() const;
+			inline bool TryLockWrite();
+
 			inline void UnlockRead() const;
 			inline void UnlockWrite();
 

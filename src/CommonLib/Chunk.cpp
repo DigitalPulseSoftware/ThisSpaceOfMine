@@ -118,24 +118,44 @@ namespace tsom
 			}
 		};
 
-		// Find and lock all neighbor chunks to avoid discrepancies between chunks
 		Nz::EnumArray<Direction, const Chunk*> neighborChunks;
+		Nz::FixedVector<const Chunk*, 6> chunkLocks;
 		for (auto&& [dir, chunk] : neighborChunks.iter_kv())
 		{
 			chunk = m_owner.GetChunk(m_indices + s_chunkDirOffset[dir]);
-			if (!chunk)
-				continue;
+			if (chunk)
+				chunkLocks.push_back(chunk);
+		}
 
-			chunk->LockRead();
+		// We need to lock all chunks at once to avoid deadlocks
+		std::size_t lastFailureMutex = Nz::MaxValue();
+		for (;;)
+		{
+			bool succeeded = true;
+			for (std::size_t i = 0; i < chunkLocks.size(); ++i)
+			{
+				if (i != lastFailureMutex && !chunkLocks[i]->TryLockRead())
+				{
+					succeeded = false;
+					// Lock failed, unlock everything and try again
+					for (std::size_t j = 0; j < i; ++j)
+						chunkLocks[j]->UnlockRead();
+
+					// Lock blocked chunk first to pause thread
+					chunkLocks[i]->LockRead();
+					lastFailureMutex = i;
+					break;
+				}
+			}
+
+			if (succeeded)
+				break;
 		}
 
 		NAZARA_DEFER(
 		{
-			for (const Chunk* chunk : neighborChunks)
-			{
-				if (chunk)
-					chunk->UnlockRead();
-			}
+			for (const Chunk* chunk : chunkLocks)
+				chunk->UnlockRead();
 		});
 
 		auto GetNeighborBlock = [&](Nz::Vector3ui indices, Direction direction) -> std::optional<BlockIndex>
