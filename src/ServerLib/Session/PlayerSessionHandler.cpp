@@ -364,8 +364,17 @@ namespace tsom
 
 			if (Chunk* chunk = planet.GetChunk(chunkIndices))
 			{
-				planet.GenerateChunk(blockLibrary, *chunk, 42, Nz::Vector3ui(5));
-				spdlog::info("regenerated chunk {};{};{}", chunkIndices.x, chunkIndices.y, chunkIndices.z);
+				std::optional<Nz::UInt32> planetId = planetEnvironment->GetDatabaseId();
+				serverInstance.GetServerDatabase().GetAllPlanets([&](Database::Planet&& planetData)
+					{
+						if (planetData.id == planetId)
+						{
+							planet.GenerateChunk(blockLibrary, *chunk, planetData.seed, planetData.chunkCount, planetData.generatorName.data());
+							spdlog::info("regenerated chunk {};{};{}", chunkIndices.x, chunkIndices.y, chunkIndices.z);
+							return false;
+						}
+						return true;
+					});
 			}
 			return;
 		}
