@@ -234,6 +234,9 @@ namespace tsom
 			serializer.SerializeArraySize(data.content);
 			std::size_t bufferSize = data.content.size() * sizeof(BlockIndex);
 
+			if (bufferSize == 0)
+				continue;
+
 			BinaryCompressor& binaryCompressor = serializer.GetBinaryCompressor();
 			if (serializer.IsWriting())
 			{

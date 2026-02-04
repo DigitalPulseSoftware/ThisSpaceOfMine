@@ -177,11 +177,18 @@ namespace tsom
 		}
 
 		chunk->LockWrite();
-		chunk->Reset([&](BlockIndex* blocks)
+
+		if (!chunkReset.content.empty())
 		{
-			for (BlockIndex blockContent : chunkReset.content)
-				*blocks++ = blockContent;
-		});
+			chunk->Reset([&](BlockIndex* blocks)
+			{
+				for (BlockIndex blockContent : chunkReset.content)
+					*blocks++ = blockContent;
+			});
+		}
+		else
+			chunk->Reset();
+
 		chunk->UnlockWrite();
 	}
 

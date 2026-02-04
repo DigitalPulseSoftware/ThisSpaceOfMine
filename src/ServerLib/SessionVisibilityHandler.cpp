@@ -444,11 +444,14 @@ namespace tsom
 			chunkResetPacket.entityId = Nz::Retrieve(m_entityIndices, visibleChunk.entityOwner);
 			chunkResetPacket.tickIndex = tickIndex;
 
-			unsigned int blockCount = chunkSize.x * chunkSize.y * chunkSize.z;
-			chunkResetPacket.content.resize(blockCount);
+			if (visibleChunk.chunk->HasContent())
+			{
+				unsigned int blockCount = chunkSize.x * chunkSize.y * chunkSize.z;
+				chunkResetPacket.content.resize(blockCount);
 
-			const BlockIndex* chunkContent = visibleChunk.chunk->GetContent();
-			std::memcpy(chunkResetPacket.content.data(), chunkContent, blockCount * sizeof(BlockIndex));
+				const BlockIndex* chunkContent = visibleChunk.chunk->GetContent();
+				std::memcpy(chunkResetPacket.content.data(), chunkContent, blockCount * sizeof(BlockIndex));
+			}
 
 			(*m_activeChunkUpdates)++;
 			m_networkSession->SendPacket(chunkResetPacket, [chunkLocation, chunkUpdateCount = m_activeChunkUpdates]
