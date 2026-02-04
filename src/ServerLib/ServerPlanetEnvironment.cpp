@@ -81,7 +81,8 @@ namespace tsom
 
 		planetComponent.planet->OnChunkUpdated.Connect([this](ChunkContainer* /*planet*/, Chunk* chunk, DirectionMask /*neighborMask*/, Nz::UInt32 /*layerMask*/)
 		{
-			m_dirtyChunks.insert(chunk->GetIndices());
+			if (chunk->HasFlags(ChunkFlag::SaveToDatabase))
+				m_dirtyChunks.insert(chunk->GetIndices());
 		});
 
 		auto& physicsSystem = m_world->GetSystem<Nz::Physics3DSystem>();
@@ -168,15 +169,17 @@ namespace tsom
 
 			BinaryCompressor& binaryCompressor = BinaryCompressor::GetThreadCompressor();
 			ServerDatabase& serverDatabase = m_serverInstance.GetServerDatabase();
-			const Planet& planet = GetPlanet();
+			Planet& planet = GetPlanet();
 
 			Nz::ByteArray byteArray;
 			for (const ChunkIndices& chunkIndices : m_dirtyChunks)
 			{
+				Chunk* chunk = planet.GetChunk(chunkIndices);
+
 				byteArray.Clear();
 
 				Nz::ByteStream byteStream(&byteArray);
-				planet.GetChunk(chunkIndices)->Serialize(byteStream);
+				chunk->Serialize(byteStream);
 
 				Nz::UInt32 decompressedSize = Nz::SafeCaster(byteArray.GetSize());
 
@@ -199,7 +202,9 @@ namespace tsom
 					.position = chunkIndices,
 					.version = s_chunkVersion,
 					.chunkData = std::span(byteArray.GetBuffer(), byteArray.GetSize())
-					});
+				});
+
+				chunk->ClearFlags(ChunkFlag::SaveToDatabase);
 			}
 			m_dirtyChunks.clear();
 		}

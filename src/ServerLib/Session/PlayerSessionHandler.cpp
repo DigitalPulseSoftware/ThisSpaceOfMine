@@ -117,6 +117,7 @@ namespace tsom
 			return;
 
 		chunk->LockWrite();
+		chunk->SetFlags(ChunkFlag::SaveToDatabase);
 		chunk->UpdateBlock(voxelLoc, EmptyBlockIndex);
 		chunk->UnlockWrite();
 	}
@@ -142,6 +143,7 @@ namespace tsom
 			return;
 
 		chunk->LockWrite();
+		chunk->SetFlags(ChunkFlag::SaveToDatabase);
 		chunk->UpdateBlock(voxelLoc, static_cast<BlockIndex>(placeBlock.newContent));
 		chunk->UnlockWrite();
 	}

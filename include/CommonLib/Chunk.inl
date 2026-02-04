@@ -16,6 +16,11 @@ namespace tsom
 	{
 	}
 
+	inline void Chunk::ClearFlags(ChunkFlags flags)
+	{
+		m_flags.Clear(flags);
+	}
+
 	inline std::span<const std::size_t> Chunk::GetActiveLayers() const
 	{
 		return { m_activeLayers.data(), m_activeLayers.size() };
@@ -106,6 +111,11 @@ namespace tsom
 		return m_blocks.data();
 	}
 
+	inline ChunkFlags Chunk::GetFlags() const
+	{
+		return m_flags;
+	}
+
 	inline const ChunkIndices& Chunk::GetIndices() const
 	{
 		return m_indices;
@@ -119,6 +129,11 @@ namespace tsom
 	inline bool Chunk::HasContent() const
 	{
 		return !m_blocks.empty();
+	}
+
+	inline bool Chunk::HasFlags(ChunkFlags flags) const
+	{
+		return m_flags.Test(flags);
 	}
 
 	inline bool Chunk::HasPerFaceCollisions() const
@@ -177,6 +192,11 @@ namespace tsom
 	inline void Chunk::LockWrite()
 	{
 		m_mutex.lock();
+	}
+
+	inline void Chunk::SetFlags(ChunkFlags flags)
+	{
+		m_flags.Set(flags);
 	}
 
 	inline bool Chunk::TryLockRead() const

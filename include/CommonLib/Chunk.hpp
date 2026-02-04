@@ -40,6 +40,17 @@ namespace tsom
 	using BlockIndices = Nz::Vector3i32;
 	using ChunkIndices = Nz::Vector3i32;
 
+	enum class ChunkFlag
+	{
+		SaveToDatabase,
+
+		Max = SaveToDatabase
+	};
+
+	constexpr bool EnableEnumAsNzFlags(ChunkFlag) { return true; }
+
+	using ChunkFlags = Nz::Flags<ChunkFlag>;
+
 	class TSOM_COMMONLIB_API Chunk : public std::enable_shared_from_this<Chunk>
 	{
 		public:
@@ -55,6 +66,8 @@ namespace tsom
 			virtual std::pair<std::shared_ptr<Nz::Collider3D>, Nz::Vector3f> BuildBlockCollider(const Nz::Vector3ui& blockIndices, float scale = 1.f) const = 0;
 			virtual std::shared_ptr<Nz::Collider3D> BuildCollider(std::size_t layerIndex) const = 0;
 			virtual void BuildMesh(std::size_t layerIndex, std::vector<Nz::UInt32>& indices, const Nz::Vector3f& center, const Nz::FunctionRef<VertexAttributes(const Nz::Vector3ui& blockIndices, Direction direction)>& addFace) const;
+
+			inline void ClearFlags(ChunkFlags flags);
 
 			virtual std::optional<HitBlock> ComputeHitCoordinates(const Nz::Vector3f& hitPos, const Nz::Vector3f& hitNormal, const Nz::Collider3D& collider, std::uint32_t hitSubshapeId) const = 0;
 			virtual Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> ComputeBlockCorners(const Nz::Vector3ui& indices) const;
@@ -79,10 +92,12 @@ namespace tsom
 			inline ChunkContainer& GetContainer();
 			inline const ChunkContainer& GetContainer() const;
 			inline const BlockIndex* GetContent() const;
+			inline ChunkFlags GetFlags() const;
 			inline const ChunkIndices& GetIndices() const;
 			inline const Nz::Vector3ui& GetSize() const;
 
 			inline bool HasContent() const;
+			inline bool HasFlags(ChunkFlags flags) const;
 			inline bool HasPerFaceCollisions() const;
 
 			inline bool IsLayerRegistered(std::size_t layerIndex) const;
@@ -94,6 +109,7 @@ namespace tsom
 			template<typename F> void Reset(F&& func);
 
 			virtual void Serialize(Nz::ByteStream& byteStream) const;
+			inline void SetFlags(ChunkFlags flags);
 
 			inline bool TryLockRead() const;
 			inline bool TryLockWrite();
@@ -145,6 +161,7 @@ namespace tsom
 			std::vector<Nz::UInt16> m_blockTypeCount;
 			Nz::FixedVector<std::size_t, Constants::MaxChunkLayerCount> m_activeLayers;
 			Nz::Vector3ui m_size;
+			ChunkFlags m_flags;
 			ChunkIndices m_indices;
 			const BlockLibrary& m_blockLibrary;
 			ChunkContainer& m_owner;
