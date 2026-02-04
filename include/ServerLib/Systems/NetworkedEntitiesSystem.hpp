@@ -8,6 +8,7 @@
 #define TSOM_SERVERLIB_SYSTEMS_NETWORKEDENTITIESSYSTEM_HPP
 
 #include <ServerLib/Export.hpp>
+#include <CommonLib/ChunkContainer.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <ServerLib/SessionVisibilityHandler.hpp>
 #include <Nazara/Core/EnttObserver.hpp>
@@ -55,6 +56,8 @@ namespace tsom
 
 			struct EntityData
 			{
+				NazaraSlot(ChunkContainer, OnChunkAdded, onChunkAdded);
+				NazaraSlot(ChunkContainer, OnChunkRemove, onChunkRemove);
 				NazaraSlot(ClassInstanceComponent, OnClientRpc, onClientRpc);
 				NazaraSlot(ClassInstanceComponent, OnPropertyUpdate, onPropertyUpdate);
 			};

@@ -107,6 +107,7 @@ namespace tsom
 			it->second.chunk->Reset(initCallback);
 
 		Chunk* chunk = it->second.chunk.get();
+		OnChunkAdded(this, chunk);
 		for (std::size_t layerIndex : chunk->GetActiveLayers())
 			OnChunkLayerAdded(this, chunk, layerIndex);
 
@@ -438,6 +439,7 @@ namespace tsom
 		assert(it != m_chunks.end());
 
 		Chunk* chunk = it->second.chunk.get();
+		OnChunkRemove(this, chunk);
 		for (std::size_t layerIndex : chunk->GetActiveLayers())
 			OnChunkLayerRemove(this, chunk, layerIndex);
 

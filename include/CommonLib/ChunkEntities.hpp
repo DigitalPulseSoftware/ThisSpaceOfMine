@@ -51,7 +51,7 @@ namespace tsom
 
 			ChunkEntities(Nz::ApplicationBase& app, Nz::EnttWorld& world, ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary, std::size_t layerIndex, NoInit);
 
-			void CreateChunkEntity(const ChunkIndices& chunkIndices, Chunk& chunk);
+			void CreateChunkEntity(const ChunkIndices& chunkIndices);
 			void DestroyChunkEntity(const ChunkIndices& chunkIndices);
 			void FillChunks();
 			virtual UpdateJob* ProcessChunkUpdate(const Chunk& chunk, DirectionMask neighborMask);
@@ -96,6 +96,7 @@ namespace tsom
 			tsl::hopscotch_map<ChunkIndices, DirectionMask> m_invalidatedChunks;
 			tsl::hopscotch_map<ChunkIndices, std::shared_ptr<UpdateJob>> m_updateJobs;
 			tsl::hopscotch_map<ChunkIndices, entt::handle> m_chunkEntities;
+			tsl::hopscotch_map<ChunkIndices, bool /*created*/> m_createdDestroyedChunks;
 			Nz::ApplicationBase& m_application;
 			Nz::EnttWorld& m_world;
 			const BlockLibrary& m_blockLibrary;

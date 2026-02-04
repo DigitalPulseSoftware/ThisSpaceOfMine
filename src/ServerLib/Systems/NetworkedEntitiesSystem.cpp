@@ -94,6 +94,50 @@ namespace tsom
 				});
 			}
 
+			if (PlanetComponent* planetComponent = m_registry.try_get<PlanetComponent>(entity))
+			{
+				// FIXME: Deduplicate code (maybe by merging components)
+				entityData.onChunkAdded.Connect(planetComponent->planet->OnChunkAdded, [this, entity](ChunkContainer* /*container*/, Chunk* chunk)
+				{
+					entt::handle handle(m_registry, entity);
+					ForEachVisibility([&](SessionVisibilityHandler& visibility)
+					{
+						visibility.CreateChunk(handle, *chunk);
+					});
+				});
+
+				entityData.onChunkRemove.Connect(planetComponent->planet->OnChunkRemove, [this, entity](ChunkContainer* /*container*/, Chunk* chunk)
+				{
+					entt::handle handle(m_registry, entity);
+					ForEachVisibility([&](SessionVisibilityHandler& visibility)
+					{
+						visibility.DestroyChunk(handle, *chunk);
+					});
+				});
+			}
+
+			if (ShipComponent* shipComponent = m_registry.try_get<ShipComponent>(entity))
+			{
+				// FIXME: Deduplicate code (maybe by merging components)
+				entityData.onChunkAdded.Connect(shipComponent->ship->OnChunkAdded, [this, entity](ChunkContainer* /*container*/, Chunk* chunk)
+				{
+					entt::handle handle(m_registry, entity);
+					ForEachVisibility([&](SessionVisibilityHandler& visibility)
+					{
+						visibility.CreateChunk(handle, *chunk);
+					});
+				});
+
+				entityData.onChunkRemove.Connect(shipComponent->ship->OnChunkRemove, [this, entity](ChunkContainer* /*container*/, Chunk* chunk)
+				{
+					entt::handle handle(m_registry, entity);
+					ForEachVisibility([&](SessionVisibilityHandler& visibility)
+					{
+						visibility.DestroyChunk(handle, *chunk);
+					});
+				});
+			}
+
 			auto& entityNetwork = m_registry.get<NetworkedComponent>(entity);
 			if (!entityNetwork.ShouldSignalCreation())
 				return;

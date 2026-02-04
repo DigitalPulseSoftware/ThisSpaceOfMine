@@ -36,7 +36,9 @@ namespace tsom
 			if (m_layerIndex != layerIndex)
 				return;
 
-			CreateChunkEntity(chunk->GetIndices(), *chunk);
+			// Chunks can be added from another thread
+			std::lock_guard lock(m_chunkLock);
+			m_createdDestroyedChunks[chunk->GetIndices()] = true;
 		});
 
 		m_onChunkRemove.Connect(chunkContainer.OnChunkLayerRemove, [this](ChunkContainer* /*emitter*/, Chunk* chunk, std::size_t layerIndex)
@@ -44,7 +46,9 @@ namespace tsom
 			if (m_layerIndex != layerIndex)
 				return;
 
-			DestroyChunkEntity(chunk->GetIndices());
+			// Chunks can be added from another thread
+			std::lock_guard lock(m_chunkLock);
+			m_createdDestroyedChunks[chunk->GetIndices()] = false;
 		});
 
 		m_onChunkUpdated.Connect(chunkContainer.OnChunkUpdated, [this](ChunkContainer* /*emitter*/, Chunk* chunk, DirectionMask neighborMask, Nz::UInt32 layerMask)
@@ -122,15 +126,27 @@ namespace tsom
 		}
 		m_finishedJobs.clear();
 
+		{
+			std::lock_guard lock(m_chunkLock);
+
+			for (auto&& [chunkIndices, created] : m_createdDestroyedChunks)
+			{
+				if (created)
+					CreateChunkEntity(chunkIndices);
+				else
+					DestroyChunkEntity(chunkIndices);
+			}
+			m_createdDestroyedChunks.clear();
+		}
+
 		for (auto&& [chunkIndices, neighborMask] : m_invalidatedChunks)
 			UpdateChunkEntity(chunkIndices, neighborMask);
 
 		m_invalidatedChunks.clear();
 	}
 
-	void ChunkEntities::CreateChunkEntity(const ChunkIndices& chunkIndices, Chunk& chunk)
+	void ChunkEntities::CreateChunkEntity(const ChunkIndices& chunkIndices)
 	{
-		std::unique_lock chunkLock(m_chunkLock);
 		entt::handle chunkEntity = m_world.CreateEntity();
 
 		auto& nodeComponent = chunkEntity.emplace<Nz::NodeComponent>(m_chunkContainer.GetChunkOffset(chunkIndices));
@@ -140,8 +156,11 @@ namespace tsom
 			nodeComponent.SetParent(m_parentEntity);
 		}
 
+		Chunk* chunk = m_chunkContainer.GetChunk(chunkIndices);
+		NazaraAssert(chunk);
+
 		auto& chunkComponent = chunkEntity.emplace<ChunkComponent>();
-		chunkComponent.chunk = &chunk;
+		chunkComponent.chunk = chunk;
 		chunkComponent.parentEntity = m_parentEntity;
 
 		auto& layerData = m_blockLibrary.GetLayerData(m_layerIndex);
@@ -162,13 +181,12 @@ namespace tsom
 		assert(!m_chunkEntities.contains(chunkIndices));
 		m_chunkEntities.insert_or_assign(chunkIndices, chunkEntity);
 
-		if (chunk.HasContent())
-			ProcessChunkUpdate(chunk, 0);
+		if (chunk->HasContent())
+			ProcessChunkUpdate(*chunk, 0);
 	}
 
 	void ChunkEntities::DestroyChunkEntity(const ChunkIndices& chunkIndices)
 	{
-		std::unique_lock chunkLock(m_chunkLock);
 		if (auto it = m_updateJobs.find(chunkIndices); it != m_updateJobs.end())
 		{
 			UpdateJob& job = *it->second;
@@ -191,7 +209,7 @@ namespace tsom
 		m_chunkContainer.ForEachChunk([this](const ChunkIndices& chunkIndices, Chunk& chunk)
 		{
 			if (chunk.IsLayerRegistered(m_layerIndex))
-				CreateChunkEntity(chunkIndices, chunk);
+				CreateChunkEntity(chunkIndices);
 		});
 	}
 
