@@ -111,6 +111,7 @@ target("CommonLib", function ()
 	end)
 
 	add_defines("TSOM_COMMONLIB_BUILD")
+	add_defines("SOL_SAFE_FUNCTION_CALLS", { public = true })
 	add_defines("SOL_SAFE_USERTYPE", { public = true })
 	add_options("commonlib_static")
 	add_options("dev_tools", { public = true })
