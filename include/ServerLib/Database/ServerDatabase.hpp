@@ -37,7 +37,8 @@ namespace tsom
 			void GetAllPlanets(Nz::FunctionRef<bool(Database::Planet&& /*planet*/)> callback) const;
 			void GetAllPlanetEntities(Nz::UInt32 planetEntityId, Nz::FunctionRef<bool(Database::PlanetEntity&& /*planetEntities*/)> callback) const;
 			void GetAllPlanetLinks(Nz::FunctionRef<bool(Database::PlanetLink&& /*planetLink*/)> callback) const;
-			void GetPlanetChunks(Nz::UInt32 planetId, Nz::FunctionRef<bool(Database::PlanetChunk&& /*PlanetChunk*/)> callback) const;
+			void GetAllPlanetChunks(Nz::UInt32 planetId, Nz::FunctionRef<bool(Database::PlanetChunk&& /*PlanetChunk*/)> callback) const;
+			bool GetPlanetChunk(Nz::UInt32 planetId, const Nz::Vector3i32& chunkIndices, Nz::FunctionRef<void(Database::PlanetChunk&& /*PlanetChunk*/)> callback) const;
 
 			void StorePlanet(const Database::Planet& planetChunk);
 			void StorePlanetChunk(const Database::PlanetChunk& planetChunk);
@@ -70,6 +71,7 @@ namespace tsom
 
 				SQLite::Statement getAllPlanetQuery;
 				SQLite::Statement getAllPlanetLinkQuery;
+				SQLite::Statement getAllPlanetChunksQuery;
 				SQLite::Statement getPlanetChunkQuery;
 				SQLite::Statement storePlanetQuery;
 				SQLite::Statement storePlanetChunkQuery;

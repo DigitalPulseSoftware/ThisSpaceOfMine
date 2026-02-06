@@ -453,28 +453,7 @@ namespace tsom
 
 		m_planet->ClearChunks();
 		m_planet->AddChunks(*stateData.blockLibrary, m_planetSettings.chunkCount);
-		m_planet->GenerateChunks(*stateData.blockLibrary, taskScheduler, m_planetSettings.seed, m_planetSettings.chunkCount, m_planetSettings.scriptName);
-
-		/*m_planet->AddChunks(*stateData.blockLibrary, {1, 1, 1});
-		Chunk* chunk = m_planet->GetChunk({ 0, 0, 0 });
-		chunk->Reset([&](BlockIndex* data)
-		{
-			BlockIndex dirtIndex = stateData.blockLibrary->GetBlockIndex("dirt");
-
-			for (unsigned int z = 0; z < 5; ++z)
-			{
-				for (unsigned int y = 0; y < 5; ++y)
-				{
-					for (unsigned int x = 0; x < 5; ++x)
-					{
-						//if (x == 0 && y == 0 && z == 0)
-						//	continue;
-
-						data[chunk->GetBlockLocalIndex({ 1 + x, 1 + y, 1 + z })] = dirtIndex;
-					}
-				}
-			}
-		});*/
+		m_planet->GenerateChunks(taskScheduler, m_planetSettings.seed, m_planetSettings.chunkCount, m_planetSettings.scriptName);
 	}
 
 	void PlanetEditorState::LayoutWidgets(const Nz::Vector2f& /*newSize*/)

@@ -372,7 +372,7 @@ namespace tsom
 					{
 						if (planetData.id == planetId)
 						{
-							planet.GenerateChunk(blockLibrary, *chunk, planetData.seed, planetData.chunkCount, planetData.generatorName.data());
+							//planet.GenerateChunk(blockLibrary, *chunk, planetData.seed, planetData.chunkCount, planetData.generatorName.data());
 							spdlog::info("regenerated chunk {};{};{}", chunkIndices.x, chunkIndices.y, chunkIndices.z);
 							return false;
 						}
@@ -713,30 +713,6 @@ namespace tsom
 				}
 			}
 */
-			return;
-		}
-		else if (message == "/spawnplanet" && m_player->HasPermission(PlayerPermission::Admin))
-		{
-			entt::handle playerEntity = m_player->GetControlledEntityReference();
-			if (!playerEntity)
-				return;
-
-			ServerEnvironment* environment = m_player->GetRootEnvironment();
-
-			entt::handle newPlanetEntity = environment->CreateEntity();
-			newPlanetEntity.emplace<Nz::NodeComponent>().CopyTransform(playerEntity.get<Nz::NodeComponent>());
-			newPlanetEntity.emplace<NetworkedComponent>();
-
-			ServerInstance& serverInstance = m_player->GetServerInstance();
-
-			auto& taskScheduler = serverInstance.GetApplication().GetComponent<Nz::TaskSchedulerAppComponent>();
-
-			auto& planetComponent = newPlanetEntity.emplace<PlanetComponent>();
-			planetComponent.planet = std::make_unique<Planet>(serverInstance.GetApplication(), 1.f, 16.f, 9.81f);
-			planetComponent.planet->GenerateChunks(serverInstance.GetBlockLibrary(), taskScheduler, std::rand(), Nz::Vector3ui(5), "alice");
-
-			planetComponent.planetEntities[0] = std::make_unique<ChunkEntities>(serverInstance.GetApplication(), environment->GetWorld(), *planetComponent.planet, serverInstance.GetBlockLibrary(), 0);
-			planetComponent.planetEntities[0]->SetParentEntity(newPlanetEntity);
 			return;
 		}
 		else if (message == "/crashserver" && m_player->HasPermission(PlayerPermission::Admin))

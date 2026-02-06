@@ -29,7 +29,10 @@ namespace tsom
 
 	ServerPlanetEnvironment::ServerPlanetEnvironment(ServerInstance& serverInstance, std::optional<Nz::UInt32> databaseId, std::string generatorName, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, float cellSize, float cornerRadius) :
 	ServerEnvironment(serverInstance, ServerEnvironmentType::Planet, true),
-	m_databaseId(databaseId)
+	m_databaseId(databaseId),
+	m_generatorName(std::move(generatorName)),
+	m_generationSeed(seed),
+	m_chunkCount(chunkCount)
 	{
 		m_world->GetRegistry().ctx().emplace<ServerPlanetEnvironment*>(this);
 		m_world->AddSystem<EnvironmentSwitchSystem>();
@@ -50,31 +53,20 @@ namespace tsom
 		planetClass->InitAndActivateEntity(m_planetEntity);
 
 		auto& planetComponent = m_planetEntity.get<PlanetComponent>();
-		planetComponent.planet->AddChunks(blockLibrary, chunkCount);
 
-		if (m_databaseId)
-			LoadChunksFromDatabase();
+		m_chunkLoadingData = std::make_shared<ChunkLoadingData>();
+		m_chunkLoadingData->chunkCount = m_chunkCount;
+		m_chunkLoadingData->planet = planetComponent.planet;
+		m_chunkLoadingData->remainingChunks.emplace(-int(m_chunkCount.x / 2), -int(m_chunkCount.y / 2), -int(m_chunkCount.z / 2));
 
-		auto& app = serverInstance.GetApplication();
-		auto& taskScheduler = app.GetComponent<Nz::TaskSchedulerAppComponent>();
-
-		planetComponent.planet->GenerateChunks(blockLibrary, taskScheduler, seed, chunkCount, std::move(generatorName));
-		taskScheduler.WaitForTasks();
-
-		planetComponent.planet->GeneratePlatform(blockLibrary, Direction::Right, { 65, -18, -39 });
-		planetComponent.planet->GeneratePlatform(blockLibrary, Direction::Back, { -34, 2, 53 });
-		planetComponent.planet->GeneratePlatform(blockLibrary, Direction::Front, { 22, -35, -59 });
-		planetComponent.planet->GeneratePlatform(blockLibrary, Direction::Down, { 23, -62, 26 });
-
-		std::size_t emptyChunkCount = 0;
-		planetComponent.planet->ForEachChunk([&](const ChunkIndices& /*osef*/, const Chunk& chunk)
-		{
-			emptyChunkCount += chunk.GetBlockCount(EmptyBlockIndex);
-		});
+		//planetComponent.planet->GeneratePlatform(blockLibrary, Direction::Right, { 65, -18, -39 });
+		//planetComponent.planet->GeneratePlatform(blockLibrary, Direction::Back, { -34, 2, 53 });
+		//planetComponent.planet->GeneratePlatform(blockLibrary, Direction::Front, { 22, -35, -59 });
+		//planetComponent.planet->GeneratePlatform(blockLibrary, Direction::Down, { 23, -62, 26 });
 
 		// We want the player to be able to breathe 5s per empty block count
 		// the player breathe 100ml per second
-		Nz::UInt64 oxygenAmount = Constants::SecondsToEmptyOxygenBlock * Nz::UInt64(Constants::PlayerOxygenConsumption) * emptyChunkCount;
+		Nz::UInt64 oxygenAmount = Constants::SecondsToEmptyOxygenBlock * Nz::UInt64(Constants::PlayerOxygenConsumption) * m_chunkCount.x * m_chunkCount.y * m_chunkCount.z;
 		m_atmosphere.SetGasAmount(GasType::Oxygen, oxygenAmount);
 
 		// We also want oxygen to be 21% of the atmosphere and have the rest as nitrogen
@@ -214,6 +206,73 @@ namespace tsom
 			databaseSystem->Save();
 	}
 
+	void ServerPlanetEnvironment::OnTick(Nz::Time elapsedTime)
+	{
+		ServerEnvironment::OnTick(elapsedTime);
+
+		std::unique_lock lock(m_chunkLoadingData->mutex);
+
+		if (!m_chunkLoadingData->remainingChunks.empty())
+		{
+			ChunkIndices indices = m_chunkLoadingData->remainingChunks.front();
+			m_chunkLoadingData->remainingChunks.pop();
+
+			spdlog::debug("loading chunk {};{};{} ({} remaining)", indices.x, indices.y, indices.z, m_chunkLoadingData->remainingChunks.size());
+
+			lock.unlock();
+
+			Chunk* chunk = GetPlanet().GetChunk(indices);
+			if (!chunk)
+				chunk = &GetPlanet().AddChunk(m_serverInstance.GetBlockLibrary(), indices);
+
+			auto& taskScheduler = m_serverInstance.GetApplication().GetComponent<Nz::TaskSchedulerAppComponent>();
+
+			m_chunkLoadingData->chunkLoadingCount++;
+			taskScheduler.AddTask([chunk, serverInstance = &m_serverInstance, databaseId = m_databaseId, chunkLoadingData = m_chunkLoadingData, seed = m_generationSeed, chunkCount = m_chunkCount, generatorName = m_generatorName]
+			{
+				bool chunkFound = false;
+				if (databaseId)
+				{
+					ServerDatabase& serverDatabase = serverInstance->GetServerDatabase();
+					chunkFound = serverDatabase.GetPlanetChunk(*databaseId, chunk->GetIndices(), [&](Database::PlanetChunk&& planetChunk)
+					{
+						if (planetChunk.version != s_chunkVersion)
+							throw std::runtime_error(fmt::format("unhandled version {}", planetChunk.version));
+
+						// Chunk data has decompressedSize first
+						Nz::UInt32 decompressedSize;
+						std::memcpy(&decompressedSize, &planetChunk.chunkData[0], sizeof(decompressedSize));
+						decompressedSize = Nz::LittleEndianToHost(decompressedSize);
+
+						BinaryCompressor& binaryCompressor = BinaryCompressor::GetThreadCompressor();
+
+						std::vector<Nz::UInt8> decompressedData(decompressedSize);
+						std::optional compressedDataOpt = binaryCompressor.Decompress(planetChunk.chunkData.data() + sizeof(decompressedSize), planetChunk.chunkData.size() - sizeof(decompressedSize), decompressedData.data(), decompressedData.size());
+						if (!compressedDataOpt)
+							throw std::runtime_error("chunk decompression failed");
+
+						if (*compressedDataOpt != decompressedSize)
+							throw std::runtime_error("chunk decompression failed (corrupt size)");
+
+						Nz::ByteStream byteStream(decompressedData.data(), decompressedData.size());
+
+						chunk->LockWrite();
+						chunk->Deserialize(byteStream);
+						chunk->UnlockWrite();
+					});
+				}
+
+				if (!chunkFound)
+					chunkLoadingData->planet->GenerateChunk(*chunk, seed, chunkCount, generatorName);
+
+				chunkLoadingData->HandleChunkLoaded(chunk->GetIndices());
+
+				if (--chunkLoadingData->chunkLoadingCount == 0 && chunkLoadingData->remainingChunks.empty())
+					spdlog::debug("planet chunk loading finished, total chunks: {} (out of {})", chunkLoadingData->visitedChunks.size(), chunkCount.x * chunkCount.y * chunkCount.z);
+			});
+		}
+	}
+
 	ServerAtmosphere* ServerPlanetEnvironment::GetFallbackAtmosphereAtPosition(const Nz::Vector3f& position)
 	{
 		Planet& planet = GetPlanet();
@@ -285,5 +344,29 @@ namespace tsom
 
 			return true;
 		});
+	}
+
+	void ServerPlanetEnvironment::ChunkLoadingData::HandleChunkLoaded(const ChunkIndices& chunkIndices)
+	{
+		ChunkIndices minIndices(-int(chunkCount.x / 2), -int(chunkCount.y / 2), -int(chunkCount.z / 2));
+		ChunkIndices maxIndices = minIndices + ChunkIndices(chunkCount) - ChunkIndices(1);
+
+		std::unique_lock lock(mutex);
+
+		DirectionMask visibilityMask = planet->GetChunkVisibilityMask(chunkIndices);
+		for (Direction visibleNeighborDir : visibilityMask)
+		{
+			ChunkIndices neighborIndices = chunkIndices + s_chunkDirOffset[visibleNeighborDir];
+			if (neighborIndices.x < minIndices.x || neighborIndices.x > maxIndices.x ||
+			    neighborIndices.y < minIndices.y || neighborIndices.y > maxIndices.y ||
+			    neighborIndices.z < minIndices.z || neighborIndices.z > maxIndices.z)
+				continue;
+
+			if (visitedChunks.contains(neighborIndices))
+				continue;
+
+			visitedChunks.insert(neighborIndices);
+			remainingChunks.push(neighborIndices);
+		}
 	}
 }
