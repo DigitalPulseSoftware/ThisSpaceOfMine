@@ -349,7 +349,7 @@ namespace tsom
 			// Connect update signal on dispatch to prevent updates made during the same tick to be sent as update
 			visibleChunk.chunkUpdatePacket.entityId = Nz::Retrieve(m_entityIndices, visibleChunk.entityOwner);
 
-			visibleChunk.onBlockUpdatedSlot.Connect(visibleChunk.chunk->OnBlockUpdated, [this, chunkIndex]([[maybe_unused]] Chunk* chunk, const Nz::Vector3ui& indices, BlockIndex newBlock, std::size_t /*prevLayerIndex*/, std::size_t /*newLayerIndex*/)
+			visibleChunk.onBlockUpdatedSlot.Connect(visibleChunk.chunk->OnBlockUpdated, [this, chunkIndex]([[maybe_unused]] Chunk* chunk, const Nz::Vector3ui& indices, BlockIndex /*oldBlock*/, BlockIndex newBlock, std::size_t /*prevLayerIndex*/, std::size_t /*newLayerIndex*/)
 			{
 				m_updatedChunk.UnboundedSet(chunkIndex);
 

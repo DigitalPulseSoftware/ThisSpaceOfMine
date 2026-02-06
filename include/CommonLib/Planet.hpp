@@ -51,6 +51,7 @@ namespace tsom
 			inline Nz::Vector3f GetCenter() const override;
 			inline Chunk* GetChunk(const ChunkIndices& chunkIndices) override;
 			inline const Chunk* GetChunk(const ChunkIndices& chunkIndices) const override;
+			inline DirectionMask GetChunkVisibilityMask(const ChunkIndices& chunkIndices) const;
 			inline std::size_t GetChunkCount() const override;
 			inline float GetCornerRadius() const;
 			inline float GetGravity() const;
@@ -67,7 +68,9 @@ namespace tsom
 		protected:
 			struct ChunkData
 			{
+				Nz::EnumArray<Direction, Nz::UInt16> directionHoleCount;
 				std::shared_ptr<Chunk> chunk;
+				DirectionMask visibilityMask;
 
 				NazaraSlot(Chunk, OnBlockUpdated, onUpdated);
 				NazaraSlot(Chunk, OnLayerRegistered, onLayerRegistered);

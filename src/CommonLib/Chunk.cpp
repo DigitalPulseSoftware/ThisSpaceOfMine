@@ -392,8 +392,8 @@ namespace tsom
 		const auto& newBlockData = m_blockLibrary.GetBlockData(newBlock);
 
 		unsigned int blockIndex = GetBlockLocalIndex(indices);
-		BlockIndex oldContent = m_blocks[blockIndex];
-		const auto& oldBlockData = m_blockLibrary.GetBlockData(oldContent);
+		BlockIndex oldBlock = m_blocks[blockIndex];
+		const auto& oldBlockData = m_blockLibrary.GetBlockData(oldBlock);
 		assert(IsLayerRegistered(oldBlockData.layerIndex));
 		m_blocks[blockIndex] = newBlock;
 
@@ -404,13 +404,13 @@ namespace tsom
 		m_layers[newBlockData.layerIndex]->collisionCellMasks[blockIndex] = newBlockData.hasCollisions;
 		m_layers[newBlockData.layerIndex]->blockCount++;
 
-		m_blockTypeCount[oldContent]--;
+		m_blockTypeCount[oldBlock]--;
 		if (newBlock >= m_blockTypeCount.size())
 			m_blockTypeCount.resize(newBlock + 1);
 
 		m_blockTypeCount[newBlock]++;
 
-		OnBlockUpdated(this, indices, newBlock, oldBlockData.layerIndex, newBlockData.layerIndex);
+		OnBlockUpdated(this, indices, oldBlock, newBlock, oldBlockData.layerIndex, newBlockData.layerIndex);
 
 		// Unregister layer only after update to avoid triggering chunk update (OnBlockUpodated)
 		assert(m_layers[oldBlockData.layerIndex]->blockCount > 0);

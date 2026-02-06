@@ -27,6 +27,14 @@ namespace tsom
 		return it->second.chunk.get();
 	}
 
+	inline DirectionMask Planet::GetChunkVisibilityMask(const ChunkIndices& chunkIndices) const
+	{
+		auto it = m_chunks.find(chunkIndices);
+		NazaraAssert(it != m_chunks.end());
+
+		return it->second.visibilityMask;
+	}
+
 	inline std::size_t Planet::GetChunkCount() const
 	{
 		return m_chunks.size();
