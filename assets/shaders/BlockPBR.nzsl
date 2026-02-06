@@ -51,7 +51,7 @@ option MaxLightCount: u32 = 3;
 const HasNormal = (VertexNormalLoc != InvalidLoc);
 const HasVertexColor = (VertexColorLoc != InvalidLoc);
 const HasColor = (HasVertexColor || Billboard);
-const HasTangent = (VertexTangentLoc != InvalidLoc);
+const HasTangent = (VertexTangentLoc != InvalidLoc && false);
 const HasUV = (VertexUvLoc != InvalidLoc);
 const HasNormalMapping = HasNormalTexture && HasNormal && HasTangent && !DepthPass;
 const HasSkinning = (VertexJointIndicesLoc != InvalidLoc && VertexJointWeightsLoc != InvalidLoc);
@@ -141,10 +141,30 @@ fn ComputeColor(input: VertOut) -> vec4[f32]
 		color *= input.color;
 
 	const if (HasBaseColorTexture)
-		color *= MaterialBaseColorMap.Sample(input.uv);
+	{
+		// Triplanar mapping
+		let x = MaterialBaseColorMap.Sample(vec3[f32](input.worldPos.yz, input.uv.z));
+		let y = MaterialBaseColorMap.Sample(vec3[f32](input.worldPos.zx, input.uv.z));
+		let z = MaterialBaseColorMap.Sample(vec3[f32](input.worldPos.xy, input.uv.z));
+
+		let m = pow(abs(input.normal), (4.0).xxx);
+		let textureColor = (x*m.x + y*m.y + z*m.z) / (m.x + m.y + m.z);
+
+		color *= textureColor;
+	}
 
 	const if (HasAlphaTexture)
-		color.w *= MaterialAlphaMap.Sample(input.uv).x;
+	{
+		// Triplanar mapping
+		let x = MaterialAlphaMap.Sample(vec3[f32](input.worldPos.yz, input.uv.z));
+		let y = MaterialAlphaMap.Sample(vec3[f32](input.worldPos.zx, input.uv.z));
+		let z = MaterialAlphaMap.Sample(vec3[f32](input.worldPos.xy, input.uv.z));
+
+		let m = pow(abs(input.normal), (4.0).xxx);
+		let textureColor = (x*m.x + y*m.y + z*m.z) / (m.x + m.y + m.z);
+
+		color.w *= textureColor.x;
+	}
 
 	const if (AlphaTest)
 	{
@@ -162,6 +182,8 @@ fn ComputeLighting(color: vec3[f32], input: VertOut) -> vec3[f32]
 
 	let eyeVec = normalize(viewerData.eyePosition - input.worldPos);
 
+	let uv = input.uv;
+
 	let normal: vec3[f32];
 	const if (HasNormalMapping)
 	{
@@ -170,7 +192,7 @@ fn ComputeLighting(color: vec3[f32], input: VertOut) -> vec3[f32]
 		let B = cross(N, T);
 		let tbnMatrix = mat3[f32](T, B, N);
 
-		normal = (MaterialNormalMap.Sample(input.uv).xyz * 2.0 - (1.0).rrr);
+		normal = (MaterialNormalMap.Sample(uv).xyz * 2.0 - (1.0).rrr);
 		normal = normalize(tbnMatrix * normal);
 	}
 	else
@@ -182,16 +204,16 @@ fn ComputeLighting(color: vec3[f32], input: VertOut) -> vec3[f32]
 
 	const if (HasDetailTexture)
 	{
-		let detail = MaterialDetailMap.Sample(input.uv).rgb;
+		let detail = MaterialDetailMap.Sample(uv).rgb;
 		roughness = 1.0 - detail.r;
 		metallic = detail.y;
 	}
 
 	const if (HasMetallicTexture)
-		metallic = MaterialMetallicMap.Sample(input.uv).x;
+		metallic = MaterialMetallicMap.Sample(uv).x;
 
 	const if (HasRoughnessTexture)
-		roughness = MaterialRoughnessMap.Sample(input.uv).x;
+		roughness = MaterialRoughnessMap.Sample(uv).x;
 
 	let F0 = vec3[f32](0.04, 0.04, 0.04);
 	F0 = albedo * metallic + F0 * (1.0 - metallic);

@@ -25,6 +25,7 @@ namespace tsom
 		/************************************************************************/
 		RegisterBlock("empty", {
 			.hasCollisions = false,
+			.isSmooth = true,
 			.isTransparent = true,
 			.permeability = 1.f
 		});
@@ -40,6 +41,8 @@ namespace tsom
 
 		RegisterBlock("dirt", {
 			.basePath = "blocks/dirt",
+			.isSmooth = true,
+			.density = 1.0f,
 			.permeability = 0.1f
 		});
 
@@ -47,6 +50,8 @@ namespace tsom
 			.basePath = "blocks/grass_top",
 			.baseDownPath = "blocks/dirt",
 			.baseSidePath = "blocks/grass_side",
+			.isSmooth = true,
+			.density = 2.0f,
 			.permeability = 0.1f
 		});
 
@@ -60,15 +65,19 @@ namespace tsom
 
 		RegisterBlock("snow", {
 			.basePath = "blocks/snow",
+			.isSmooth = true,
 			.permeability = 0.5f
 		});
 
 		RegisterBlock("stone", {
-			.basePath = "blocks/cobblestone"
+			.basePath = "blocks/cobblestone",
+			.isSmooth = true,
+			.density = 4.0f
 		});
 
 		RegisterBlock("stone_mossy", {
-			.basePath = "blocks/mossy_cobblestone"
+			.basePath = "blocks/mossy_cobblestone",
+			.isSmooth = true,
 		});
 
 		RegisterBlock("forcefield", {
@@ -92,6 +101,7 @@ namespace tsom
 		RegisterBlock("glass", {
 			.basePath = "blocks/glass",
 			.isDoubleSided = true,
+			.isSmooth = true,
 			.isTransparent = true
 		});
 
@@ -99,7 +109,8 @@ namespace tsom
 			.layerName = "water",
 			.basePath = "blocks/water",
 			.isDoubleSided = true,
-			.isTransparent = true
+			.isSmooth = false,
+			.isTransparent = true,
 		});
 	}
 
@@ -111,6 +122,8 @@ namespace tsom
 		blockData.hasCollisions = blockInfo.hasCollisions;
 		blockData.isDoubleSided = blockInfo.isDoubleSided;
 		blockData.isTransparent = blockInfo.isTransparent;
+		blockData.isSmooth = blockInfo.isSmooth;
+		blockData.density = blockInfo.density;
 		blockData.permeability = blockInfo.permeability;
 		blockData.name = name;
 

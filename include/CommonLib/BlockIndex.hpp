@@ -8,14 +8,16 @@
 #define TSOM_COMMONLIB_BLOCKINDEX_HPP
 
 #include <NazaraUtils/Prerequisites.hpp>
-#include <limits>
+#include <NazaraUtils/Constants.hpp>
 
 namespace tsom
 {
 	using BlockIndex = Nz::UInt16;
 
 	constexpr BlockIndex EmptyBlockIndex = 0;
-	constexpr BlockIndex InvalidBlockIndex = std::numeric_limits<BlockIndex>::max();
+	constexpr BlockIndex InvalidBlockIndex = Nz::MaxValue();
 }
+
+#include <CommonLib/BlockIndex.inl>
 
 #endif // TSOM_COMMONLIB_BLOCKINDEX_HPP

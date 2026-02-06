@@ -32,6 +32,7 @@
 #include <Nazara/Graphics/PropertyHandler/UniformValuePropertyHandler.hpp>
 #include <Nazara/Platform/Window.hpp>
 #include <Nazara/Renderer/Plugins/ImGuiPlugin.hpp>
+#include <numeric>
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
 
@@ -47,7 +48,7 @@ namespace tsom
 
 		m_cameraEntity = CreateEntity();
 		{
-			auto& cameraNode = m_cameraEntity.emplace<Nz::NodeComponent>(Nz::Vector3f(0.f, 150.f, -75.f), m_cameraRotation);
+			auto& cameraNode = m_cameraEntity.emplace<Nz::NodeComponent>(Nz::Vector3f(0.f, 20.f, -75.f), m_cameraRotation);
 
 #ifdef TSOM_DEV_TOOLS
 			auto passList = filesystem.Load<Nz::PipelinePassList>(stateData.imgui ? "assets/3d_dev.passlist" : "assets/3d.passlist");
@@ -180,7 +181,7 @@ namespace tsom
 		m_planetParentEntity.emplace<Nz::NodeComponent>();
 		m_planetParentEntity.emplace<VisualEntityComponent>().visualEntity = m_planetParentEntity;
 
-		m_planet = std::make_unique<Planet>(*stateData.app, 1.f, 16.f, 9.81f);
+		m_planet = std::make_unique<Planet>(*stateData.app, 1.0f, 16.f, 9.81f);
 		for (std::size_t layerIndex = 0; layerIndex < m_planetEntities.size(); ++layerIndex)
 		{
 			if (!stateData.blockLibrary->IsValidLayer(layerIndex))
@@ -291,6 +292,29 @@ namespace tsom
 
 			cameraNode.SetPosition(cameraPos);
 		}
+
+		Chunk* chunk = m_planet->GetChunk({0, 0, 0});
+		Nz::Vector3f chunkOffset = m_planet->GetChunkOffset({ 0, 0, 0 });
+
+		/*Nz::DebugDrawer* debugDrawer = m_cameraEntity.get<Nz::CameraComponent>().AccessDebugDrawer();
+
+		for (unsigned int z = 0; z < 7; ++z)
+		{
+			for (unsigned int y = 0; y < 7; ++y)
+			{
+				for (unsigned int x = 0; x < 7; ++x)
+				{
+					BlockIndex blockIndex = chunk->GetBlockContent({ x, y, z });
+					auto corners = chunk->ComputeBlockCorners({ x, y, z });
+					Nz::Vector3f blockCenter = std::accumulate(corners.begin(), corners.end(), Nz::Vector3f::Zero()) / corners.size();
+
+					if (x == 0 && y == 0 && z == 0)
+						debugDrawer->DrawSphere(blockCenter, 0.03f, Nz::Color::Yellow());
+					else
+						debugDrawer->DrawSphere(blockCenter, 0.03f, blockIndex == EmptyBlockIndex ? Nz::Color::Red() : Nz::Color::Blue());
+				}
+			}
+		}*/
 
 #ifdef TSOM_DEV_TOOLS
 		if (stateData.imgui)
@@ -420,6 +444,27 @@ namespace tsom
 		m_planet->ClearChunks();
 		m_planet->AddChunks(*stateData.blockLibrary, m_planetSettings.chunkCount);
 		m_planet->GenerateChunks(*stateData.blockLibrary, taskScheduler, m_planetSettings.seed, m_planetSettings.chunkCount, m_planetSettings.scriptName);
+
+		/*m_planet->AddChunks(*stateData.blockLibrary, {1, 1, 1});
+		Chunk* chunk = m_planet->GetChunk({ 0, 0, 0 });
+		chunk->Reset([&](BlockIndex* data)
+		{
+			BlockIndex dirtIndex = stateData.blockLibrary->GetBlockIndex("dirt");
+
+			for (unsigned int z = 0; z < 5; ++z)
+			{
+				for (unsigned int y = 0; y < 5; ++y)
+				{
+					for (unsigned int x = 0; x < 5; ++x)
+					{
+						//if (x == 0 && y == 0 && z == 0)
+						//	continue;
+
+						data[chunk->GetBlockLocalIndex({ 1 + x, 1 + y, 1 + z })] = dirtIndex;
+					}
+				}
+			}
+		});*/
 	}
 
 	void PlanetEditorState::LayoutWidgets(const Nz::Vector2f& /*newSize*/)

@@ -5,8 +5,7 @@
 #include <CommonLib/Planet.hpp>
 #include <CommonLib/BlockLibrary.hpp>
 #include <CommonLib/ChunkLock.hpp>
-#include <CommonLib/DeformedChunk.hpp>
-#include <CommonLib/FlatChunk.hpp>
+#include <CommonLib/SurfaceNetsChunk.hpp>
 #include <CommonLib/Scripting/ChunkScriptingLibrary.hpp>
 #include <CommonLib/Scripting/MathScriptingLibrary.hpp>
 #include <CommonLib/Scripting/ScriptingContext.hpp>
@@ -31,27 +30,7 @@ namespace tsom
 	{
 		assert(!m_chunks.contains(indices));
 		ChunkData chunkData;
-
-		Nz::Vector3f chunkOffset = GetChunkOffset(indices);
-
-		// Check if chunk has to be deformed (check if it has a deformed corner)
-		auto IsDeformedChunk = [&]()
-		{
-			Nz::Boxf aabb(chunkOffset - Nz::Vector3f(ChunkSize) * m_tileSize * 0.5f, Nz::Vector3f(ChunkSize) * m_tileSize);
-
-			for (const Nz::Vector3f& corner : aabb.GetCorners())
-			{
-				if (!DeformedChunk::DeformPosition(corner, GetCenter(), m_cornerRadius).ApproxEqual(corner, 0.001f))
-					return true;
-			}
-
-			return false;
-		};
-
-		if (m_cornerRadius > 0.f && IsDeformedChunk())
-			chunkData.chunk = std::make_unique<DeformedChunk>(blockLibrary, *this, indices, Nz::Vector3ui{ ChunkSize }, m_tileSize, GetCenter() - chunkOffset, m_cornerRadius);
-		else
-			chunkData.chunk = std::make_unique<FlatChunk>(blockLibrary, *this, indices, Nz::Vector3ui{ ChunkSize }, m_tileSize);
+		chunkData.chunk = std::make_unique<SurfaceNetsChunk>(blockLibrary, *this, indices, Nz::Vector3ui{ ChunkSize }, m_tileSize);
 
 		chunkData.onLayerRegistered.Connect(chunkData.chunk->OnLayerRegistered, [this](Chunk* chunk, std::size_t layerIndex)
 		{
