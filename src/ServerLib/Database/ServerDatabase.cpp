@@ -21,7 +21,8 @@ namespace tsom
 	partialUpdatePlanetEntityQuery(database, "UPDATE planet_entities SET class_version = ?, position_x = ?, position_y = ?, position_z = ?, rotation_x = ?, rotation_y = ?, rotation_z = ?, rotation_w = ?, properties = ?, last_update = datetime() WHERE id = ?"),
 	getAllPlanetQuery(database, "SELECT id, generator, seed, chunk_count_x, chunk_count_y, chunk_count_z, block_size, corner_radius, gravity FROM planets"),
 	getAllPlanetLinkQuery(database, "SELECT source_planet_id, destination_planet_id, position_x, position_y, position_z FROM planet_links"),
-	getPlanetChunkQuery(database, "SELECT position_x, position_y, position_z, version, chunk_data FROM planet_chunks WHERE planet_id = ?"),
+	getAllPlanetChunksQuery(database, "SELECT position_x, position_y, position_z, version, chunk_data FROM planet_chunks WHERE planet_id = ?"),
+	getPlanetChunkQuery(database, "SELECT version, chunk_data FROM planet_chunks WHERE planet_id = ? AND position_x = ? AND position_y = ? AND position_z = ?"),
 	storePlanetQuery(database, "REPLACE INTO planets(id, generator, seed, chunk_count_x, chunk_count_y, chunk_count_z, block_size, corner_radius, gravity) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)"),
 	storePlanetChunkQuery(database, "REPLACE INTO planet_chunks(planet_id, position_x, position_y, position_z, version, chunk_data, last_update) VALUES(?, ?, ?, ?, ?, ?, datetime())"),
 	storePlanetLinkQuery(database, "REPLACE INTO planet_links(source_planet_id, destination_planet_id, position_x, position_y, position_z) VALUES(?, ?, ?, ?, ?)")
@@ -166,27 +167,53 @@ namespace tsom
 		}
 	}
 
-	void ServerDatabase::GetPlanetChunks(Nz::UInt32 planetId, Nz::FunctionRef<bool(Database::PlanetChunk&& /*planetChunk*/)> callback) const
+	void ServerDatabase::GetAllPlanetChunks(Nz::UInt32 planetId, Nz::FunctionRef<bool(Database::PlanetChunk&& /*planetChunk*/)> callback) const
 	{
-		NAZARA_DEFER({ m_preparedStatements->getPlanetChunkQuery.reset(); });
-		m_preparedStatements->getPlanetChunkQuery.bind(1, planetId);
+		NAZARA_DEFER({ m_preparedStatements->getAllPlanetChunksQuery.reset(); });
+		m_preparedStatements->getAllPlanetChunksQuery.bind(1, planetId);
 
-		while (m_preparedStatements->getPlanetChunkQuery.executeStep())
+		while (m_preparedStatements->getAllPlanetChunksQuery.executeStep())
 		{
 			Database::PlanetChunk planetChunk;
 			planetChunk.planetId = planetId;
-			planetChunk.position.x = Nz::SafeCaster(m_preparedStatements->getPlanetChunkQuery.getColumn(0).getDouble());
-			planetChunk.position.y = Nz::SafeCaster(m_preparedStatements->getPlanetChunkQuery.getColumn(1).getDouble());
-			planetChunk.position.z = Nz::SafeCaster(m_preparedStatements->getPlanetChunkQuery.getColumn(2).getDouble());
-			planetChunk.version = m_preparedStatements->getPlanetChunkQuery.getColumn(3);
+			planetChunk.position.x = Nz::SafeCaster(m_preparedStatements->getAllPlanetChunksQuery.getColumn(0).getDouble());
+			planetChunk.position.y = Nz::SafeCaster(m_preparedStatements->getAllPlanetChunksQuery.getColumn(1).getDouble());
+			planetChunk.position.z = Nz::SafeCaster(m_preparedStatements->getAllPlanetChunksQuery.getColumn(2).getDouble());
+			planetChunk.version = m_preparedStatements->getAllPlanetChunksQuery.getColumn(3);
 
-			SQLite::Column column = m_preparedStatements->getPlanetChunkQuery.getColumn(4);
+			SQLite::Column column = m_preparedStatements->getAllPlanetChunksQuery.getColumn(4);
 			const Nz::UInt8* chunkData = static_cast<const Nz::UInt8*>(column.getBlob());
 			planetChunk.chunkData = std::span(chunkData, chunkData + column.getBytes());
 
 			if (!callback(std::move(planetChunk)))
 				break;
 		}
+	}
+
+	bool ServerDatabase::GetPlanetChunk(Nz::UInt32 planetId, const Nz::Vector3i32& chunkIndices, Nz::FunctionRef<void(Database::PlanetChunk&& /*PlanetChunk*/)> callback) const
+	{
+		NAZARA_DEFER({ m_preparedStatements->getPlanetChunkQuery.reset(); });
+		m_preparedStatements->getPlanetChunkQuery.bind(1, planetId);
+		m_preparedStatements->getPlanetChunkQuery.bind(2, chunkIndices.x);
+		m_preparedStatements->getPlanetChunkQuery.bind(3, chunkIndices.y);
+		m_preparedStatements->getPlanetChunkQuery.bind(4, chunkIndices.z);
+
+		if (!m_preparedStatements->getPlanetChunkQuery.executeStep())
+			return false;
+
+		Database::PlanetChunk planetChunk;
+		planetChunk.planetId = planetId;
+		planetChunk.position.x = chunkIndices.x;
+		planetChunk.position.y = chunkIndices.y;
+		planetChunk.position.z = chunkIndices.z;
+		planetChunk.version = m_preparedStatements->getPlanetChunkQuery.getColumn(0);
+
+		SQLite::Column column = m_preparedStatements->getPlanetChunkQuery.getColumn(1);
+		const Nz::UInt8* chunkData = static_cast<const Nz::UInt8*>(column.getBlob());
+		planetChunk.chunkData = std::span(chunkData, chunkData + column.getBytes());
+
+		callback(std::move(planetChunk));
+		return true;
 	}
 
 	void ServerDatabase::Migrate()

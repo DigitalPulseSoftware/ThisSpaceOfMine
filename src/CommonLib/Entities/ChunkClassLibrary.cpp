@@ -36,7 +36,7 @@ namespace tsom
 				Nz::EnttWorld* world = entity.registry()->ctx().get<Nz::EnttWorld*>();
 
 				auto& planetComponent = entity.emplace<PlanetComponent>();
-				planetComponent.planet = std::make_unique<Planet>(m_app, cellSize, cornerRadius, gravity);
+				planetComponent.planet = std::make_shared<Planet>(m_app, cellSize, cornerRadius, gravity);
 				for (std::size_t layerIndex = 0; layerIndex < planetComponent.planetEntities.size(); ++layerIndex)
 				{
 					if (!m_blockLibrary.IsValidLayer(layerIndex))

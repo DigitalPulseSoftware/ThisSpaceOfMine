@@ -169,7 +169,23 @@ namespace tsom
 				}
 			}
 
-			if (neighborMask != 0)
+			DirectionMask directionMask;
+			if (indices.x == 0)
+				directionMask |= Direction::Left;
+			else if (indices.x == size.x - 1)
+				directionMask |= Direction::Right;
+
+			if (indices.y == 0)
+				directionMask |= Direction::Front;
+			else if (indices.y == size.y - 1)
+				directionMask |= Direction::Back;
+
+			if (indices.z == 0)
+				directionMask |= Direction::Down;
+			else if (indices.z == size.z - 1)
+				directionMask |= Direction::Up;
+
+			if (directionMask != 0)
 			{
 				auto& previousBlockData = blockLibrary.GetBlockData(oldBlock);
 				auto& newBlockData = blockLibrary.GetBlockData(newBlock);
@@ -183,7 +199,7 @@ namespace tsom
 					if (previousBlockData.isTransparent)
 					{
 						// We're putting an opaque block on a transparent one
-						for (Direction direction : neighborMask)
+						for (Direction direction : directionMask)
 						{
 							NazaraAssert(chunkData.directionHoleCount[direction] > 0);
 							if (--chunkData.directionHoleCount[direction] == 0)
@@ -193,7 +209,7 @@ namespace tsom
 					else
 					{
 						// Replacing an opaque block by a transparent one
-						for (Direction direction : neighborMask)
+						for (Direction direction : directionMask)
 						{
 							chunkData.directionHoleCount[direction]++;
 							chunkData.visibilityMask |= direction;
@@ -339,11 +355,11 @@ namespace tsom
 			callback(chunkIndices, *chunkData.chunk);
 	}
 
-	void Planet::GenerateChunk(const BlockLibrary& blockLibrary, Chunk& chunk, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, std::string scriptName)
+	void Planet::GenerateChunk(Chunk& chunk, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, std::string_view scriptName)
 	{
 		ChunkIndices chunkIndices = chunk.GetIndices();
 
-		ScriptingContext scriptingContext = ScriptingContext(m_app);
+		ScriptingContext scriptingContext(m_app);
 		scriptingContext.RegisterLibrary<MathScriptingLibrary>();
 		scriptingContext.RegisterLibrary<ChunkScriptingLibrary>();
 
@@ -363,7 +379,7 @@ namespace tsom
 		}
 	}
 
-	void Planet::GenerateChunks(const BlockLibrary& blockLibrary, Nz::TaskScheduler& taskScheduler, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, std::string scriptName)
+	void Planet::GenerateChunks(Nz::TaskScheduler& taskScheduler, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, std::string_view scriptName)
 	{
 		struct ThreadState
 		{
@@ -383,6 +399,7 @@ namespace tsom
 		};
 
 		auto context = std::make_shared<GenerationContext>();
+		std::string scriptPath = fmt::format("scripts/planets/{}.lua", scriptName);
 
 		ForEachChunk([=, this, &taskScheduler](const ChunkIndices& chunkIndices, Chunk& chunk)
 		{
@@ -404,7 +421,7 @@ namespace tsom
 						threadState->scriptingContext.RegisterLibrary<MathScriptingLibrary>();
 						threadState->scriptingContext.RegisterLibrary<ChunkScriptingLibrary>();
 
-						Nz::Result execResult = threadState->scriptingContext.LoadFile(fmt::format("scripts/planets/{}.lua", scriptName));
+						Nz::Result execResult = threadState->scriptingContext.LoadFile(scriptPath);
 						if (!execResult)
 							return;
 

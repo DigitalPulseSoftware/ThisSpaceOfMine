@@ -11,8 +11,12 @@
 #include <CommonLib/Chunk.hpp>
 #include <ServerLib/ServerAtmosphere.hpp>
 #include <ServerLib/ServerEnvironment.hpp>
+#include <tsl/hopscotch_set.h>
+#include <atomic>
 #include <filesystem>
+#include <mutex>
 #include <optional>
+#include <queue>
 
 namespace tsom
 {
@@ -41,6 +45,7 @@ namespace tsom
 			inline entt::handle GetPlanetEntity() const;
 
 			void OnSave() override;
+			void OnTick(Nz::Time elapsedTime) override;
 
 			ServerPlanetEnvironment& operator=(const ServerPlanetEnvironment&) = delete;
 			ServerPlanetEnvironment& operator=(ServerPlanetEnvironment&&) = delete;
@@ -50,11 +55,27 @@ namespace tsom
 			void LoadChunksFromDatabase();
 			void LoadEntitiesFromDatabase();
 
+			struct ChunkLoadingData
+			{
+				Nz::Vector3ui chunkCount;
+				std::atomic_uint chunkLoadingCount;
+				std::mutex mutex;
+				std::shared_ptr<Planet> planet;
+				std::queue<ChunkIndices> remainingChunks;
+				tsl::hopscotch_set<ChunkIndices> visitedChunks;
+
+				void HandleChunkLoaded(const ChunkIndices& chunkIndices);
+			};
+
 			ServerAtmosphere m_atmosphere;
 			std::filesystem::path m_savePath;
 			std::optional<Nz::UInt32> m_databaseId;
+			std::shared_ptr<ChunkLoadingData> m_chunkLoadingData;
+			std::string m_generatorName;
 			std::unordered_set<ChunkIndices /*chunkIndex*/> m_dirtyChunks;
 			entt::handle m_planetEntity;
+			Nz::UInt32 m_generationSeed;
+			Nz::Vector3ui m_chunkCount;
 	};
 }
 
