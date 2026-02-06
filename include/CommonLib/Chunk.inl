@@ -148,6 +148,7 @@ namespace tsom
 
 	inline void Chunk::Reset()
 	{
+		m_activeLayers.clear();
 		m_blocks.clear();
 		m_blocks.resize(m_size.x * m_size.y * m_size.z, EmptyBlockIndex);
 
@@ -168,12 +169,13 @@ namespace tsom
 		// Chunks don't have any block until they are reset
 		if (!HasContent())
 		{
+			m_activeLayers.clear();
+			for (auto& layerOpt : m_layers)
+				layerOpt.reset();
+
 			m_blocks.resize(m_size.x * m_size.y * m_size.z, EmptyBlockIndex);
 			m_blockTypeCount.resize(EmptyBlockIndex + 1);
 			m_blockTypeCount[EmptyBlockIndex] = m_blocks.size();
-
-			for (auto& layerOpt : m_layers)
-				layerOpt.reset();
 
 			// Create first layer (empty block)
 			RegisterLayer(0);
