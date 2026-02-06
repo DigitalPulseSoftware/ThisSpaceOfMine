@@ -30,8 +30,7 @@ namespace tsom
 	m_tickIndex(0),
 	m_application(application),
 	m_config(std::move(config)),
-	m_scriptingContext(application),
-	m_serverDatabase(application, m_config.databaseFile)
+	m_scriptingContext(application)
 	{
 		m_entityRegistry.RegisterClassLibrary<ChunkClassLibrary>(m_application, m_blockLibrary);
 		m_entityRegistry.RegisterClassLibrary<ServerEntityClassLibrary>(m_application);
@@ -186,16 +185,17 @@ namespace tsom
 
 	void ServerInstance::LoadFromDatabase()
 	{
-		ServerConfig databaseConfig = ServerConfig::Load(m_serverDatabase);
+		ServerDatabase& serverDatabase = GetServerDatabase();
+		ServerConfig databaseConfig = ServerConfig::Load(serverDatabase);
 
 		m_databaseEnvironments.clear();
-		m_serverDatabase.GetAllPlanets([&](Database::Planet&& planetData)
+		serverDatabase.GetAllPlanets([&](Database::Planet&& planetData)
 		{
 			RegisterDatabaseEnvironment(planetData.id, std::make_unique<ServerPlanetEnvironment>(*this, planetData.id, std::string(planetData.generatorName), planetData.seed, planetData.chunkCount, planetData.blockSize, planetData.cornerRadius));
 			return true;
 		});
 
-		m_serverDatabase.GetAllPlanetLinks([&](Database::PlanetLink&& planetLink)
+		serverDatabase.GetAllPlanetLinks([&](Database::PlanetLink&& planetLink)
 		{
 			LinkDatabaseEnvironments(planetLink.sourcePlanet, planetLink.destinationPlanet, planetLink.position);
 			return true;

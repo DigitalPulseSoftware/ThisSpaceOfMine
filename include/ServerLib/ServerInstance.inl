@@ -117,7 +117,7 @@ namespace tsom
 
 	inline ServerDatabase& ServerInstance::GetServerDatabase()
 	{
-		return m_serverDatabase;
+		return m_serverDatabase.GetOrCreate(m_application, m_config.databaseFile);
 	}
 
 	inline Nz::Time ServerInstance::GetTickDuration() const

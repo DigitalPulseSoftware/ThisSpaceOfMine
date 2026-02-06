@@ -29,7 +29,7 @@ namespace tsom
 	}
 
 	ServerDatabase::ServerDatabase(Nz::ApplicationBase& app, const std::string& filename) :
-	m_database(filename, SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE),
+	m_database(filename, SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE | SQLite::OPEN_NOMUTEX),
 	m_app(app)
 	{
 		Migrate();
