@@ -46,14 +46,83 @@ namespace tsom
 			OnChunkLayerRemove(this, chunk, layerIndex);
 		});
 
-		chunkData.onReset.Connect(chunkData.chunk->OnReset, [this](Chunk* chunk)
+		chunkData.onReset.Connect(chunkData.chunk->OnReset, [this, &blockLibrary](Chunk* chunk)
 		{
+			// Build direction blockers
+			auto chunkIt = m_chunks.find(chunk->GetIndices());
+			NazaraAssert(chunkIt != m_chunks.end());
+			ChunkData& chunkData = chunkIt.value();
+			chunkData.directionHoleCount.fill(0);
+
+			if (chunk->HasContent())
+			{
+				// Left / right
+				for (unsigned int z = 0; z < ChunkSize; ++z)
+				{
+					for (unsigned int y = 0; y < ChunkSize; ++y)
+					{
+						BlockIndex leftBlockIndex = chunk->GetBlockContent({ 0, y, z });
+						BlockIndex rightBlockIndex = chunk->GetBlockContent({ ChunkSize - 1, y, z });
+
+						auto& leftBlockData = blockLibrary.GetBlockData(leftBlockIndex);
+						if (leftBlockData.isTransparent)
+							chunkData.directionHoleCount[Direction::Left]++;
+
+						auto& rightBlockData = blockLibrary.GetBlockData(rightBlockIndex);
+						if (rightBlockData.isTransparent)
+							chunkData.directionHoleCount[Direction::Right]++;
+					}
+				}
+
+				// Front / back
+				for (unsigned int z = 0; z < ChunkSize; ++z)
+				{
+					for (unsigned int x = 0; x < ChunkSize; ++x)
+					{
+						BlockIndex frontBlockIndex = chunk->GetBlockContent({ x, 0, z });
+						BlockIndex backBlockIndex = chunk->GetBlockContent({ x, ChunkSize - 1, z });
+
+						auto& frontBlockData = blockLibrary.GetBlockData(frontBlockIndex);
+						if (frontBlockData.isTransparent)
+							chunkData.directionHoleCount[Direction::Front]++;
+
+						auto& backBlockData = blockLibrary.GetBlockData(backBlockIndex);
+						if (backBlockData.isTransparent)
+							chunkData.directionHoleCount[Direction::Back]++;
+					}
+				}
+
+				// Down / up
+				for (unsigned int y = 0; y < ChunkSize; ++y)
+				{
+					for (unsigned int x = 0; x < ChunkSize; ++x)
+					{
+						BlockIndex downBlockIndex = chunk->GetBlockContent({ x, y, 0 });
+						BlockIndex upBlockIndex = chunk->GetBlockContent({ x, y, ChunkSize - 1 });
+
+						auto& downBlockData = blockLibrary.GetBlockData(downBlockIndex);
+						if (downBlockData.isTransparent)
+							chunkData.directionHoleCount[Direction::Down]++;
+
+						auto& upBlockData = blockLibrary.GetBlockData(upBlockIndex);
+						if (upBlockData.isTransparent)
+							chunkData.directionHoleCount[Direction::Up]++;
+					}
+				}
+
+				for (auto&& [direction, holeCount] : chunkData.directionHoleCount.iter_kv())
+				{
+					if (holeCount > 0)
+						chunkData.visibilityMask |= direction;
+				}
+			}
+
 			// FIXME: Nz::Signal operator() is not thread-safe!
 			std::lock_guard lock(m_chunkUpdatedSignalMutex);
 			OnChunkUpdated(this, chunk, NeighborChunkMask_All, chunk->GetActiveLayerMask());
 		});
 
-		chunkData.onUpdated.Connect(chunkData.chunk->OnBlockUpdated, [this](Chunk* chunk, const Nz::Vector3ui& indices, BlockIndex newBlock, std::size_t oldLayerIndex, std::size_t newLayerIndex)
+		chunkData.onUpdated.Connect(chunkData.chunk->OnBlockUpdated, [this, &blockLibrary](Chunk* chunk, const Nz::Vector3ui& indices, BlockIndex oldBlock, BlockIndex newBlock, std::size_t oldLayerIndex, std::size_t newLayerIndex)
 		{
 			NeighborChunkMask neighborMask;
 
@@ -96,6 +165,39 @@ namespace tsom
 
 						ChunkIndices dir(dx, dy, dz);
 						neighborMask |= ToNeighborChunk({ dx, dy, dz });
+					}
+				}
+			}
+
+			if (neighborMask != 0)
+			{
+				auto& previousBlockData = blockLibrary.GetBlockData(oldBlock);
+				auto& newBlockData = blockLibrary.GetBlockData(newBlock);
+
+				if (previousBlockData.isTransparent != newBlockData.isTransparent)
+				{
+					auto chunkIt = m_chunks.find(chunk->GetIndices());
+					NazaraAssert(chunkIt != m_chunks.end());
+					ChunkData& chunkData = chunkIt.value();
+
+					if (previousBlockData.isTransparent)
+					{
+						// We're putting an opaque block on a transparent one
+						for (Direction direction : neighborMask)
+						{
+							NazaraAssert(chunkData.directionHoleCount[direction] > 0);
+							if (--chunkData.directionHoleCount[direction] == 0)
+								chunkData.visibilityMask.Clear(direction);
+						}
+					}
+					else
+					{
+						// Replacing an opaque block by a transparent one
+						for (Direction direction : neighborMask)
+						{
+							chunkData.directionHoleCount[direction]++;
+							chunkData.visibilityMask |= direction;
+						}
 					}
 				}
 			}
