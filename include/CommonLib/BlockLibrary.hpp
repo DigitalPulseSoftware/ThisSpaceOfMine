@@ -53,7 +53,9 @@ namespace tsom
 				std::string baseUpPath;
 				bool hasCollisions = true;
 				bool isDoubleSided = false;
+				bool isSmooth = false;
 				bool isTransparent = false;
+				float density = 1.0f;
 				float permeability = 0.f;
 			};
 
@@ -65,6 +67,8 @@ namespace tsom
 				bool hasCollisions;
 				bool isDoubleSided;
 				bool isTransparent;
+				bool isSmooth;
+				float density;
 				float permeability;
 			};
 

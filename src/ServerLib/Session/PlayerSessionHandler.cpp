@@ -806,6 +806,8 @@ namespace tsom
 		if (chunk->GetBlockContent(blockIndices) != EmptyBlockIndex)
 			return false;
 
+		return true; //< FIXME
+
 		// Check that nothing blocks the way
 		auto [blockCollider, colliderOffset] = chunk->BuildBlockCollider(blockIndices, 0.75f); // Test a smaller block to allow a bit of overlap
 
