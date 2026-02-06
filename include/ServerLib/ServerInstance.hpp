@@ -15,6 +15,7 @@
 #include <ServerLib/ServerPlayer.hpp>
 #include <ServerLib/Database/ServerDatabase.hpp>
 #include <Nazara/Core/Clock.hpp>
+#include <Nazara/Core/ThreadLocalData.hpp>
 #include <Nazara/Core/TimerManager.hpp>
 #include <NazaraUtils/Bitset.hpp>
 #include <NazaraUtils/MemoryPool.hpp>
@@ -133,6 +134,7 @@ namespace tsom
 			Nz::Bitset<> m_newPlayers;
 			Nz::MemoryPool<ServerPlayer> m_players;
 			Nz::MillisecondClock m_saveClock;
+			Nz::ThreadLocalData<ServerDatabase> m_serverDatabase;
 			Nz::Time m_tickAccumulator;
 			Nz::Time m_tickDuration;
 			Nz::TimerManager m_tickedTimerManager;
@@ -142,7 +144,6 @@ namespace tsom
 			Config m_config;
 			ScriptingContext m_scriptingContext;
 			EntityRegistry m_entityRegistry;
-			ServerDatabase m_serverDatabase;
 			Spawnpoint m_defaultSpawnpoint;
 	};
 }

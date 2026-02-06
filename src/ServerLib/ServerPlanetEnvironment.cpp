@@ -233,7 +233,7 @@ namespace tsom
 		auto& blockLibrary = m_serverInstance.GetBlockLibrary();
 		Planet& planet = GetPlanet();
 
-		serverDatabase.GetPlanetChunks(*m_databaseId, [&](Database::PlanetChunk&& planetChunk)
+		serverDatabase.GetAllPlanetChunks(*m_databaseId, [&](Database::PlanetChunk&& planetChunk)
 		{
 			if (planetChunk.version != s_chunkVersion)
 				throw std::runtime_error(fmt::format("unhandled version {}", planetChunk.version));
