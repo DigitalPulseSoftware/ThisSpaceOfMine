@@ -109,7 +109,7 @@ namespace tsom
 			.layerName = "water",
 			.basePath = "blocks/water",
 			.isDoubleSided = true,
-			.isSmooth = false,
+			.isSmooth = true,
 			.isTransparent = true,
 		});
 	}

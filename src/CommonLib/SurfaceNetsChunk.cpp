@@ -60,12 +60,12 @@ namespace tsom
 			{ 0, 0, 1 }
 		};
 
-		constexpr Nz::Vector3i s_voxelQuads[3][4] = {
+		constexpr Nz::Vector3i s_voxelQuads[6][4] = {
 			{
-				Nz::Vector3i(0, 0, -1),
-				Nz::Vector3i(0, -1, -1),
-				Nz::Vector3i(0, -1, 0),
-				Nz::Vector3i(0, 0, 0)
+				Nz::Vector3i(-1, -1, -1),
+				Nz::Vector3i(-1, 0, -1),
+				Nz::Vector3i(-1, 0, 0),
+				Nz::Vector3i(-1, -1, 0)
 			},
 			{
 				Nz::Vector3i(0, 0, -1),
@@ -78,6 +78,24 @@ namespace tsom
 				Nz::Vector3i(0, -1, 0),
 				Nz::Vector3i(-1, -1, 0),
 				Nz::Vector3i(-1, 0, 0)
+			},
+			{
+				Nz::Vector3i(0, 0, -1),
+				Nz::Vector3i(0, -1, -1),
+				Nz::Vector3i(0, -1, 0),
+				Nz::Vector3i(0, 0, 0)
+			},
+			{
+				Nz::Vector3i(-1, -1, -1),
+				Nz::Vector3i(-1, -1, 0),
+				Nz::Vector3i(0, -1, 0),
+				Nz::Vector3i(0, -1, -1)
+			},
+			{
+				Nz::Vector3i(0, -1, -1),
+				Nz::Vector3i(0, 0, -1),
+				Nz::Vector3i(-1, 0, -1),
+				Nz::Vector3i(-1, -1, -1)
 			}
 		};
 
@@ -248,7 +266,7 @@ namespace tsom
 				chunk->UnlockRead();
 		});
 
-		auto GetNeighborBlock = [&](Nz::Vector3ui indices, Nz::Vector3i direction) -> BlockIndex
+		auto GetNeighborBlock = [&](Nz::Vector3ui indices, const Nz::Vector3i& offset) -> BlockIndex
 		{
 			ChunkIndices chunkIndices = m_indices;
 			std::swap(chunkIndices.y, chunkIndices.z);
@@ -256,21 +274,21 @@ namespace tsom
 			for (unsigned int axis : { 0, 1, 2 })
 			{
 				unsigned int& index = indices[axis];
-				int offset = direction[axis];
-				assert(offset >= -1 && offset <= 1);
+				int axisOffset = offset[axis];
+				assert(axisOffset >= -1 && axisOffset <= 1);
 
-				if (offset > 0)
+				if (axisOffset > 0)
 				{
-					index += offset;
+					index += axisOffset;
 					if (index >= m_size[axis])
 					{
 						index -= m_size[axis];
 						chunkIndices[axis]++;
 					}
 				}
-				else if (offset < 0)
+				else if (axisOffset < 0)
 				{
-					unsigned int posOffset = std::abs(offset);
+					unsigned int posOffset = std::abs(axisOffset);
 					if (posOffset > index)
 					{
 						index += m_size[axis];
@@ -300,7 +318,7 @@ namespace tsom
 			else
 				return GetBlockContent(indices);
 		};
-
+		
 		for (unsigned int z = 0; z < m_size.z; ++z)
 		{
 			for (unsigned int y = 0; y < m_size.y; ++y)
@@ -312,155 +330,185 @@ namespace tsom
 					Nz::Vector3f blockPos = (Nz::Vector3f(blockIndices) - Nz::Vector3f(m_size) * 0.5f) * m_blockSize + Nz::Vector3f(m_blockSize);
 					Nz::Vector3f blockOffset(blockPos.x, blockPos.z, blockPos.y);
 
-					BlockIndex blockIndex = GetBlockContent(blockIndices);
+					BlockIndex blockContent = GetBlockContent(blockIndices);
+					if (blockContent == EmptyBlockIndex)
+						continue;
 
-					const auto& blockData = m_blockLibrary.GetBlockData(blockIndex);
-					//if (blockData.layerIndex != layerIndex)
-					//	continue;
+					const auto& blockData = m_blockLibrary.GetBlockData(blockContent);
+					if (blockData.layerIndex != layerIndex)
+						continue;
 
-					for (unsigned int i : { 0, 1, 2 })
+					auto DrawFace = [&](Direction direction, bool interiorFace)
 					{
-						auto neighboorBlockIndex = GetNeighborBlock(blockIndices, s_axis[i]);
+						VertexAttributes vertexAttributes = addFace(blockIndices, direction);
+						assert(vertexAttributes.position);
 
-						const auto& neighboorBlockData = m_blockLibrary.GetBlockData(neighboorBlockIndex);
+						constexpr std::array<Nz::UInt32, 6> s_indices = { 0, 1, 2, 0, 2, 3 };
+						constexpr std::array<Nz::UInt32, 6> s_reversedIndices = { 0, 2, 1, 0, 3, 2 };
 
-						bool voxelExists = !blockData.isTransparent;
-						bool neighboorExists = !neighboorBlockData.isTransparent;
-						bool swapIndices = !voxelExists && blockData.isSmooth;
+						const std::array<Nz::UInt32, 6>& faceIndices = (interiorFace) ? s_reversedIndices : s_indices;
 
-						if (blockData.layerIndex != layerIndex)
+						for (Nz::UInt32 index : faceIndices)
+							indices.push_back(vertexAttributes.firstIndex + index);
+
+						constexpr Nz::EnumArray<Direction, unsigned int> s_dirToAxis = { 1, 5, 4, 0, 3, 2 };
+						unsigned int axis = s_dirToAxis[direction];
+
+						for (std::size_t vertIndex = 0; vertIndex < 4; ++vertIndex)
 						{
-							if (!neighboorExists || neighboorBlockData.layerIndex != layerIndex)
-								continue;
-						}
+							Nz::Vector3f total = Nz::Vector3f::Zero();
+							unsigned int count = 0;
 
-						std::size_t textureIndex = blockData.texIndices[Direction::Up];
-
-						if (blockData.isTransparent)
-							textureIndex = neighboorBlockData.texIndices[Direction::Up];
-
-						//if (m_indices == ChunkIndices { 0, 2, 0 } && blockIndices == Nz::Vector3ui { 28, 12, 15 } && i == 1 && generateVisualMesh)
-						//	NazaraDebugBreak();
-
-						bool shouldGenerateFace = voxelExists != neighboorExists;
-						if (!shouldGenerateFace)
-						{
-							if (generateVisualMesh)
+							bool isSmooth = blockData.isSmooth;
+							if (isSmooth)
 							{
-								// don't render faces between blocks of the same type even if transparent
-								if (blockIndex != neighboorBlockIndex)
-									shouldGenerateFace = blockData.isTransparent || neighboorBlockData.isTransparent;
-							}
-							else
-							{
-								if (blockIndex != neighboorBlockIndex && !blockData.hasCollisions)
-									shouldGenerateFace = neighboorBlockData.hasCollisions;
-							}
-						}
-
-						if (shouldGenerateFace)
-						{
-							VertexAttributes vertexAttributes = addFace(blockIndices, Direction::Up);
-
-							for (unsigned int j = 0; j < 4; ++j)
-							{
-								bool isSmooth = blockData.isSmooth;
-
-								Nz::Vector3f total = Nz::Vector3f::Zero();
-								unsigned int count = 0;
-
-								if (isSmooth)
+								for (int z = 0; z < 12; ++z)
 								{
-									for (int z = 0; z < 12; ++z)
+									Nz::Vector3i edgePos = s_voxelQuads[axis][vertIndex] + s_edgeOffsets[z][0];
+									Nz::Vector3i edgeNeighborPos = s_voxelQuads[axis][vertIndex] + s_edgeOffsets[z][1];
+
+									BlockIndex edge1 = GetNeighborBlock(blockIndices, edgePos);
+									BlockIndex edge2 = GetNeighborBlock(blockIndices, edgeNeighborPos);
+
+									const auto& edge1BlockData = m_blockLibrary.GetBlockData(edge1);
+									const auto& edge2BlockData = m_blockLibrary.GetBlockData(edge2);
+
+									if (!edge2BlockData.isSmooth)
 									{
-										Nz::Vector3i edgePos = s_voxelQuads[i][j] + s_edgeOffsets[z][0];
-										Nz::Vector3i edgeNeighborPos = s_voxelQuads[i][j] + s_edgeOffsets[z][1];
+										isSmooth = false;
+										break;
+									}
 
-										BlockIndex edge1 = GetNeighborBlock(blockIndices, edgePos);
-										BlockIndex edge2 = GetNeighborBlock(blockIndices, edgeNeighborPos);
+									bool isEdge1Visible = !edge1BlockData.isTransparent;
+									bool isEdge2Visible = !edge2BlockData.isTransparent;
 
-										const auto& edge1BlockData = m_blockLibrary.GetBlockData(edge1);
-										const auto& edge2BlockData = m_blockLibrary.GetBlockData(edge2);
+									if (isEdge1Visible != isEdge2Visible)
+									{
+										Nz::Vector3f edge1Pos(edgePos.x, edgePos.z, edgePos.y);
+										Nz::Vector3f edge2Pos(edgeNeighborPos.x, edgeNeighborPos.z, edgeNeighborPos.y);
 
-										if (!edge2BlockData.isSmooth)
-										{
-											isSmooth = false;
-											break;
-										}
+										float edge1Density = edge1BlockData.density;
+										float edge2Density = edge2BlockData.density;
 
-										bool isEdge1Visible = !edge1BlockData.isTransparent;
-										bool isEdge2Visible = !edge2BlockData.isTransparent;
+										Nz::Vector3f midPoint;
+										if (edge1BlockData.isSmooth != edge2BlockData.isSmooth)
+											midPoint = edge1Pos; //< edge2BlockData.isSmooth cannot be false here
+										else
+											midPoint = (edge1Pos * edge1Density + edge2Pos * edge2Density) / (edge1Density + edge2Density);
 
-										bool processEdge = isEdge1Visible != isEdge2Visible;
-										if (generateVisualMesh)
-										{
-											if (edge1 != edge2)
-											{
-												processEdge |= edge1BlockData.isTransparent;
-												processEdge |= edge2BlockData.isTransparent;
-											}
-										}
-
-										if (processEdge)
-										{
-											Nz::Vector3f edge1Pos(edgePos.x, edgePos.z, edgePos.y);
-											Nz::Vector3f edge2Pos(edgeNeighborPos.x, edgeNeighborPos.z, edgeNeighborPos.y);
-
-											float edge1Density = edge1BlockData.density;
-											float edge2Density = edge2BlockData.density;
-
-											Nz::Vector3f midPoint;
-											if (edge1BlockData.isSmooth != edge2BlockData.isSmooth)
-												midPoint = edge1Pos; //< edge2BlockData.isSmooth cannot be false here
-											else
-												midPoint = (edge1Pos * edge1Density + edge2Pos * edge2Density) / (edge1Density + edge2Density);
-
-											total += midPoint;
-											count++;
-										}
+										total += midPoint;
+										count++;
 									}
 								}
-
-								if (isSmooth)
-									vertexAttributes.position[j] = blockOffset + m_blockSize * total / float(count) - Nz::Vector3f(m_blockSize * 0.5f);
-								else
-								{
-									Nz::Vector3f offset(s_voxelQuads[i][j]);
-									offset = { offset.x, offset.z, offset.y };
-
-									vertexAttributes.position[j] = blockOffset + m_blockSize * offset;
-								}
 							}
 
-							if (vertexAttributes.uv)
-							{
-								float sliceIndex = textureIndex;
-								vertexAttributes.uv[0] = { 0.f, 0.f, sliceIndex };
-								vertexAttributes.uv[1] = { 0.f, 0.f, sliceIndex };
-								vertexAttributes.uv[2] = { 1.f, 0.f, sliceIndex };
-								vertexAttributes.uv[3] = { 1.f, 0.f, sliceIndex };
-							}
+							if (count == 0) //< FIXME: Why does this happen?
+								isSmooth = false;
 
-							// Split the quad into two triangles
-							if (!swapIndices)
-								indices.insert(indices.end(), { vertexAttributes.firstIndex + 0, vertexAttributes.firstIndex + 1, vertexAttributes.firstIndex + 2, vertexAttributes.firstIndex + 0, vertexAttributes.firstIndex + 2, vertexAttributes.firstIndex + 3 });
+							if (isSmooth)
+								vertexAttributes.position[vertIndex] = blockOffset + m_blockSize * total / float(count) - Nz::Vector3f(m_blockSize * 0.5f);
 							else
-								indices.insert(indices.end(), { vertexAttributes.firstIndex + 0, vertexAttributes.firstIndex + 2, vertexAttributes.firstIndex + 1, vertexAttributes.firstIndex + 0, vertexAttributes.firstIndex + 3, vertexAttributes.firstIndex + 2 });
-
-							if (blockData.isDoubleSided)
 							{
-								VertexAttributes doubleSideVertexAttributes = addFace(blockIndices, Direction::Up);
-								std::copy(vertexAttributes.position, vertexAttributes.position + 4, doubleSideVertexAttributes.position);
+								Nz::Vector3f offset(s_voxelQuads[axis][vertIndex]);
+								offset = { offset.x, offset.z, offset.y };
 
-								if (vertexAttributes.uv)
-									std::copy(vertexAttributes.uv, vertexAttributes.uv + 4, doubleSideVertexAttributes.uv);
-
-								if (!swapIndices)
-									indices.insert(indices.end(), { doubleSideVertexAttributes.firstIndex + 0, doubleSideVertexAttributes.firstIndex + 2, doubleSideVertexAttributes.firstIndex + 1, doubleSideVertexAttributes.firstIndex + 0, doubleSideVertexAttributes.firstIndex + 3, doubleSideVertexAttributes.firstIndex + 2 });
-								else
-									indices.insert(indices.end(), { doubleSideVertexAttributes.firstIndex + 0, doubleSideVertexAttributes.firstIndex + 1, doubleSideVertexAttributes.firstIndex + 2, doubleSideVertexAttributes.firstIndex + 0, doubleSideVertexAttributes.firstIndex + 2, doubleSideVertexAttributes.firstIndex + 3 });
+								vertexAttributes.position[vertIndex] = blockOffset + m_blockSize * offset;
 							}
 						}
+
+						if (vertexAttributes.normal)
+						{
+							for (std::size_t i = 0; i < 4; ++i)
+								vertexAttributes.normal[i] = Nz::Vector3f::Zero();
+
+							// Per face normal
+							Nz::Vector3f n0 = Nz::Vector3f::CrossProduct(vertexAttributes.position[1] - vertexAttributes.position[0], vertexAttributes.position[2] - vertexAttributes.position[0]);
+							Nz::Vector3f n1 = Nz::Vector3f::CrossProduct(vertexAttributes.position[2] - vertexAttributes.position[0], vertexAttributes.position[3] - vertexAttributes.position[0]);
+
+							Nz::Vector3f faceNormal = Nz::Vector3f::Normalize(n0 + n1);
+
+							for (unsigned int i = 0; i < 3; ++i)
+								vertexAttributes.normal[faceIndices[i]] = faceNormal;
+						}
+
+						/*if (vertexAttributes.tangent)
+						{
+							Nz::Vector3f edgeCenter = (pos[0] + pos[1]) * 0.5f;
+							Nz::Vector3f tangent = Nz::Vector3f::Normalize(edgeCenter - faceCenter);
+
+							for (std::size_t i = 0; i < pos.size(); ++i)
+								vertexAttributes.tangent[i] = tangent;
+						}*/
+
+						if (vertexAttributes.uv)
+						{
+							std::size_t textureIndex = blockData.texIndices[Direction::Up];
+							float sliceIndex = textureIndex;
+							vertexAttributes.uv[0] = { 0.f, 0.f, sliceIndex };
+							vertexAttributes.uv[1] = { 0.f, 0.f, sliceIndex };
+							vertexAttributes.uv[2] = { 1.f, 0.f, sliceIndex };
+							vertexAttributes.uv[3] = { 1.f, 0.f, sliceIndex };
+						}
+					};
+
+					auto IsTransparent = [&](BlockIndex neighborBlockIndex)
+					{
+						// don't render faces between blocks of the same type even if transparent
+						if (blockContent == neighborBlockIndex)
+							return false;
+
+						const auto& neighborBlockData = m_blockLibrary.GetBlockData(neighborBlockIndex);
+						return neighborBlockData.isTransparent;
+					};
+
+					Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> corners = Chunk::ComputeBlockCorners(blockIndices);
+
+					// Up
+					if (IsTransparent(GetNeighborBlock(blockIndices, s_blockDirOffset[Direction::Up])))
+					{
+						DrawFace(Direction::Up, false);
+						if (generateVisualMesh && blockData.isDoubleSided)
+							DrawFace(Direction::Up, true);
+					}
+
+					// Down
+					if (IsTransparent(GetNeighborBlock(blockIndices, s_blockDirOffset[Direction::Down])))
+					{
+						DrawFace(Direction::Down, false);
+						if (generateVisualMesh && blockData.isDoubleSided)
+							DrawFace(Direction::Down, true);
+					}
+
+					// Front
+					if (IsTransparent(GetNeighborBlock(blockIndices, s_blockDirOffset[Direction::Front])))
+					{
+						DrawFace(Direction::Front, false);
+						if (generateVisualMesh && blockData.isDoubleSided)
+							DrawFace(Direction::Front, true);
+					}
+
+					// Back
+					if (IsTransparent(GetNeighborBlock(blockIndices, s_blockDirOffset[Direction::Back])))
+					{
+						DrawFace(Direction::Back, false);
+						if (generateVisualMesh && blockData.isDoubleSided)
+							DrawFace(Direction::Back, true);
+					}
+
+					// Left
+					if (IsTransparent(GetNeighborBlock(blockIndices, s_blockDirOffset[Direction::Left])))
+					{
+						DrawFace(Direction::Left, false);
+						if (generateVisualMesh && blockData.isDoubleSided)
+							DrawFace(Direction::Left, true);
+					}
+
+					// Right
+					if (IsTransparent(GetNeighborBlock(blockIndices, s_blockDirOffset[Direction::Right])))
+					{
+						DrawFace(Direction::Right, false);
+						if (generateVisualMesh && blockData.isDoubleSided)
+							DrawFace(Direction::Right, true);
 					}
 				}
 			}
@@ -711,14 +759,16 @@ namespace tsom
 
 	std::optional<Chunk::HitBlock> SurfaceNetsChunk::ComputeHitCoordinates(const Nz::Vector3f& hitPos, const Nz::Vector3f& hitNormal, const Nz::Collider3D& collider, std::uint32_t hitSubshapeId) const
 	{
-		Nz::Vector3f blockPos = hitPos - hitNormal * m_blockSize * 0.25f;
-		std::optional<Nz::Vector3ui> blockIndices = ComputeCoordinates(blockPos);
-		if (!blockIndices)
+		std::uint32_t remainder;
+		const Nz::Collider3D* subCollider = collider.GetSubCollider(hitSubshapeId, remainder);
+		if (!subCollider)
 			return std::nullopt;
 
+		Nz::UInt32 userdata = SafeCast<const Nz::MeshCollider3D*>(subCollider)->GetTriangleUserData(remainder);
+
 		return HitBlock{
-			.direction = DirectionFromNormal(hitNormal),
-			.blockIndices = *blockIndices
+			.direction = static_cast<Direction>(userdata % 6),
+			.blockIndices = GetBlockLocalIndices(userdata / 6)
 		};
 	}
 }
