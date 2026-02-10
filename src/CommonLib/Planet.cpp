@@ -4,6 +4,7 @@
 
 #include <CommonLib/Planet.hpp>
 #include <CommonLib/BlockLibrary.hpp>
+#include <CommonLib/ChunkLock.hpp>
 #include <CommonLib/DeformedChunk.hpp>
 #include <CommonLib/FlatChunk.hpp>
 #include <CommonLib/Scripting/ChunkScriptingLibrary.hpp>
@@ -242,15 +243,13 @@ namespace tsom
 
 		sol::protected_function generationFunction = execResult.GetValue();
 
-		chunk.LockWrite();
-		NAZARA_DEFER({ chunk.UnlockWrite(); });
+		ChunkWriteLock lock(&chunk);
 
 		auto result = generationFunction(chunk, seed, chunkCount);
 		if (!result.valid())
 		{
 			sol::error err = result;
 			spdlog::error("chunk {};{};{} failed to generate: {}", chunkIndices.x, chunkIndices.y, chunkIndices.z, err.what());
-			return;
 		}
 	}
 
@@ -310,15 +309,13 @@ namespace tsom
 						currentThreadState = it->second.get();
 				}
 
-				chunk.LockWrite();
-				NAZARA_DEFER({ chunk.UnlockWrite(); });
+				ChunkWriteLock lock(&chunk);
 
 				auto result = currentThreadState->generationFunction(chunk, seed, chunkCount);
 				if (!result.valid())
 				{
 					sol::error err = result;
 					spdlog::error("chunk {};{};{} failed to generate: {}", chunkIndices.x, chunkIndices.y, chunkIndices.z, err.what());
-					return;
 				}
 			});
 		});

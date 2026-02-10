@@ -5,6 +5,7 @@
 #include <ServerLib/ServerPlanetEnvironment.hpp>
 #include <CommonLib/BlockLibrary.hpp>
 #include <CommonLib/ChunkEntities.hpp>
+#include <CommonLib/ChunkLock.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Components/PlanetComponent.hpp>
 #include <CommonLib/Systems/BuoyancySystem.hpp>
@@ -255,9 +256,8 @@ namespace tsom
 			if (!chunk)
 				chunk = &planet.AddChunk(blockLibrary, planetChunk.position);
 
-			chunk->LockWrite();
+			ChunkWriteLock lock(chunk);
 			chunk->Deserialize(byteStream);
-			chunk->UnlockWrite();
 
 			return true;
 		});

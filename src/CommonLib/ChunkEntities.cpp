@@ -4,6 +4,7 @@
 
 #include <CommonLib/ChunkEntities.hpp>
 #include <CommonLib/BlockLibrary.hpp>
+#include <CommonLib/ChunkLock.hpp>
 #include <CommonLib/PhysicsConstants.hpp>
 #include <CommonLib/Components/ChunkComponent.hpp>
 #include <CommonLib/Components/EntityOwnerComponent.hpp>
@@ -242,10 +243,8 @@ namespace tsom
 			if (updateJob->cancelled)
 				return;
 
-			chunkPtr->LockRead();
+			ChunkReadLock lock(chunkPtr.get());
 			updateJob->collider = chunkPtr->BuildCollider(m_layerIndex);
-			chunkPtr->UnlockRead();
-
 			updateJob->jobDone++;
 		});
 

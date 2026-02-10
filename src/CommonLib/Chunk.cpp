@@ -5,6 +5,7 @@
 #include <CommonLib/Chunk.hpp>
 #include <CommonLib/BlockLibrary.hpp>
 #include <CommonLib/ChunkContainer.hpp>
+#include <CommonLib/ChunkLock.hpp>
 #include <CommonLib/InternalConstants.hpp>
 #include <Nazara/Core/ByteStream.hpp>
 #include <Nazara/Math/Box.hpp>
@@ -119,44 +120,15 @@ namespace tsom
 		};
 
 		Nz::EnumArray<Direction, const Chunk*> neighborChunks;
-		Nz::FixedVector<const Chunk*, 6> chunkLocks;
+		MultiChunkReadLock chunkLock;
 		for (auto&& [dir, chunk] : neighborChunks.iter_kv())
 		{
 			chunk = m_owner.GetChunk(m_indices + s_chunkDirOffset[dir]);
 			if (chunk)
-				chunkLocks.push_back(chunk);
+				chunkLock.AddChunk(chunk);
 		}
 
-		// We need to lock all chunks at once to avoid deadlocks
-		std::size_t lastFailureMutex = Nz::MaxValue();
-		for (;;)
-		{
-			bool succeeded = true;
-			for (std::size_t i = 0; i < chunkLocks.size(); ++i)
-			{
-				if (i != lastFailureMutex && !chunkLocks[i]->TryLockRead())
-				{
-					succeeded = false;
-					// Lock failed, unlock everything and try again
-					for (std::size_t j = 0; j < i; ++j)
-						chunkLocks[j]->UnlockRead();
-
-					// Lock blocked chunk first to pause thread
-					chunkLocks[i]->LockRead();
-					lastFailureMutex = i;
-					break;
-				}
-			}
-
-			if (succeeded)
-				break;
-		}
-
-		NAZARA_DEFER(
-		{
-			for (const Chunk* chunk : chunkLocks)
-				chunk->UnlockRead();
-		});
+		chunkLock.Lock();
 
 		auto GetNeighborBlock = [&](Nz::Vector3ui indices, Direction direction) -> std::optional<BlockIndex>
 		{

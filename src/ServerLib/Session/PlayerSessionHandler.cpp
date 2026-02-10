@@ -6,6 +6,7 @@
 #include <CommonLib/BlockIndex.hpp>
 #include <CommonLib/CharacterController.hpp>
 #include <CommonLib/ChunkEntities.hpp>
+#include <CommonLib/ChunkLock.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/PhysicsConstants.hpp>
 #include <CommonLib/Planet.hpp>
@@ -116,10 +117,10 @@ namespace tsom
 		if (!CheckCanMineBlock(chunk, voxelLoc))
 			return;
 
-		chunk->LockWrite();
+		ChunkWriteLock lock(chunk);
+
 		chunk->SetFlags(ChunkFlag::SaveToDatabase);
 		chunk->UpdateBlock(voxelLoc, EmptyBlockIndex);
-		chunk->UnlockWrite();
 	}
 
 	void PlayerSessionHandler::HandlePacket(Packets::C_PlaceBlock&& placeBlock)
@@ -142,10 +143,10 @@ namespace tsom
 		if (!CheckCanPlaceBlock(environment, chunk, voxelLoc))
 			return;
 
-		chunk->LockWrite();
+		ChunkWriteLock lock(chunk);
+
 		chunk->SetFlags(ChunkFlag::SaveToDatabase);
 		chunk->UpdateBlock(voxelLoc, static_cast<BlockIndex>(placeBlock.newContent));
-		chunk->UnlockWrite();
 	}
 
 	void PlayerSessionHandler::HandlePacket(Packets::C_SendChatMessage&& playerChat)

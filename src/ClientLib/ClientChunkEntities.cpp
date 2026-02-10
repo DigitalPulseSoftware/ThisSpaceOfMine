@@ -5,6 +5,7 @@
 #include <ClientLib/ClientChunkEntities.hpp>
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Components/VisualEntityComponent.hpp>
+#include <CommonLib/ChunkLock.hpp>
 #include <CommonLib/Components/EntityOwnerComponent.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/EnttWorld.hpp>
@@ -260,10 +261,8 @@ namespace tsom
 				if (updateJob->cancelled)
 					return;
 
-				chunkPtr->LockRead();
+				ChunkReadLock lock(chunkPtr.get());
 				updateJob->collider = chunkPtr->BuildCollider(m_layerIndex);
-				chunkPtr->UnlockRead();
-
 				updateJob->jobDone++;
 			});
 		}
@@ -273,10 +272,8 @@ namespace tsom
 			if (updateJob->cancelled)
 				return;
 
-			chunkPtr->LockRead();
+			ChunkReadLock lock(chunkPtr.get());
 			updateJob->mesh = BuildMesh(*chunkPtr);
-			chunkPtr->UnlockRead();
-
 			updateJob->jobDone++;
 		});
 

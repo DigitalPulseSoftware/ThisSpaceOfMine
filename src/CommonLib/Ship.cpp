@@ -4,6 +4,7 @@
 
 #include <CommonLib/Ship.hpp>
 #include <CommonLib/BlockLibrary.hpp>
+#include <CommonLib/ChunkLock.hpp>
 #include <CommonLib/FlatChunk.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <Nazara/Physics3D/Collider3D.hpp>
@@ -160,7 +161,7 @@ namespace tsom
 		unsigned int height = (small) ? 4 : 6;
 		Nz::Vector3ui startPos = chunk.GetSize() / 2 - Nz::Vector3ui(boxSize / 2, boxSize / 2, height / 2);
 
-		chunk.LockWrite();
+		ChunkWriteLock lock(&chunk);
 		chunk.Reset();
 
 		for (unsigned int z = 0; z < height; ++z)
@@ -181,8 +182,6 @@ namespace tsom
 				}
 			}
 		}
-
-		chunk.UnlockWrite();
 	}
 
 	void Ship::RemoveChunk(const ChunkIndices& indices)

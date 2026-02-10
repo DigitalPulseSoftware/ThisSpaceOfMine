@@ -4,6 +4,7 @@
 
 #include <ServerLib/ServerShipEnvironment.hpp>
 #include <CommonLib/ChunkEntities.hpp>
+#include <CommonLib/ChunkLock.hpp>
 #include <CommonLib/Ship.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Components/ShipComponent.hpp>
@@ -588,9 +589,9 @@ namespace tsom
 		{
 			updateJob->previousAreaList = previousAreaList;
 
-			chunkPtr->LockRead();
+			ChunkReadLock lock(chunkPtr.get());
 			updateJob->chunkArea = GenerateChunkAreas(*chunkPtr, updateJob->isCancelled);
-			chunkPtr->UnlockRead();
+			lock.Unlock();
 
 			// Compute previous area occupancy
 			if (updateJob->chunkArea && previousAreaList)
@@ -691,7 +692,7 @@ namespace tsom
 
 		taskScheduler.AddTask([areaList, updateJob, chunkPtr = chunk.shared_from_this()]
 		{
-			chunkPtr->LockRead();
+			ChunkReadLock lock(chunkPtr.get());
 			for (Area& area : areaList->areas)
 			{
 				if (updateJob->isCancelled)
@@ -705,8 +706,6 @@ namespace tsom
 
 			updateJob->interiorCollider = BuildTriggerCollider(*chunkPtr, *areaList, Nz::Vector3f::Zero(), updateJob->isCancelled);
 			updateJob->hullCollider = BuildTriggerCollider(*chunkPtr, *areaList, Nz::Vector3f(chunkPtr->GetBlockSize() * 2.f), updateJob->isCancelled);
-			chunkPtr->UnlockRead();
-
 			updateJob->isFinished = true;
 		});
 

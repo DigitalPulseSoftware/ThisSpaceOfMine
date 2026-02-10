@@ -21,6 +21,7 @@
 #include <ClientLib/Scripting/ClientAssetScriptingLibrary.hpp>
 #include <ClientLib/Scripting/ClientEntityScriptingLibrary.hpp>
 #include <ClientLib/Scripting/ClientScriptingLibrary.hpp>
+#include <CommonLib/ChunkLock.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/NetworkSession.hpp>
 #include <CommonLib/PhysicsConstants.hpp>
@@ -176,7 +177,7 @@ namespace tsom
 			return;
 		}
 
-		chunk->LockWrite();
+		ChunkWriteLock lock(chunk);
 
 		if (!chunkReset.content.empty())
 		{
@@ -188,8 +189,6 @@ namespace tsom
 		}
 		else
 			chunk->Reset();
-
-		chunk->UnlockWrite();
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::S_ChunkUpdate&& chunkUpdate)
@@ -199,12 +198,10 @@ namespace tsom
 		auto& chunkNetworkMap = entity.get<ChunkNetworkMapComponent>();
 
 		Chunk* chunk = Nz::Retrieve(chunkNetworkMap.chunkByNetworkIndex, chunkUpdate.chunkId);
-		chunk->LockWrite();
+		ChunkWriteLock lock(chunk);
 
 		for (auto&& [blockPos, blockIndex] : chunkUpdate.updates)
 			chunk->UpdateBlock({ blockPos.x, blockPos.y, blockPos.z }, Nz::SafeCast<BlockIndex>(blockIndex));
-
-		chunk->UnlockWrite();
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::S_ConsoleOutput&& consoleOutput)
