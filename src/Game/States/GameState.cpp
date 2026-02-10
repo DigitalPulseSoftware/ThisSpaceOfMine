@@ -1057,6 +1057,8 @@ namespace tsom
 						}
 
 						auto cornerPos = hitChunk.ComputeBlockCorners(hitCoordinates->blockIndices);
+						for (Nz::Vector3f& pos : cornerPos)
+							pos = chunkNode.ToGlobalPosition(pos) + raycastHit->hitNormal * 0.02f;
 
 						constexpr Nz::EnumArray<Direction, std::array<Nz::BoxCorner, 4>> directionToCorners = {
 							// Back
@@ -1075,10 +1077,10 @@ namespace tsom
 
 						auto& corners = directionToCorners[hitCoordinates->direction];
 
-						debugDrawer->DrawLine(chunkNode.ToGlobalPosition(cornerPos[corners[0]]), chunkNode.ToGlobalPosition(cornerPos[corners[1]]), Nz::Color::Green());
-						debugDrawer->DrawLine(chunkNode.ToGlobalPosition(cornerPos[corners[1]]), chunkNode.ToGlobalPosition(cornerPos[corners[2]]), Nz::Color::Green());
-						debugDrawer->DrawLine(chunkNode.ToGlobalPosition(cornerPos[corners[2]]), chunkNode.ToGlobalPosition(cornerPos[corners[3]]), Nz::Color::Green());
-						debugDrawer->DrawLine(chunkNode.ToGlobalPosition(cornerPos[corners[3]]), chunkNode.ToGlobalPosition(cornerPos[corners[0]]), Nz::Color::Green());
+						debugDrawer->DrawLine(cornerPos[corners[0]], cornerPos[corners[1]], Nz::Color::Green());
+						debugDrawer->DrawLine(cornerPos[corners[1]], cornerPos[corners[2]], Nz::Color::Green());
+						debugDrawer->DrawLine(cornerPos[corners[2]], cornerPos[corners[3]], Nz::Color::Green());
+						debugDrawer->DrawLine(cornerPos[corners[3]], cornerPos[corners[0]], Nz::Color::Green());
 					}
 				}
 				else if (auto* interactible = raycastHit->hitEntity.try_get<ClientInteractibleComponent>(); interactible && interactible->isEnabled)
