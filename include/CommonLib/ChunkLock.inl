@@ -8,6 +8,7 @@ namespace tsom
 {
 	template<bool Write>
 	ChunkLock<Write>::ChunkLock(ChunkType chunk) :
+	m_chunk(chunk),
 	m_isLocked(false)
 	{
 		Lock();
@@ -15,12 +16,14 @@ namespace tsom
 
 	template<bool Write>
 	ChunkLock<Write>::ChunkLock(ChunkType chunk, std::adopt_lock_t) :
+	m_chunk(chunk),
 	m_isLocked(true)
 	{
 	}
 
 	template<bool Write>
 	ChunkLock<Write>::ChunkLock(ChunkType chunk, std::defer_lock_t) :
+	m_chunk(chunk),
 	m_isLocked(false)
 	{
 	}
