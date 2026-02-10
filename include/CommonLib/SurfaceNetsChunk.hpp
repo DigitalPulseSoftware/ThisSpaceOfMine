@@ -10,6 +10,7 @@
 #include <CommonLib/Chunk.hpp>
 #include <Nazara/Math/Box.hpp>
 #include <NazaraUtils/FunctionRef.hpp>
+#include <unordered_map>
 
 namespace tsom
 {
@@ -33,7 +34,10 @@ namespace tsom
 			SurfaceNetsChunk& operator=(SurfaceNetsChunk&&) = delete;
 
 		private:
+			Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> BuildCorners(const Nz::Vector3ui& indices, const std::unordered_map<ChunkIndices, const Chunk*>& neighborChunks) const;
 			void BuildMesh(std::size_t layerIndex, std::vector<Nz::UInt32>& indices, const Nz::FunctionRef<VertexAttributes(const Nz::Vector3ui& blockIndices, Direction direction)>& addFace, bool generateVisualMesh) const;
+
+			BlockIndex GetNeighborBlock(const std::unordered_map<ChunkIndices, const Chunk*>& neighborChunks, Nz::Vector3ui indices, const Nz::Vector3i& offset) const;
 	};
 }
 
