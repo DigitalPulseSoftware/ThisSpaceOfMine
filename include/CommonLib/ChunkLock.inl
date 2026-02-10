@@ -10,6 +10,19 @@ namespace tsom
 	ChunkLock<Write>::ChunkLock(ChunkType chunk) :
 	m_isLocked(false)
 	{
+		Lock();
+	}
+
+	template<bool Write>
+	ChunkLock<Write>::ChunkLock(ChunkType chunk, std::adopt_lock_t) :
+	m_isLocked(true)
+	{
+	}
+
+	template<bool Write>
+	ChunkLock<Write>::ChunkLock(ChunkType chunk, std::defer_lock_t) :
+	m_isLocked(false)
+	{
 	}
 
 	template<bool Write>

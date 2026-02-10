@@ -21,6 +21,8 @@ namespace tsom
 
 		public:
 			ChunkLock(ChunkType chunk);
+			ChunkLock(ChunkType chunk, std::adopt_lock_t);
+			ChunkLock(ChunkType chunk, std::defer_lock_t);
 			ChunkLock(const ChunkLock&) = delete;
 			ChunkLock(ChunkLock&& chunkLock) noexcept;
 			~ChunkLock();
