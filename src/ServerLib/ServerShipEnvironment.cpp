@@ -696,10 +696,7 @@ namespace tsom
 			for (Area& area : areaList->areas)
 			{
 				if (updateJob->isCancelled)
-				{
-					chunkPtr->UnlockRead(); // TODO: lock guards
 					return;
-				}
 
 				BuildAreaCollider(area, *chunkPtr);
 			}
