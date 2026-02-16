@@ -451,36 +451,30 @@ namespace tsom
 
 						if (vertexAttributes.normal)
 						{
-							for (std::size_t i = 0; i < 4; ++i)
-								vertexAttributes.normal[i] = Nz::Vector3f::Zero();
-
 							// Per face normal
 							Nz::Vector3f n0 = Nz::Vector3f::CrossProduct(vertexAttributes.position[1] - vertexAttributes.position[0], vertexAttributes.position[2] - vertexAttributes.position[0]);
 							Nz::Vector3f n1 = Nz::Vector3f::CrossProduct(vertexAttributes.position[2] - vertexAttributes.position[0], vertexAttributes.position[3] - vertexAttributes.position[0]);
 
 							Nz::Vector3f faceNormal = Nz::Vector3f::Normalize(n0 + n1);
 
-							for (unsigned int i = 0; i < 3; ++i)
-								vertexAttributes.normal[faceIndices[i]] = faceNormal;
+							for (unsigned int i = 0; i < 4; ++i)
+								vertexAttributes.normal[i] = faceNormal;
 						}
 
-						/*if (vertexAttributes.tangent)
+						if (vertexAttributes.tangent)
 						{
-							Nz::Vector3f edgeCenter = (pos[0] + pos[1]) * 0.5f;
-							Nz::Vector3f tangent = Nz::Vector3f::Normalize(edgeCenter - faceCenter);
+							Nz::Vector3f faceTangent = Nz::Vector3f::Normalize(vertexAttributes.position[1] - vertexAttributes.position[0]);
 
-							for (std::size_t i = 0; i < pos.size(); ++i)
-								vertexAttributes.tangent[i] = tangent;
-						}*/
+							for (std::size_t i = 0; i < 4; ++i)
+								vertexAttributes.tangent[i] = faceTangent;
+						}
 
 						if (vertexAttributes.uv)
 						{
 							std::size_t textureIndex = blockData.texIndices[Direction::Up];
 							float sliceIndex = textureIndex;
-							vertexAttributes.uv[0] = { 0.f, 0.f, sliceIndex };
-							vertexAttributes.uv[1] = { 0.f, 0.f, sliceIndex };
-							vertexAttributes.uv[2] = { 1.f, 0.f, sliceIndex };
-							vertexAttributes.uv[3] = { 1.f, 0.f, sliceIndex };
+							for (std::size_t i = 0; i < 4; ++i)
+								vertexAttributes.uv[i] = { 0.f, 0.f, sliceIndex };
 						}
 					};
 
@@ -498,7 +492,7 @@ namespace tsom
 					if (IsTransparent(GetNeighborBlock(neighborChunks, blockIndices, s_blockDirOffset[Direction::Up])))
 					{
 						DrawFace(Direction::Up, false, { Nz::BoxCorner::RightTopNear, Nz::BoxCorner::LeftTopNear, Nz::BoxCorner::RightBottomNear, Nz::BoxCorner::LeftBottomNear });
-						if (blockData.isDoubleSided)
+						if (blockData.isDoubleSided && generateVisualMesh)
 							DrawFace(Direction::Up, true, { Nz::BoxCorner::LeftTopNear, Nz::BoxCorner::RightTopNear, Nz::BoxCorner::LeftBottomNear, Nz::BoxCorner::RightBottomNear });
 					}
 
@@ -506,7 +500,7 @@ namespace tsom
 					if (IsTransparent(GetNeighborBlock(neighborChunks, blockIndices, s_blockDirOffset[Direction::Down])))
 					{
 						DrawFace(Direction::Down, false, { Nz::BoxCorner::LeftTopFar, Nz::BoxCorner::RightTopFar, Nz::BoxCorner::LeftBottomFar, Nz::BoxCorner::RightBottomFar });
-						if (blockData.isDoubleSided)
+						if (blockData.isDoubleSided && generateVisualMesh)
 							DrawFace(Direction::Down, true, { Nz::BoxCorner::RightTopFar, Nz::BoxCorner::LeftTopFar, Nz::BoxCorner::RightBottomFar, Nz::BoxCorner::LeftBottomFar });
 					}
 
@@ -514,7 +508,7 @@ namespace tsom
 					if (IsTransparent(GetNeighborBlock(neighborChunks, blockIndices, s_blockDirOffset[Direction::Front])))
 					{
 						DrawFace(Direction::Front, false, { Nz::BoxCorner::RightTopFar, Nz::BoxCorner::RightTopNear, Nz::BoxCorner::RightBottomFar, Nz::BoxCorner::RightBottomNear });
-						if (blockData.isDoubleSided)
+						if (blockData.isDoubleSided && generateVisualMesh)
 							DrawFace(Direction::Front, true, { Nz::BoxCorner::RightTopNear, Nz::BoxCorner::RightTopFar, Nz::BoxCorner::RightBottomNear, Nz::BoxCorner::RightBottomFar });
 					}
 
@@ -522,7 +516,7 @@ namespace tsom
 					if (IsTransparent(GetNeighborBlock(neighborChunks, blockIndices, s_blockDirOffset[Direction::Back])))
 					{
 						DrawFace(Direction::Back, false, { Nz::BoxCorner::LeftTopNear, Nz::BoxCorner::LeftTopFar, Nz::BoxCorner::LeftBottomNear, Nz::BoxCorner::LeftBottomFar });
-						if (blockData.isDoubleSided)
+						if (blockData.isDoubleSided && generateVisualMesh)
 							DrawFace(Direction::Back, true, { Nz::BoxCorner::LeftTopFar, Nz::BoxCorner::LeftTopNear, Nz::BoxCorner::LeftBottomFar, Nz::BoxCorner::LeftBottomNear });
 					}
 
@@ -530,7 +524,7 @@ namespace tsom
 					if (IsTransparent(GetNeighborBlock(neighborChunks, blockIndices, s_blockDirOffset[Direction::Left])))
 					{
 						DrawFace(Direction::Left, false, { Nz::BoxCorner::RightBottomNear, Nz::BoxCorner::LeftBottomNear, Nz::BoxCorner::RightBottomFar, Nz::BoxCorner::LeftBottomFar });
-						if (blockData.isDoubleSided)
+						if (blockData.isDoubleSided && generateVisualMesh)
 							DrawFace(Direction::Left, true, { Nz::BoxCorner::LeftBottomNear, Nz::BoxCorner::RightBottomNear, Nz::BoxCorner::LeftBottomFar, Nz::BoxCorner::RightBottomFar });
 					}
 
@@ -538,7 +532,7 @@ namespace tsom
 					if (IsTransparent(GetNeighborBlock(neighborChunks, blockIndices, s_blockDirOffset[Direction::Right])))
 					{
 						DrawFace(Direction::Right, false, { Nz::BoxCorner::LeftTopNear, Nz::BoxCorner::RightTopNear, Nz::BoxCorner::LeftTopFar, Nz::BoxCorner::RightTopFar });
-						if (blockData.isDoubleSided)
+						if (blockData.isDoubleSided && generateVisualMesh)
 							DrawFace(Direction::Right, true, { Nz::BoxCorner::RightTopNear, Nz::BoxCorner::LeftTopNear, Nz::BoxCorner::RightTopFar, Nz::BoxCorner::LeftTopFar });
 					}
 				}
