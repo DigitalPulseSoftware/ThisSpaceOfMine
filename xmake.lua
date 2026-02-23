@@ -193,7 +193,7 @@ target("CommonLib", function ()
 		local dependfile = target:dependfile("versioninfo")
 		depend.on_changed(function ()
 			progress.show(opt.progress, "${color.build.target}updating version info (%s on %s@%s)", targetversion:shortstr(), commitHash, branch)
-			io.writefile(targetfile, string.format([[
+			local content = string.format([[
 // this file was automatically generated
 // no header guards
 
@@ -206,7 +206,10 @@ std::string_view BuildSystem = "%s";
 std::string_view BuildBranch = "%s";
 std::string_view BuildCommit = "%s";
 std::string_view BuildCommitDate = "%s";
-]], targetversion:major(), targetversion:minor(), targetversion:patch(), targetplat, targetarch, system, branch, commitHash, commitDate))
+]], targetversion:major(), targetversion:minor(), targetversion:patch(), targetplat, targetarch, system, branch, commitHash, commitDate)
+			if not os.isfile(targetfile) or io.readfile(targetfile) ~= content then
+				io.writefile(targetfile, content)
+			end
 		end,
 		{
 			dependfile = dependfile, 
