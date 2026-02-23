@@ -5,8 +5,8 @@
 #include <Game/States/PlayState.hpp>
 #include <CommonLib/CommonConfigs.hpp>
 #include <CommonLib/UpdaterAppComponent.hpp>
-#include <Game/GameConfigs.hpp>
 #include <Game/GameConfigAppComponent.hpp>
+#include <Game/GameConfigs.hpp>
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/CreatePlayerState.hpp>
 #include <Game/States/DirectConnectionState.hpp>

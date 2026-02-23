@@ -7,8 +7,8 @@
 #ifndef TSOM_COMMONLIB_CHUNKLOCK_HPP
 #define TSOM_COMMONLIB_CHUNKLOCK_HPP
 
-#include <CommonLib/Chunk.hpp>
 #include <CommonLib/Export.hpp>
+#include <CommonLib/Chunk.hpp>
 #include <NazaraUtils/FixedVector.hpp>
 #include <utility>
 
@@ -37,7 +37,7 @@ namespace tsom
 			ChunkType m_chunk;
 			bool m_isLocked;
 	};
-	
+
 	template<bool Write, std::size_t Max = 3 * 3 * 3>
 	class MultiChunkLock
 	{

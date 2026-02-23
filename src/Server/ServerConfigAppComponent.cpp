@@ -3,8 +3,8 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <Server/ServerConfigAppComponent.hpp>
-#include <Server/ServerConfigs.hpp>
 #include <CommonLib/CommonConfigs.hpp>
+#include <Server/ServerConfigs.hpp>
 #include <Nazara/Core/StringExt.hpp>
 #include <NazaraUtils/PathUtils.hpp>
 #include <cppcodec/base64_rfc4648.hpp>

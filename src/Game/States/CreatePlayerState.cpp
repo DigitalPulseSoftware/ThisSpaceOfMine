@@ -4,8 +4,8 @@
 
 #include <Game/States/CreatePlayerState.hpp>
 #include <CommonLib/CommonConfigs.hpp>
-#include <Game/GameConfigs.hpp>
 #include <Game/GameConfigAppComponent.hpp>
+#include <Game/GameConfigs.hpp>
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/GameState.hpp>
 #include <Nazara/Widgets.hpp>

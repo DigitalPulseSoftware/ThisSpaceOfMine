@@ -3,9 +3,9 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <Game/GameConfigAppComponent.hpp>
-#include <Game/GameConfigs.hpp>
 #include <CommonLib/CommonConfigs.hpp>
 #include <CommonLib/Version.hpp>
+#include <Game/GameConfigs.hpp>
 #include <Nazara/Core/SystemDirectory.hpp>
 #include <NazaraUtils/PathUtils.hpp>
 #include <spdlog/spdlog.h>

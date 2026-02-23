@@ -3,7 +3,6 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ClientLib/Scripting/ClientEntityScriptingLibrary.hpp>
-#include <NazaraUtils/FunctionTraits.hpp>
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Components/ClientInteractibleComponent.hpp>
 #include <ClientLib/Components/VisualEntityComponent.hpp>
@@ -11,6 +10,7 @@
 #include <Nazara/Graphics/PointLight.hpp>
 #include <Nazara/Graphics/Components/GraphicsComponent.hpp>
 #include <Nazara/Graphics/Components/LightComponent.hpp>
+#include <NazaraUtils/FunctionTraits.hpp>
 #include <frozen/string.h>
 #include <frozen/unordered_map.h>
 

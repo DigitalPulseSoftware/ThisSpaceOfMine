@@ -12,8 +12,8 @@
 #include <Nazara/Physics3D/Collider3D.hpp>
 #include <NazaraUtils/FunctionTraits.hpp>
 #include <fmt/core.h>
-#include <spdlog/spdlog.h>
 #include <sol/state.hpp>
+#include <spdlog/spdlog.h>
 #include <numeric>
 
 SOL_BASE_CLASSES(tsom::DeformedChunk, tsom::Chunk);

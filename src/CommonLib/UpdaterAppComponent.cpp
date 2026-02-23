@@ -3,8 +3,8 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/UpdaterAppComponent.hpp>
-#include <CommonLib/ConfigFile.hpp>
 #include <CommonLib/CommonConfigs.hpp>
+#include <CommonLib/ConfigFile.hpp>
 #include <CommonLib/Version.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/Process.hpp>

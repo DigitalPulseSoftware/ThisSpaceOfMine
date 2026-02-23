@@ -25,8 +25,8 @@
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Components/PlanetComponent.hpp>
 #include <CommonLib/Components/ShipComponent.hpp>
-#include <Game/GameConfigs.hpp>
 #include <Game/GameConfigAppComponent.hpp>
+#include <Game/GameConfigs.hpp>
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/StateData.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>

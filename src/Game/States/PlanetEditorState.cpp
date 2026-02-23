@@ -8,8 +8,8 @@
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Components/VisualEntityComponent.hpp>
 #include <CommonLib/Planet.hpp>
-#include <Game/GameConfigs.hpp>
 #include <Game/GameConfigAppComponent.hpp>
+#include <Game/GameConfigs.hpp>
 #include <Game/States/StateData.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
