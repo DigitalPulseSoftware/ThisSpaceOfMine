@@ -4,6 +4,7 @@
 
 #include <CommonLib/UpdaterAppComponent.hpp>
 #include <CommonLib/ConfigFile.hpp>
+#include <CommonLib/CommonConfigs.hpp>
 #include <CommonLib/Version.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/Process.hpp>
@@ -132,7 +133,7 @@ namespace tsom
 		webService->QueueRequest([&, server](Nz::WebRequest& request)
 		{
 			request.SetMethod(Nz::WebRequestMethod::Get);
-			request.SetURL(fmt::format("{}/game_version?platform={}{}_{}", m_configFile.GetStringValue("Api.Url"), BuildPlatform, server ? "-server" : "", BuildArch));
+			request.SetURL(fmt::format("{}/game_version?platform={}{}_{}", m_configFile.GetStringValue(Config::Api_Url), BuildPlatform, server ? "-server" : "", BuildArch));
 			request.SetServiceName("TSOM Version Check");
 			request.SetResultCallback([cb = std::move(callback)](Nz::WebRequestResult&& result)
 			{

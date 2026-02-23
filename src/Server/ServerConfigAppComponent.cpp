@@ -3,6 +3,8 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <Server/ServerConfigAppComponent.hpp>
+#include <Server/ServerConfigs.hpp>
+#include <CommonLib/CommonConfigs.hpp>
 #include <Nazara/Core/StringExt.hpp>
 #include <NazaraUtils/PathUtils.hpp>
 #include <cppcodec/base64_rfc4648.hpp>
@@ -12,21 +14,21 @@ namespace tsom
 {
 	ServerConfigFile::ServerConfigFile()
 	{
-		RegisterStringOption("Api.Url");
-		RegisterStringOption("ConnectionToken.EncryptionKey", "");
-		RegisterIntegerOption("Server.Port", 1, 0xFFFF, 29536);
-		RegisterIntegerOption("Server.MaxStuckSeconds", 0, 60, 10);
-		RegisterBoolOption("Debug.EnableDrawer", true);
-		RegisterBoolOption("Server.SleepWhenEmpty", true);
-		RegisterStringOption("Save.Directory", "saves/chunks");
-		RegisterStringOption("Database.Filename", "server_database.db");
-		RegisterIntegerOption("Save.Interval", 0, 60 * 60, 30);
+		RegisterStringOption(Config::Api_Url);
+		RegisterStringOption(Config::ConnectionToken_EncryptionKey, "");
+		RegisterIntegerOption(Config::Server_Port, 1, 0xFFFF, 29536);
+		RegisterIntegerOption(Config::Server_MaxStuckSeconds, 0, 60, 10);
+		RegisterBoolOption(Config::Debug_EnableDrawer, true);
+		RegisterBoolOption(Config::Server_SleepWhenEmpty, true);
+		RegisterStringOption(Config::Save_Directory, "saves/chunks");
+		RegisterStringOption(Config::Database_Filename, "server_database.db");
+		RegisterIntegerOption(Config::Save_Interval, 0, 60 * 60, 30);
 
 		// Server.AutoUpdater
-		RegisterBoolOption("Server.AutoUpdater.Enabled", false);
-		RegisterIntegerOption("Server.AutoUpdater.CheckInterval", 1, 60 * 60, 30);
-		RegisterIntegerOption("Server.AutoUpdater.QuitDelay", 1, 60 * 60, 10 * 60);
-		RegisterStringOption("Server.AutoUpdater.Behavior", "downloadandupdate", [](std::string value) -> Nz::Result<std::string, std::string>
+		RegisterBoolOption(Config::Server_AutoUpdater_Enabled, false);
+		RegisterIntegerOption(Config::Server_AutoUpdater_CheckInterval, 1, 60 * 60, 30);
+		RegisterIntegerOption(Config::Server_AutoUpdater_QuitDelay, 1, 60 * 60, 10 * 60);
+		RegisterStringOption(Config::Server_AutoUpdater_Behavior, "downloadandupdate", [](std::string value) -> Nz::Result<std::string, std::string>
 		{
 			value = Nz::ToLower(value);
 			if (value != "downloadandupdate" && value != "downloadandexit")
@@ -40,7 +42,7 @@ namespace tsom
 	{
 		using base64 = cppcodec::base64_rfc4648;
 
-		std::vector<std::uint8_t> connectionTokenEncryptionKey = base64::decode(GetStringValue("ConnectionToken.EncryptionKey"));
+		std::vector<std::uint8_t> connectionTokenEncryptionKey = base64::decode(GetStringValue(Config::ConnectionToken_EncryptionKey));
 		if (!connectionTokenEncryptionKey.empty())
 		{
 			if (connectionTokenEncryptionKey.size() != m_connectionTokenEncryptionKey.size())

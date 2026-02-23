@@ -6,6 +6,7 @@
 #include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/UpdaterAppComponent.hpp>
 #include <Server/ServerConfigAppComponent.hpp>
+#include <Server/ServerConfigs.hpp>
 #include <Server/ServerUpdateAppComponent.hpp>
 #include <ServerLib/PlayerTokenAppComponent.hpp>
 #include <ServerLib/ServerInstanceAppComponent.hpp>
@@ -51,12 +52,12 @@ int ServerMain(int argc, char* argv[])
 
 	auto& config = configAppComponent.GetConfig();
 
-	if (config.GetBoolValue("Server.AutoUpdater.Enabled"))
+	if (config.GetBoolValue(tsom::Config::Server_AutoUpdater_Enabled))
 	{
 		app.AddComponent<tsom::UpdaterAppComponent>(config);
 
 		tsom::ServerUpdateAppComponent::UpdateBehavior updateBehavior;
-		const std::string& updateBehaviorStr = config.GetStringValue("Server.AutoUpdater.Behavior");
+		const std::string& updateBehaviorStr = config.GetStringValue(tsom::Config::Server_AutoUpdater_Behavior);
 		if (updateBehaviorStr == "downloadandexit")
 			updateBehavior = tsom::ServerUpdateAppComponent::UpdateBehavior::DownloadAndExit;
 		else
@@ -65,20 +66,20 @@ int ServerMain(int argc, char* argv[])
 			updateBehavior = tsom::ServerUpdateAppComponent::UpdateBehavior::DownloadAndUpdate;
 		}
 
-		Nz::Time checkInterval = Nz::Time::Seconds(config.GetIntegerValue<long long>("Server.AutoUpdater.CheckInterval"));
-		Nz::Time quitDelay = Nz::Time::Seconds(config.GetIntegerValue<long long>("Server.AutoUpdater.QuitDelay"));
+		Nz::Time checkInterval = Nz::Time::Seconds(config.GetIntegerValue<long long>(tsom::Config::Server_AutoUpdater_CheckInterval));
+		Nz::Time quitDelay = Nz::Time::Seconds(config.GetIntegerValue<long long>(tsom::Config::Server_AutoUpdater_QuitDelay));
 
 		app.AddComponent<tsom::ServerUpdateAppComponent>(updateBehavior, checkInterval, quitDelay);
 	}
 
-	Nz::UInt16 serverPort = config.GetIntegerValue<Nz::UInt16>("Server.Port");
+	Nz::UInt16 serverPort = config.GetIntegerValue<Nz::UInt16>(tsom::Config::Server_Port);
 
 	tsom::ServerInstance::Config instanceConfig;
-	instanceConfig.pauseWhenEmpty = config.GetBoolValue("Server.SleepWhenEmpty");
-	instanceConfig.saveInterval = Nz::Time::Seconds(config.GetIntegerValue<long long>("Save.Interval"));
+	instanceConfig.pauseWhenEmpty = config.GetBoolValue(tsom::Config::Server_SleepWhenEmpty);
+	instanceConfig.saveInterval = Nz::Time::Seconds(config.GetIntegerValue<long long>(tsom::Config::Save_Interval));
 	instanceConfig.connectionTokenEncryptionKey = config.GetConnectionTokenEncryptionKey();
-	instanceConfig.enableDebugDrawer = config.GetBoolValue("Debug.EnableDrawer");
-	instanceConfig.databaseFile = config.GetStringValue("Database.Filename");
+	instanceConfig.enableDebugDrawer = config.GetBoolValue(tsom::Config::Debug_EnableDrawer);
+	instanceConfig.databaseFile = config.GetStringValue(tsom::Config::Database_Filename);
 
 	bool isMigratingToDatabase = !std::filesystem::is_regular_file(instanceConfig.databaseFile);
 
@@ -86,13 +87,13 @@ int ServerMain(int argc, char* argv[])
 	auto& sessionManager = instance.AddSessionManager(serverPort);
 	sessionManager.SetDefaultHandler<tsom::InitialSessionHandler>(std::ref(instance));
 
-	std::filesystem::path saveDirectory = Nz::Utf8Path(config.GetStringValue("Save.Directory"));
+	std::filesystem::path saveDirectory = Nz::Utf8Path(config.GetStringValue(tsom::Config::Save_Directory));
 
 	if (isMigratingToDatabase)
 	{
 		if (std::filesystem::is_directory(saveDirectory))
 		{
-			spdlog::warn("first time launching after sqlite switch: migrating saves.");
+			spdlog::warn("first time launching after SQLite switch: migrating saves.");
 
 			MigrateFileToSqlite(instance, saveDirectory);
 			std::filesystem::path migratedSaveDir = saveDirectory;
@@ -121,7 +122,7 @@ int ServerMain(int argc, char* argv[])
 
 	spdlog::info("server ready.");
 
-	if (Nz::UInt32 maxStuckTime = config.GetIntegerValue<Nz::UInt32>("Server.MaxStuckSeconds"))
+	if (Nz::UInt32 maxStuckTime = config.GetIntegerValue<Nz::UInt32>(tsom::Config::Server_MaxStuckSeconds))
 		app.AddComponent<tsom::HealthCheckerAppComponent>(maxStuckTime);
 
 	return app.Run();

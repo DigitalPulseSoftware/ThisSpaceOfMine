@@ -2,49 +2,50 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
+#include <fmt/format.h>
 #include <cassert>
 #include <limits>
 #include <stdexcept>
 
 namespace tsom
 {
-	inline bool ConfigFile::GetBoolValue(const std::string& optionName) const
+	inline bool ConfigFile::GetBoolValue(BoolOptionName optionName) const
 	{
-		std::size_t optionIndex = GetOptionIndex(optionName);
+		std::size_t optionIndex = GetOptionIndex(optionName.name);
 		return std::get<BoolOption>(m_options[optionIndex].data).value;
 	}
 
 	template<typename T>
-	T ConfigFile::GetFloatValue(const std::string& optionName) const
+	T ConfigFile::GetFloatValue(FloatOptionName optionName) const
 	{
-		std::size_t optionIndex = GetOptionIndex(optionName);
+		std::size_t optionIndex = GetOptionIndex(optionName.name);
 		return static_cast<T>(std::get<FloatOption>(m_options[optionIndex].data).value);
 	}
 
 	template<typename T>
-	T ConfigFile::GetIntegerValue(const std::string& optionName) const
+	T ConfigFile::GetIntegerValue(IntegerOptionName optionName) const
 	{
-		std::size_t optionIndex = GetOptionIndex(optionName);
+		std::size_t optionIndex = GetOptionIndex(optionName.name);
 
 		long long value = std::get<IntegerOption>(m_options[optionIndex].data).value;
 		if constexpr (std::is_unsigned_v<T>)
 		{
 			if (value < 0)
-				throw std::range_error(optionName + " value is smaller than T minimal representable value(" + std::to_string(value) + ')');
+				throw std::range_error(fmt::format("{} value is smaller than T minimal representable value ({} < 0)", optionName.name, value));
 
 			unsigned long long unsignedValue = static_cast<unsigned long long>(value);
 			if (unsignedValue > std::numeric_limits<T>::max())
-				throw std::range_error(optionName + " value is greater than T maximal representable value (" + std::to_string(unsignedValue) + ')');
+				throw std::range_error(fmt::format("{} value is greater than T maximal representable value ({} > {})", optionName.name, unsignedValue, std::numeric_limits<T>::max()));
 
 			return static_cast<T>(unsignedValue);
 		}
 		else
 		{
 			if (value < std::numeric_limits<T>::min())
-				throw std::range_error(optionName + " value is smaller than T minimal representable value(" + std::to_string(value) + ')');
+				throw std::range_error(fmt::format("{} value is smaller than T minimal representable value ({} < {})", optionName.name, value, std::numeric_limits<T>::min()));
 
 			if (value > std::numeric_limits<T>::max())
-				throw std::range_error(optionName + " value is greater than T maximal representable value (" + std::to_string(value) + ')');
+				throw std::range_error(fmt::format("{} value is greater than T maximal representable value ({} > {})", optionName.name, value, std::numeric_limits<T>::max()));
 
 			return static_cast<T>(value);
 		}
@@ -59,7 +60,7 @@ namespace tsom
 		RegisterConfig(std::move(optionName), std::move(optionData));
 	}
 
-	inline std::size_t ConfigFile::GetOptionIndex(const std::string& optionName) const
+	inline std::size_t ConfigFile::GetOptionIndex(std::string_view optionName) const
 	{
 		auto it = m_optionByName.find(optionName);
 		assert(it != m_optionByName.end());
@@ -67,50 +68,50 @@ namespace tsom
 		return it->second;
 	}
 
-	inline const std::string& ConfigFile::GetStringValue(const std::string& optionName) const
+	inline const std::string& ConfigFile::GetStringValue(StringOptionName optionName) const
 	{
-		std::size_t optionIndex = GetOptionIndex(optionName);
+		std::size_t optionIndex = GetOptionIndex(optionName.name);
 		return std::get<StringOption>(m_options[optionIndex].data).value;
 	}
 
-	inline Nz::Signal<bool>& ConfigFile::GetBoolUpdateSignal(const std::string& optionName)
+	inline Nz::Signal<bool>& ConfigFile::GetBoolUpdateSignal(BoolOptionName optionName)
 	{
-		std::size_t optionIndex = GetOptionIndex(optionName);
+		std::size_t optionIndex = GetOptionIndex(optionName.name);
 		return std::get<BoolOption>(m_options[optionIndex].data).OnValueUpdate;
 	}
 
-	inline Nz::Signal<double>& ConfigFile::GetFloatUpdateSignal(const std::string& optionName)
+	inline Nz::Signal<double>& ConfigFile::GetFloatUpdateSignal(FloatOptionName optionName)
 	{
-		std::size_t optionIndex = GetOptionIndex(optionName);
+		std::size_t optionIndex = GetOptionIndex(optionName.name);
 		return std::get<FloatOption>(m_options[optionIndex].data).OnValueUpdate;
 	}
 
-	inline Nz::Signal<long long>& ConfigFile::GetIntegerUpdateSignal(const std::string& optionName)
+	inline Nz::Signal<long long>& ConfigFile::GetIntegerUpdateSignal(IntegerOptionName optionName)
 	{
-		std::size_t optionIndex = GetOptionIndex(optionName);
+		std::size_t optionIndex = GetOptionIndex(optionName.name);
 		return std::get<IntegerOption>(m_options[optionIndex].data).OnValueUpdate;
 	}
 
-	inline Nz::Signal<const std::string&>& ConfigFile::GetStringUpdateSignal(const std::string& optionName)
+	inline Nz::Signal<const std::string&>& ConfigFile::GetStringUpdateSignal(StringOptionName optionName)
 	{
-		std::size_t optionIndex = GetOptionIndex(optionName);
+		std::size_t optionIndex = GetOptionIndex(optionName.name);
 		return std::get<StringOption>(m_options[optionIndex].data).OnValueUpdate;
 	}
 
-	inline void ConfigFile::RegisterBoolOption(std::string optionName, std::optional<bool> defaultValue)
+	inline void ConfigFile::RegisterBoolOption(BoolOptionName optionName, std::optional<bool> defaultValue)
 	{
 		BoolOption boolOption;
 		boolOption.defaultValue = std::move(defaultValue);
 
-		RegisterOption(std::move(optionName), std::move(boolOption));
+		RegisterOption(std::string(optionName.name), std::move(boolOption));
 	}
 
-	inline void ConfigFile::RegisterFloatOption(std::string optionName, std::optional<double> defaultValue, FloatValidation validation)
+	inline void ConfigFile::RegisterFloatOption(FloatOptionName optionName, std::optional<double> defaultValue, FloatValidation validation)
 	{
-		RegisterFloatOption(std::move(optionName), -std::numeric_limits<double>::infinity(), std::numeric_limits<double>::infinity(), std::move(defaultValue), std::move(validation));
+		RegisterFloatOption(optionName, -std::numeric_limits<double>::infinity(), std::numeric_limits<double>::infinity(), std::move(defaultValue), std::move(validation));
 	}
 
-	inline void ConfigFile::RegisterFloatOption(std::string optionName, double minBounds, double maxBounds, std::optional<double> defaultValue, FloatValidation validation)
+	inline void ConfigFile::RegisterFloatOption(FloatOptionName optionName, double minBounds, double maxBounds, std::optional<double> defaultValue, FloatValidation validation)
 	{
 		FloatOption floatOption;
 		floatOption.defaultValue = std::move(defaultValue);
@@ -118,15 +119,15 @@ namespace tsom
 		floatOption.minBounds = minBounds;
 		floatOption.validation = std::move(validation);
 
-		RegisterOption(std::move(optionName), std::move(floatOption));
+		RegisterOption(std::string(optionName.name), std::move(floatOption));
 	}
 
-	inline void ConfigFile::RegisterIntegerOption(std::string optionName, std::optional<long long> defaultValue, IntegerValidation validation)
+	inline void ConfigFile::RegisterIntegerOption(IntegerOptionName optionName, std::optional<long long> defaultValue, IntegerValidation validation)
 	{
 		RegisterIntegerOption(std::move(optionName), std::numeric_limits<long long>::min(), std::numeric_limits<long long>::max(), std::move(defaultValue), std::move(validation));
 	}
 
-	inline void ConfigFile::RegisterIntegerOption(std::string optionName, long long minBounds, long long maxBounds, std::optional<long long> defaultValue, IntegerValidation validation)
+	inline void ConfigFile::RegisterIntegerOption(IntegerOptionName optionName, long long minBounds, long long maxBounds, std::optional<long long> defaultValue, IntegerValidation validation)
 	{
 		IntegerOption intOption;
 		intOption.defaultValue = std::move(defaultValue);
@@ -134,21 +135,21 @@ namespace tsom
 		intOption.minBounds = minBounds;
 		intOption.validation = std::move(validation);
 
-		RegisterOption(std::move(optionName), std::move(intOption));
+		RegisterOption(std::string(optionName.name), std::move(intOption));
 	}
 
-	inline void ConfigFile::RegisterStringOption(std::string optionName, std::optional<std::string> defaultValue, StringValidation validation)
+	inline void ConfigFile::RegisterStringOption(StringOptionName optionName, std::optional<std::string> defaultValue, StringValidation validation)
 	{
 		StringOption strOption;
 		strOption.defaultValue = std::move(defaultValue);
 		strOption.validation = std::move(validation);
 
-		RegisterOption(std::move(optionName), std::move(strOption));
+		RegisterOption(std::string(optionName.name), std::move(strOption));
 	}
 
-	inline bool ConfigFile::SetBoolValue(const std::string& optionName, bool value)
+	inline bool ConfigFile::SetBoolValue(BoolOptionName optionName, bool value)
 	{
-		std::size_t optionIndex = GetOptionIndex(optionName);
+		std::size_t optionIndex = GetOptionIndex(optionName.name);
 
 		BoolOption& option = std::get<BoolOption>(m_options[optionIndex].data);
 		if (option.value != value)

@@ -25,6 +25,7 @@
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Components/PlanetComponent.hpp>
 #include <CommonLib/Components/ShipComponent.hpp>
+#include <Game/GameConfigs.hpp>
 #include <Game/GameConfigAppComponent.hpp>
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/StateData.hpp>
@@ -679,7 +680,7 @@ namespace tsom
 		m_remainingCameraRotation = Nz::EulerAnglesf::Zero();
 		m_predictedCameraRotation = Nz::EulerAnglesf::Zero();
 
-		float mouseSensitivity = config.GetFloatValue<float>("Input.MouseSensitivity");
+		float mouseSensitivity = config.GetFloatValue<float>(Config::Input_MouseSensitivity);
 		m_mouseMovedSlot.Connect(stateData.canvas->OnUnhandledMouseMoved, [&, mouseSensitivity](const Nz::WindowEventHandler*, const Nz::WindowEvent::MouseMoveEvent& event)
 		{
 			if (!m_isMouseLocked)

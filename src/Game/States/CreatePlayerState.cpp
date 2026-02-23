@@ -3,6 +3,8 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <Game/States/CreatePlayerState.hpp>
+#include <CommonLib/CommonConfigs.hpp>
+#include <Game/GameConfigs.hpp>
 #include <Game/GameConfigAppComponent.hpp>
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/GameState.hpp>
@@ -87,7 +89,7 @@ namespace tsom
 		webService.QueueRequest([&, nickname](Nz::WebRequest& request) mutable
 		{
 			request.SetMethod(Nz::WebRequestMethod::Post);
-			request.SetURL(fmt::format("{}/v1/players", gameConfig.GetStringValue("Api.Url")));
+			request.SetURL(fmt::format("{}/v1/players", gameConfig.GetStringValue(Config::Api_Url)));
 			request.SetServiceName("TSOM Player Create");
 
 			nlohmann::json createParams;
@@ -128,7 +130,7 @@ namespace tsom
 				std::string playerUuid = responseDoc["uuid"];
 				std::string connectToken = responseDoc["token"];
 
-				gameConfig.SetStringValue("Player.Token", std::string(connectToken));
+				gameConfig.SetStringValue(Config::Player_Token, std::string(connectToken));
 
 				gameConfigComponent.Save();
 

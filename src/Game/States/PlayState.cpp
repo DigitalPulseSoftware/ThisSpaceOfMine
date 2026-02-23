@@ -3,7 +3,9 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <Game/States/PlayState.hpp>
+#include <CommonLib/CommonConfigs.hpp>
 #include <CommonLib/UpdaterAppComponent.hpp>
+#include <Game/GameConfigs.hpp>
 #include <Game/GameConfigAppComponent.hpp>
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/CreatePlayerState.hpp>
@@ -29,7 +31,7 @@ namespace tsom
 	{
 		auto& gameConfig = GetStateData().app->GetComponent<GameConfigAppComponent>().GetConfig();
 
-		bool devMode = gameConfig.GetBoolValue("Api.DevMode");
+		bool devMode = gameConfig.GetBoolValue(Config::Api_DevMode);
 
 		m_layout = CreateWidget<Nz::BoxLayout>(Nz::BoxLayoutOrientation::TopToBottom);
 
@@ -65,8 +67,8 @@ namespace tsom
 	{
 		auto& gameConfig = GetStateData().app->GetComponent<GameConfigAppComponent>().GetConfig();
 
-		std::string_view playerToken = gameConfig.GetStringValue("Player.Token");
-		bool devMode = gameConfig.GetBoolValue("Api.DevMode");
+		std::string_view playerToken = gameConfig.GetStringValue(Config::Player_Token);
+		bool devMode = gameConfig.GetBoolValue(Config::Api_DevMode);
 
 		if (!playerToken.empty())
 		{
@@ -120,12 +122,12 @@ namespace tsom
 		auto& gameConfig = GetStateData().app->GetComponent<GameConfigAppComponent>().GetConfig();
 		auto& webService = GetStateData().app->GetComponent<Nz::WebServiceAppComponent>();
 
-		std::string_view playerToken = gameConfig.GetStringValue("Player.Token");
+		std::string_view playerToken = gameConfig.GetStringValue(Config::Player_Token);
 
 		webService.QueueRequest([&, devMode](Nz::WebRequest& request)
 		{
 			request.SetMethod(Nz::WebRequestMethod::Post);
-			request.SetURL(fmt::format("{}/v1/player/auth", gameConfig.GetStringValue("Api.Url")));
+			request.SetURL(fmt::format("{}/v1/player/auth", gameConfig.GetStringValue(Config::Api_Url)));
 			request.SetServiceName("TSOM Player Info");
 
 			nlohmann::json connectBody;
@@ -187,19 +189,17 @@ namespace tsom
 	void PlayState::OnCreateOrConnectPressed(bool devMode)
 	{
 		auto& gameConfig = GetStateData().app->GetComponent<GameConfigAppComponent>();
-		std::string_view playerToken = gameConfig.GetConfig().GetStringValue("Player.Token");
+		std::string_view playerToken = gameConfig.GetConfig().GetStringValue(Config::Player_Token);
 
 		if (!playerToken.empty())
 		{
 			auto& gameConfig = GetStateData().app->GetComponent<GameConfigAppComponent>().GetConfig();
 			auto& webService = GetStateData().app->GetComponent<Nz::WebServiceAppComponent>();
 
-			std::string_view playerToken = gameConfig.GetStringValue("Player.Token");
-
 			webService.QueueRequest([&, devMode](Nz::WebRequest& request)
 			{
 				request.SetMethod(Nz::WebRequestMethod::Post);
-				request.SetURL(fmt::format("{}/v1/game/connect", gameConfig.GetStringValue("Api.Url")));
+				request.SetURL(fmt::format("{}/v1/game/connect", gameConfig.GetStringValue(Config::Api_Url)));
 				request.SetServiceName("TSOM Player Info");
 
 				nlohmann::json connectBody;

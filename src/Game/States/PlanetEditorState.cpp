@@ -8,6 +8,7 @@
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Components/VisualEntityComponent.hpp>
 #include <CommonLib/Planet.hpp>
+#include <Game/GameConfigs.hpp>
 #include <Game/GameConfigAppComponent.hpp>
 #include <Game/States/StateData.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
@@ -41,7 +42,7 @@ namespace tsom
 	m_cameraRotation(-45.f, 180.f, 0.f)
 	{
 		auto& stateData = GetStateData();
-
+		auto& config = stateData.app->GetComponent<GameConfigAppComponent>().GetConfig();
 		auto& filesystem = stateData.app->GetComponent<Nz::FilesystemAppComponent>();
 
 		m_cameraEntity = CreateEntity();
@@ -219,7 +220,7 @@ namespace tsom
 
 		auto& config = stateData.app->GetComponent<GameConfigAppComponent>().GetConfig();
 
-		float mouseSensitivity = config.GetFloatValue<float>("Input.MouseSensitivity");
+		float mouseSensitivity = config.GetFloatValue<float>(Config::Input_MouseSensitivity);
 		m_mouseMovedSlot.Connect(stateData.canvas->OnUnhandledMouseMoved, [&, mouseSensitivity](const Nz::WindowEventHandler*, const Nz::WindowEvent::MouseMoveEvent& event)
 		{
 			if (!m_isMouseLocked)

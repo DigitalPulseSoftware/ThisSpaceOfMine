@@ -8,6 +8,7 @@
 #include <CommonLib/UpdaterAppComponent.hpp>
 #include <CommonLib/Version.hpp>
 #include <Game/GameConfigAppComponent.hpp>
+#include <Game/GameConfigs.hpp>
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/GameState.hpp>
 #include <Game/States/UpdateState.hpp>
@@ -31,8 +32,8 @@ namespace tsom
 	{
 		auto& gameConfig = GetStateData().app->GetComponent<GameConfigAppComponent>().GetConfig();
 
-		std::string_view address = gameConfig.GetStringValue("Menu.ServerAddress");
-		std::string_view nickname = gameConfig.GetStringValue("Menu.Login");
+		std::string_view address = gameConfig.GetStringValue(Config::Menu_ServerAddress);
+		std::string_view nickname = gameConfig.GetStringValue(Config::Menu_Login);
 
 		const Nz::CommandLineParameters& cmdParams = GetStateData().app->GetCommandLineParameters();
 		cmdParams.GetParameter("server-address", &address);
@@ -122,7 +123,7 @@ namespace tsom
 		}
 
 		auto& gameConfig = GetStateData().app->GetComponent<GameConfigAppComponent>();
-		Nz::UInt16 serverPort = gameConfig.GetConfig().GetIntegerValue<Nz::UInt16>("Server.Port");
+		Nz::UInt16 serverPort = gameConfig.GetConfig().GetIntegerValue<Nz::UInt16>(Config::Server_Port);
 
 		Nz::ResolveError resolveError;
 		auto hostVec = Nz::IpAddress::ResolveHostname(Nz::NetProtocol::Any, m_serverAddressArea->GetText(), std::to_string(serverPort), &resolveError);
@@ -133,8 +134,8 @@ namespace tsom
 			return;
 		}
 
-		gameConfig.GetConfig().SetStringValue("Menu.Login", login);
-		gameConfig.GetConfig().SetStringValue("Menu.ServerAddress", m_serverAddressArea->GetText());
+		gameConfig.GetConfig().SetStringValue(Config::Menu_Login, login);
+		gameConfig.GetConfig().SetStringValue(Config::Menu_ServerAddress, m_serverAddressArea->GetText());
 
 		gameConfig.Save();
 

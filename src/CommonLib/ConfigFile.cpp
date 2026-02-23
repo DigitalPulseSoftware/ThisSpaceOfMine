@@ -315,9 +315,9 @@ namespace tsom
 		}
 	}
 
-	bool ConfigFile::SetFloatValue(const std::string& optionName, double value)
+	bool ConfigFile::SetFloatValue(FloatOptionName optionName, double value)
 	{
-		std::size_t optionIndex = GetOptionIndex(optionName);
+		std::size_t optionIndex = GetOptionIndex(optionName.name);
 
 		FloatOption& option = std::get<FloatOption>(m_options[optionIndex].data);
 		if (value > option.maxBounds)
@@ -353,9 +353,9 @@ namespace tsom
 		return true;
 	}
 
-	bool ConfigFile::SetIntegerValue(const std::string& optionName, long long value)
+	bool ConfigFile::SetIntegerValue(IntegerOptionName optionName, long long value)
 	{
-		std::size_t optionIndex = GetOptionIndex(optionName);
+		std::size_t optionIndex = GetOptionIndex(optionName.name);
 
 		IntegerOption& option = std::get<IntegerOption>(m_options[optionIndex].data);
 		if (value > option.maxBounds)
@@ -391,9 +391,9 @@ namespace tsom
 		return true;
 	}
 
-	bool ConfigFile::SetStringValue(const std::string& optionName, std::string value)
+	bool ConfigFile::SetStringValue(StringOptionName optionName, std::string value)
 	{
-		std::size_t optionIndex = GetOptionIndex(optionName);
+		std::size_t optionIndex = GetOptionIndex(optionName.name);
 
 		StringOption& option = std::get<StringOption>(m_options[optionIndex].data);
 

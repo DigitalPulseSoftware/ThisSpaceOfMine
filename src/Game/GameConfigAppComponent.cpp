@@ -3,6 +3,8 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <Game/GameConfigAppComponent.hpp>
+#include <Game/GameConfigs.hpp>
+#include <CommonLib/CommonConfigs.hpp>
 #include <CommonLib/Version.hpp>
 #include <Nazara/Core/SystemDirectory.hpp>
 #include <NazaraUtils/PathUtils.hpp>
@@ -12,10 +14,10 @@ namespace tsom
 {
 	GameConfigFile::GameConfigFile()
 	{
-		RegisterBoolOption("Api.DevMode", false);
-		RegisterStringOption("Api.Url");
+		RegisterBoolOption(Config::Api_DevMode, false);
+		RegisterStringOption(Config::Api_Url);
 
-		RegisterStringOption("Menu.Login", "Mingebag", [](std::string value) -> Nz::Result<std::string, std::string>
+		RegisterStringOption(Config::Menu_Login, "Mingebag", [](std::string value) -> Nz::Result<std::string, std::string>
 		{
 			if (value.empty())
 				return Nz::Err("name cannot be empty");
@@ -26,11 +28,11 @@ namespace tsom
 			return Nz::Ok(std::move(value));
 		});
 
-		RegisterStringOption("Menu.ServerAddress", "tsom.digitalpulse.software");
+		RegisterStringOption(Config::Menu_ServerAddress, "tsom.digitalpulse.software");
 
-		RegisterFloatOption("Input.MouseSensitivity", 0.0, 1.0, 0.3);
+		RegisterFloatOption(Config::Input_MouseSensitivity, 0.0, 1.0, 0.3);
 
-		RegisterStringOption("Player.Token", "", [](std::string value) -> Nz::Result<std::string, std::string>
+		RegisterStringOption(Config::Player_Token, "", [](std::string value) -> Nz::Result<std::string, std::string>
 		{
 			if (value.size() > 64)
 				return Nz::Err("Invalid token");
@@ -38,7 +40,7 @@ namespace tsom
 			return Nz::Ok(std::move(value));
 		});
 
-		RegisterIntegerOption("Server.Port", 1, 0xFFFF, 29536);
+		RegisterIntegerOption(Config::Server_Port, 1, 0xFFFF, 29536);
 	}
 
 	std::filesystem::path GameConfigFile::GetPath()
