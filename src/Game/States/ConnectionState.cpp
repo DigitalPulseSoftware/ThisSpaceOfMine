@@ -62,7 +62,7 @@ namespace tsom
 		m_serverSession.emplace(*reactor, peerId, serverAddress);
 		m_serverSession->SetProtocolVersion(IsDevVersion() ? Nz::MaxValue() : GameVersion);
 
-		ClientSessionHandler& sessionHandler = m_serverSession->SetupHandler<ClientSessionHandler>(*stateData.app, *stateData.world, *stateData.blockLibrary);
+		ClientSessionHandler& sessionHandler = m_serverSession->SetupHandler<ClientSessionHandler>(*stateData.app, *stateData.config, *stateData.world, *stateData.blockLibrary);
 		ConnectSignal(sessionHandler.OnAuthResponse, [this](const Packets::S_AuthResponse& authResponse)
 		{
 			if (authResponse.authResult.IsOk())

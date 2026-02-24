@@ -13,16 +13,19 @@
 namespace tsom
 {
 	class ClientBlockLibrary;
+	class ConfigFile;
 
 	class TSOM_CLIENTLIB_API ClientChunkClassLibrary final : public ChunkClassLibrary
 	{
 		public:
-			ClientChunkClassLibrary(Nz::ApplicationBase& app, const ClientBlockLibrary& blockLibrary);
+			ClientChunkClassLibrary(Nz::ApplicationBase& app, ConfigFile& config, const ClientBlockLibrary& blockLibrary);
 
 		private:
 			void InitializePlanetEntity(entt::handle entity) override;
 			void InitializeShipEntity(entt::handle entity) override;
 			std::unique_ptr<ChunkEntities> SetupChunkEntities(Nz::EnttWorld& world, ChunkContainer& chunkContainer, std::size_t layerIndex) override;
+
+			ConfigFile& m_config;
 	};
 }
 

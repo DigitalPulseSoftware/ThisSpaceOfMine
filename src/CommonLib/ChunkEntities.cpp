@@ -287,4 +287,20 @@ namespace tsom
 			rigidBody.TeleportTo(chunkNode.GetGlobalPosition(), chunkNode.GetGlobalRotation());
 		}
 	}
+
+	void ChunkEntities::RebuildAllChunks()
+	{
+		for (auto it = m_updateJobs.begin(); it != m_updateJobs.end(); ++it)
+		{
+			it->second->cancelled = true;
+		}
+		m_updateJobs.clear();
+
+		std::lock_guard lock(m_invalidatedChunkMutex);
+		for (const auto& [chunkIndices, entity] : m_chunkEntities)
+		{
+			NazaraUnused(entity);
+			m_invalidatedChunks[chunkIndices] = 0;
+		}
+	}
 }

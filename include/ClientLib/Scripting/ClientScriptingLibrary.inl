@@ -4,9 +4,10 @@
 
 namespace tsom
 {
-	inline ClientScriptingLibrary::ClientScriptingLibrary(Nz::ApplicationBase& app, ClientSessionHandler& sessionHandler) :
+	inline ClientScriptingLibrary::ClientScriptingLibrary(Nz::ApplicationBase& app, ConfigFile& configFile, ClientSessionHandler& sessionHandler) :
 	m_app(app),
-	m_sessionHandler(sessionHandler)
+	m_sessionHandler(sessionHandler),
+	m_config(configFile)
 	{
 	}
 }

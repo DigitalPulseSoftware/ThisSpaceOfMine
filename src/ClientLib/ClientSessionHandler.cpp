@@ -65,11 +65,12 @@ namespace tsom
 		{ PacketIndex<Packets::C_UpdatePlayerInputs>, { .channel = 1, .flags = Nz::ENetPacketFlag_Unreliable } }
 	});
 
-	ClientSessionHandler::ClientSessionHandler(NetworkSession* session, Nz::ApplicationBase& app, Nz::EnttWorld& world, ClientBlockLibrary& blockLibrary) :
+	ClientSessionHandler::ClientSessionHandler(NetworkSession* session, Nz::ApplicationBase& app, ConfigFile& config, Nz::EnttWorld& world, ClientBlockLibrary& blockLibrary) :
 	SessionHandler(session),
 	m_app(app),
 	m_world(world),
 	m_blockLibrary(blockLibrary),
+	m_config(config),
 	m_ownPlayerIndex(InvalidPlayerIndex),
 	m_scriptingContext(app),
 	m_lastInputIndex(0)
@@ -81,11 +82,11 @@ namespace tsom
 		m_scriptingContext.RegisterLibrary<ClientAssetScriptingLibrary>(m_app);
 		m_scriptingContext.LoadDirectory("scripts/assets");
 
-		m_entityRegistry.RegisterClassLibrary<ClientChunkClassLibrary>(m_app, m_blockLibrary);
+		m_entityRegistry.RegisterClassLibrary<ClientChunkClassLibrary>(m_app, config, m_blockLibrary);
 		m_entityRegistry.RegisterClassLibrary<ClientEntityClassLibrary>(m_app);
 
 		m_scriptingContext.RegisterLibrary<ClientEntityScriptingLibrary>(m_entityRegistry);
-		m_scriptingContext.RegisterLibrary<ClientScriptingLibrary>(m_app, *this);
+		m_scriptingContext.RegisterLibrary<ClientScriptingLibrary>(m_app, config, *this);
 
 		LoadScripts();
 	}

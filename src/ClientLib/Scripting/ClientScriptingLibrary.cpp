@@ -5,6 +5,7 @@
 #include <ClientLib/Scripting/ClientScriptingLibrary.hpp>
 #include <ClientLib/ClientAssetLibraryAppComponent.hpp>
 #include <ClientLib/ClientSessionHandler.hpp>
+#include <CommonLib/ConfigFile.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
 #include <Nazara/Graphics/Model.hpp>
 #include <sol/state.hpp>
@@ -31,6 +32,7 @@ namespace tsom
 		state["SERVER"] = false;
 
 		RegisterClientSession(state);
+		RegisterConfig(state);
 		RegisterScripts(state);
 	}
 
@@ -38,6 +40,50 @@ namespace tsom
 	{
 		sol::table sessionLibrary = state.create_named_table("ClientSession");
 
+	}
+
+	void ClientScriptingLibrary::RegisterConfig(sol::state& state)
+	{
+		sol::table configLibrary = state.create_named_table("Config");
+		configLibrary["GetBool"] = LuaFunction([this](std::string_view configName)
+		{
+			return m_config.GetBoolValue(ConfigFile::BoolOptionName{ configName });
+		});
+
+		configLibrary["GetFloat"] = LuaFunction([this](std::string_view configName)
+		{
+			return m_config.GetFloatValue<lua_Number>(ConfigFile::FloatOptionName{ configName });
+		});
+
+		configLibrary["GetInteger"] = LuaFunction([this](std::string_view configName)
+		{
+			return m_config.GetIntegerValue<lua_Integer>(ConfigFile::IntegerOptionName{ configName });
+		});
+
+		configLibrary["GetString"] = LuaFunction([this](std::string_view configName)
+		{
+			return m_config.GetStringValue(ConfigFile::StringOptionName{ configName });
+		});
+
+		configLibrary["SetBool"] = LuaFunction([this](std::string_view configName, bool value)
+		{
+			return m_config.SetBoolValue(ConfigFile::BoolOptionName{ configName }, value);
+		});
+
+		configLibrary["SetFloat"] = LuaFunction([this](std::string_view configName, double value)
+		{
+			return m_config.SetFloatValue(ConfigFile::FloatOptionName{ configName }, value);
+		});
+
+		configLibrary["SetInteger"] = LuaFunction([this](std::string_view configName, long long value)
+		{
+			return m_config.SetIntegerValue(ConfigFile::IntegerOptionName{ configName }, value);
+		});
+
+		configLibrary["SetString"] = LuaFunction([this](std::string_view configName, std::string value)
+		{
+			return m_config.SetStringValue(ConfigFile::StringOptionName{ configName }, std::move(value));
+		});
 	}
 
 	void ClientScriptingLibrary::RegisterScripts(sol::state& state)

@@ -3,6 +3,7 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <Game/GameConfigAppComponent.hpp>
+#include <ClientLib/ClientConfigs.hpp>
 #include <CommonLib/CommonConfigs.hpp>
 #include <CommonLib/Version.hpp>
 #include <Game/GameConfigs.hpp>
@@ -41,6 +42,8 @@ namespace tsom
 		});
 
 		RegisterIntegerOption(Config::Server_Port, 1, 0xFFFF, 29536);
+
+		RegisterFloatOption(Config::Visual_ChunkNormalSmoothAngle, 0.0, 180.0, 0.0);
 	}
 
 	std::filesystem::path GameConfigFile::GetPath()

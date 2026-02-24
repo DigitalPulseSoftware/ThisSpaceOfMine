@@ -56,6 +56,7 @@ namespace tsom
 			void FillChunks();
 			virtual UpdateJob* ProcessChunkUpdate(const Chunk& chunk, DirectionMask neighborMask);
 			void OnParentNodeInvalidated(const Nz::Node* node);
+			void RebuildAllChunks();
 			inline void UpdateChunkEntity(const ChunkIndices& chunkIndices, DirectionMask neighborMask);
 
 			struct UpdateJob
