@@ -3,9 +3,11 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ClientLib/ClientChunkEntities.hpp>
+#include <ClientLib/ClientConfigs.hpp>
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Components/VisualEntityComponent.hpp>
 #include <CommonLib/ChunkLock.hpp>
+#include <CommonLib/ConfigFile.hpp>
 #include <CommonLib/Components/EntityOwnerComponent.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/EnttWorld.hpp>
@@ -13,6 +15,7 @@
 #include <Nazara/Core/IndexBuffer.hpp>
 #include <Nazara/Core/TaskSchedulerAppComponent.hpp>
 #include <Nazara/Core/VertexBuffer.hpp>
+#include <Nazara/Core/VertexMapper.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Graphics/GraphicalMesh.hpp>
 #include <Nazara/Graphics/Graphics.hpp>
@@ -26,8 +29,9 @@
 
 namespace tsom
 {
-	ClientChunkEntities::ClientChunkEntities(Nz::ApplicationBase& app, Nz::EnttWorld& world, ChunkContainer& chunkContainer, const ClientBlockLibrary& blockLibrary, std::size_t layerIndex) :
+	ClientChunkEntities::ClientChunkEntities(Nz::ApplicationBase& app, ConfigFile& config, Nz::EnttWorld& world, ChunkContainer& chunkContainer, const ClientBlockLibrary& blockLibrary, std::size_t layerIndex) :
 	ChunkEntities(app, world, chunkContainer, blockLibrary, layerIndex, NoInit{}),
+	m_configFile(config),
 	m_isCollisionGenerationEnabled(true)
 	{
 		auto& filesystem = app.GetComponent<Nz::FilesystemAppComponent>();
@@ -145,6 +149,11 @@ namespace tsom
 			}
 		});
 
+		m_onVisualChunkNormalSmoothAngleUpdatedSlot.Connect(m_configFile.GetFloatUpdateSignal(Config::Visual_ChunkNormalSmoothAngle), [this](double /*newValue*/)
+		{
+			RebuildAllChunks();
+		});
+
 		FillChunks();
 	}
 
@@ -176,6 +185,47 @@ namespace tsom
 
 		std::shared_ptr<Nz::StaticMesh> staticMesh = std::make_shared<Nz::StaticMesh>(std::move(vertexBuffer), std::move(indexBuffer));
 		staticMesh->GenerateAABB();
+
+		Nz::DegreeAnglef smoothLimitAngle = m_configFile.GetFloatValue<float>(Config::Visual_ChunkNormalSmoothAngle);
+		if (smoothLimitAngle > 0.0f)
+		{
+			Nz::VertexMapper mapper(*staticMesh);
+			Nz::UInt32 vertexCount = mapper.GetVertexCount();
+
+			Nz::SparsePtr<Nz::Vector3f> normals = mapper.GetComponentPtr<Nz::Vector3f>(Nz::VertexComponent::Normal);
+			Nz::SparsePtr<Nz::Vector3f> positions = mapper.GetComponentPtr<Nz::Vector3f>(Nz::VertexComponent::Position);
+
+			// TODO: Replace by a vertex finder-like
+			std::map<Nz::Vector3i, Nz::HybridVector<Nz::UInt32, 6>> posToVerts;
+			for (Nz::UInt32 i = 0; i < vertexCount; ++i)
+			{
+				Nz::Vector3i p = Nz::Vector3i(Nz::Vector3f::Apply(positions[i] * 100.f, std::roundf));
+				posToVerts[p].push_back(i);
+			}
+
+			float fLimit = smoothLimitAngle.GetCos();
+			for (Nz::UInt32 i = 0; i < vertexCount; ++i)
+			{
+				Nz::Vector3i p = Nz::Vector3i(Nz::Vector3f::Apply(positions[i] * 100.f, std::roundf));
+
+				Nz::Vector3f vr = normals[i];
+
+				auto& verticesFound = posToVerts[p];
+				Nz::Vector3f pcNor;
+				for (Nz::UInt32 j : verticesFound)
+				{
+					Nz::Vector3f v = normals[j];
+
+					// Check whether the angle between the two normals is not too large.
+					// Skip the angle check on our own normal to avoid false negatives
+					// (v*v is not guaranteed to be 1.0 for all unit vectors v)
+					if ((j == i || (Nz::Vector3f::DotProduct(v, vr) >= fLimit)))
+						pcNor += v;
+				}
+
+				normals[i] = pcNor.Normalize();
+			}
+		}
 
 		std::shared_ptr<Nz::Mesh> chunkMesh = std::make_shared<Nz::Mesh>();
 		chunkMesh->CreateStatic();

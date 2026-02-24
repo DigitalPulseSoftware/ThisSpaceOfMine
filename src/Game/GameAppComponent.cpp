@@ -18,6 +18,7 @@
 #include <CommonLib/Physics/PhysicsSettings.hpp>
 #include <CommonLib/Systems/PlanetSystem.hpp>
 #include <CommonLib/Systems/ShipSystem.hpp>
+#include <Game/GameConfigAppComponent.hpp>
 #include <Game/States/BackgroundState.hpp>
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/DebugInfoState.hpp>
@@ -92,10 +93,13 @@ namespace tsom
 			SetupCanvas(world, window);
 			SetupCamera(renderWindow, world);
 
+			auto& gameConfig = GetApp().GetComponent<GameConfigAppComponent>();
+
 			std::shared_ptr<tsom::StateData> stateData = std::make_shared<tsom::StateData>();
 			stateData->app = &GetApp();
 			stateData->blockLibrary = &m_blockLibrary.value();
 			stateData->canvas = &m_canvas.value();
+			stateData->config = &gameConfig.GetConfig();
 			stateData->renderTarget = std::move(renderWindow);
 			stateData->window = &window;
 			stateData->swapchain = &swapchain;

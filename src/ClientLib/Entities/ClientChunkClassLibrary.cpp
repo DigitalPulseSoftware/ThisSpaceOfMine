@@ -13,8 +13,9 @@
 
 namespace tsom
 {
-	ClientChunkClassLibrary::ClientChunkClassLibrary(Nz::ApplicationBase& app, const ClientBlockLibrary& blockLibrary) :
-	ChunkClassLibrary(app, blockLibrary)
+	ClientChunkClassLibrary::ClientChunkClassLibrary(Nz::ApplicationBase& app, ConfigFile& config, const ClientBlockLibrary& blockLibrary) :
+	ChunkClassLibrary(app, blockLibrary),
+	m_config(config)
 	{
 	}
 
@@ -36,6 +37,6 @@ namespace tsom
 
 	std::unique_ptr<ChunkEntities> ClientChunkClassLibrary::SetupChunkEntities(Nz::EnttWorld& world, ChunkContainer& chunkContainer, std::size_t layerIndex)
 	{
-		return std::make_unique<ClientChunkEntities>(m_app, world, chunkContainer, Nz::SafeCast<const ClientBlockLibrary&>(m_blockLibrary), layerIndex);
+		return std::make_unique<ClientChunkEntities>(m_app, m_config, world, chunkContainer, Nz::SafeCast<const ClientBlockLibrary&>(m_blockLibrary), layerIndex);
 	}
 }

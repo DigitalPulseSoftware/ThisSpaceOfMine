@@ -32,10 +32,12 @@ namespace tsom
 		Nz::Vector3f tangent;
 	};
 
+	class ConfigFile;
+
 	class TSOM_CLIENTLIB_API ClientChunkEntities final : public ChunkEntities
 	{
 		public:
-			ClientChunkEntities(Nz::ApplicationBase& app, Nz::EnttWorld& world, ChunkContainer& chunkContainer, const ClientBlockLibrary& blockLibrary, std::size_t layerIndex);
+			ClientChunkEntities(Nz::ApplicationBase& app, ConfigFile& config, Nz::EnttWorld& world, ChunkContainer& chunkContainer, const ClientBlockLibrary& blockLibrary, std::size_t layerIndex);
 			ClientChunkEntities(const ClientChunkEntities&) = delete;
 			ClientChunkEntities(ClientChunkEntities&&) = delete;
 			~ClientChunkEntities() = default;
@@ -58,6 +60,8 @@ namespace tsom
 
 			std::shared_ptr<Nz::MaterialInstance> m_chunkMaterial;
 			std::shared_ptr<Nz::VertexDeclaration> m_chunkVertexDeclaration;
+			Nz::Signal<double>::ConnectionGuard m_onVisualChunkNormalSmoothAngleUpdatedSlot;
+			ConfigFile& m_configFile;
 			bool m_isCollisionGenerationEnabled;
 	};
 }

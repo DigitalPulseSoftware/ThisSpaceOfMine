@@ -31,6 +31,7 @@ namespace Nz
 namespace tsom
 {
 	class ClientBlockLibrary;
+	class ConfigFile;
 	class GravityController;
 	struct PlayerAnimationAssets;
 
@@ -39,7 +40,7 @@ namespace tsom
 		public:
 			struct PlayerInfo;
 
-			ClientSessionHandler(NetworkSession* session, Nz::ApplicationBase& app, Nz::EnttWorld& world, ClientBlockLibrary& blockLibrary);
+			ClientSessionHandler(NetworkSession* session, Nz::ApplicationBase& app, ConfigFile& config, Nz::EnttWorld& world, ClientBlockLibrary& blockLibrary);
 			~ClientSessionHandler();
 
 			inline entt::handle GetControlledEntity() const;
@@ -142,6 +143,7 @@ namespace tsom
 			Nz::ApplicationBase& m_app;
 			Nz::EnttWorld& m_world;
 			ClientBlockLibrary& m_blockLibrary;
+			ConfigFile& m_config;
 			Nz::UInt16 m_lastTickIndex;
 			Nz::UInt16 m_ownPlayerIndex;
 			ScriptingContext m_scriptingContext;

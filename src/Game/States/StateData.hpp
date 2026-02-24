@@ -25,6 +25,7 @@ namespace tsom
 	class ClientBlockLibrary;
 	class ClientSessionHandler;
 	class ConnectionState;
+	class ConfigFile;
 	class ImGuiRuntime;
 	class NetworkSession;
 
@@ -36,9 +37,10 @@ namespace tsom
 		Nz::EnttWorld* world;
 		Nz::Window* window;
 		Nz::WindowSwapchain* swapchain;
-		ConnectionState* connectionState = nullptr;
 		ClientBlockLibrary* blockLibrary = nullptr;
 		ClientSessionHandler* sessionHandler = nullptr;
+		ConfigFile* config;
+		ConnectionState* connectionState = nullptr;
 		NetworkSession* networkSession = nullptr;
 
 #ifdef TSOM_DEV_TOOLS
