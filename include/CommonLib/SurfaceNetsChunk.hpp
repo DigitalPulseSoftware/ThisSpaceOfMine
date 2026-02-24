@@ -33,6 +33,10 @@ namespace tsom
 			SurfaceNetsChunk& operator=(const SurfaceNetsChunk&) = delete;
 			SurfaceNetsChunk& operator=(SurfaceNetsChunk&&) = delete;
 
+			static Nz::Int64 GetColliderBuildTime();
+			static Nz::Int64 GetMeshBuildTime();
+			static void ResetTime();
+
 		private:
 			using NeighborChunkArray = std::array<const Chunk*, 27>;
 
