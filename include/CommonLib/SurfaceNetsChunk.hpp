@@ -10,7 +10,7 @@
 #include <CommonLib/Chunk.hpp>
 #include <Nazara/Math/Box.hpp>
 #include <NazaraUtils/FunctionRef.hpp>
-#include <unordered_map>
+#include <array>
 
 namespace tsom
 {
@@ -34,10 +34,14 @@ namespace tsom
 			SurfaceNetsChunk& operator=(SurfaceNetsChunk&&) = delete;
 
 		private:
-			Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> BuildCorners(const Nz::Vector3ui& indices, const std::unordered_map<ChunkIndices, const Chunk*>& neighborChunks) const;
+			using NeighborChunkArray = std::array<const Chunk*, 27>;
+
+			Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> BuildCorners(const Nz::Vector3ui& indices, const NeighborChunkArray& neighborChunks) const;
 			void BuildMesh(std::size_t layerIndex, std::vector<Nz::UInt32>& indices, const Nz::FunctionRef<VertexAttributes(const Nz::Vector3ui& blockIndices, Direction direction)>& addFace, bool generateVisualMesh) const;
 
-			BlockIndex GetNeighborBlock(const std::unordered_map<ChunkIndices, const Chunk*>& neighborChunks, Nz::Vector3ui indices, const Nz::Vector3i& offset) const;
+			static inline std::size_t GetNeighborIndex(const ChunkIndices& chunkIndices);
+
+			BlockIndex GetNeighborBlock(const NeighborChunkArray& neighborChunks, Nz::Vector3ui indices, const Nz::Vector3i& offset) const;
 	};
 }
 
