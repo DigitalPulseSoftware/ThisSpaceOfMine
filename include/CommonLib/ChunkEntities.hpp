@@ -54,10 +54,10 @@ namespace tsom
 			void CreateChunkEntity(const ChunkIndices& chunkIndices);
 			void DestroyChunkEntity(const ChunkIndices& chunkIndices);
 			void FillChunks();
-			virtual UpdateJob* ProcessChunkUpdate(const Chunk& chunk, DirectionMask neighborMask);
+			virtual UpdateJob* ProcessChunkUpdate(const Chunk& chunk, NeighborChunkMask neighborMask);
 			void OnParentNodeInvalidated(const Nz::Node* node);
 			void RebuildAllChunks();
-			inline void UpdateChunkEntity(const ChunkIndices& chunkIndices, DirectionMask neighborMask);
+			inline void UpdateChunkEntity(const ChunkIndices& chunkIndices, NeighborChunkMask neighborMask);
 
 			struct UpdateJob
 			{
@@ -94,7 +94,7 @@ namespace tsom
 			std::size_t m_layerIndex;
 			std::vector<FinishedJob> m_finishedJobs;
 			entt::handle m_parentEntity;
-			tsl::hopscotch_map<ChunkIndices, DirectionMask> m_invalidatedChunks;
+			tsl::hopscotch_map<ChunkIndices, NeighborChunkMask> m_invalidatedChunks;
 			tsl::hopscotch_map<ChunkIndices, std::shared_ptr<UpdateJob>> m_updateJobs;
 			tsl::hopscotch_map<ChunkIndices, entt::handle> m_chunkEntities;
 			tsl::hopscotch_map<ChunkIndices, bool /*created*/> m_createdDestroyedChunks;

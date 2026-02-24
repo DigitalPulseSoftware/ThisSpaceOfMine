@@ -49,7 +49,7 @@ namespace tsom
 			NazaraSignal(OnChunkLayerRemove, ChunkContainer* /*planet*/, Chunk* /*chunk*/, std::size_t /*layerIndex*/);
 			NazaraSignal(OnChunkAdded, ChunkContainer* /*planet*/, Chunk* /*chunk*/);
 			NazaraSignal(OnChunkRemove, ChunkContainer* /*planet*/, Chunk* /*chunk*/);
-			NazaraSignal(OnChunkUpdated, ChunkContainer* /*planet*/, Chunk* /*chunk*/, DirectionMask /*neighborUpdate*/, Nz::UInt32 /*layerMask*/);
+			NazaraSignal(OnChunkUpdated, ChunkContainer* /*planet*/, Chunk* /*chunk*/, NeighborChunkMask /*neighborMask*/, Nz::UInt32 /*layerMask*/);
 
 		protected:
 			float m_tileSize;

@@ -87,7 +87,7 @@ namespace tsom
 			}
 		});
 
-		shipComponent.ship->OnChunkUpdated.Connect([this](ChunkContainer*, Chunk* chunk, DirectionMask /*directionMask*/, Nz::UInt32 /*layerMask*/)
+		shipComponent.ship->OnChunkUpdated.Connect([this](ChunkContainer*, Chunk* chunk, NeighborChunkMask /*neighborMask*/, Nz::UInt32 /*layerMask*/)
 		{
 			m_invalidatedChunks.emplace(chunk);
 			*m_shouldSave = true;

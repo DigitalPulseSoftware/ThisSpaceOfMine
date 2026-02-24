@@ -17,7 +17,7 @@ namespace tsom
 	class TSOM_COMMONLIB_API SurfaceNetsChunk : public Chunk
 	{
 		public:
-			using Chunk::Chunk;
+			inline SurfaceNetsChunk(const BlockLibrary& blockLibrary, ChunkContainer& owner, const ChunkIndices& indices, const Nz::Vector3ui& size, float blockSize);
 			SurfaceNetsChunk(const SurfaceNetsChunk&) = delete;
 			SurfaceNetsChunk(SurfaceNetsChunk&&) = delete;
 			~SurfaceNetsChunk() = default;
@@ -38,12 +38,10 @@ namespace tsom
 			static void ResetTime();
 
 		private:
-			using NeighborChunkArray = std::array<const Chunk*, 27>;
+			using NeighborChunkArray = Nz::EnumArray<NeighborChunk, const Chunk*>;
 
 			Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> BuildCorners(const Nz::Vector3ui& indices, const NeighborChunkArray& neighborChunks) const;
 			void BuildMesh(std::size_t layerIndex, std::vector<Nz::UInt32>& indices, const Nz::FunctionRef<VertexAttributes(const Nz::Vector3ui& blockIndices, Direction direction)>& addFace, bool generateVisualMesh) const;
-
-			static inline std::size_t GetNeighborIndex(const ChunkIndices& chunkIndices);
 
 			BlockIndex GetNeighborBlock(const NeighborChunkArray& neighborChunks, Nz::Vector3ui indices, const Nz::Vector3i& offset) const;
 	};

@@ -234,7 +234,7 @@ namespace tsom
 		return chunkMesh;
 	}
 
-	auto ClientChunkEntities::ProcessChunkUpdate(const Chunk& chunk, DirectionMask neighborMask) -> ColliderModelUpdateJob*
+	auto ClientChunkEntities::ProcessChunkUpdate(const Chunk& chunk, NeighborChunkMask neighborMask) -> ColliderModelUpdateJob*
 	{
 		NazaraAssert(chunk.HasContent());
 
@@ -327,9 +327,9 @@ namespace tsom
 		});
 
 		// Add neighbor chunks
-		for (Direction neighborDir : neighborMask)
+		for (NeighborChunk neighborChunk : neighborMask)
 		{
-			ChunkIndices neighborIndices = chunk.GetIndices() + s_chunkDirOffset[neighborDir];
+			ChunkIndices neighborIndices = chunk.GetIndices() + s_neighborChunkOffset[neighborChunk];
 			const Chunk* neighborChunk = m_chunkContainer.GetChunk(neighborIndices);
 			if (!neighborChunk || !neighborChunk->HasContent() || !neighborChunk->IsLayerRegistered(m_layerIndex))
 				continue;

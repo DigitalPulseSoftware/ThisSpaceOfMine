@@ -41,26 +41,55 @@ namespace tsom
 		{
 			// FIXME: Nz::Signal operator() is not thread-safe!
 			std::lock_guard lock(m_chunkUpdatedSignalMutex);
-			OnChunkUpdated(this, chunk, DirectionMask_All, chunk->GetActiveLayerMask());
+			OnChunkUpdated(this, chunk, NeighborChunkMask_All, chunk->GetActiveLayerMask());
 		});
 
 		chunkData.onUpdated.Connect(chunkData.chunk->OnBlockUpdated, [this](Chunk* chunk, const Nz::Vector3ui& indices, BlockIndex newBlock, std::size_t prevLayerIndex, std::size_t newLayerIndex)
 		{
-			DirectionMask neighborMask;
+			NeighborChunkMask neighborMask;
+
+			// Find every neighbor chunk required, based on block position
+			std::array<Nz::Int32, 2> xs{ 0, 0 };
+			std::array<Nz::Int32, 2> ys{ 0, 0 };
+			std::array<Nz::Int32, 2> zs{ 0, 0 };
+
+			std::size_t nx = 1, ny = 1, nz = 1;
+
+			const Nz::Vector3ui& size = chunk->GetSize();
+
 			if (indices.x == 0)
-				neighborMask |= Direction::Left;
-			else if (indices.x == chunk->GetSize().x - 1)
-				neighborMask |= Direction::Right;
+				xs[nx++] = -1;
+			else if (indices.x == size.x - 1)
+				xs[nx++] = 1;
 
 			if (indices.y == 0)
-				neighborMask |= Direction::Front;
-			else if (indices.y == chunk->GetSize().y - 1)
-				neighborMask |= Direction::Back;
+				zs[nz++] = -1;
+			else if (indices.y == size.y - 1)
+				zs[nz++] = 1;
 
 			if (indices.z == 0)
-				neighborMask |= Direction::Up;
-			else if (indices.z == chunk->GetSize().z - 1)
-				neighborMask |= Direction::Down;
+				ys[ny++] = -1;
+			else if (indices.z == size.z - 1)
+				ys[ny++] = 1;
+
+			for (std::size_t ix = 0; ix < nx; ++ix)
+			{
+				for (std::size_t iy = 0; iy < ny; ++iy)
+				{
+					for (std::size_t iz = 0; iz < nz; ++iz)
+					{
+						Nz::Int32 dx = xs[ix];
+						Nz::Int32 dy = ys[iy];
+						Nz::Int32 dz = zs[iz];
+
+						if (dx == 0 && dy == 0 && dz == 0)
+							continue;
+
+						ChunkIndices dir(dx, dy, dz);
+						neighborMask |= ToNeighborChunk({ dx, dy, dz });
+					}
+				}
+			}
 
 			Nz::UInt32 layerMask = 0;
 			layerMask |= 1u << prevLayerIndex;

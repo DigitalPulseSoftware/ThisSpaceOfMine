@@ -52,7 +52,7 @@ namespace tsom
 			m_createdDestroyedChunks[chunk->GetIndices()] = false;
 		});
 
-		m_onChunkUpdated.Connect(chunkContainer.OnChunkUpdated, [this](ChunkContainer* /*emitter*/, Chunk* chunk, DirectionMask neighborMask, Nz::UInt32 layerMask)
+		m_onChunkUpdated.Connect(chunkContainer.OnChunkUpdated, [this](ChunkContainer* /*emitter*/, Chunk* chunk, NeighborChunkMask neighborMask, Nz::UInt32 layerMask)
 		{
 			if ((layerMask & (1u << m_layerIndex)) == 0)
 				return;
@@ -214,7 +214,7 @@ namespace tsom
 		});
 	}
 
-	auto ChunkEntities::ProcessChunkUpdate(const Chunk& chunk, DirectionMask neighborMask) -> UpdateJob*
+	auto ChunkEntities::ProcessChunkUpdate(const Chunk& chunk, NeighborChunkMask neighborMask) -> UpdateJob*
 	{
 		NazaraAssert(chunk.HasContent());
 
@@ -249,9 +249,9 @@ namespace tsom
 		});
 
 		// Add neighbor chunks
-		for (Direction neighborDir : neighborMask)
+		for (NeighborChunk neighborChunk : neighborMask)
 		{
-			ChunkIndices neighborIndices = chunk.GetIndices() + s_chunkDirOffset[neighborDir];
+			ChunkIndices neighborIndices = chunk.GetIndices() + s_neighborChunkOffset[neighborChunk];
 			const Chunk* neighborChunk = m_chunkContainer.GetChunk(neighborIndices);
 
 			// We only need to regenerate collisions for neighbor chunks having per-face collisions (like deformed chunks)

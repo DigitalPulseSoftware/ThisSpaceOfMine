@@ -30,38 +30,6 @@ namespace tsom
 		std::atomic_int64_t s_chunkMeshBuildCount = 0;
 		std::atomic_int64_t s_chunkMeshBuildTime = 0;
 
-		constexpr std::array s_neighborChunkOffset = {
-			ChunkIndices(-1, -1, -1),
-			ChunkIndices(-1, -1,  0),
-			ChunkIndices(-1, -1,  1),
-			ChunkIndices(-1,  0, -1),
-			ChunkIndices(-1,  0,  0),
-			ChunkIndices(-1,  0,  1),
-			ChunkIndices(-1,  1, -1),
-			ChunkIndices(-1,  1,  0),
-			ChunkIndices(-1,  1,  1),
-
-			ChunkIndices( 0, -1, -1),
-			ChunkIndices( 0, -1,  0),
-			ChunkIndices( 0, -1,  1),
-			ChunkIndices( 0,  0, -1),
-			// 0,0,0 not included
-			ChunkIndices( 0,  0,  1),
-			ChunkIndices( 0,  1, -1),
-			ChunkIndices( 0,  1,  0),
-			ChunkIndices( 0,  1,  1),
-
-			ChunkIndices( 1, -1, -1),
-			ChunkIndices( 1, -1,  0),
-			ChunkIndices( 1, -1,  1),
-			ChunkIndices( 1,  0, -1),
-			ChunkIndices( 1,  0,  0),
-			ChunkIndices( 1,  0,  1),
-			ChunkIndices( 1,  1, -1),
-			ChunkIndices( 1,  1,  0),
-			ChunkIndices( 1,  1,  1),
-		};
-		
 		constexpr Nz::Vector3i s_axis[3] = {
 			{ 1, 0, 0 },
 			{ 0, 1, 0 },
@@ -241,7 +209,7 @@ namespace tsom
 
 					ChunkIndices dir(dx, dy, dz);
 					const Chunk* chunk = m_owner.GetChunk(m_indices + dir);
-					neighborChunks[GetNeighborIndex(ChunkIndices(dx, dy, dz))] = chunk;
+					neighborChunks[ToNeighborChunk(ChunkIndices(dx, dy, dz))] = chunk;
 
 					if (chunk)
 						chunkLock.AddChunk(chunk);
@@ -396,7 +364,7 @@ namespace tsom
 		{
 			const Chunk* chunk = m_owner.GetChunk(m_indices + dir);
 
-			neighborChunks[GetNeighborIndex(dir)] = chunk;
+			neighborChunks[ToNeighborChunk(dir)] = chunk;
 			if (chunk)
 				chunkLock.AddChunk(chunk);
 		}
@@ -581,7 +549,7 @@ namespace tsom
 
 		if (crossedBoundaries)
 		{
-			const Chunk* chunk = neighborChunks[GetNeighborIndex(chunkIndices - m_indices)];
+			const Chunk* chunk = neighborChunks[ToNeighborChunk(chunkIndices - m_indices)];
 			if (!chunk)
 				return EmptyBlockIndex;
 

@@ -80,7 +80,7 @@ namespace tsom
 		// We also want oxygen to be 21% of the atmosphere and have the rest as nitrogen
 		m_atmosphere.SetGasAmount(GasType::Nitrogen, oxygenAmount * (100 - Constants::OxygenAtmospherePct) / Constants::OxygenAtmospherePct);
 
-		planetComponent.planet->OnChunkUpdated.Connect([this](ChunkContainer* /*planet*/, Chunk* chunk, DirectionMask /*neighborMask*/, Nz::UInt32 /*layerMask*/)
+		planetComponent.planet->OnChunkUpdated.Connect([this](ChunkContainer* /*planet*/, Chunk* chunk, NeighborChunkMask /*neighborMask*/, Nz::UInt32 /*layerMask*/)
 		{
 			if (chunk->HasFlags(ChunkFlag::SaveToDatabase))
 				m_dirtyChunks.insert(chunk->GetIndices());
