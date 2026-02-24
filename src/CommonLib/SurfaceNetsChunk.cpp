@@ -184,11 +184,6 @@ namespace tsom
 		if (indices.empty())
 			return nullptr;
 
-		/*for (std::size_t i = 0; i < indices.size(); i += 3)
-		{
-			std::swap(indices[i + 1], indices[i + 2]);
-		}*/
-
 		Nz::MeshCollider3D::Settings meshSettings;
 		meshSettings.indexCount = indices.size();
 		meshSettings.indices = indices.data();
