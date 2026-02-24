@@ -199,7 +199,7 @@ namespace tsom
 
 	Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> SurfaceNetsChunk::ComputeBlockCorners(const Nz::Vector3ui& indices) const
 	{
-		std::unordered_map<ChunkIndices, const Chunk*> neighborChunks;
+		NeighborChunkArray neighborChunks;
 
 		// Find every neighbor chunk required, based on block position
 		std::array<int, 2> xs{ 0, 0 };
@@ -223,6 +223,7 @@ namespace tsom
 		else if (indices.z == m_size.z - 1)
 			ys[ny++] = 1;
 
+		MultiChunkReadLock chunkLock;
 		for (std::size_t ix = 0; ix < nx; ++ix)
 		{
 			for (std::size_t iy = 0; iy < ny; ++iy)
@@ -236,17 +237,14 @@ namespace tsom
 					if (dx == 0 && dy == 0 && dz == 0)
 						continue;
 
-					neighborChunks.emplace(ChunkIndices(dx, dy, dz), nullptr);
+					ChunkIndices dir(dx, dy, dz);
+					const Chunk* chunk = m_owner.GetChunk(m_indices + dir);
+					neighborChunks[GetNeighborIndex(ChunkIndices(dx, dy, dz))] = chunk;
+
+					if (chunk)
+						chunkLock.AddChunk(chunk);
 				}
 			}
-		}
-
-		MultiChunkReadLock chunkLock;
-		for (auto&& [dir, chunk] : neighborChunks)
-		{
-			chunk = m_owner.GetChunk(m_indices + dir);
-			if (chunk)
-				chunkLock.AddChunk(chunk);
 		}
 
 		chunkLock.Lock();
@@ -284,7 +282,7 @@ namespace tsom
 		};
 	}
 
-	Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> SurfaceNetsChunk::BuildCorners(const Nz::Vector3ui& indices, const std::unordered_map<ChunkIndices, const Chunk*>& neighborChunks) const
+	Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> SurfaceNetsChunk::BuildCorners(const Nz::Vector3ui& indices, const NeighborChunkArray& neighborChunks) const
 	{
 		Nz::Vector3f blockPos = (Nz::Vector3f(indices) - Nz::Vector3f(m_size) * 0.5f) * m_blockSize + Nz::Vector3f(m_blockSize);
 		Nz::Vector3f blockOffset(blockPos.x, blockPos.z, blockPos.y);
@@ -369,43 +367,14 @@ namespace tsom
 	void SurfaceNetsChunk::BuildMesh(std::size_t layerIndex, std::vector<Nz::UInt32>& indices, const Nz::FunctionRef<VertexAttributes(const Nz::Vector3ui& blockIndices, Direction direction)>& addFace, bool generateVisualMesh) const
 	{
 		// Find and lock all neighbor chunks to avoid discrepancies between chunks
-		// TODO: Switch to a perfect-hash map
-		std::unordered_map<ChunkIndices, const Chunk*> neighborChunks = {
-			{ ChunkIndices(-1, -1, -1),	nullptr },
-			{ ChunkIndices(-1, -1,  0),	nullptr },
-			{ ChunkIndices(-1, -1,  1),	nullptr },
-			{ ChunkIndices(-1,  0, -1),	nullptr },
-			{ ChunkIndices(-1,  0,  0),	nullptr },
-			{ ChunkIndices(-1,  0,  1),	nullptr },
-			{ ChunkIndices(-1,  1, -1),	nullptr },
-			{ ChunkIndices(-1,  1,  0),	nullptr },
-			{ ChunkIndices(-1,  1,  1),	nullptr },
-
-			{ ChunkIndices(0, -1, -1), nullptr },
-			{ ChunkIndices(0, -1,  0), nullptr },
-			{ ChunkIndices(0, -1,  1), nullptr },
-			{ ChunkIndices(0,  0, -1), nullptr },
-
-			{ ChunkIndices(0,  0,  1), nullptr },
-			{ ChunkIndices(0,  1, -1), nullptr },
-			{ ChunkIndices(0,  1,  0), nullptr },
-			{ ChunkIndices(0,  1,  1), nullptr },
-
-			{ ChunkIndices(1, -1, -1), nullptr },
-			{ ChunkIndices(1, -1,  0), nullptr },
-			{ ChunkIndices(1, -1,  1), nullptr },
-			{ ChunkIndices(1,  0, -1), nullptr },
-			{ ChunkIndices(1,  0,  0), nullptr },
-			{ ChunkIndices(1,  0,  1), nullptr },
-			{ ChunkIndices(1,  1, -1), nullptr },
-			{ ChunkIndices(1,  1,  0), nullptr },
-			{ ChunkIndices(1,  1,  1), nullptr },
-		};
+		NeighborChunkArray neighborChunks;
 
 		MultiChunkReadLock chunkLock;
-		for (auto&& [dir, chunk] : neighborChunks)
+		for (const ChunkIndices& dir : s_neighborChunkOffset)
 		{
-			chunk = m_owner.GetChunk(m_indices + dir);
+			const Chunk* chunk = m_owner.GetChunk(m_indices + dir);
+
+			neighborChunks[GetNeighborIndex(dir)] = chunk;
 			if (chunk)
 				chunkLock.AddChunk(chunk);
 		}
@@ -540,47 +509,44 @@ namespace tsom
 		}
 	}
 
-	BlockIndex SurfaceNetsChunk::GetNeighborBlock(const std::unordered_map<ChunkIndices, const Chunk*>& neighborChunks, Nz::Vector3ui indices, const Nz::Vector3i& offset) const
+	BlockIndex SurfaceNetsChunk::GetNeighborBlock(const NeighborChunkArray& neighborChunks, Nz::Vector3ui indices, const Nz::Vector3i& offset) const
 	{
 		ChunkIndices chunkIndices = m_indices;
 		std::swap(chunkIndices.y, chunkIndices.z);
+		bool crossedBoundaries = false;
 
 		for (unsigned int axis : { 0, 1, 2 })
 		{
-			unsigned int& index = indices[axis];
 			int axisOffset = offset[axis];
 			assert(axisOffset >= -1 && axisOffset <= 1);
 
-			if (axisOffset > 0)
-			{
-				index += axisOffset;
-				if (index >= m_size[axis])
-				{
-					index -= m_size[axis];
-					chunkIndices[axis]++;
-				}
-			}
-			else if (axisOffset < 0)
-			{
-				unsigned int posOffset = std::abs(axisOffset);
-				if (posOffset > index)
-				{
-					index += m_size[axis];
-					chunkIndices[axis]--;
-				}
+			int index = static_cast<int>(indices[axis]);
+			index += axisOffset;
 
-				index -= posOffset;
+			int size = int(m_size[axis]);
+
+			if (index < 0)
+			{
+				index += size;
+				chunkIndices[axis]--;
+				crossedBoundaries = true;
 			}
+			else if (index >= size)
+			{
+				index -= size;
+				chunkIndices[axis]++;
+				crossedBoundaries = true;
+			}
+
+			assert(index >= 0 && index < size);
+			indices[axis] = static_cast<unsigned int>(index);
 		}
 
 		std::swap(chunkIndices.y, chunkIndices.z);
 
-		if (chunkIndices != m_indices)
+		if (crossedBoundaries)
 		{
-			auto it = neighborChunks.find(chunkIndices - m_indices);
-			NazaraAssert(it != neighborChunks.end());
-
-			const Chunk* chunk = it->second;
+			const Chunk* chunk = neighborChunks[GetNeighborIndex(chunkIndices - m_indices)];
 			if (!chunk)
 				return EmptyBlockIndex;
 
@@ -592,5 +558,4 @@ namespace tsom
 		else
 			return GetBlockContent(indices);
 	};
-
 }
