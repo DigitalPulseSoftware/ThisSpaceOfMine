@@ -8,6 +8,7 @@
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Components/VisualEntityComponent.hpp>
 #include <CommonLib/Planet.hpp>
+#include <CommonLib/SurfaceNetsChunk.hpp>
 #include <Game/GameConfigAppComponent.hpp>
 #include <Game/GameConfigs.hpp>
 #include <Game/States/StateData.hpp>
@@ -425,6 +426,13 @@ namespace tsom
 					atmosphereScattering = AtmosphereScattering{};
 			}
 			ImGui::End();
+
+			if (ImGui::Begin("Debug"))
+			{
+				ImGui::Text("Chunk mesh build time: %lfms", SurfaceNetsChunk::GetMeshBuildTime() / 1'000'000.0);
+				ImGui::Text("Chunk collider build time: %lfms", SurfaceNetsChunk::GetColliderBuildTime() / 1'000'000.0);
+			}
+			ImGui::End();
 		}
 #endif
 
@@ -440,6 +448,8 @@ namespace tsom
 		taskScheduler.WaitForTasks();
 
 		m_planet->UpdateCornerRadius(m_planetSettings.cornerRadius);
+
+		SurfaceNetsChunk::ResetTime();
 
 		m_planet->ClearChunks();
 		m_planet->AddChunks(*stateData.blockLibrary, m_planetSettings.chunkCount);

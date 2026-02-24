@@ -7,10 +7,12 @@
 #include <CommonLib/ChunkContainer.hpp>
 #include <CommonLib/ChunkLock.hpp>
 #include <CommonLib/Direction.hpp>
+#include <Nazara/Core/Clock.hpp>
 #include <Nazara/Physics3D/Collider3D.hpp>
 #include <NazaraUtils/Bitset.hpp>
 #include <NazaraUtils/CallOnExit.hpp>
 #include <NazaraUtils/FixedVector.hpp>
+#include <map>
 #include <numeric>
 #include <spdlog/spdlog.h>
 
@@ -23,6 +25,11 @@ namespace tsom
 {
 	namespace
 	{
+		std::atomic_int64_t s_chunkColliderBuildCount = 0;
+		std::atomic_int64_t s_chunkColliderBuildTime = 0;
+		std::atomic_int64_t s_chunkMeshBuildCount = 0;
+		std::atomic_int64_t s_chunkMeshBuildTime = 0;
+
 		constexpr std::array s_neighborChunkOffset = {
 			ChunkIndices(-1, -1, -1),
 			ChunkIndices(-1, -1,  0),
@@ -282,6 +289,26 @@ namespace tsom
 		};
 	}
 
+	Nz::Int64 SurfaceNetsChunk::GetColliderBuildTime()
+	{
+		std::int64_t buildCount = std::max(s_chunkColliderBuildCount.load(), std::int64_t(1));
+		return s_chunkColliderBuildTime / buildCount;
+	}
+
+	Nz::Int64 SurfaceNetsChunk::GetMeshBuildTime()
+	{
+		std::int64_t buildCount = std::max(s_chunkMeshBuildCount.load(), std::int64_t(1));
+		return s_chunkMeshBuildTime / buildCount;
+	}
+
+	void SurfaceNetsChunk::ResetTime()
+	{
+		s_chunkColliderBuildCount = 0;
+		s_chunkColliderBuildTime = 0;
+		s_chunkMeshBuildCount = 0;
+		s_chunkMeshBuildTime = 0;
+	}
+
 	Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> SurfaceNetsChunk::BuildCorners(const Nz::Vector3ui& indices, const NeighborChunkArray& neighborChunks) const
 	{
 		Nz::Vector3f blockPos = (Nz::Vector3f(indices) - Nz::Vector3f(m_size) * 0.5f) * m_blockSize + Nz::Vector3f(m_blockSize);
@@ -380,7 +407,9 @@ namespace tsom
 		}
 
 		chunkLock.Lock();
-		
+
+		Nz::HighPrecisionClock clock;
+
 		for (unsigned int z = 0; z < m_size.z; ++z)
 		{
 			for (unsigned int y = 0; y < m_size.y; ++y)
@@ -506,6 +535,17 @@ namespace tsom
 					}
 				}
 			}
+		}
+
+		if (generateVisualMesh)
+		{
+			s_chunkMeshBuildTime += clock.GetElapsedTime().AsNanoseconds();
+			s_chunkMeshBuildCount++;
+		}
+		else
+		{
+			s_chunkColliderBuildTime += clock.GetElapsedTime().AsNanoseconds();
+			s_chunkColliderBuildCount++;
 		}
 	}
 
