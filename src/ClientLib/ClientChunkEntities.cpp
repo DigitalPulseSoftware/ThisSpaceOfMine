@@ -153,7 +153,7 @@ namespace tsom
 		std::vector<Nz::UInt32> indices;
 		std::vector<VertexStruct> vertices;
 
-		auto AddVertices = [&](const Nz::Vector3ui& blockIndices, Direction direction)
+		auto AddVertices = [&](const Nz::Vector3ui& /*blockIndices*/, Direction /*direction*/)
 		{
 			Chunk::VertexAttributes vertexAttributes;
 
@@ -176,8 +176,6 @@ namespace tsom
 
 		std::shared_ptr<Nz::StaticMesh> staticMesh = std::make_shared<Nz::StaticMesh>(std::move(vertexBuffer), std::move(indexBuffer));
 		staticMesh->GenerateAABB();
-		staticMesh->GenerateNormalsAndTangents(); //< FIXME: Tangent generation should be fixed
-		//staticMesh->GenerateTangents(); //< FIXME: Tangent generation should be fixed
 
 		std::shared_ptr<Nz::Mesh> chunkMesh = std::make_shared<Nz::Mesh>();
 		chunkMesh->CreateStatic();

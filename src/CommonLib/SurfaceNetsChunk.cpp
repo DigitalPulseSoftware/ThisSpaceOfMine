@@ -421,8 +421,8 @@ namespace tsom
 						if (vertexAttributes.normal)
 						{
 							// Per face normal
-							Nz::Vector3f n0 = Nz::Vector3f::CrossProduct(vertexAttributes.position[1] - vertexAttributes.position[0], vertexAttributes.position[2] - vertexAttributes.position[0]);
-							Nz::Vector3f n1 = Nz::Vector3f::CrossProduct(vertexAttributes.position[2] - vertexAttributes.position[0], vertexAttributes.position[3] - vertexAttributes.position[0]);
+							Nz::Vector3f n0 = Nz::Vector3f::CrossProduct(vertexAttributes.position[faceIndices[1]] - vertexAttributes.position[faceIndices[0]], vertexAttributes.position[faceIndices[2]] - vertexAttributes.position[faceIndices[0]]);
+							Nz::Vector3f n1 = Nz::Vector3f::CrossProduct(vertexAttributes.position[faceIndices[4]] - vertexAttributes.position[faceIndices[3]], vertexAttributes.position[faceIndices[5]] - vertexAttributes.position[faceIndices[3]]);
 
 							Nz::Vector3f faceNormal = Nz::Vector3f::Normalize(n0 + n1);
 
