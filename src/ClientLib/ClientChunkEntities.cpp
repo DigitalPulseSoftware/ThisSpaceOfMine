@@ -330,15 +330,15 @@ namespace tsom
 		for (NeighborChunk neighborChunk : neighborMask)
 		{
 			ChunkIndices neighborIndices = chunk.GetIndices() + s_neighborChunkOffset[neighborChunk];
-			const Chunk* neighborChunk = m_chunkContainer.GetChunk(neighborIndices);
-			if (!neighborChunk || !neighborChunk->HasContent() || !neighborChunk->IsLayerRegistered(m_layerIndex))
+			const Chunk* neighborChunkPtr = m_chunkContainer.GetChunk(neighborIndices);
+			if (!neighborChunkPtr || !neighborChunkPtr->HasContent() || !neighborChunkPtr->IsLayerRegistered(m_layerIndex))
 				continue;
 
 			updateJob->chunkDependencies.push_back(neighborIndices);
 
 			// Trigger our neighbor update
 			if (!m_updateJobs.contains(neighborIndices))
-				ProcessChunkUpdate(*neighborChunk, 0);
+				ProcessChunkUpdate(*neighborChunkPtr, 0);
 		}
 
 		ColliderModelUpdateJob* jobPtr = updateJob.get();

@@ -252,17 +252,17 @@ namespace tsom
 		for (NeighborChunk neighborChunk : neighborMask)
 		{
 			ChunkIndices neighborIndices = chunk.GetIndices() + s_neighborChunkOffset[neighborChunk];
-			const Chunk* neighborChunk = m_chunkContainer.GetChunk(neighborIndices);
+			const Chunk* neighborChunkPtr = m_chunkContainer.GetChunk(neighborIndices);
 
 			// We only need to regenerate collisions for neighbor chunks having per-face collisions (like deformed chunks)
-			if (!neighborChunk || !neighborChunk->HasContent() || !neighborChunk->HasPerFaceCollisions() || !neighborChunk->IsLayerRegistered(m_layerIndex))
+			if (!neighborChunkPtr || !neighborChunkPtr->HasContent() || !neighborChunkPtr->HasPerFaceCollisions() || !neighborChunkPtr->IsLayerRegistered(m_layerIndex))
 				continue;
 
 			updateJob->chunkDependencies.push_back(neighborIndices);
 
 			// Trigger our neighbor update
 			if (!m_updateJobs.contains(neighborIndices))
-				ProcessChunkUpdate(*neighborChunk, 0);
+				ProcessChunkUpdate(*neighborChunkPtr, 0);
 		}
 
 		UpdateJob* updateJobPtr = updateJob.get();
