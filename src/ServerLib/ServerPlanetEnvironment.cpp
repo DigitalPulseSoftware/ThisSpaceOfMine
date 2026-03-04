@@ -206,71 +206,69 @@ namespace tsom
 			databaseSystem->Save();
 	}
 
-	void ServerPlanetEnvironment::OnTick(Nz::Time elapsedTime)
+	void ServerPlanetEnvironment::Update()
 	{
-		ServerEnvironment::OnTick(elapsedTime);
-
 		std::unique_lock lock(m_chunkLoadingData->mutex);
 
-		if (!m_chunkLoadingData->remainingChunks.empty())
+		if (m_chunkLoadingData->remainingChunks.empty())
+			return;
+
+		ChunkIndices indices = m_chunkLoadingData->remainingChunks.front();
+		m_chunkLoadingData->remainingChunks.pop();
+
+		spdlog::debug("loading chunk {};{};{} ({} remaining)", indices.x, indices.y, indices.z, m_chunkLoadingData->remainingChunks.size());
+
+		lock.unlock();
+
+		Chunk* chunk = GetPlanet().GetChunk(indices);
+		if (!chunk)
+			chunk = &GetPlanet().AddChunk(m_serverInstance.GetBlockLibrary(), indices);
+
+		auto& taskScheduler = m_serverInstance.GetApplication().GetComponent<Nz::TaskSchedulerAppComponent>();
+
+		m_chunkLoadingData->chunkLoadingCount++;
+		taskScheduler.AddTask([chunk, serverInstance = &m_serverInstance, databaseId = m_databaseId, chunkLoadingData = m_chunkLoadingData, seed = m_generationSeed, chunkCount = m_chunkCount, generatorName = m_generatorName]
 		{
-			ChunkIndices indices = m_chunkLoadingData->remainingChunks.front();
-			m_chunkLoadingData->remainingChunks.pop();
-
-			spdlog::debug("loading chunk {};{};{} ({} remaining)", indices.x, indices.y, indices.z, m_chunkLoadingData->remainingChunks.size());
-
-			lock.unlock();
-
-			Chunk* chunk = GetPlanet().GetChunk(indices);
-			if (!chunk)
-				chunk = &GetPlanet().AddChunk(m_serverInstance.GetBlockLibrary(), indices);
-
-			auto& taskScheduler = m_serverInstance.GetApplication().GetComponent<Nz::TaskSchedulerAppComponent>();
-
-			m_chunkLoadingData->chunkLoadingCount++;
-			taskScheduler.AddTask([chunk, serverInstance = &m_serverInstance, databaseId = m_databaseId, chunkLoadingData = m_chunkLoadingData, seed = m_generationSeed, chunkCount = m_chunkCount, generatorName = m_generatorName]
+			bool chunkFound = false;
+			if (databaseId)
 			{
-				bool chunkFound = false;
-				if (databaseId)
+				ServerDatabase& serverDatabase = serverInstance->GetServerDatabase();
+				chunkFound = serverDatabase.GetPlanetChunk(*databaseId, chunk->GetIndices(), [&](Database::PlanetChunk&& planetChunk)
 				{
-					ServerDatabase& serverDatabase = serverInstance->GetServerDatabase();
-					chunkFound = serverDatabase.GetPlanetChunk(*databaseId, chunk->GetIndices(), [&](Database::PlanetChunk&& planetChunk)
-					{
-						if (planetChunk.version != s_chunkVersion)
-							throw std::runtime_error(fmt::format("unhandled version {}", planetChunk.version));
+					if (planetChunk.version != s_chunkVersion)
+						throw std::runtime_error(fmt::format("unhandled version {}", planetChunk.version));
 
-						// Chunk data has decompressedSize first
-						Nz::UInt32 decompressedSize;
-						std::memcpy(&decompressedSize, &planetChunk.chunkData[0], sizeof(decompressedSize));
-						decompressedSize = Nz::LittleEndianToHost(decompressedSize);
+					// Chunk data has decompressedSize first
+					Nz::UInt32 decompressedSize;
+					std::memcpy(&decompressedSize, &planetChunk.chunkData[0], sizeof(decompressedSize));
+					decompressedSize = Nz::LittleEndianToHost(decompressedSize);
 
-						BinaryCompressor& binaryCompressor = BinaryCompressor::GetThreadCompressor();
+					BinaryCompressor& binaryCompressor = BinaryCompressor::GetThreadCompressor();
 
-						std::vector<Nz::UInt8> decompressedData(decompressedSize);
-						std::optional compressedDataOpt = binaryCompressor.Decompress(planetChunk.chunkData.data() + sizeof(decompressedSize), planetChunk.chunkData.size() - sizeof(decompressedSize), decompressedData.data(), decompressedData.size());
-						if (!compressedDataOpt)
-							throw std::runtime_error("chunk decompression failed");
+					std::vector<Nz::UInt8> decompressedData(decompressedSize);
+					std::optional compressedDataOpt = binaryCompressor.Decompress(planetChunk.chunkData.data() + sizeof(decompressedSize), planetChunk.chunkData.size() - sizeof(decompressedSize), decompressedData.data(), decompressedData.size());
+					if (!compressedDataOpt)
+						throw std::runtime_error("chunk decompression failed");
 
-						if (*compressedDataOpt != decompressedSize)
-							throw std::runtime_error("chunk decompression failed (corrupt size)");
+					if (*compressedDataOpt != decompressedSize)
+						throw std::runtime_error("chunk decompression failed (corrupt size)");
 
-						Nz::ByteStream byteStream(decompressedData.data(), decompressedData.size());
+					Nz::ByteStream byteStream(decompressedData.data(), decompressedData.size());
 
-						chunk->LockWrite();
-						chunk->Deserialize(byteStream);
-						chunk->UnlockWrite();
-					});
-				}
+					chunk->LockWrite();
+					chunk->Deserialize(byteStream);
+					chunk->UnlockWrite();
+				});
+			}
 
-				if (!chunkFound)
-					chunkLoadingData->planet->GenerateChunk(*chunk, seed, chunkCount, generatorName);
+			if (!chunkFound)
+				chunkLoadingData->planet->GenerateChunk(*chunk, seed, chunkCount, generatorName);
 
-				chunkLoadingData->HandleChunkLoaded(chunk->GetIndices());
+			chunkLoadingData->HandleChunkLoaded(chunk->GetIndices());
 
-				if (--chunkLoadingData->chunkLoadingCount == 0 && chunkLoadingData->remainingChunks.empty())
-					spdlog::debug("planet chunk loading finished, total chunks: {} (out of {})", chunkLoadingData->visitedChunks.size(), chunkCount.x * chunkCount.y * chunkCount.z);
-			});
-		}
+			if (--chunkLoadingData->chunkLoadingCount == 0 && chunkLoadingData->remainingChunks.empty())
+				spdlog::debug("planet chunk loading finished, total chunks: {} (out of {})", chunkLoadingData->visitedChunks.size(), chunkCount.x * chunkCount.y * chunkCount.z);
+		});
 	}
 
 	ServerAtmosphere* ServerPlanetEnvironment::GetFallbackAtmosphereAtPosition(const Nz::Vector3f& position)

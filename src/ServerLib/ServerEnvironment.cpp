@@ -124,4 +124,8 @@ namespace tsom
 		m_world->GetSystem<NetworkedEntitiesSystem>().UnregisterPlayer(player);
 		m_registeredPlayers.UnregisterPlayer(player);
 	}
+
+	void ServerEnvironment::Update()
+	{
+	}
 }

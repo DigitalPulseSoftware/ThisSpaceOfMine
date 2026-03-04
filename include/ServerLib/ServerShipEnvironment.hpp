@@ -52,7 +52,8 @@ namespace tsom
 			Nz::Result<void, std::string> Load(const nlohmann::json& data);
 
 			void OnSave() override;
-			void OnTick(Nz::Time elapsedTime) override;
+
+			void Update() override;
 
 			void UpdateExterior(ServerEnvironment* exteriorEnvironment, entt::handle exteriorEntity);
 

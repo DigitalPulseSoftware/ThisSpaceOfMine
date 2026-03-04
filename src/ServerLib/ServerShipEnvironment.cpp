@@ -383,7 +383,7 @@ namespace tsom
 		});
 	}
 
-	void ServerShipEnvironment::OnTick(Nz::Time elapsedTime)
+	void ServerShipEnvironment::Update()
 	{
 		// Check and apply chunk areas update
 		for (auto it = m_areaUpdateJobs.begin(); it != m_areaUpdateJobs.end();)
@@ -475,8 +475,6 @@ namespace tsom
 					controlledRigidbody->AddLinearVelocity(shipLinearVelocity);
 			}
 		}
-
-		ServerEnvironment::OnTick(elapsedTime);
 	}
 
 	void ServerShipEnvironment::UpdateExterior(ServerEnvironment* exteriorEnvironment, entt::handle exteriorEntity)
