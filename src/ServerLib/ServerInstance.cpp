@@ -247,9 +247,12 @@ namespace tsom
 		for (auto&& sessionManagerPtr : m_sessionManagers)
 			sessionManagerPtr->Poll();
 
-		// No player? Pause instance for 100ms
+		for (ServerEnvironment* env : m_environments)
+			env->Update();
+
+		// No player? Pause instance for 50ms
 		if (m_config.pauseWhenEmpty && m_players.begin() == m_players.end())
-			return Nz::Time::Milliseconds(100);
+			return Nz::Time::Milliseconds(50);
 
 		m_tickAccumulator += elapsedTime;
 		while (m_tickAccumulator >= m_tickDuration)
@@ -257,6 +260,8 @@ namespace tsom
 			OnTick(m_tickDuration);
 			m_tickAccumulator -= m_tickDuration;
 		}
+
+		OnNetworkTick();
 
 		return m_tickDuration - m_tickAccumulator;
 	}
@@ -279,7 +284,7 @@ namespace tsom
 		});
 	}
 
-	void ServerInstance::OnNetworkTick()
+	void ServerInstance::HandleNetworkEvents()
 	{
 		// Handle disconnected players
 		for (std::size_t playerIndex : m_disconnectedPlayers.IterBits())
@@ -357,7 +362,10 @@ namespace tsom
 			}
 		}
 		m_newPlayers.Clear();
+	}
 
+	void ServerInstance::OnNetworkTick()
+	{
 		ForEachPlayer([&](ServerPlayer& serverPlayer)
 		{
 			serverPlayer.GetVisibilityHandler().Dispatch(m_tickIndex);
@@ -389,6 +397,6 @@ namespace tsom
 		for (ServerEnvironment* env : m_environments)
 			env->OnTick(elapsedTime);
 
-		OnNetworkTick();
+		HandleNetworkEvents();
 	}
 }

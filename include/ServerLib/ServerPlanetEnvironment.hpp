@@ -45,7 +45,8 @@ namespace tsom
 			inline entt::handle GetPlanetEntity() const;
 
 			void OnSave() override;
-			void OnTick(Nz::Time elapsedTime) override;
+
+			void Update() override;
 
 			ServerPlanetEnvironment& operator=(const ServerPlanetEnvironment&) = delete;
 			ServerPlanetEnvironment& operator=(ServerPlanetEnvironment&&) = delete;

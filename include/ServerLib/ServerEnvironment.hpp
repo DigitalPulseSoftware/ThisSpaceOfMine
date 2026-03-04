@@ -63,6 +63,8 @@ namespace tsom
 			void RegisterPlayer(ServerPlayer* player, bool createEntities);
 			void UnregisterPlayer(ServerPlayer* player);
 
+			virtual void Update();
+
 			ServerEnvironment& operator=(const ServerEnvironment&) = delete;
 			ServerEnvironment& operator=(ServerEnvironment&&) = delete;
 
