@@ -24,9 +24,9 @@ namespace tsom
 
 	constexpr NeighborChunk ToNeighborChunk(const Nz::Vector3i32& chunkIndices)
 	{
-		NazaraAssert(chunkIndices.x >= -1 && chunkIndices.x <= -1);
-		NazaraAssert(chunkIndices.y >= -1 && chunkIndices.y <= -1);
-		NazaraAssert(chunkIndices.z >= -1 && chunkIndices.z <= -1);
+		NazaraAssert(chunkIndices.x >= -1 && chunkIndices.x <= 1);
+		NazaraAssert(chunkIndices.y >= -1 && chunkIndices.y <= 1);
+		NazaraAssert(chunkIndices.z >= -1 && chunkIndices.z <= 1);
 
 		return static_cast<NeighborChunk>((chunkIndices.x + 1) * 9 + (chunkIndices.y + 1) * 3 + (chunkIndices.z + 1));
 	}

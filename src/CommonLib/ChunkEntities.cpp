@@ -138,12 +138,14 @@ namespace tsom
 					DestroyChunkEntity(chunkIndices);
 			}
 			m_createdDestroyedChunks.clear();
+
+			std::lock_guard lock2(m_invalidatedChunkMutex);
+
+			for (auto&& [chunkIndices, neighborMask] : m_invalidatedChunks)
+				UpdateChunkEntity(chunkIndices, neighborMask);
+
+			m_invalidatedChunks.clear();
 		}
-
-		for (auto&& [chunkIndices, neighborMask] : m_invalidatedChunks)
-			UpdateChunkEntity(chunkIndices, neighborMask);
-
-		m_invalidatedChunks.clear();
 	}
 
 	void ChunkEntities::CreateChunkEntity(const ChunkIndices& chunkIndices)

@@ -33,9 +33,9 @@
 #include <Nazara/Graphics/PropertyHandler/UniformValuePropertyHandler.hpp>
 #include <Nazara/Platform/Window.hpp>
 #include <Nazara/Renderer/Plugins/ImGuiPlugin.hpp>
-#include <numeric>
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
+#include <numeric>
 
 namespace tsom
 {

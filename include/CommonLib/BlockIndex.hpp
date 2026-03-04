@@ -7,8 +7,8 @@
 #ifndef TSOM_COMMONLIB_BLOCKINDEX_HPP
 #define TSOM_COMMONLIB_BLOCKINDEX_HPP
 
-#include <NazaraUtils/Prerequisites.hpp>
 #include <NazaraUtils/Constants.hpp>
+#include <NazaraUtils/Prerequisites.hpp>
 
 namespace tsom
 {
