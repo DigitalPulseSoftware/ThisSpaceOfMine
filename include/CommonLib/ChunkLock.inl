@@ -6,6 +6,36 @@
 
 namespace tsom
 {
+	namespace Detail
+	{
+		template<bool Write, typename T>
+		void LockChunk(T* chunk)
+		{
+			if constexpr (Write)
+				chunk->LockWrite();
+			else
+				chunk->LockRead();
+		}
+
+		template<bool Write, typename T>
+		bool TryLockChunk(T* chunk)
+		{
+			if constexpr (Write)
+				return chunk->TryLockWrite();
+			else
+				return chunk->TryLockRead();
+		}
+
+		template<bool Write, typename T>
+		void UnlockChunk(T* chunk)
+		{
+			if constexpr (Write)
+				chunk->UnlockWrite();
+			else
+				chunk->UnlockRead();
+		}
+	}
+
 	template<bool Write>
 	ChunkLock<Write>::ChunkLock(ChunkType chunk) :
 	m_chunk(chunk),
@@ -46,11 +76,8 @@ namespace tsom
 	void ChunkLock<Write>::Lock()
 	{
 		NazaraAssertMsg(!m_isLocked, "ChunkLock is already locked");
-		if constexpr (Write)
-			m_chunk->LockWrite();
-		else
-			m_chunk->LockRead();
 
+		Detail::LockChunk<Write>(m_chunk);
 		m_isLocked = true;
 	}
 
@@ -58,11 +85,8 @@ namespace tsom
 	void ChunkLock<Write>::Unlock()
 	{
 		NazaraAssertMsg(m_isLocked, "ChunkLock isn't locked");
-		if constexpr (Write)
-			m_chunk->UnlockWrite();
-		else
-			m_chunk->UnlockRead();
 
+		Detail::UnlockChunk<Write>(m_chunk);
 		m_isLocked = false;
 	}
 
@@ -91,6 +115,7 @@ namespace tsom
 	void MultiChunkLock<Write, Max>::AddChunk(ChunkType chunk)
 	{
 		NazaraAssertMsg(!m_isLocked, "ChunkLock is already locked");
+		NazaraAssertMsg(std::find(m_chunks.begin(), m_chunks.end(), chunk) == m_chunks.end(), "Chunk is already in the list");
 		m_chunks.push_back(chunk);
 	}
 
@@ -99,24 +124,32 @@ namespace tsom
 	{
 		// Algorithm to lock every chunk without deadlock
 		std::size_t lastFailureMutex = Nz::MaxValue();
+
 		for (;;)
 		{
 			bool succeeded = true;
 			for (std::size_t i = 0; i < m_chunks.size(); ++i)
 			{
-				if (i != lastFailureMutex && !m_chunks[i]->TryLockRead())
-				{
-					succeeded = false;
+				if (i == lastFailureMutex)
+					continue;
 
-					// Lock failed, unlock everything and try again
-					for (std::size_t j = 0; j < i; ++j)
-						m_chunks[j]->UnlockRead();
+				if (Detail::TryLockChunk<Write>(m_chunks[i]))
+					continue;
 
-					// Lock blocked chunk first to pause thread
-					m_chunks[i]->LockRead();
-					lastFailureMutex = i;
-					break;
-				}
+				// Lock failed, unlock everything and try again
+				succeeded = false;
+
+				for (std::size_t j = 0; j < i; ++j)
+					Detail::UnlockChunk<Write>(m_chunks[j]);
+
+				if (lastFailureMutex > i && lastFailureMutex < m_chunks.size())
+					Detail::UnlockChunk<Write>(m_chunks[lastFailureMutex]);
+
+				// Lock blocked chunk first to pause thread
+				Detail::LockChunk<Write>(m_chunks[i]);
+
+				lastFailureMutex = i;
+				break;
 			}
 
 			if (succeeded)
@@ -131,7 +164,7 @@ namespace tsom
 	{
 		NazaraAssertMsg(m_isLocked, "ChunkLock isn't locked");
 		for (const Chunk* chunk : m_chunks)
-			chunk->UnlockRead();
+			Detail::UnlockChunk<Write>(chunk);
 
 		m_isLocked = false;
 	}
