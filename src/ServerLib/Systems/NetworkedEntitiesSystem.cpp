@@ -3,6 +3,7 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ServerLib/Systems/NetworkedEntitiesSystem.hpp>
+#include <CommonLib/EntityClass.hpp>
 #include <CommonLib/Planet.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Components/PlanetComponent.hpp>
@@ -20,17 +21,18 @@ namespace tsom
 	NetworkedEntitiesSystem::NetworkedEntitiesSystem(entt::registry& registry, ServerEnvironment& environment) :
 	m_networkedEntities(registry),
 	m_registry(registry),
-	m_environment(environment)
+	m_environment(environment),
+	m_players(environment.GetServerInstance())
 	{
 		m_networkedEntities.OnEntityAdded.Connect([&](entt::entity entity)
 		{
 			// Handle entities in Update to let all components initialize themselves
-			m_pendingEntities.emplace(entity);
+			m_pendingCreatedEntities.emplace(entity);
 		});
 
 		m_networkedEntities.OnEntityRemove.Connect([&](entt::entity entity)
 		{
-			if (!m_pendingEntities.remove(entity))
+			if (!m_pendingCreatedEntities.remove(entity))
 			{
 				ForEachVisibility([&](SessionVisibilityHandler& visibility)
 				{
@@ -40,15 +42,9 @@ namespace tsom
 		});
 	}
 
-	void NetworkedEntitiesSystem::CreateAllEntities(SessionVisibilityHandler& visibility) const
-	{
-		for (auto&& [entity, entityData] : m_networkedEntities.each())
-			CreateEntity(visibility, entt::handle(m_registry, entity), BuildCreateEntityData(entity));
-	}
-
 	void NetworkedEntitiesSystem::ForEachVisibility(const Nz::FunctionRef<void(SessionVisibilityHandler& visibility)>& functor)
 	{
-		m_environment.ForEachPlayer([&](ServerPlayer& player)
+		m_players.ForEachPlayer([&](ServerPlayer& player)
 		{
 			functor(player.GetVisibilityHandler());
 		});
@@ -57,11 +53,23 @@ namespace tsom
 	void NetworkedEntitiesSystem::ForgetEntity(entt::entity entity)
 	{
 		m_networkedEntities.Remove(entity);
+		m_pendingCreatedEntities.remove(entity);
+	}
+
+	void NetworkedEntitiesSystem::UnregisterPlayer(ServerPlayer* player)
+	{
+		auto it = std::find(m_pendingPlayers.begin(), m_pendingPlayers.end(), player);
+		if (it != m_pendingPlayers.end())
+			m_pendingPlayers.erase(it);
+		else
+		{
+			m_players.UnregisterPlayer(player);
+		}
 	}
 
 	void NetworkedEntitiesSystem::Update(Nz::Time /*elapsedTime*/)
 	{
-		for (entt::entity entity : m_pendingEntities)
+		for (entt::entity entity : m_pendingCreatedEntities)
 		{
 			EntityData& entityData = m_networkedEntities.Get(entity);
 
@@ -148,7 +156,25 @@ namespace tsom
 				CreateEntity(visibility, entt::handle(m_registry, entity), createData);
 			});
 		}
-		m_pendingEntities.clear();
+		m_pendingCreatedEntities.clear();
+
+		if (!m_pendingPlayers.empty())
+		{
+			// Send all entities to newly connected players
+			for (auto&& [entity, entityData] : m_networkedEntities.each())
+			{
+				entt::handle entityHandle(m_registry, entity);
+
+				SessionVisibilityHandler::CreateEntityData createData = BuildCreateEntityData(entity);
+				for (ServerPlayer* player : m_pendingPlayers)
+					CreateEntity(player->GetVisibilityHandler(), entityHandle, createData);
+			}
+
+			for (ServerPlayer* player : m_pendingPlayers)
+				m_players.RegisterPlayer(player);
+
+			m_pendingPlayers.clear();
+		}
 	}
 
 	SessionVisibilityHandler::CreateEntityData NetworkedEntitiesSystem::BuildCreateEntityData(entt::entity entity) const

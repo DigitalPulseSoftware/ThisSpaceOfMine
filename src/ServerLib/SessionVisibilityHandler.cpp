@@ -117,7 +117,7 @@ namespace tsom
 
 			EnvironmentId envId = Nz::SafeCast<EnvironmentId>(envIndex);
 
-			assert(!m_environmentIndices.contains(&environment));
+			NazaraAssert(!m_environmentIndices.contains(&environment));
 			m_environmentIndices[&environment] = envId;
 
 			if (envIndex >= m_environments.size())
@@ -127,7 +127,7 @@ namespace tsom
 			m_environments[envIndex].owner = environmentOwner;
 			m_environments[envIndex].isVisible = false;
 
-			assert(std::find_if(m_createdEnvironments.begin(), m_createdEnvironments.end(), [&](const EnvironmentCreationData& envCreation) { return envCreation.environment == &environment; }) == m_createdEnvironments.end());
+			NazaraAssert(std::find_if(m_createdEnvironments.begin(), m_createdEnvironments.end(), [&](const EnvironmentCreationData& envCreation) { return envCreation.environment == &environment; }) == m_createdEnvironments.end());
 			m_createdEnvironments.push_back({
 				.environment = &environment,
 				.owner = environmentOwner,

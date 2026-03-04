@@ -2,22 +2,18 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
-#include <Nazara/Core/Error.hpp>
-
 namespace tsom
 {
 	template<typename F>
 	void ServerEnvironment::ForEachPlayer(F&& callback)
 	{
-		for (std::size_t playerIndex : m_registeredPlayers.IterBits())
-			callback(*m_serverInstance.GetPlayer(playerIndex));
+		m_registeredPlayers.ForEachPlayer(std::forward<F>(callback));
 	}
 
 	template<typename F>
 	void ServerEnvironment::ForEachPlayer(F&& callback) const
 	{
-		for (std::size_t playerIndex : m_registeredPlayers.IterBits())
-			callback(*m_serverInstance.GetPlayer(playerIndex));
+		m_registeredPlayers.ForEachPlayer(std::forward<F>(callback));
 	}
 
 	inline ServerInstance& ServerEnvironment::GetServerInstance()

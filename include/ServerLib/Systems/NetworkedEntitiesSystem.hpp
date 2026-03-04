@@ -10,14 +10,14 @@
 #include <ServerLib/Export.hpp>
 #include <CommonLib/ChunkContainer.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
+#include <ServerLib/ServerPlayerList.hpp>
 #include <ServerLib/SessionVisibilityHandler.hpp>
 #include <Nazara/Core/EnttObserver.hpp>
 #include <Nazara/Core/Time.hpp>
 #include <NazaraUtils/FunctionRef.hpp>
 #include <NazaraUtils/TypeList.hpp>
 #include <entt/entt.hpp>
-#include <tsl/hopscotch_map.h>
-#include <tsl/hopscotch_set.h>
+#include <vector>
 
 namespace Nz
 {
@@ -27,6 +27,7 @@ namespace Nz
 namespace tsom
 {
 	class ServerEnvironment;
+	class ServerPlayer;
 
 	class TSOM_SERVERLIB_API NetworkedEntitiesSystem
 	{
@@ -40,10 +41,11 @@ namespace tsom
 			NetworkedEntitiesSystem(NetworkedEntitiesSystem&&) = delete;
 			~NetworkedEntitiesSystem() = default;
 
-			void CreateAllEntities(SessionVisibilityHandler& visibility) const;
-
 			void ForEachVisibility(const Nz::FunctionRef<void(SessionVisibilityHandler& visibility)>& functor);
 			void ForgetEntity(entt::entity entity);
+
+			inline void RegisterPlayer(ServerPlayer* player, bool createEntities);
+			void UnregisterPlayer(ServerPlayer* player);
 
 			void Update(Nz::Time elapsedTime);
 
@@ -62,10 +64,12 @@ namespace tsom
 				NazaraSlot(ClassInstanceComponent, OnPropertyUpdate, onPropertyUpdate);
 			};
 
-			entt::storage<void> m_pendingEntities;
+			std::vector<ServerPlayer*> m_pendingPlayers;
+			entt::storage<void> m_pendingCreatedEntities;
 			Nz::EnttObserver<Nz::TypeList<class NetworkedComponent>, Nz::TypeList<Nz::DisabledComponent>, EntityData> m_networkedEntities;
 			entt::registry& m_registry;
 			ServerEnvironment& m_environment;
+			ServerPlayerList m_players;
 	};
 }
 

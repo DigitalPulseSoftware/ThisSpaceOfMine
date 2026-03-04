@@ -17,6 +17,7 @@
 namespace tsom
 {
 	ServerEnvironment::ServerEnvironment(ServerInstance& serverInstance, ServerEnvironmentType type, bool isRoot) :
+	m_registeredPlayers(serverInstance),
 	m_type(type),
 	m_serverInstance(serverInstance),
 	m_isRoot(isRoot)
@@ -112,15 +113,15 @@ namespace tsom
 		m_world->Update(elapsedTime);
 	}
 
-	void ServerEnvironment::RegisterPlayer(ServerPlayer* player)
+	void ServerEnvironment::RegisterPlayer(ServerPlayer* player, bool createEntities)
 	{
-		NazaraAssertMsg(!m_registeredPlayers.UnboundedTest(player->GetPlayerIndex()), "player was already registered");
-		m_registeredPlayers.UnboundedSet(player->GetPlayerIndex());
+		m_registeredPlayers.RegisterPlayer(player);
+		m_world->GetSystem<NetworkedEntitiesSystem>().RegisterPlayer(player, createEntities);
 	}
 
 	void ServerEnvironment::UnregisterPlayer(ServerPlayer* player)
 	{
-		NazaraAssertMsg(m_registeredPlayers.UnboundedTest(player->GetPlayerIndex()), "player is not registered");
-		m_registeredPlayers.Reset(player->GetPlayerIndex());
+		m_world->GetSystem<NetworkedEntitiesSystem>().UnregisterPlayer(player);
+		m_registeredPlayers.UnregisterPlayer(player);
 	}
 }

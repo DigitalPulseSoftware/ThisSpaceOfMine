@@ -6,6 +6,7 @@
 #include <CommonLib/CharacterController.hpp>
 #include <CommonLib/ConsoleExecutor.hpp>
 #include <CommonLib/ShipController.hpp>
+#include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Scripting/AssetScriptingLibrary.hpp>
 #include <CommonLib/Scripting/ChunkScriptingLibrary.hpp>
 #include <CommonLib/Scripting/MathScriptingLibrary.hpp>
@@ -19,7 +20,6 @@
 #include <ServerLib/Scripting/ServerEntityScriptingLibrary.hpp>
 #include <ServerLib/Scripting/ServerScriptingLibrary.hpp>
 #include <ServerLib/Systems/EnvironmentProxySystem.hpp>
-#include <ServerLib/Systems/NetworkedEntitiesSystem.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <cassert>
 
@@ -66,13 +66,9 @@ namespace tsom
 		assert(m_rootEnvironment);
 		assert(!IsInEnvironment(environment));
 		m_registeredEnvironments.push_back(environment);
-		environment->RegisterPlayer(this);
 
-		if (m_visibilityHandler.CreateEnvironment(*environment, environmentOwner))
-		{
-			auto& networkedEntities = environment->GetWorld().GetSystem<NetworkedEntitiesSystem>();
-			networkedEntities.CreateAllEntities(m_visibilityHandler);
-		}
+		bool shouldCreateEntities = m_visibilityHandler.CreateEnvironment(*environment, environmentOwner);
+		environment->RegisterPlayer(this, shouldCreateEntities);
 	}
 
 	void ServerPlayer::ClearEnvironments()

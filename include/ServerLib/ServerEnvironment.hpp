@@ -10,6 +10,7 @@
 #include <ServerLib/Export.hpp>
 #include <CommonLib/Debug/DebugDrawInterface.hpp>
 #include <ServerLib/ServerInstance.hpp>
+#include <ServerLib/ServerPlayerList.hpp>
 #include <Nazara/Core/EnttWorld.hpp>
 #include <memory>
 
@@ -59,7 +60,7 @@ namespace tsom
 			virtual void OnSave() = 0;
 			virtual void OnTick(Nz::Time elapsedTime);
 
-			void RegisterPlayer(ServerPlayer* player);
+			void RegisterPlayer(ServerPlayer* player, bool createEntities);
 			void UnregisterPlayer(ServerPlayer* player);
 
 			ServerEnvironment& operator=(const ServerEnvironment&) = delete;
@@ -77,7 +78,7 @@ namespace tsom
 
 			std::unique_ptr<Nz::EnttWorld> m_world;
 			std::unique_ptr<DebugDrawInterface> m_debugDrawer;
-			Nz::Bitset<Nz::UInt64> m_registeredPlayers;
+			ServerPlayerList m_registeredPlayers;
 			ServerEnvironmentType m_type;
 			ServerInstance& m_serverInstance;
 			bool m_isRoot;
