@@ -294,6 +294,7 @@ namespace tsom
 				std::string generatorName = table["generatorName"];
 
 				Database::Planet planet;
+				planet.blockSize = table["blockSize"];
 				planet.chunkCount = table["chunkCount"];
 				planet.cornerRadius = table["cornerRadius"];
 				planet.generatorName = generatorName;

@@ -28,6 +28,7 @@ namespace tsom::Database
 		std::string_view generatorName;
 		Nz::UInt32 seed;
 		Nz::Vector3ui32 chunkCount;
+		float blockSize = 0.5f;
 		float cornerRadius;
 		float gravity;
 	};
