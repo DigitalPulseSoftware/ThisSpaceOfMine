@@ -182,7 +182,7 @@ namespace tsom
 		m_planetParentEntity.emplace<Nz::NodeComponent>();
 		m_planetParentEntity.emplace<VisualEntityComponent>().visualEntity = m_planetParentEntity;
 
-		m_planet = std::make_unique<Planet>(*stateData.app, 1.0f, 16.f, 9.81f);
+		m_planet = std::make_unique<Planet>(*stateData.app, 0.5f, 16.f, 9.81f);
 		for (std::size_t layerIndex = 0; layerIndex < m_planetEntities.size(); ++layerIndex)
 		{
 			if (!stateData.blockLibrary->IsValidLayer(layerIndex))

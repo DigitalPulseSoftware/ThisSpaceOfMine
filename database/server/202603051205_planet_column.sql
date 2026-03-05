@@ -1,0 +1,1 @@
+ALTER TABLE "planets" ADD COLUMN "block_size" REAL NOT NULL DEFAULT 1.0 CHECK("block_size" > 0)

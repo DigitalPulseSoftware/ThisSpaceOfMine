@@ -112,6 +112,7 @@ int ServerMain(int argc, char* argv[])
 				.generatorName = "bob",
 				.seed = 42,
 				.chunkCount = Nz::Vector3ui(5),
+				.blockSize = 0.5f,
 				.cornerRadius = 16.f,
 				.gravity = 9.81f
 			});

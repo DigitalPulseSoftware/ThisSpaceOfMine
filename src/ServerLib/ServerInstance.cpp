@@ -191,7 +191,7 @@ namespace tsom
 		m_databaseEnvironments.clear();
 		m_serverDatabase.GetAllPlanets([&](Database::Planet&& planetData)
 		{
-			RegisterDatabaseEnvironment(planetData.id, std::make_unique<ServerPlanetEnvironment>(*this, planetData.id, std::string(planetData.generatorName), planetData.seed, planetData.chunkCount, 1.f, planetData.cornerRadius));
+			RegisterDatabaseEnvironment(planetData.id, std::make_unique<ServerPlanetEnvironment>(*this, planetData.id, std::string(planetData.generatorName), planetData.seed, planetData.chunkCount, planetData.blockSize, planetData.cornerRadius));
 			return true;
 		});
 
