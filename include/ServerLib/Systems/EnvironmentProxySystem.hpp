@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -8,9 +8,10 @@
 #define TSOM_SERVERLIB_SYSTEMS_ENVIRONMENTPROXYSYSTEM_HPP
 
 #include <ServerLib/Export.hpp>
+#include <Nazara/Core/EnttObserver.hpp>
 #include <Nazara/Core/Time.hpp>
 #include <NazaraUtils/TypeList.hpp>
-#include <entt/fwd.hpp>
+#include <entt/entt.hpp>
 
 namespace Nz
 {
@@ -19,24 +20,28 @@ namespace Nz
 
 namespace tsom
 {
+	class ServerEnvironment;
+	class ServerPlayer;
+
 	class TSOM_SERVERLIB_API EnvironmentProxySystem
 	{
 		public:
 			static constexpr bool AllowConcurrent = false;
-			static constexpr Nz::Int64 ExecutionOrder = 1'000'000;
+			static constexpr Nz::Int64 ExecutionOrder = -1'000'000;
 			using Components = Nz::TypeList<class EnvironmentProxyComponent, Nz::NodeComponent>;
 
-			inline EnvironmentProxySystem(entt::registry& registry);
+			EnvironmentProxySystem(entt::registry& registry);
 			EnvironmentProxySystem(const EnvironmentProxySystem&) = delete;
 			EnvironmentProxySystem(EnvironmentProxySystem&&) = delete;
 			~EnvironmentProxySystem() = default;
 
-			void Update(Nz::Time elapsedTime);
+			void AddEnvironmentRecursively(ServerPlayer* player);
 
 			EnvironmentProxySystem& operator=(const EnvironmentProxySystem&) = delete;
 			EnvironmentProxySystem& operator=(EnvironmentProxySystem&&) = delete;
 
 		private:
+			Nz::EnttObserver<Nz::TypeList<Nz::NodeComponent, class EnvironmentProxyComponent>> m_observer;
 			entt::registry& m_registry;
 	};
 }

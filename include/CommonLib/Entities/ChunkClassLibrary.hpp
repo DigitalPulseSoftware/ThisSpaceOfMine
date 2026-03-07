@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -38,8 +38,9 @@ namespace tsom
 			ChunkClassLibrary& operator=(ChunkClassLibrary&&) = delete;
 
 		protected:
-			virtual void InitializeChunkEntity(entt::handle entity);
-			virtual std::unique_ptr<ChunkEntities> SetupChunkEntities(Nz::EnttWorld& world, ChunkContainer& chunkContainer);
+			virtual void InitializePlanetEntity(entt::handle entity);
+			virtual void InitializeShipEntity(entt::handle entity);
+			virtual std::unique_ptr<ChunkEntities> SetupChunkEntities(Nz::EnttWorld& world, ChunkContainer& chunkContainer, std::size_t layerIndex);
 
 			Nz::ApplicationBase& m_app;
 			const BlockLibrary& m_blockLibrary;

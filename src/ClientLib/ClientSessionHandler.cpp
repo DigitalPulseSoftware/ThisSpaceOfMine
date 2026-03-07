@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -17,8 +17,11 @@
 #include <ClientLib/Components/TransformCopyComponent.hpp>
 #include <ClientLib/Components/VisualEntityComponent.hpp>
 #include <ClientLib/Entities/ClientChunkClassLibrary.hpp>
+#include <ClientLib/Entities/ClientEntityClassLibrary.hpp>
+#include <ClientLib/Scripting/ClientAssetScriptingLibrary.hpp>
 #include <ClientLib/Scripting/ClientEntityScriptingLibrary.hpp>
 #include <ClientLib/Scripting/ClientScriptingLibrary.hpp>
+#include <CommonLib/ChunkLock.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/NetworkSession.hpp>
 #include <CommonLib/PhysicsConstants.hpp>
@@ -47,28 +50,28 @@
 #include <Nazara/Physics3D/Components/PhysCharacter3DComponent.hpp>
 #include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
 #include <Nazara/TextRenderer/SimpleTextDrawer.hpp>
-#include <fmt/color.h>
-#include <fmt/format.h>
+#include <spdlog/spdlog.h>
 
 namespace tsom
 {
 	constexpr SessionHandler::SendAttributeTable s_packetAttributes = SessionHandler::BuildAttributeTable({
-		{ PacketIndex<Packets::AuthRequest>,        { .channel = 0, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::ExitShipControl>,    { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::Interact>,           { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::MineBlock>,          { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::PlaceBlock>,         { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::SendChatMessage>,    { .channel = 0, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::UpdatePlayerInputs>, { .channel = 1, .flags = Nz::ENetPacketFlag_Unreliable } }
+		{ PacketIndex<Packets::C_AuthRequest>,        { .channel = 0, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::C_ExitShipControl>,    { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::C_Interact>,           { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::C_MineBlock>,          { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::C_PlaceBlock>,         { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::C_SendChatMessage>,    { .channel = 0, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::C_SendConsoleCommand>, { .channel = 0, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::C_UpdatePlayerInputs>, { .channel = 1, .flags = Nz::ENetPacketFlag_Unreliable } }
 	});
 
-	ClientSessionHandler::ClientSessionHandler(NetworkSession* session, Nz::ApplicationBase& app, Nz::EnttWorld& world, ClientBlockLibrary& blockLibrary) :
+	ClientSessionHandler::ClientSessionHandler(NetworkSession* session, Nz::ApplicationBase& app, ConfigFile& config, Nz::EnttWorld& world, ClientBlockLibrary& blockLibrary) :
 	SessionHandler(session),
 	m_app(app),
 	m_world(world),
 	m_blockLibrary(blockLibrary),
+	m_config(config),
 	m_ownPlayerIndex(InvalidPlayerIndex),
-	m_currentEnvironmentIndex(Nz::MaxValue()),
 	m_scriptingContext(app),
 	m_lastInputIndex(0)
 	{
@@ -76,12 +79,14 @@ namespace tsom
 		SetupAttributeTable(s_packetAttributes);
 
 		m_scriptingContext.RegisterLibrary<MathScriptingLibrary>();
-		m_scriptingContext.RegisterLibrary<ClientScriptingLibrary>(m_app, *this);
+		m_scriptingContext.RegisterLibrary<ClientAssetScriptingLibrary>(m_app);
 		m_scriptingContext.LoadDirectory("scripts/assets");
 
-		m_entityRegistry.RegisterClassLibrary<ClientChunkClassLibrary>(m_app, m_blockLibrary);
+		m_entityRegistry.RegisterClassLibrary<ClientChunkClassLibrary>(m_app, config, m_blockLibrary);
+		m_entityRegistry.RegisterClassLibrary<ClientEntityClassLibrary>(m_app);
 
 		m_scriptingContext.RegisterLibrary<ClientEntityScriptingLibrary>(m_entityRegistry);
+		m_scriptingContext.RegisterLibrary<ClientScriptingLibrary>(m_app, config, *this);
 
 		LoadScripts();
 	}
@@ -95,12 +100,15 @@ namespace tsom
 		}
 	}
 
-	void ClientSessionHandler::EnableShipControl(bool enable)
+	const Nz::Node* ClientSessionHandler::GetEnvironmentNode(std::size_t environmentIndex) const
 	{
-		OnShipControlUpdated(enable);
+		if (environmentIndex > m_environments.size() || !m_environments[environmentIndex])
+			return nullptr;
+
+		return m_environments[environmentIndex]->rootEntity.try_get<Nz::NodeComponent>();
 	}
 
-	void ClientSessionHandler::HandlePacket(Packets::AuthResponse&& authResponse)
+	void ClientSessionHandler::HandlePacket(Packets::S_AuthResponse&& authResponse)
 	{
 		if (authResponse.authResult.IsOk())
 			m_ownPlayerIndex = authResponse.ownPlayerIndex;
@@ -108,13 +116,13 @@ namespace tsom
 		OnAuthResponse(authResponse);
 	}
 
-	void ClientSessionHandler::HandlePacket(Packets::ChatMessage&& chatMessage)
+	void ClientSessionHandler::HandlePacket(Packets::S_ChatMessage&& chatMessage)
 	{
 		if (chatMessage.playerIndex)
 		{
 			if (chatMessage.playerIndex >= m_players.size())
 			{
-				fmt::print(fg(fmt::color::red), "ChatMessage with unknown player index {}\n", *chatMessage.playerIndex);
+				spdlog::error("ChatMessage with unknown player index {}", *chatMessage.playerIndex);
 				return;
 			}
 
@@ -124,7 +132,7 @@ namespace tsom
 			OnChatMessage(chatMessage.message);
 	}
 
-	void ClientSessionHandler::HandlePacket(Packets::ChunkCreate&& chunkCreate)
+	void ClientSessionHandler::HandlePacket(Packets::S_ChunkCreate&& chunkCreate)
 	{
 		ChunkIndices indices(chunkCreate.chunkLocX, chunkCreate.chunkLocY, chunkCreate.chunkLocZ);
 
@@ -142,7 +150,7 @@ namespace tsom
 		chunkNetworkMap.chunkNetworkIndices.emplace(chunk, chunkCreate.chunkId);
 	}
 
-	void ClientSessionHandler::HandlePacket(Packets::ChunkDestroy&& chunkDestroy)
+	void ClientSessionHandler::HandlePacket(Packets::S_ChunkDestroy&& chunkDestroy)
 	{
 		assert(m_entities[chunkDestroy.entityId]);
 		entt::handle& entity = m_entities[chunkDestroy.entityId]->entity;
@@ -157,7 +165,7 @@ namespace tsom
 		chunkNetworkMap.chunkByNetworkIndex.erase(it);
 	}
 
-	void ClientSessionHandler::HandlePacket(Packets::ChunkReset&& chunkReset)
+	void ClientSessionHandler::HandlePacket(Packets::S_ChunkReset&& chunkReset)
 	{
 		assert(m_entities[chunkReset.entityId]);
 		entt::handle& entity = m_entities[chunkReset.entityId]->entity;
@@ -166,175 +174,54 @@ namespace tsom
 		Chunk* chunk = Nz::Retrieve(chunkNetworkMap.chunkByNetworkIndex, chunkReset.chunkId);
 		if (!chunk)
 		{
-			fmt::print(fg(fmt::color::red), "ChunkReset handler: unknown chunk {}\n", chunkReset.chunkId);
+			spdlog::error("ChunkReset handler: unknown chunk {}", chunkReset.chunkId);
 			return;
 		}
 
-		chunk->LockWrite();
-		chunk->Reset([&](BlockIndex* blocks)
+		ChunkWriteLock lock(chunk);
+
+		if (!chunkReset.content.empty())
 		{
-			for (BlockIndex blockContent : chunkReset.content)
-				*blocks++ = blockContent;
-		});
-		chunk->UnlockWrite();
+			chunk->Reset([&](BlockIndex* blocks)
+			{
+				for (BlockIndex blockContent : chunkReset.content)
+					*blocks++ = blockContent;
+			});
+		}
+		else
+			chunk->Reset();
 	}
 
-	void ClientSessionHandler::HandlePacket(Packets::ChunkUpdate&& chunkUpdate)
+	void ClientSessionHandler::HandlePacket(Packets::S_ChunkUpdate&& chunkUpdate)
 	{
 		assert(m_entities[chunkUpdate.entityId]);
 		entt::handle& entity = m_entities[chunkUpdate.entityId]->entity;
 		auto& chunkNetworkMap = entity.get<ChunkNetworkMapComponent>();
 
 		Chunk* chunk = Nz::Retrieve(chunkNetworkMap.chunkByNetworkIndex, chunkUpdate.chunkId);
-		chunk->LockWrite();
+		ChunkWriteLock lock(chunk);
 
 		for (auto&& [blockPos, blockIndex] : chunkUpdate.updates)
 			chunk->UpdateBlock({ blockPos.x, blockPos.y, blockPos.z }, Nz::SafeCast<BlockIndex>(blockIndex));
-
-		chunk->UnlockWrite();
 	}
 
-	void ClientSessionHandler::HandlePacket(Packets::DebugDrawLineList&& debugDrawLineList)
+	void ClientSessionHandler::HandlePacket(Packets::S_ConsoleOutput&& consoleOutput)
 	{
-		std::shared_ptr<Nz::MaterialInstance> debugMat = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic);
-		debugMat->SetValueProperty("BaseColor", debugDrawLineList.color);
-		debugMat->UpdatePassesStates([](Nz::RenderStates& states)
-		{
-			states.depthBuffer = false;
-			states.primitiveMode = Nz::PrimitiveMode::LineList;
-			return true;
-		});
-
-		std::shared_ptr<Nz::VertexBuffer> debugVB = std::make_shared<Nz::VertexBuffer>(Nz::VertexDeclaration::Get(Nz::VertexLayout::XYZ), Nz::SafeCast<Nz::UInt32>(debugDrawLineList.vertices.size()), Nz::BufferUsage::Write, Nz::SoftwareBufferFactory, debugDrawLineList.vertices.data());
-		std::shared_ptr<Nz::IndexBuffer> debugIB = std::make_shared<Nz::IndexBuffer>(Nz::IndexType::U16, Nz::SafeCast<Nz::UInt32>(debugDrawLineList.indices.size()), Nz::BufferUsage::Write, Nz::SoftwareBufferFactory, debugDrawLineList.indices.data());
-
-		std::shared_ptr<Nz::StaticMesh> debugSubMesh = std::make_shared<Nz::StaticMesh>(std::move(debugVB), std::move(debugIB));
-		debugSubMesh->GenerateAABB();
-		debugSubMesh->SetPrimitiveMode(Nz::PrimitiveMode::LineList);
-
-		std::shared_ptr<Nz::Mesh> debugMesh = Nz::Mesh::Build(std::move(debugSubMesh));
-		std::shared_ptr<Nz::GraphicalMesh> debugGraphicalMesh = Nz::GraphicalMesh::BuildFromMesh(*debugMesh);
-
-		std::shared_ptr<Nz::Model> debugModel = std::make_shared<Nz::Model>(debugGraphicalMesh);
-		for (std::size_t i = 0; i < debugModel->GetSubMeshCount(); ++i)
-			debugModel->SetMaterial(i, debugMat);
-
-		entt::handle debugEntity = m_world.CreateEntity();
-
-		assert(m_environments[debugDrawLineList.environmentId]);
-		auto& environment = *m_environments[debugDrawLineList.environmentId];
-
-		auto& entityNode = debugEntity.emplace<Nz::NodeComponent>(debugDrawLineList.position, debugDrawLineList.rotation);
-		entityNode.SetParent(environment.rootEntity);
-
-		auto& gfxComponent = debugEntity.emplace<Nz::GraphicsComponent>();
-		gfxComponent.AttachRenderable(std::move(debugModel), tsom::Constants::RenderMask3D);
-
-		debugEntity.emplace<Nz::LifetimeComponent>(Nz::Time::Seconds(debugDrawLineList.duration));
+		OnConsoleOutput(consoleOutput.color, consoleOutput.output);
 	}
 
-	void ClientSessionHandler::HandlePacket(Packets::EntitiesCreation&& entitiesCreation)
+	void ClientSessionHandler::HandlePacket(Packets::S_DebugDrawLineList&& debugDrawLineList)
+	{
+		OnDebugDrawLineList(debugDrawLineList);
+	}
+
+	void ClientSessionHandler::HandlePacket(Packets::S_EntitiesCreation&& entitiesCreation)
 	{
 		for (auto&& entityData : entitiesCreation.entities)
-		{
-			entt::handle entity = m_world.CreateEntity();
-
-			if (entityData.entityId >= m_entities.size())
-				m_entities.resize(entityData.entityId + 1);
-
-			assert(!m_entities[entityData.entityId]);
-			m_entities[entityData.entityId] = EntityData{
-				.environmentIndex = entityData.environmentId,
-				.entity = entity
-			};
-
-			assert(m_environments[entityData.environmentId]);
-			auto& environment = *m_environments[entityData.environmentId];
-			environment.entities.UnboundedSet(entityData.entityId);
-
-			// Create logical entity
-			auto& entityNode = entity.emplace<Nz::NodeComponent>(entityData.initialStates.position, entityData.initialStates.rotation);
-			entityNode.SetParent(environment.rootEntity);
-
-			auto& entityEnv = entity.emplace<EnvironmentComponent>();
-			entityEnv.environmentIndex = entityData.environmentId;
-
-			auto& entityNetId = entity.emplace<ClientEntityNetworkIndex>();
-			entityNetId.networkIndex = entityData.entityId;
-
-			// Create visual entity
-			entt::handle visualEntity = m_world.CreateEntity();
-
-			auto& visualNode = visualEntity.emplace<Nz::NodeComponent>(entityData.initialStates.position, entityData.initialStates.rotation);
-			visualNode.SetParent(environment.visualRootEntity);
-
-			// Bind visual entity to logical entity
-			auto& entityVisualComp = entity.emplace<VisualEntityComponent>();
-			entityVisualComp.visualEntity = visualEntity;
-
-			auto& entityOwnerComp = entity.emplace<EntityOwnerComponent>();
-			entityOwnerComp.Register(visualEntity);
-
-
-			std::string entityClassName = GetSession()->GetStringStore().GetString(entityData.entityClass);
-			if (std::shared_ptr<const EntityClass> entityClass = m_entityRegistry.FindClass(entityClassName))
-			{
-				auto& entityInstance = entity.emplace<ClassInstanceComponent>(entityClass);
-
-				std::size_t networkedPropertyIndex = 0;
-				for (Nz::UInt32 i = 0; i < entityClass->GetPropertyCount(); ++i)
-				{
-					if (entityClass->GetProperty(i).isNetworked)
-						entityInstance.UpdateProperty(i, std::move(entityData.properties[networkedPropertyIndex++]));
-				}
-
-				entityClass->ActivateEntity(entity);
-			}
-			else
-				fmt::print(fg(fmt::color::red), "unknown entity class {}\n", entityClassName);
-
-			if (entityData.playerControlled)
-				SetupEntity(entity, std::move(entityData.playerControlled.value()));
-
-			// TEMP
-			if (PlanetComponent* planetComponent = entity.try_get<PlanetComponent>())
-				environment.gravityController = planetComponent->planet.get();
-			else if (ShipComponent* shipComponent = entity.try_get<ShipComponent>())
-				environment.gravityController = shipComponent->ship.get();
-
-			fmt::print("Created entity {} in environment {} ({})\n", entityData.entityId, entityData.environmentId, entityClassName);
-
-			// Since we make use of parenting for environments, we need to make replication happen in global space
-			if (Nz::RigidBody3DComponent* rigidBody = entity.try_get<Nz::RigidBody3DComponent>())
-			{
-				if (rigidBody->GetReplicationMode() != Nz::PhysicsReplication3D::None)
-				{
-					auto& referencedInterp = visualEntity.emplace<ReferencedPhysicsInterpolationComponent>();
-					referencedInterp.referenceEntity = entity;
-				}
-
-				switch (rigidBody->GetReplicationMode())
-				{
-					case Nz::PhysicsReplication3D::Local:
-						rigidBody->SetReplicationMode(Nz::PhysicsReplication3D::Global);
-						break;
-
-					case Nz::PhysicsReplication3D::LocalOnce:
-						rigidBody->SetReplicationMode(Nz::PhysicsReplication3D::GlobalOnce);
-						break;
-
-					case Nz::PhysicsReplication3D::Custom:
-					case Nz::PhysicsReplication3D::CustomOnce:
-					case Nz::PhysicsReplication3D::Global:
-					case Nz::PhysicsReplication3D::GlobalOnce:
-					case Nz::PhysicsReplication3D::None:
-						break;
-				}
-			}
-		}
+			HandleEntityCreation(std::move(entityData));
 	}
 
-	void ClientSessionHandler::HandlePacket(Packets::EntitiesDelete&& entitiesDelete)
+	void ClientSessionHandler::HandlePacket(Packets::S_EntitiesDelete&& entitiesDelete)
 	{
 		for (auto entityId : entitiesDelete.entities)
 		{
@@ -350,11 +237,11 @@ namespace tsom
 
 			entityData.entity.destroy();
 			m_entities[entityId].reset();
-			fmt::print("Deleted entity {} from environment {}\n", entityId, environmentIndex);
+			spdlog::info("Deleted entity {} from environment {}", entityId, environmentIndex);
 		}
 	}
 
-	void ClientSessionHandler::HandlePacket(Packets::EntitiesStateUpdate&& stateUpdate)
+	void ClientSessionHandler::HandlePacket(Packets::S_EntitiesStateUpdate&& stateUpdate)
 	{
 		for (auto& entityStates : stateUpdate.entities)
 		{
@@ -384,11 +271,11 @@ namespace tsom
 			OnControlledEntityStateUpdate(stateUpdate.lastInputIndex, *stateUpdate.controlledCharacter);
 	}
 
-	void ClientSessionHandler::HandlePacket(Packets::EntityEnvironmentUpdate&& environmentUpdate)
+	void ClientSessionHandler::HandlePacket(Packets::S_EntityEnvironmentUpdate&& environmentUpdate)
 	{
 		assert(m_entities[environmentUpdate.entity]);
 		EntityData& entityData = *m_entities[environmentUpdate.entity];
-		fmt::print("Entity {} moved to environment #{} to environment #{}\n", environmentUpdate.entity, entityData.environmentIndex, environmentUpdate.newEnvironmentId);
+		spdlog::info("Entity {} moved to environment #{} to environment #{}", environmentUpdate.entity, entityData.environmentIndex, environmentUpdate.newEnvironmentId);
 
 		assert(m_environments[entityData.environmentIndex]);
 		auto& oldEnvironment = *m_environments[entityData.environmentIndex];
@@ -413,7 +300,7 @@ namespace tsom
 		visualNode.SetParent(newEnvironment.visualRootEntity, true);
 	}
 
-	void ClientSessionHandler::HandlePacket(Packets::EntityProcedureCall&& procedureCall)
+	void ClientSessionHandler::HandlePacket(Packets::S_EntityProcedureCall&& procedureCall)
 	{
 		assert(m_entities[procedureCall.entity]);
 		EntityData& entityData = *m_entities[procedureCall.entity];
@@ -423,38 +310,51 @@ namespace tsom
 		if (clientRpc.onCalled)
 			clientRpc.onCalled(entityData.entity);
 		else
-			fmt::print(fg(fmt::color::yellow), "client rpc {} has been triggered but has no callback\n", clientRpc.name);
+			spdlog::warn("client rpc {} has been triggered but has no callback", clientRpc.name);
 	}
 
-	void ClientSessionHandler::HandlePacket(Packets::EntityPropertyUpdate&& propertyUpdate)
+	void ClientSessionHandler::HandlePacket(Packets::S_EntityPropertiesUpdate&& propertyUpdate)
 	{
 		assert(m_entities[propertyUpdate.entity]);
 		EntityData& entityData = *m_entities[propertyUpdate.entity];
 
 		auto& classInstance = entityData.entity.get<ClassInstanceComponent>();
-		classInstance.UpdateProperty(propertyUpdate.propertyIndex, std::move(propertyUpdate.propertyValue));
+		for (auto& propertyData : propertyUpdate.properties)
+			classInstance.UpdateProperty(propertyData.index, std::move(propertyData.value));
 	}
 
-	void ClientSessionHandler::HandlePacket(Packets::EnvironmentCreate&& envCreate)
+	void ClientSessionHandler::HandlePacket(Packets::S_EnvironmentCreate&& envCreate)
 	{
-		fmt::print("Created environment #{} at {};{};{}\n", envCreate.id, envCreate.transform.translation.x, envCreate.transform.translation.y, envCreate.transform.translation.z);
+		spdlog::info("Created environment #{} (owned by {})", envCreate.id, envCreate.ownerEntity);
 		if (envCreate.id >= m_environments.size())
 			m_environments.resize(envCreate.id + 1);
 
 		auto& environment = m_environments[envCreate.id].emplace();
-		environment.transform = envCreate.transform;
 
 		environment.rootEntity = m_world.CreateEntity();
-		environment.rootEntity.emplace<Nz::NodeComponent>(envCreate.transform.translation, envCreate.transform.rotation);
+		environment.rootEntity.emplace<Nz::NodeComponent>();
 
 		environment.visualRootEntity = m_world.CreateEntity();
-		environment.visualRootEntity.emplace<Nz::NodeComponent>(envCreate.transform.translation, envCreate.transform.rotation);
-		environment.visualRootEntity.emplace<CameraFollowerComponent>(envCreate.transform.translation, envCreate.transform.rotation);
+		environment.visualRootEntity.emplace<Nz::NodeComponent>();
+
+		if (envCreate.ownerEntity != Nz::MaxValue<Packets::Helper::EntityId>())
+		{
+			assert(m_entities[envCreate.ownerEntity]);
+			EntityData& ownerEntity = *m_entities[envCreate.ownerEntity];
+
+			auto& ownerNode = ownerEntity.entity.get<Nz::NodeComponent>();
+
+			environment.rootEntity.get<Nz::NodeComponent>().SetParent(ownerNode);
+			environment.visualRootEntity.get<Nz::NodeComponent>().SetParent(ownerNode);
+		}
+
+		for (auto&& entityData : envCreate.entities)
+			HandleEntityCreation(std::move(entityData));
 	}
 
-	void ClientSessionHandler::HandlePacket(Packets::EnvironmentDestroy&& envDestroy)
+	void ClientSessionHandler::HandlePacket(Packets::S_EnvironmentDestroy&& envDestroy)
 	{
-		fmt::print("Destroyed environment #{}\n", envDestroy.id);
+		spdlog::info("Destroyed environment #{}", envDestroy.id);
 		for (std::size_t entityIndex : m_environments[envDestroy.id]->entities.IterBits())
 		{
 			assert(m_entities[entityIndex]);
@@ -467,36 +367,28 @@ namespace tsom
 		m_environments[envDestroy.id].reset();
 	}
 
-	void ClientSessionHandler::HandlePacket(Packets::EnvironmentUpdate&& envUpdate)
+	void ClientSessionHandler::HandlePacket(Packets::S_EnvironmentsUpdateOwner&& envOwnerUpdate)
 	{
-		assert(m_environments[envUpdate.id]);
-		auto& environmentData = *m_environments[envUpdate.id];
-		environmentData.transform = envUpdate.transform;
-
-		auto& rootNode = environmentData.rootEntity.get<Nz::NodeComponent>();
-		rootNode.SetTransform(environmentData.transform.translation, environmentData.transform.rotation);
-
-		auto& rootVisualNode = environmentData.visualRootEntity.get<CameraFollowerComponent>();
-		rootVisualNode.SetTransform(environmentData.transform.translation, environmentData.transform.rotation);
-
-		// Teleport physical entities
-		for (std::size_t entityIndex : environmentData.entities.IterBits())
+		for (const auto& ownerUpdate : envOwnerUpdate.ownerUpdates)
 		{
-			assert(m_entities[entityIndex]);
-			EntityData& entityData = *m_entities[entityIndex];
+			spdlog::info("Environment #{} changed owned to {}", ownerUpdate.environment, ownerUpdate.newOwner);
 
-			Nz::NodeComponent& entityNode = entityData.entity.get<Nz::NodeComponent>();
-
-			if (Nz::RigidBody3DComponent* rigidBody = entityData.entity.try_get<Nz::RigidBody3DComponent>())
+			Nz::Node* ownerNode = nullptr;
+			if (ownerUpdate.newOwner != Nz::MaxValue<Packets::Helper::EntityId>())
 			{
-				rigidBody->TeleportTo(entityNode.GetGlobalPosition(), entityNode.GetGlobalRotation());
-				if (rigidBody->IsStatic())
-					rigidBody->SetReplicationMode(Nz::PhysicsReplication3D::GlobalOnce);
+				NazaraAssert(m_entities[ownerUpdate.newOwner]);
+				EntityData& ownerEntity = *m_entities[ownerUpdate.newOwner];
+				ownerNode = &ownerEntity.entity.get<Nz::NodeComponent>();
 			}
+
+			NazaraAssert(ownerUpdate.environment < m_environments.size() && m_environments[ownerUpdate.environment]);
+			auto& envData = *m_environments[ownerUpdate.environment];
+			envData.rootEntity.get<Nz::NodeComponent>().SetParent(ownerNode);
+			envData.visualRootEntity.get<Nz::NodeComponent>().SetParent(ownerNode);
 		}
 	}
 
-	void ClientSessionHandler::HandlePacket(Packets::GameData&& gameData)
+	void ClientSessionHandler::HandlePacket(Packets::S_GameData&& gameData)
 	{
 		m_lastTickIndex = gameData.tickIndex;
 		for (auto& playerData : gameData.players)
@@ -510,12 +402,26 @@ namespace tsom
 		}
 	}
 
-	void ClientSessionHandler::HandlePacket(Packets::NetworkStrings&& networkStrings)
+	void ClientSessionHandler::HandlePacket(Packets::S_NetworkStrings&& networkStrings)
 	{
 		GetSession()->GetStringStore().FillStore(networkStrings.startId, std::move(networkStrings.strings));
 	}
 
-	void ClientSessionHandler::HandlePacket(Packets::PlayerJoin&& playerJoin)
+	void ClientSessionHandler::HandlePacket(Packets::S_PilotShip&& pilotShip)
+	{
+		assert(m_entities[pilotShip.shipEntity]);
+		entt::handle& entity = m_entities[pilotShip.shipEntity]->entity;
+		entt::handle& exteriorEntity = m_entities[pilotShip.shipExteriorEntity]->entity;
+
+		OnControlledShip(entity, exteriorEntity, pilotShip.referenceRotation);
+	}
+
+	void ClientSessionHandler::HandlePacket(Packets::S_PilotShipFinish&& pilotShipFinish)
+	{
+		OnControlledShipFinished();
+	}
+
+	void ClientSessionHandler::HandlePacket(Packets::S_PlayerJoin&& playerJoin)
 	{
 		if (playerJoin.index >= m_players.size())
 			m_players.resize(playerJoin.index + 1);
@@ -527,11 +433,11 @@ namespace tsom
 		OnPlayerJoined(playerInfo);
 	}
 
-	void ClientSessionHandler::HandlePacket(Packets::PlayerLeave&& playerLeave)
+	void ClientSessionHandler::HandlePacket(Packets::S_PlayerLeave&& playerLeave)
 	{
 		if (playerLeave.index >= m_players.size() || !m_players[playerLeave.index])
 		{
-			fmt::print(fg(fmt::color::red), "PlayerLeave with unknown player index {}\n", playerLeave.index);
+			spdlog::error("PlayerLeave with unknown player index {}", playerLeave.index);
 			return;
 		}
 
@@ -540,11 +446,11 @@ namespace tsom
 		m_players[playerLeave.index].reset();
 	}
 
-	void ClientSessionHandler::HandlePacket(Packets::PlayerNameUpdate&& playerNameUpdate)
+	void ClientSessionHandler::HandlePacket(Packets::S_PlayerNameUpdate&& playerNameUpdate)
 	{
 		if (playerNameUpdate.index >= m_players.size() || !m_players[playerNameUpdate.index])
 		{
-			fmt::print(fg(fmt::color::red), "PlayerNameUpdate with unknown player index {}\n", playerNameUpdate.index);
+			spdlog::error("PlayerNameUpdate with unknown player index {}", playerNameUpdate.index);
 			return;
 		}
 
@@ -554,41 +460,6 @@ namespace tsom
 		playerInfo.nickname = std::move(playerNameUpdate.newNickname).Str();
 		if (playerInfo.textSprite)
 			playerInfo.textSprite->Update(Nz::SimpleTextDrawer::Draw(playerInfo.nickname, 48, Nz::TextStyle_Regular, (playerInfo.isAuthenticated) ? Nz::Color::White() : Nz::Color::Gray()), 0.01f);
-	}
-
-	void ClientSessionHandler::HandlePacket(Packets::UpdateRootEnvironment&& playerEnv)
-	{
-		if (m_currentEnvironmentIndex != std::numeric_limits<Packets::Helper::EnvironmentId>::max())
-		{
-			assert(m_environments[playerEnv.newRootEnv]);
-			EnvironmentTransform inverseTransform = -m_environments[playerEnv.newRootEnv]->transform;
-
-			for (auto& envOpt : m_environments)
-			{
-				if (!envOpt)
-					continue;
-
-				auto& env = *envOpt;
-				env.transform += inverseTransform;
-
-				auto& rootNode = env.rootEntity.get<Nz::NodeComponent>();
-				rootNode.SetTransform(env.transform.translation, env.transform.rotation);
-
-				// Teleport physical entities
-				for (std::size_t entityIndex : env.entities.IterBits())
-				{
-					assert(m_entities[entityIndex]);
-					EntityData& entityData = *m_entities[entityIndex];
-
-					Nz::NodeComponent& entityNode = entityData.entity.get<Nz::NodeComponent>();
-
-					if (Nz::RigidBody3DComponent* rigidBody = entityData.entity.try_get<Nz::RigidBody3DComponent>())
-						rigidBody->TeleportTo(entityNode.GetGlobalPosition(), entityNode.GetGlobalRotation());
-				}
-			}
-		}
-
-		m_currentEnvironmentIndex = playerEnv.newRootEnv;
 	}
 
 	void ClientSessionHandler::LoadScripts(bool isReloading)
@@ -604,6 +475,104 @@ namespace tsom
 		{
 			LoadScripts(false);
 		});
+	}
+
+	void ClientSessionHandler::HandleEntityCreation(Packets::Helper::EntityData&& entityData)
+	{
+		entt::handle entity = m_world.CreateEntity();
+
+		if (entityData.entityId >= m_entities.size())
+			m_entities.resize(entityData.entityId + 1);
+
+		assert(!m_entities[entityData.entityId]);
+		m_entities[entityData.entityId] = EntityData{
+			.environmentIndex = entityData.environmentId,
+			.entity = entity
+		};
+
+		assert(m_environments[entityData.environmentId]);
+		auto& environment = *m_environments[entityData.environmentId];
+		environment.entities.UnboundedSet(entityData.entityId);
+
+		// Create logical entity
+		auto& entityNode = entity.emplace<Nz::NodeComponent>(entityData.initialStates.position, entityData.initialStates.rotation);
+		entityNode.SetParent(environment.rootEntity);
+
+		auto& entityEnv = entity.emplace<EnvironmentComponent>();
+		entityEnv.environmentIndex = entityData.environmentId;
+
+		auto& entityNetId = entity.emplace<ClientEntityNetworkIndex>();
+		entityNetId.networkIndex = entityData.entityId;
+
+		// Create visual entity
+		entt::handle visualEntity = m_world.CreateEntity();
+
+		auto& visualNode = visualEntity.emplace<Nz::NodeComponent>(entityData.initialStates.position, entityData.initialStates.rotation);
+		visualNode.SetParent(environment.visualRootEntity);
+
+		// Bind visual entity to logical entity
+		auto& entityVisualComp = entity.emplace<VisualEntityComponent>();
+		entityVisualComp.visualEntity = visualEntity;
+
+		auto& entityOwnerComp = entity.emplace<EntityOwnerComponent>();
+		entityOwnerComp.Register(visualEntity);
+
+
+		std::string entityClassName = GetSession()->GetStringStore().GetString(entityData.entityClass);
+		if (std::shared_ptr<const EntityClass> entityClass = m_entityRegistry.FindClass(entityClassName))
+		{
+			auto& entityInstance = entity.emplace<ClassInstanceComponent>(entityClass);
+
+			std::size_t networkedPropertyIndex = 0;
+			for (Nz::UInt32 i = 0; i < entityClass->GetPropertyCount(); ++i)
+			{
+				if (entityClass->GetProperty(i).isNetworked)
+					entityInstance.UpdateProperty(i, std::move(entityData.properties[networkedPropertyIndex++]));
+			}
+
+			entityClass->InitAndActivateEntity(entity);
+		}
+		else
+			spdlog::error("unknown entity class {}", entityClassName);
+
+		if (entityData.playerControlled)
+			SetupEntity(entity, std::move(entityData.playerControlled.value()));
+
+		// TEMP
+		if (PlanetComponent* planetComponent = entity.try_get<PlanetComponent>())
+			environment.gravityController = planetComponent->planet.get();
+		else if (ShipComponent* shipComponent = entity.try_get<ShipComponent>())
+			environment.gravityController = shipComponent->ship.get();
+
+		spdlog::info("Created entity {} in environment {} ({})", entityData.entityId, entityData.environmentId, entityClassName);
+
+		// Since we make use of parenting for environments, we need to make replication happen in global space
+		if (Nz::RigidBody3DComponent* rigidBody = entity.try_get<Nz::RigidBody3DComponent>())
+		{
+			if (rigidBody->GetReplicationMode() != Nz::PhysicsReplication3D::None)
+			{
+				auto& referencedInterp = visualEntity.emplace<ReferencedPhysicsInterpolationComponent>();
+				referencedInterp.referenceEntity = entity;
+			}
+
+			switch (rigidBody->GetReplicationMode())
+			{
+				case Nz::PhysicsReplication3D::Local:
+					rigidBody->SetReplicationMode(Nz::PhysicsReplication3D::Global);
+					break;
+
+				case Nz::PhysicsReplication3D::LocalOnce:
+					rigidBody->SetReplicationMode(Nz::PhysicsReplication3D::GlobalOnce);
+					break;
+
+				case Nz::PhysicsReplication3D::Custom:
+				case Nz::PhysicsReplication3D::CustomOnce:
+				case Nz::PhysicsReplication3D::Global:
+				case Nz::PhysicsReplication3D::GlobalOnce:
+				case Nz::PhysicsReplication3D::None:
+					break;
+			}
+		}
 	}
 
 	void ClientSessionHandler::SetupEntity(entt::handle entity, Packets::Helper::PlayerControlledData&& entityData)
@@ -662,6 +631,7 @@ namespace tsom
 
 				Nz::MaterialPass forwardPass;
 				forwardPass.states.depthBuffer = true;
+				forwardPass.states.depthCompare = Nz::RendererComparison::GreaterOrEqual;
 				forwardPass.shaders.push_back(std::make_shared<Nz::UberShader>(nzsl::ShaderStageType::Fragment | nzsl::ShaderStageType::Vertex, "TSOM.PlayerPBR"));
 				settings.AddPass("ForwardPass", forwardPass);
 
@@ -671,6 +641,7 @@ namespace tsom
 
 				Nz::MaterialPass shadowPass = depthPass;
 				shadowPass.options[nzsl::Ast::HashOption("ShadowPass")] = true;
+				shadowPass.states.depthCompare = Nz::RendererComparison::LessOrEqual; //< TODO: Reverse depth for shadow pass?
 				shadowPass.states.frontFace = Nz::FrontFace::Clockwise;
 				shadowPass.states.depthClamp = Nz::Graphics::Instance()->GetRenderDevice()->GetEnabledFeatures().depthClamping;
 				settings.AddPass("ShadowPass", shadowPass);
@@ -731,7 +702,7 @@ namespace tsom
 		visualEntity.emplace<AnimationComponent>(skeleton, std::make_shared<PlayerAnimationController>(visualEntity, m_playerAnimAssets));
 
 		// Floating name
-		std::shared_ptr<Nz::TextSprite> textSprite = std::make_shared<Nz::TextSprite>();
+		std::shared_ptr<Nz::TextSprite> textSprite = std::make_shared<Nz::TextSprite>(Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic, Nz::MaterialInstancePreset::ReverseZ | Nz::MaterialInstancePreset::AlphaBlended));
 
 		PlayerInfo* playerInfo = FetchPlayerInfo(entityData.controllingPlayerId);
 		if (playerInfo)

@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -13,38 +13,44 @@
 #endif
 
 // Keep these two in order to keep their opcode stable (as they're responsible for protocol version check)
-TSOM_NETWORK_PACKET(AuthRequest)
-TSOM_NETWORK_PACKET(AuthResponse)
+TSOM_NETWORK_PACKET(C_AuthRequest)
+TSOM_NETWORK_PACKET(S_AuthResponse)
 
 // Debug opcode
-TSOM_NETWORK_PACKET(DebugDrawLineList)
+TSOM_NETWORK_PACKET(S_DebugDrawLineList)
 
-TSOM_NETWORK_PACKET(ChatMessage)
-TSOM_NETWORK_PACKET(ChunkCreate)
-TSOM_NETWORK_PACKET(ChunkDestroy)
-TSOM_NETWORK_PACKET(ChunkReset)
-TSOM_NETWORK_PACKET(ChunkUpdate)
-TSOM_NETWORK_PACKET(EntitiesCreation)
-TSOM_NETWORK_PACKET(EntitiesDelete)
-TSOM_NETWORK_PACKET(EntitiesStateUpdate)
-TSOM_NETWORK_PACKET(EntityEnvironmentUpdate)
-TSOM_NETWORK_PACKET(EntityProcedureCall)
-TSOM_NETWORK_PACKET(EntityPropertyUpdate)
-TSOM_NETWORK_PACKET(EnvironmentCreate)
-TSOM_NETWORK_PACKET(EnvironmentDestroy)
-TSOM_NETWORK_PACKET(EnvironmentUpdate)
-TSOM_NETWORK_PACKET(ExitShipControl)
-TSOM_NETWORK_PACKET(GameData)
-TSOM_NETWORK_PACKET(Interact)
-TSOM_NETWORK_PACKET(MineBlock)
-TSOM_NETWORK_PACKET(NetworkStrings)
-TSOM_NETWORK_PACKET(PlaceBlock)
-TSOM_NETWORK_PACKET(PlayerLeave)
-TSOM_NETWORK_PACKET(PlayerJoin)
-TSOM_NETWORK_PACKET(PlayerNameUpdate)
-TSOM_NETWORK_PACKET(SendChatMessage)
-TSOM_NETWORK_PACKET(UpdateRootEnvironment)
-TSOM_NETWORK_PACKET_LAST(UpdatePlayerInputs)
+// Client opcodes
+TSOM_NETWORK_PACKET(C_ExitShipControl)
+TSOM_NETWORK_PACKET(C_Interact)
+TSOM_NETWORK_PACKET(C_MineBlock)
+TSOM_NETWORK_PACKET(C_PlaceBlock)
+TSOM_NETWORK_PACKET(C_SendChatMessage)
+TSOM_NETWORK_PACKET(C_SendConsoleCommand)
+TSOM_NETWORK_PACKET(C_UpdatePlayerInputs)
+
+// Server opcodes
+TSOM_NETWORK_PACKET(S_ChatMessage)
+TSOM_NETWORK_PACKET(S_ChunkCreate)
+TSOM_NETWORK_PACKET(S_ChunkDestroy)
+TSOM_NETWORK_PACKET(S_ChunkReset)
+TSOM_NETWORK_PACKET(S_ChunkUpdate)
+TSOM_NETWORK_PACKET(S_ConsoleOutput)
+TSOM_NETWORK_PACKET(S_EntitiesCreation)
+TSOM_NETWORK_PACKET(S_EntitiesDelete)
+TSOM_NETWORK_PACKET(S_EntitiesStateUpdate)
+TSOM_NETWORK_PACKET(S_EntityEnvironmentUpdate)
+TSOM_NETWORK_PACKET(S_EntityProcedureCall)
+TSOM_NETWORK_PACKET(S_EntityPropertiesUpdate)
+TSOM_NETWORK_PACKET(S_EnvironmentCreate)
+TSOM_NETWORK_PACKET(S_EnvironmentDestroy)
+TSOM_NETWORK_PACKET(S_EnvironmentsUpdateOwner)
+TSOM_NETWORK_PACKET(S_GameData)
+TSOM_NETWORK_PACKET(S_NetworkStrings)
+TSOM_NETWORK_PACKET(S_PilotShip)
+TSOM_NETWORK_PACKET(S_PilotShipFinish)
+TSOM_NETWORK_PACKET(S_PlayerJoin)
+TSOM_NETWORK_PACKET(S_PlayerLeave)
+TSOM_NETWORK_PACKET_LAST(S_PlayerNameUpdate)
 
 #undef TSOM_NETWORK_PACKET
 #undef TSOM_NETWORK_PACKET_LAST

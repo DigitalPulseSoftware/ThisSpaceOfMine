@@ -1,49 +1,62 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ServerLib/Systems/EnvironmentSwitchSystem.hpp>
+#include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <ServerLib/ServerEnvironment.hpp>
-#include <ServerLib/ServerInstance.hpp>
-#include <ServerLib/ServerPlayer.hpp>
-#include <ServerLib/ServerShipEnvironment.hpp>
 #include <ServerLib/Components/EnvironmentEnterTriggerComponent.hpp>
+#include <ServerLib/Components/ServerEnvironmentSwitchComponent.hpp>
+#include <Nazara/Core/Components/DisabledComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Collider3D.hpp>
 
 namespace tsom
 {
+	EnvironmentSwitchSystem::EnvironmentSwitchSystem(entt::registry& registry) :
+	m_registry(registry)
+	{
+		m_ownerEnvironment = m_registry.ctx().get<ServerEnvironment*>();
+	}
+
 	void EnvironmentSwitchSystem::Update(Nz::Time elapsedTime)
 	{
-		auto view = m_registry.view<Nz::NodeComponent, EnvironmentEnterTriggerComponent>();
+		auto triggerView = m_registry.view<Nz::NodeComponent, EnvironmentEnterTriggerComponent>(entt::exclude<Nz::DisabledComponent>);
+		auto entityView = m_registry.view<Nz::NodeComponent, ClassInstanceComponent, ServerEnvironmentSwitchComponent>(entt::exclude<Nz::DisabledComponent>);
 
-		for (entt::entity entity : view)
+		ServerEnvironment* previousEnvironment = ServerEnvironment::GetEnvironment(m_registry);
+
+		for (auto&& [triggerEntity, triggerNode, enterTrigger] : triggerView.each())
 		{
-			auto& enterTrigger = view.get<EnvironmentEnterTriggerComponent>(entity);
-			if (!enterTrigger.entryTrigger)
+			if (!enterTrigger.enabled)
 				continue;
 
-			auto& triggerNode = view.get<Nz::NodeComponent>(entity);
-			m_ownerEnvironment->ForEachPlayer([&](ServerPlayer& player)
+			for (auto&& [entity, entityNode, entityInstance, envSwitch] : entityView.each())
 			{
-				if (player.GetControlledEntityEnvironment() != m_ownerEnvironment)
-					return;
+				if (entity == triggerEntity)
+					continue;
 
-				entt::handle playerEntity = player.GetControlledEntity();
-				if (!playerEntity)
-					return;
+				Nz::Vector3f localPos = triggerNode.ToLocalPosition(entityNode.GetPosition());
 
-				Nz::Vector3f playerPosition = playerEntity.get<Nz::NodeComponent>().GetPosition();
-
-				Nz::Vector3f localPlayerPos = triggerNode.ToLocalPosition(playerPosition);
 				// Use AABB as a cheap test
-				if (enterTrigger.aabb.Contains(localPlayerPos))
+				if NAZARA_LIKELY(!enterTrigger.aabb.Contains(localPos))
+					continue;
+
+				if (enterTrigger.entryTrigger)
 				{
-					localPlayerPos -= enterTrigger.entryTrigger->GetCenterOfMass(); //< https://jrouwe.github.io/JoltPhysics/index.html#center-of-mass
-					if (enterTrigger.entryTrigger->CollisionQuery(localPlayerPos))
-						player.MoveEntityToEnvironment(enterTrigger.targetEnvironment, Nz::Vector3f::Zero());
+					if (!enterTrigger.entryTrigger->CollisionQuery(localPos - enterTrigger.entryTrigger->GetCenterOfMass())) //< https://jrouwe.github.io/JoltPhysics/index.html#center-of-mass
+						continue;
 				}
-			});
+
+				entt::handle oldEntity(m_registry, entity);
+				ServerEnvironment* newEnvironment = enterTrigger.targetEnvironment;
+
+				EnvironmentTransform transform(triggerNode.GetPosition(), triggerNode.GetRotation());
+				transform = -transform;
+
+				envSwitch.Switch(oldEntity, previousEnvironment, newEnvironment, transform);
+				break;
+			}
 		}
 	}
 }

@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -8,18 +8,26 @@
 #define TSOM_SERVERLIB_SYSTEMS_NETWORKEDENTITIESSYSTEM_HPP
 
 #include <ServerLib/Export.hpp>
+#include <CommonLib/ChunkContainer.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
+#include <ServerLib/ServerPlayerList.hpp>
 #include <ServerLib/SessionVisibilityHandler.hpp>
+#include <Nazara/Core/EnttObserver.hpp>
 #include <Nazara/Core/Time.hpp>
 #include <NazaraUtils/FunctionRef.hpp>
 #include <NazaraUtils/TypeList.hpp>
 #include <entt/entt.hpp>
-#include <tsl/hopscotch_map.h>
-#include <tsl/hopscotch_set.h>
+#include <vector>
+
+namespace Nz
+{
+	class DisabledComponent;
+}
 
 namespace tsom
 {
 	class ServerEnvironment;
+	class ServerPlayer;
 
 	class TSOM_SERVERLIB_API NetworkedEntitiesSystem
 	{
@@ -31,12 +39,13 @@ namespace tsom
 			NetworkedEntitiesSystem(entt::registry& registry, ServerEnvironment& environment);
 			NetworkedEntitiesSystem(const NetworkedEntitiesSystem&) = delete;
 			NetworkedEntitiesSystem(NetworkedEntitiesSystem&&) = delete;
-			~NetworkedEntitiesSystem();
-
-			void CreateAllEntities(SessionVisibilityHandler& visibility) const;
+			~NetworkedEntitiesSystem() = default;
 
 			void ForEachVisibility(const Nz::FunctionRef<void(SessionVisibilityHandler& visibility)>& functor);
 			void ForgetEntity(entt::entity entity);
+
+			inline void RegisterPlayer(ServerPlayer* player, bool createEntities);
+			void UnregisterPlayer(ServerPlayer* player);
 
 			void Update(Nz::Time elapsedTime);
 
@@ -46,21 +55,21 @@ namespace tsom
 		private:
 			SessionVisibilityHandler::CreateEntityData BuildCreateEntityData(entt::entity entity) const;
 			void CreateEntity(SessionVisibilityHandler& visibility, entt::handle entity, const SessionVisibilityHandler::CreateEntityData& createData) const;
-			void OnNetworkedDestroy(entt::registry& registry, entt::entity entity);
 
 			struct EntityData
 			{
+				NazaraSlot(ChunkContainer, OnChunkAdded, onChunkAdded);
+				NazaraSlot(ChunkContainer, OnChunkRemove, onChunkRemove);
 				NazaraSlot(ClassInstanceComponent, OnClientRpc, onClientRpc);
 				NazaraSlot(ClassInstanceComponent, OnPropertyUpdate, onPropertyUpdate);
 			};
 
-			tsl::hopscotch_map<entt::entity, EntityData> m_networkedEntities;
-			entt::observer m_networkedConstructObserver;
-			entt::scoped_connection m_disabledConstructConnection;
-			entt::scoped_connection m_networkedDestroyConnection;
-			entt::scoped_connection m_nodeDestroyConnection;
+			std::vector<ServerPlayer*> m_pendingPlayers;
+			entt::storage<void> m_pendingCreatedEntities;
+			Nz::EnttObserver<Nz::TypeList<class NetworkedComponent>, Nz::TypeList<Nz::DisabledComponent>, EntityData> m_networkedEntities;
 			entt::registry& m_registry;
 			ServerEnvironment& m_environment;
+			ServerPlayerList m_players;
 	};
 }
 

@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -13,15 +13,19 @@
 namespace tsom
 {
 	class ClientBlockLibrary;
+	class ConfigFile;
 
 	class TSOM_CLIENTLIB_API ClientChunkClassLibrary final : public ChunkClassLibrary
 	{
 		public:
-			ClientChunkClassLibrary(Nz::ApplicationBase& app, const ClientBlockLibrary& blockLibrary);
+			ClientChunkClassLibrary(Nz::ApplicationBase& app, ConfigFile& config, const ClientBlockLibrary& blockLibrary);
 
 		private:
-			void InitializeChunkEntity(entt::handle entity) override;
-			std::unique_ptr<ChunkEntities> SetupChunkEntities(Nz::EnttWorld& world, ChunkContainer& chunkContainer) override;
+			void InitializePlanetEntity(entt::handle entity) override;
+			void InitializeShipEntity(entt::handle entity) override;
+			std::unique_ptr<ChunkEntities> SetupChunkEntities(Nz::EnttWorld& world, ChunkContainer& chunkContainer, std::size_t layerIndex) override;
+
+			ConfigFile& m_config;
 	};
 }
 

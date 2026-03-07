@@ -1,25 +1,26 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/Planet.hpp>
 #include <CommonLib/BlockLibrary.hpp>
-#include <CommonLib/DeformedChunk.hpp>
-#include <CommonLib/FlatChunk.hpp>
-#include <CommonLib/Utility/SignedDistanceFunctions.hpp>
+#include <CommonLib/ChunkLock.hpp>
+#include <CommonLib/SurfaceNetsChunk.hpp>
+#include <CommonLib/Scripting/ChunkScriptingLibrary.hpp>
+#include <CommonLib/Scripting/MathScriptingLibrary.hpp>
+#include <CommonLib/Scripting/ScriptingContext.hpp>
 #include <Nazara/Core/TaskScheduler.hpp>
-#include <Nazara/Core/VertexStruct.hpp>
-#include <Nazara/Math/Ray.hpp>
-#include <Nazara/Physics3D/Collider3D.hpp>
+#include <Nazara/Math/Box.hpp>
 #include <NazaraUtils/CallOnExit.hpp>
 #include <PerlinNoise.hpp>
-#include <fmt/format.h>
-#include <random>
+#include <spdlog/spdlog.h>
+#include <thread>
 
 namespace tsom
 {
-	Planet::Planet(float tileSize, float cornerRadius, float gravity) :
+	Planet::Planet(Nz::ApplicationBase& app, float tileSize, float cornerRadius, float gravity) :
 	ChunkContainer(tileSize),
+	m_app(app),
 	m_cornerRadius(cornerRadius),
 	m_gravity(gravity)
 	{
@@ -29,42 +30,238 @@ namespace tsom
 	{
 		assert(!m_chunks.contains(indices));
 		ChunkData chunkData;
-		chunkData.chunk = std::make_shared<FlatChunk>(blockLibrary, *this, indices, Nz::Vector3ui{ ChunkSize }, m_tileSize);
+		chunkData.chunk = std::make_unique<SurfaceNetsChunk>(blockLibrary, *this, indices, Nz::Vector3ui{ ChunkSize }, m_tileSize);
 
-		chunkData.onReset.Connect(chunkData.chunk->OnReset, [this](Chunk* chunk)
+		chunkData.onLayerRegistered.Connect(chunkData.chunk->OnLayerRegistered, [this](Chunk* chunk, std::size_t layerIndex)
 		{
-			OnChunkUpdated(this, chunk, DirectionMask_All);
+			// FIXME: Nz::Signal operator() is not thread-safe!
+			std::lock_guard lock(m_chunkLayerAddedSignalMutex);
+			OnChunkLayerAdded(this, chunk, layerIndex);
 		});
 
-		chunkData.onUpdated.Connect(chunkData.chunk->OnBlockUpdated, [this](Chunk* chunk, const Nz::Vector3ui& indices, BlockIndex /*newBlock*/)
+		chunkData.onLayerUnregistered.Connect(chunkData.chunk->OnLayerUnregistered, [this](Chunk* chunk, std::size_t layerIndex)
 		{
-			DirectionMask neighborMask;
+			// FIXME: Nz::Signal operator() is not thread-safe!
+			std::lock_guard lock(m_chunkLayerRemovedSignalMutex);
+			OnChunkLayerRemove(this, chunk, layerIndex);
+		});
+
+		chunkData.onReset.Connect(chunkData.chunk->OnReset, [this, &blockLibrary](Chunk* chunk)
+		{
+			// Build direction blockers
+			auto chunkIt = m_chunks.find(chunk->GetIndices());
+			NazaraAssert(chunkIt != m_chunks.end());
+			ChunkData& chunkData = chunkIt.value();
+			chunkData.directionHoleCount.fill(0);
+
+			if (chunk->HasContent())
+			{
+				// Left / right
+				for (unsigned int z = 0; z < ChunkSize; ++z)
+				{
+					for (unsigned int y = 0; y < ChunkSize; ++y)
+					{
+						BlockIndex leftBlockIndex = chunk->GetBlockContent({ 0, y, z });
+						BlockIndex rightBlockIndex = chunk->GetBlockContent({ ChunkSize - 1, y, z });
+
+						auto& leftBlockData = blockLibrary.GetBlockData(leftBlockIndex);
+						if (leftBlockData.isTransparent)
+							chunkData.directionHoleCount[Direction::Left]++;
+
+						auto& rightBlockData = blockLibrary.GetBlockData(rightBlockIndex);
+						if (rightBlockData.isTransparent)
+							chunkData.directionHoleCount[Direction::Right]++;
+					}
+				}
+
+				// Front / back
+				for (unsigned int z = 0; z < ChunkSize; ++z)
+				{
+					for (unsigned int x = 0; x < ChunkSize; ++x)
+					{
+						BlockIndex frontBlockIndex = chunk->GetBlockContent({ x, 0, z });
+						BlockIndex backBlockIndex = chunk->GetBlockContent({ x, ChunkSize - 1, z });
+
+						auto& frontBlockData = blockLibrary.GetBlockData(frontBlockIndex);
+						if (frontBlockData.isTransparent)
+							chunkData.directionHoleCount[Direction::Front]++;
+
+						auto& backBlockData = blockLibrary.GetBlockData(backBlockIndex);
+						if (backBlockData.isTransparent)
+							chunkData.directionHoleCount[Direction::Back]++;
+					}
+				}
+
+				// Down / up
+				for (unsigned int y = 0; y < ChunkSize; ++y)
+				{
+					for (unsigned int x = 0; x < ChunkSize; ++x)
+					{
+						BlockIndex downBlockIndex = chunk->GetBlockContent({ x, y, 0 });
+						BlockIndex upBlockIndex = chunk->GetBlockContent({ x, y, ChunkSize - 1 });
+
+						auto& downBlockData = blockLibrary.GetBlockData(downBlockIndex);
+						if (downBlockData.isTransparent)
+							chunkData.directionHoleCount[Direction::Down]++;
+
+						auto& upBlockData = blockLibrary.GetBlockData(upBlockIndex);
+						if (upBlockData.isTransparent)
+							chunkData.directionHoleCount[Direction::Up]++;
+					}
+				}
+
+				DirectionMask oldVisibilityMask = chunkData.visibilityMask;
+				chunkData.visibilityMask.Clear();
+
+				for (auto&& [direction, holeCount] : chunkData.directionHoleCount.iter_kv())
+				{
+					if (holeCount > 0)
+						chunkData.visibilityMask |= direction;
+				}
+
+				if (oldVisibilityMask != chunkData.visibilityMask)
+					OnChunkVisibilityMaskUpdated(this, chunk, oldVisibilityMask, chunkData.visibilityMask);
+			}
+
+			// FIXME: Nz::Signal operator() is not thread-safe!
+			std::lock_guard lock(m_chunkUpdatedSignalMutex);
+			OnChunkUpdated(this, chunk, NeighborChunkMask_All, chunk->GetActiveLayerMask());
+		});
+
+		chunkData.onUpdated.Connect(chunkData.chunk->OnBlockUpdated, [this, &blockLibrary](Chunk* chunk, const Nz::Vector3ui& indices, BlockIndex oldBlock, BlockIndex newBlock, std::size_t oldLayerIndex, std::size_t newLayerIndex)
+		{
+			NeighborChunkMask neighborMask;
+
+			// Find every neighbor chunk required, based on block position
+			std::array<Nz::Int32, 2> xs{ 0, 0 };
+			std::array<Nz::Int32, 2> ys{ 0, 0 };
+			std::array<Nz::Int32, 2> zs{ 0, 0 };
+
+			std::size_t nx = 1, ny = 1, nz = 1;
+
+			const Nz::Vector3ui& size = chunk->GetSize();
+
 			if (indices.x == 0)
-				neighborMask |= Direction::Left;
-			else if (indices.x == chunk->GetSize().x - 1)
-				neighborMask |= Direction::Right;
+				xs[nx++] = -1;
+			else if (indices.x == size.x - 1)
+				xs[nx++] = 1;
 
 			if (indices.y == 0)
-				neighborMask |= Direction::Front;
-			else if (indices.y == chunk->GetSize().y - 1)
-				neighborMask |= Direction::Back;
+				zs[nz++] = -1;
+			else if (indices.y == size.y - 1)
+				zs[nz++] = 1;
 
 			if (indices.z == 0)
-				neighborMask |= Direction::Down;
-			else if (indices.z == chunk->GetSize().z - 1)
-				neighborMask |= Direction::Up;
+				ys[ny++] = -1;
+			else if (indices.z == size.z - 1)
+				ys[ny++] = 1;
 
-			OnChunkUpdated(this, chunk, neighborMask);
+			for (std::size_t ix = 0; ix < nx; ++ix)
+			{
+				for (std::size_t iy = 0; iy < ny; ++iy)
+				{
+					for (std::size_t iz = 0; iz < nz; ++iz)
+					{
+						Nz::Int32 dx = xs[ix];
+						Nz::Int32 dy = ys[iy];
+						Nz::Int32 dz = zs[iz];
+
+						if (dx == 0 && dy == 0 && dz == 0)
+							continue;
+
+						ChunkIndices dir(dx, dy, dz);
+						neighborMask |= ToNeighborChunk({ dx, dy, dz });
+					}
+				}
+			}
+
+			DirectionMask directionMask;
+			if (indices.x == 0)
+				directionMask |= Direction::Left;
+			else if (indices.x == size.x - 1)
+				directionMask |= Direction::Right;
+
+			if (indices.y == 0)
+				directionMask |= Direction::Front;
+			else if (indices.y == size.y - 1)
+				directionMask |= Direction::Back;
+
+			if (indices.z == 0)
+				directionMask |= Direction::Down;
+			else if (indices.z == size.z - 1)
+				directionMask |= Direction::Up;
+
+			if (directionMask != 0)
+			{
+				auto& previousBlockData = blockLibrary.GetBlockData(oldBlock);
+				auto& newBlockData = blockLibrary.GetBlockData(newBlock);
+
+				if (previousBlockData.isTransparent != newBlockData.isTransparent)
+				{
+					auto chunkIt = m_chunks.find(chunk->GetIndices());
+					NazaraAssert(chunkIt != m_chunks.end());
+					ChunkData& chunkData = chunkIt.value();
+
+					DirectionMask oldVisibilityMask = chunkData.visibilityMask;
+
+					if (previousBlockData.isTransparent)
+					{
+						// We're putting an opaque block on a transparent one
+						for (Direction direction : directionMask)
+						{
+							NazaraAssert(chunkData.directionHoleCount[direction] > 0);
+							if (--chunkData.directionHoleCount[direction] == 0)
+								chunkData.visibilityMask.Clear(direction);
+						}
+					}
+					else
+					{
+						// Replacing an opaque block by a transparent one
+						for (Direction direction : directionMask)
+						{
+							chunkData.directionHoleCount[direction]++;
+							chunkData.visibilityMask |= direction;
+						}
+					}
+
+					if (oldVisibilityMask != chunkData.visibilityMask)
+						OnChunkVisibilityMaskUpdated(this, chunk, oldVisibilityMask, chunkData.visibilityMask);
+				}
+			}
+
+			Nz::UInt32 layerMask = 0;
+			layerMask |= 1u << oldLayerIndex;
+			if (newBlock != EmptyBlockIndex)
+				layerMask |= 1u << newLayerIndex;
+
+			// FIXME: Nz::Signal operator() is not thread-safe!
+			std::lock_guard lock(m_chunkUpdatedSignalMutex);
+			OnChunkUpdated(this, chunk, neighborMask, layerMask);
 		});
 
 		auto it = m_chunks.insert_or_assign(indices, std::move(chunkData)).first;
 
-		OnChunkAdded(this, it->second.chunk.get());
-
 		if (initCallback)
 			it->second.chunk->Reset(initCallback);
 
+		Chunk* chunk = it->second.chunk.get();
+		OnChunkAdded(this, chunk);
+		for (std::size_t layerIndex : chunk->GetActiveLayers())
+			OnChunkLayerAdded(this, chunk, layerIndex);
+
 		return *it->second.chunk;
+	}
+
+	void Planet::AddChunks(const BlockLibrary& blockLibrary, const Nz::Vector3ui& chunkCount)
+	{
+		for (int chunkZ = 0; chunkZ < chunkCount.z; ++chunkZ)
+		{
+			for (int chunkY = 0; chunkY < chunkCount.y; ++chunkY)
+			{
+				for (int chunkX = 0; chunkX < chunkCount.x; ++chunkX)
+					AddChunk(blockLibrary, { chunkX - int(chunkCount.x / 2), chunkY - int(chunkCount.y / 2), chunkZ - int(chunkCount.z / 2) });
+			}
+		}
 	}
 
 	auto Planet::ComputeGravity(const Nz::Vector3f& position) const -> GravityForce
@@ -73,7 +270,7 @@ namespace tsom
 		constexpr float PlanetGravityCenterNoGravity = 4.f;
 		constexpr float PlanetGravitySpaceStart = 100.f;
 		constexpr float PlanetGravitySpaceFinish = 150.f;
-		constexpr float PlanetGravitySpaceNone = 250.f;
+		constexpr float PlanetGravitySpaceNone = 350.f;
 
 		// Decrease gravity near the center
 		float distSq = position.SquaredDistance(GetCenter());
@@ -145,6 +342,18 @@ namespace tsom
 		return Nz::Vector3f::Normalize(position - innerPos);
 	}
 
+	void Planet::ClearChunks()
+	{
+		for (auto&& [chunkIndices, chunkData] : m_chunks)
+		{
+			Chunk* chunk = chunkData.chunk.get();
+			for (std::size_t layerIndex : chunk->GetActiveLayers())
+				OnChunkLayerRemove(this, chunk, layerIndex);
+		}
+
+		m_chunks.clear();
+	}
+
 	void Planet::ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, Chunk& chunk)> callback)
 	{
 		for (auto&& [chunkIndices, chunkData] : m_chunks)
@@ -157,249 +366,97 @@ namespace tsom
 			callback(chunkIndices, *chunkData.chunk);
 	}
 
-	void Planet::GenerateChunk(const BlockLibrary& blockLibrary, Chunk& chunk, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount)
+	void Planet::GenerateChunk(Chunk& chunk, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, std::string_view scriptName)
 	{
-		constexpr std::size_t freeSpace = 30;
-
 		ChunkIndices chunkIndices = chunk.GetIndices();
-		Nz::UInt32 chunkSeed = seed + static_cast<Nz::UInt32>(chunkIndices.x) + static_cast<Nz::UInt32>(chunkIndices.y) + static_cast<Nz::UInt32>(chunkIndices.z);
 
-		std::minstd_rand rand(chunkSeed);
-		std::bernoulli_distribution dis(0.9);
+		ScriptingContext scriptingContext(m_app);
+		scriptingContext.RegisterLibrary<MathScriptingLibrary>();
+		scriptingContext.RegisterLibrary<ChunkScriptingLibrary>();
 
-		BlockIndex dirtBlockIndex = blockLibrary.GetBlockIndex("dirt");
-		BlockIndex grassBlockIndex = blockLibrary.GetBlockIndex("grass");
-		BlockIndex stoneBlockIndex = blockLibrary.GetBlockIndex("stone");
-		BlockIndex stoneMossyBlockIndex = blockLibrary.GetBlockIndex("stone_mossy");
-		BlockIndex snowBlockIndex = blockLibrary.GetBlockIndex("snow");
+		Nz::Result execResult = scriptingContext.LoadFile(fmt::format("scripts/planets/{}.lua", scriptName));
+		if (!execResult)
+			return;
 
-		Nz::Vector3i maxHeight((Nz::Vector3i(chunkCount) + Nz::Vector3i(1)) / 2);
-		maxHeight *= int(Planet::ChunkSize);
+		sol::protected_function generationFunction = execResult.GetValue();
 
-		Nz::EnumArray<Direction, siv::PerlinNoise> perlin;
-		for (auto&& [dir, noise] : perlin.iter_kv())
-			noise.reseed(seed + static_cast<unsigned int>(dir));
+		ChunkWriteLock lock(&chunk);
 
-		chunk.LockWrite();
-		NAZARA_DEFER({ chunk.UnlockWrite(); });
-
-		chunk.Reset([&](BlockIndex* blockIndices)
+		auto result = generationFunction(chunk, seed, chunkCount);
+		if (!result.valid())
 		{
-			// Fill all blocks based on their depth
-			ChunkIndices chunkIndices = chunk.GetIndices();
-
-			BlockIndex* blockIndexPtr = blockIndices;
-			for (unsigned int z = 0; z < Planet::ChunkSize; ++z)
-			{
-				for (unsigned int y = 0; y < Planet::ChunkSize; ++y)
-				{
-					for (unsigned int x = 0; x < Planet::ChunkSize; ++x)
-					{
-						Nz::Vector3i blockPos = GetBlockIndices(chunkIndices, { x, y, z });
-						unsigned int depth = Nz::SafeCaster(std::min({
-							maxHeight.x - std::abs(blockPos.x),
-							maxHeight.y - std::abs(blockPos.z),
-							maxHeight.z - std::abs(blockPos.y)
-						}));
-
-						if (depth < freeSpace)
-						{
-							*blockIndexPtr++ = EmptyBlockIndex;
-							continue;
-						}
-
-						depth -= freeSpace;
-
-						BlockIndex blockIndex;
-						if (depth <= 6)
-							blockIndex = snowBlockIndex;
-						else if (depth <= 18)
-							blockIndex = dirtBlockIndex;
-						else
-							blockIndex = (dis(rand)) ? stoneBlockIndex : stoneMossyBlockIndex;
-
-						if (std::abs(blockPos.x) <= 2 && std::abs(blockPos.z) <= 2)
-							blockIndex = EmptyBlockIndex;
-
-						if (blockIndex != InvalidBlockIndex)
-							*blockIndexPtr++ = blockIndex;
-					}
-				}
-			}
-
-			constexpr double heightScale = 1.5f;
-			constexpr double scale = 0.02f;
-
-			// +X
-			for (unsigned int y = 0; y < Planet::ChunkSize; ++y)
-			{
-				for (unsigned int x = 0; x < Planet::ChunkSize; ++x)
-				{
-					BlockIndices mapPos = GetBlockIndices(chunkIndices, { 0, x, y });
-					double height = perlin[Direction::Right].normalizedOctave2D_01(mapPos.y * scale, mapPos.z * scale, 4) * heightScale;
-
-					int terrainDepth = std::round(std::min<double>(height * (maxHeight.x / 2 - freeSpace) + freeSpace, maxHeight.x / 2));
-					int blockDepth = maxHeight.x - mapPos.x + 1;
-					if (blockDepth < terrainDepth)
-						continue;
-
-					unsigned int startHeight = Nz::SafeCaster(blockDepth - terrainDepth);
-					if (startHeight >= Planet::ChunkSize)
-						continue;
-
-					if (BlockIndex& blockType = blockIndices[chunk.GetBlockLocalIndex({ startHeight, x, y })]; blockType == dirtBlockIndex)
-						blockType = grassBlockIndex;
-
-					for (unsigned int height = startHeight + 1; height < Planet::ChunkSize; ++height)
-						blockIndices[chunk.GetBlockLocalIndex({ height, x, y })] = EmptyBlockIndex;
-				}
-			}
-
-			// -X
-			for (unsigned int y = 0; y < Planet::ChunkSize; ++y)
-			{
-				for (unsigned int x = 0; x < Planet::ChunkSize; ++x)
-				{
-					BlockIndices mapPos = GetBlockIndices(chunkIndices, { Planet::ChunkSize - 1, x, y });
-					double height = perlin[Direction::Left].normalizedOctave2D_01(mapPos.y * scale, mapPos.z * scale, 4) * heightScale;
-
-					int terrainDepth = std::round(std::min<double>(height * (maxHeight.x / 2 - freeSpace) + freeSpace, maxHeight.x / 2));
-					int blockDepth = maxHeight.x + mapPos.x + 1;
-					if (blockDepth < terrainDepth)
-						continue;
-
-					unsigned int startHeight = Nz::SafeCast<unsigned int>(blockDepth - terrainDepth);
-					if (startHeight >= Planet::ChunkSize)
-						continue;
-
-					if (BlockIndex& blockType = blockIndices[chunk.GetBlockLocalIndex({ Planet::ChunkSize - startHeight - 1, x, y })]; blockType == dirtBlockIndex)
-						blockType = grassBlockIndex;
-
-					for (unsigned int height = startHeight + 1; height < Planet::ChunkSize; ++height)
-						blockIndices[chunk.GetBlockLocalIndex({ Planet::ChunkSize - height - 1, x, y })] = EmptyBlockIndex;
-				}
-			}
-
-			// +Y
-			for (unsigned int z = 0; z < Planet::ChunkSize; ++z)
-			{
-				for (unsigned int x = 0; x < Planet::ChunkSize; ++x)
-				{
-					BlockIndices mapPos = GetBlockIndices(chunkIndices, { x, z, 0 });
-					double height = perlin[Direction::Up].normalizedOctave2D_01(mapPos.x * scale, mapPos.z * scale, 4) * heightScale;
-
-					int terrainDepth = std::round(std::min<double>(height * (maxHeight.y / 2 - freeSpace) + freeSpace, maxHeight.y / 2));
-					int blockDepth = maxHeight.y - mapPos.y + 1;
-					if (blockDepth < terrainDepth)
-						continue;
-
-					unsigned int startHeight = Nz::SafeCaster(blockDepth - terrainDepth);
-					if (startHeight >= Planet::ChunkSize)
-						continue;
-
-					if (BlockIndex& blockType = blockIndices[chunk.GetBlockLocalIndex({ x, z, startHeight })]; blockType == dirtBlockIndex)
-						blockType = grassBlockIndex;
-
-					for (unsigned int height = startHeight + 1; height < Planet::ChunkSize; ++height)
-						blockIndices[chunk.GetBlockLocalIndex({ x, z, height })] = EmptyBlockIndex;
-				}
-			}
-
-			// -Y
-			for (unsigned int z = 0; z < Planet::ChunkSize; ++z)
-			{
-				for (unsigned int x = 0; x < Planet::ChunkSize; ++x)
-				{
-					BlockIndices mapPos = GetBlockIndices(chunkIndices, { x, z, Planet::ChunkSize - 1 });
-					double height = perlin[Direction::Down].normalizedOctave2D_01(mapPos.x * scale, mapPos.z * scale, 4) * heightScale;
-
-					int terrainDepth = std::round(std::min<double>(height * (maxHeight.y / 2 - freeSpace) + freeSpace, maxHeight.y / 2));
-					int blockDepth = maxHeight.y + mapPos.y + 1;
-					if (blockDepth < terrainDepth)
-						continue;
-
-					unsigned int startHeight = Nz::SafeCast<unsigned int>(blockDepth - terrainDepth);
-					if (startHeight >= Planet::ChunkSize)
-						continue;
-
-					if (BlockIndex& blockType = blockIndices[chunk.GetBlockLocalIndex({ x, z, Planet::ChunkSize - startHeight - 1 })]; blockType == dirtBlockIndex)
-						blockType = grassBlockIndex;
-
-					for (unsigned int height = startHeight + 1; height < Planet::ChunkSize; ++height)
-						blockIndices[chunk.GetBlockLocalIndex({ x, z, Planet::ChunkSize - height - 1 })] = EmptyBlockIndex;
-				}
-			}
-
-			// +Z
-			for (unsigned int y = 0; y < Planet::ChunkSize; ++y)
-			{
-				for (unsigned int x = 0; x < Planet::ChunkSize; ++x)
-				{
-					BlockIndices mapPos = GetBlockIndices(chunkIndices, { x, 0, y });
-					double height = perlin[Direction::Back].normalizedOctave2D_01(mapPos.x * scale, mapPos.y * scale, 4) * heightScale;
-
-					int terrainDepth = std::round(std::min<double>(height * (maxHeight.z / 2 - freeSpace) + freeSpace, maxHeight.z / 2));
-					int blockDepth = maxHeight.z - mapPos.z + 1;
-					if (blockDepth < terrainDepth)
-						continue;
-
-					unsigned int startHeight = Nz::SafeCaster(blockDepth - terrainDepth);
-					if (startHeight >= Planet::ChunkSize)
-						continue;
-
-					if (BlockIndex& blockType = blockIndices[chunk.GetBlockLocalIndex({ x, startHeight, y })]; blockType == dirtBlockIndex)
-						blockType = grassBlockIndex;
-
-					for (unsigned int height = startHeight + 1; height < Planet::ChunkSize; ++height)
-						blockIndices[chunk.GetBlockLocalIndex({ x, height, y })] = EmptyBlockIndex;
-				}
-			}
-
-			// -Z
-			for (unsigned int y = 0; y < Planet::ChunkSize; ++y)
-			{
-				for (unsigned int x = 0; x < Planet::ChunkSize; ++x)
-				{
-					BlockIndices mapPos = GetBlockIndices(chunkIndices, { x, Planet::ChunkSize - 1, y });
-					double height = perlin[Direction::Front].normalizedOctave2D_01(mapPos.x * scale, mapPos.y * scale, 4) * heightScale;
-
-					int terrainDepth = std::round(std::min<double>(height * (maxHeight.z / 2 - freeSpace) + freeSpace, maxHeight.z / 2));
-					int blockDepth = maxHeight.z + mapPos.z + 1;
-					if (blockDepth < terrainDepth)
-						continue;
-
-					unsigned int startHeight = Nz::SafeCaster(blockDepth - terrainDepth);
-					if (startHeight >= Planet::ChunkSize)
-						continue;
-
-					if (BlockIndex& blockType = blockIndices[chunk.GetBlockLocalIndex({ x, Planet::ChunkSize - startHeight - 1, y })]; blockType == dirtBlockIndex)
-						blockType = grassBlockIndex;
-
-					for (unsigned int height = startHeight + 1; height < Planet::ChunkSize; ++height)
-						blockIndices[chunk.GetBlockLocalIndex({ x, Planet::ChunkSize - height - 1, y })] = EmptyBlockIndex;
-				}
-			}
-		});
+			sol::error err = result;
+			spdlog::error("chunk {};{};{} failed to generate: {}", chunkIndices.x, chunkIndices.y, chunkIndices.z, err.what());
+		}
 	}
 
-	void Planet::GenerateChunks(const BlockLibrary& blockLibrary, Nz::TaskScheduler& taskScheduler, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount)
+	void Planet::GenerateChunks(Nz::TaskScheduler& taskScheduler, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, std::string_view scriptName)
 	{
-		for (int chunkZ = 0; chunkZ < chunkCount.z; ++chunkZ)
+		struct ThreadState
 		{
-			for (int chunkY = 0; chunkY < chunkCount.y; ++chunkY)
+			ThreadState(Nz::ApplicationBase& app) :
+			scriptingContext(app)
 			{
-				for (int chunkX = 0; chunkX < chunkCount.x; ++chunkX)
-				{
-					auto& chunk = AddChunk(blockLibrary, { chunkX - int(chunkCount.x / 2), chunkY - int(chunkCount.y / 2), chunkZ - int(chunkCount.z / 2) });
-					taskScheduler.AddTask([&]
-					{
-						GenerateChunk(blockLibrary, chunk, seed, chunkCount);
-					});
-				}
 			}
-		}
 
-		taskScheduler.WaitForTasks();
+			ScriptingContext scriptingContext;
+			sol::protected_function generationFunction;
+		};
+
+		struct GenerationContext
+		{
+			std::mutex threadMutex;
+			std::unordered_map<std::thread::id, std::unique_ptr<ThreadState>> threadStates;
+		};
+
+		auto context = std::make_shared<GenerationContext>();
+		std::string scriptPath = fmt::format("scripts/planets/{}.lua", scriptName);
+
+		ForEachChunk([=, this, &taskScheduler](const ChunkIndices& chunkIndices, Chunk& chunk)
+		{
+			if (chunk.HasContent())
+				return;
+
+			taskScheduler.AddTask([=, this, &chunk]
+			{
+				ThreadState* currentThreadState = nullptr;
+				{
+					std::unique_lock lock(context->threadMutex);
+					auto id = std::this_thread::get_id();
+					auto it = context->threadStates.find(id);
+					if (it == context->threadStates.end())
+					{
+						lock.unlock();
+
+						std::unique_ptr<ThreadState> threadState = std::make_unique<ThreadState>(m_app);
+						threadState->scriptingContext.RegisterLibrary<MathScriptingLibrary>();
+						threadState->scriptingContext.RegisterLibrary<ChunkScriptingLibrary>();
+
+						Nz::Result execResult = threadState->scriptingContext.LoadFile(scriptPath);
+						if (!execResult)
+							return;
+
+						threadState->generationFunction = execResult.GetValue();
+
+						currentThreadState = threadState.get();
+
+						lock.lock();
+						context->threadStates.emplace(id, std::move(threadState));
+					}
+					else
+						currentThreadState = it->second.get();
+				}
+
+				ChunkWriteLock lock(&chunk);
+
+				auto result = currentThreadState->generationFunction(chunk, seed, chunkCount);
+				if (!result.valid())
+				{
+					sol::error err = result;
+					spdlog::error("chunk {};{};{} failed to generate: {}", chunkIndices.x, chunkIndices.y, chunkIndices.z, err.what());
+				}
+			});
+		});
 	}
 
 	void Planet::GeneratePlatform(const BlockLibrary& blockLibrary, Direction upDirection, const BlockIndices& platformCenter)
@@ -441,7 +498,7 @@ namespace tsom
 					Nz::Vector3ui innerCoordinates;
 					ChunkIndices chunkIndices = GetChunkIndicesByBlockIndices(coordinates, &innerCoordinates);
 					if (Chunk* chunk = GetChunk(chunkIndices))
-						chunk->UpdateBlock(innerCoordinates, blockIndex);
+						chunk->UpdateBlock(innerCoordinates, blockIndex, true);
 
 					xPos += dirAxis.rightDir;
 				}
@@ -497,7 +554,7 @@ namespace tsom
 					}
 
 					hasEmpty = true;
-					chunk->UpdateBlock(innerCoordinates, planksBlockIndex);
+					chunk->UpdateBlock(innerCoordinates, planksBlockIndex, true);
 				}
 
 				xPos = startingX;
@@ -516,7 +573,11 @@ namespace tsom
 		auto it = m_chunks.find(indices);
 		assert(it != m_chunks.end());
 
-		OnChunkRemove(this, it->second.chunk.get());
+		Chunk* chunk = it->second.chunk.get();
+		OnChunkRemove(this, chunk);
+		for (std::size_t layerIndex : chunk->GetActiveLayers())
+			OnChunkLayerRemove(this, chunk, layerIndex);
+
 		m_chunks.erase(it);
 	}
 }

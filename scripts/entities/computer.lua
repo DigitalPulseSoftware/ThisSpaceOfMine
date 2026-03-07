@@ -1,21 +1,10 @@
 local classData = EntityRegistry.ClassBuilder()
 
--- TODO: Replace by RPC
-classData:AddProperty("active", { type = "bool", default = false, isNetworked = true })
-
-classData:AddClientRPC("activate")
-
-if CLIENT then
-	classData:OnClientRPC("activate", function (self)
-		ClientSession.EnableShipControl(true)
-	end)
-end
-
 classData:On("init", function (self)
 	local physSettings = {
-		kind = "dynamic",
+		kind = "static",
 		mass = 0.0,
-		collider = BoxCollider3D.new(Vec3(0.5)),
+		collider = BoxCollider3D.new(Vec3f(0.5)),
 		objectLayer = Constants.ObjectLayerStatic
 	}
 
@@ -36,10 +25,9 @@ end)
 if SERVER then
 	classData:On("interact", function (self, player)
 		local computerNode = self:GetComponent("node")
-		local outsideEntity = self:GetEnvironment():GetOutsideShipEntity()
+		local shipEnv = self:GetEnvironment()
 
-		player:GetController():SetShipController(ShipController.new(outsideEntity, computerNode:GetRotation()))
-		self:CallClientRPC("activate", player)
+		player:PilotShip(shipEnv:GetShipEntity(), shipEnv:GetExteriorShipEntity(), computerNode:GetRotation())
 	end)
 end
 

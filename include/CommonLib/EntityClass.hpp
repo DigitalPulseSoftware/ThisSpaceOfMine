@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -10,8 +10,10 @@
 #include <CommonLib/Export.hpp>
 #include <CommonLib/EntityProperties.hpp>
 #include <entt/fwd.hpp>
+#include <nlohmann/json_fwd.hpp>
 #include <tsl/hopscotch_map.h>
 #include <functional>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -42,11 +44,18 @@ namespace tsom
 			inline const Property& GetProperty(Nz::UInt32 propertyIndex) const;
 			inline Nz::UInt32 GetPropertyCount() const;
 
+			void InitAndActivateEntity(entt::handle entity) const;
+			void InitEntity(entt::handle entity) const;
+
+			std::vector<EntityProperty> PropertiesFromJson(const nlohmann::json& propertiesJson) const;
+			nlohmann::json PropertiesToJson(std::span<const EntityProperty> properties) const;
+
 			EntityClass& operator=(const EntityClass&) = delete;
 			EntityClass& operator=(EntityClass&&) noexcept = default;
 
 			struct Callbacks
 			{
+				std::function<void(entt::handle)> onActivate;
 				std::function<void(entt::handle)> onInit;
 			};
 

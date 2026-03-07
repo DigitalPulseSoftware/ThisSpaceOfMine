@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -33,9 +33,9 @@ namespace tsom
 			bool Update(Nz::StateMachine& fsm, Nz::Time elapsedTime) override;
 
 		private:
-			void FetchPlayerInfo();
+			void FetchPlayerInfo(bool devMode);
 			void LayoutWidgets(const Nz::Vector2f& newSize) override;
-			void OnCreateOrConnectPressed();
+			void OnCreateOrConnectPressed(bool devMode);
 
 			std::optional<UpdateInfo> m_newVersionInfo;
 			std::shared_ptr<Nz::State> m_nextState;

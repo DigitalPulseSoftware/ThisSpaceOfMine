@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -10,6 +10,7 @@
 #include <CommonLib/Export.hpp>
 #include <CommonLib/BlockIndex.hpp>
 #include <CommonLib/Direction.hpp>
+#include <CommonLib/PhysicsConstants.hpp>
 #include <NazaraUtils/EnumArray.hpp>
 #include <tsl/hopscotch_map.h>
 #include <string>
@@ -22,6 +23,8 @@ namespace tsom
 		public:
 			struct BlockData;
 			struct BlockInfo;
+			struct LayerData;
+			struct LayerInfo;
 
 			BlockLibrary();
 			BlockLibrary(const BlockLibrary&) = delete;
@@ -29,12 +32,17 @@ namespace tsom
 			~BlockLibrary() = default;
 
 			inline const BlockData& GetBlockData(BlockIndex blockIndex) const;
+			inline const LayerData& GetLayerData(std::size_t layerIndex) const;
 			inline BlockIndex GetBlockIndex(std::string_view blockName) const;
+			inline bool IsValidBlock(BlockIndex blockIndex) const;
+			inline bool IsValidLayer(std::size_t layerIndex) const;
 
 			BlockIndex RegisterBlock(std::string name, BlockInfo blockInfo);
+			std::size_t RegisterLayer(std::string name, LayerInfo layerInfo);
 
 			struct BlockInfo
 			{
+				std::string_view layerName = "default";
 				std::string basePath;
 				std::string baseBackPath;
 				std::string baseDownPath;
@@ -45,18 +53,43 @@ namespace tsom
 				std::string baseUpPath;
 				bool hasCollisions = true;
 				bool isDoubleSided = false;
+				bool isSmooth = false;
 				bool isTransparent = false;
+				float density = 1.0f;
 				float permeability = 0.f;
 			};
 
 			struct BlockData
 			{
+				std::size_t layerIndex;
 				std::string name;
 				Nz::EnumArray<Direction, unsigned int> texIndices;
 				bool hasCollisions;
 				bool isDoubleSided;
 				bool isTransparent;
+				bool isSmooth;
+				float density;
 				float permeability;
+			};
+
+			struct LayerInfo
+			{
+				std::string name;
+				Nz::PhysObjectLayer3D physicsLayer = Constants::ObjectLayerStatic;
+				bool isBlended;
+				bool isFluid = false;
+				bool isPhysicsTrigger = false;
+				int renderLayer = 0;
+			};
+
+			struct LayerData
+			{
+				std::string name;
+				Nz::PhysObjectLayer3D physicsLayer;
+				bool isBlended;
+				bool isFluid;
+				bool isPhysicsTrigger;
+				int renderLayer;
 			};
 
 			BlockLibrary& operator=(const BlockLibrary&) = delete;
@@ -67,8 +100,10 @@ namespace tsom
 
 		protected:
 			tsl::hopscotch_map<std::string /*name*/, BlockIndex /*blockIndex*/, std::hash<std::string_view>, std::equal_to<>> m_blockIndices;
+			tsl::hopscotch_map<std::string /*name*/, std::size_t /*layerIndex*/, std::hash<std::string_view>, std::equal_to<>> m_layerIndices;
 			tsl::hopscotch_map<std::string /*texturePath*/, unsigned int /*textureIndex*/, std::hash<std::string_view>, std::equal_to<>> m_textureIndices;
 			std::vector<BlockData> m_blocks;
+			std::vector<LayerData> m_layers;
 	};
 }
 

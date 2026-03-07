@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -30,9 +30,22 @@ namespace tsom
 		return GetProperty<Property>(GetPropertyIndex(propertyName));
 	}
 
+	inline const std::vector<EntityProperty>& ClassInstanceComponent::GetProperties() const&
+	{
+		return m_properties;
+	}
+
+	inline std::vector<EntityProperty>&& ClassInstanceComponent::GetProperties()&&
+	{
+		return std::move(m_properties);
+	}
+
 	inline void ClassInstanceComponent::UpdateProperty(Nz::UInt32 propertyIndex, EntityProperty&& value)
 	{
 		assert(propertyIndex < m_properties.size());
+		if (m_properties[propertyIndex] == value)
+			return;
+
 		OnPropertyUpdate(this, propertyIndex, value);
 		m_properties[propertyIndex] = std::move(value);
 	}

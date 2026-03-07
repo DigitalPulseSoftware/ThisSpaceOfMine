@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme Leclercq
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -79,6 +79,24 @@ namespace tsom
 	}
 
 	template<EntityPropertyType P>
+	bool EntityPropertyArrayValue<P>::operator==(const EntityPropertyArrayValue& rhs) const
+	{
+		if (m_size != rhs.m_size)
+			return false;
+
+		if (!std::equal(&m_arrayData[0], &m_arrayData[m_size - 1], &rhs.m_arrayData[0], &rhs.m_arrayData[m_size - 1]))
+			return false;
+
+		return true;
+	}
+
+	template<EntityPropertyType P>
+	bool EntityPropertyArrayValue<P>::operator!=(const EntityPropertyArrayValue& rhs) const
+	{
+		return !operator==(rhs);
+	}
+
+	template<EntityPropertyType P>
 	auto EntityPropertyArrayValue<P>::begin() -> UnderlyingType*
 	{
 		return &m_arrayData[0];
@@ -141,12 +159,6 @@ namespace tsom
 	}
 
 	template<EntityPropertyType P>
-	auto EntityPropertySingleValue<P>::operator*() && -> UnderlyingType&&
-	{
-		return std::move(value);
-	}
-
-	template<EntityPropertyType P>
 	auto EntityPropertySingleValue<P>::operator*() const & -> const UnderlyingType&
 	{
 		return value;
@@ -159,14 +171,20 @@ namespace tsom
 	}
 
 	template<EntityPropertyType P>
-	EntityPropertySingleValue<P>::operator UnderlyingType && () &&
-	{
-		return std::move(value);
-	}
-
-	template<EntityPropertyType P>
 	EntityPropertySingleValue<P>::operator const UnderlyingType& () const&
 	{
 		return value;
+	}
+
+	template<EntityPropertyType P>
+	bool EntityPropertySingleValue<P>::operator==(const EntityPropertySingleValue& rhs) const
+	{
+		return value == rhs.value;
+	}
+
+	template<EntityPropertyType P>
+	bool EntityPropertySingleValue<P>::operator!=(const EntityPropertySingleValue& rhs) const
+	{
+		return value != rhs.value;
 	}
 }

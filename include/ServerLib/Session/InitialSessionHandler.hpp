@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -21,7 +21,7 @@ namespace tsom
 			InitialSessionHandler(ServerInstance& instance, NetworkSession* session);
 			~InitialSessionHandler() = default;
 
-			void HandlePacket(Packets::AuthRequest&& authRequest);
+			void HandlePacket(Packets::C_AuthRequest&& authRequest);
 
 			void OnDeserializationError(std::size_t packetIndex) override;
 			void OnUnexpectedPacket(std::size_t packetIndex) override;

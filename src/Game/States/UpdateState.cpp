@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -15,8 +15,8 @@
 #include <Nazara/Widgets/ProgressBarWidget.hpp>
 #include <Nazara/Widgets/SimpleLabelWidget.hpp>
 #include <NazaraUtils/PathUtils.hpp>
-#include <fmt/color.h>
 #include <fmt/core.h>
+#include <spdlog/spdlog.h>
 #include <numeric>
 
 namespace tsom
@@ -65,7 +65,7 @@ namespace tsom
 			m_isCancelled = true;
 		});
 
-		updater.DownloadAndUpdate(m_updateInfo, m_updateInfo.assetVersion > currentGameVersion, m_updateInfo.binaryVersion > currentGameVersion);
+		updater.DownloadAndUpdate(m_updateInfo, m_updateInfo.assetVersion > currentGameVersion, m_updateInfo.binaryVersion > currentGameVersion, true, true);
 	}
 
 	bool UpdateState::Update(Nz::StateMachine& fsm, Nz::Time elapsedTime)

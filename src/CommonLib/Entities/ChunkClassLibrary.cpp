@@ -1,8 +1,9 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/Entities/ChunkClassLibrary.hpp>
+#include <CommonLib/BlockLibrary.hpp>
 #include <CommonLib/EntityClass.hpp>
 #include <CommonLib/EntityProperties.hpp>
 #include <CommonLib/EntityRegistry.hpp>
@@ -17,9 +18,10 @@ namespace tsom
 	{
 		registry.RegisterClass(EntityClass("planet", {
 			{
-				EntityClass::Property { .name = "CellSize",     .type = EntityPropertyType::Float, .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(1.f),   .isNetworked = true },
-				EntityClass::Property { .name = "CornerRadius", .type = EntityPropertyType::Float, .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(16.f),  .isNetworked = true },
-				EntityClass::Property { .name = "Gravity",      .type = EntityPropertyType::Float, .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(9.81f), .isNetworked = true }
+				EntityClass::Property { .name = "CellSize",             .type = EntityPropertyType::Float,       .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(1.f),                      .isNetworked = true },
+				EntityClass::Property { .name = "CornerRadius",         .type = EntityPropertyType::Float,       .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(16.f),                     .isNetworked = true },
+				EntityClass::Property { .name = "Gravity",              .type = EntityPropertyType::Float,       .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(9.81f),                    .isNetworked = true },
+				EntityClass::Property { .name = "AtmospherePlanetDims", .type = EntityPropertyType::FloatSize3D, .defaultValue = EntityPropertySingleValue<EntityPropertyType::FloatSize3D>(Nz::Vector3f(60.f)), .isNetworked = true },
 			}
 		},
 		{
@@ -34,11 +36,17 @@ namespace tsom
 				Nz::EnttWorld* world = entity.registry()->ctx().get<Nz::EnttWorld*>();
 
 				auto& planetComponent = entity.emplace<PlanetComponent>();
-				planetComponent.planet = std::make_unique<Planet>(cellSize, cornerRadius, gravity);
-				planetComponent.planetEntities = SetupChunkEntities(*world, *planetComponent.planet);
-				planetComponent.planetEntities->SetParentEntity(entity);
+				planetComponent.planet = std::make_shared<Planet>(m_app, cellSize, cornerRadius, gravity);
+				for (std::size_t layerIndex = 0; layerIndex < planetComponent.planetEntities.size(); ++layerIndex)
+				{
+					if (!m_blockLibrary.IsValidLayer(layerIndex))
+						continue;
 
-				InitializeChunkEntity(entity);
+					planetComponent.planetEntities[layerIndex] = SetupChunkEntities(*world, *planetComponent.planet, layerIndex);
+					planetComponent.planetEntities[layerIndex]->SetParentEntity(entity);
+				}
+
+				InitializePlanetEntity(entity);
 			}
 		},
 		{}));
@@ -59,21 +67,31 @@ namespace tsom
 
 				auto& shipComponent = entity.emplace<ShipComponent>();
 				shipComponent.ship = std::make_unique<Ship>(cellSize);
-				shipComponent.shipEntities = SetupChunkEntities(*world, *shipComponent.ship);
-				shipComponent.shipEntities->SetParentEntity(entity);
+				for (std::size_t layerIndex = 0; layerIndex < shipComponent.shipEntities.size(); ++layerIndex)
+				{
+					if (!m_blockLibrary.IsValidLayer(layerIndex))
+						continue;
 
-				InitializeChunkEntity(entity);
+					shipComponent.shipEntities[layerIndex] = SetupChunkEntities(*world, *shipComponent.ship, layerIndex);
+					shipComponent.shipEntities[layerIndex]->SetParentEntity(entity);
+				}
+
+				InitializeShipEntity(entity);
 			}
 		},
 		{}));
 	}
 
-	void ChunkClassLibrary::InitializeChunkEntity(entt::handle entity)
+	void ChunkClassLibrary::InitializePlanetEntity(entt::handle entity)
 	{
 	}
 
-	std::unique_ptr<ChunkEntities> ChunkClassLibrary::SetupChunkEntities(Nz::EnttWorld& world, ChunkContainer& chunkContainer)
+	void ChunkClassLibrary::InitializeShipEntity(entt::handle entity)
 	{
-		return std::make_unique<ChunkEntities>(m_app, world, chunkContainer, m_blockLibrary);
+	}
+
+	std::unique_ptr<ChunkEntities> ChunkClassLibrary::SetupChunkEntities(Nz::EnttWorld& world, ChunkContainer& chunkContainer, std::size_t layerIndex)
+	{
+		return std::make_unique<ChunkEntities>(m_app, world, chunkContainer, m_blockLibrary, layerIndex);
 	}
 }

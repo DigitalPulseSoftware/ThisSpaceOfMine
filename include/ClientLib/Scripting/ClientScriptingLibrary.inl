@@ -1,12 +1,13 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 namespace tsom
 {
-	inline ClientScriptingLibrary::ClientScriptingLibrary(Nz::ApplicationBase& app, ClientSessionHandler& sessionHandler) :
+	inline ClientScriptingLibrary::ClientScriptingLibrary(Nz::ApplicationBase& app, ConfigFile& configFile, ClientSessionHandler& sessionHandler) :
 	m_app(app),
-	m_sessionHandler(sessionHandler)
+	m_sessionHandler(sessionHandler),
+	m_config(configFile)
 	{
 	}
 }

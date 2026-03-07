@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -11,6 +11,8 @@
 
 #include <CommonLib/Utility/CrashHandler.hpp>
 #include <Nazara/Core/DynLib.hpp>
+#include <array>
+#include <string_view>
 
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
@@ -27,9 +29,17 @@ namespace tsom
 			~CrashHandlerWin32();
 
 			bool Install() override;
+			void HandleUnhandledException(const std::exception* e, const cpptrace::stacktrace& stacktrace) override;
 			void Uninstall() override;
 
 		private:
+			void GenerateCrashdump(const wchar_t* filename, EXCEPTION_POINTERS* e);
+			void GenerateCrashlog(const wchar_t* filename, std::string_view errorMessage, EXCEPTION_POINTERS* e, DWORD crashedThread, const cpptrace::stacktrace& stacktrace);
+
+			static std::array<wchar_t, MAX_PATH> GetCrashdumpFilename();
+			static std::string GetErrorMessage(EXCEPTION_RECORD* record);
+			static LONG CALLBACK HandleException(EXCEPTION_POINTERS* e);
+
 			Nz::DynLib m_windbg;
 	};
 }

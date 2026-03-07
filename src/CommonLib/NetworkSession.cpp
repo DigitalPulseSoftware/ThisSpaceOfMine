@@ -1,9 +1,8 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/NetworkSession.hpp>
-#include <CommonLib/NetworkSessionManager.hpp>
 #include <CommonLib/SessionHandler.hpp>
 
 namespace tsom
@@ -23,7 +22,6 @@ namespace tsom
 		assert(m_peerId != NetworkReactor::InvalidPeerId);
 
 		m_reactor.DisconnectPeer(m_peerId, 0, type);
-		m_sessionHandler = nullptr;
 	}
 
 	void NetworkSession::HandlePacket(Nz::ByteArray&& byteArray)

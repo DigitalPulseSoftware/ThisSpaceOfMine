@@ -1,10 +1,10 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/EntityClass.hpp>
-#include <fmt/format.h>
+#include <spdlog/spdlog.h>
 
 namespace tsom
 {
@@ -16,6 +16,13 @@ namespace tsom
 		m_properties.reserve(propertyCount);
 		for (std::size_t i = 0; i < propertyCount; ++i)
 			m_properties.emplace_back(m_entityClass->GetProperty(i).defaultValue);
+	}
+
+	ClassInstanceComponent::ClassInstanceComponent(std::shared_ptr<const EntityClass> entityClass, std::vector<EntityProperty>&& properties) :
+	m_entityClass(std::move(entityClass)),
+	m_properties(std::move(properties))
+	{
+		NazaraAssert(m_entityClass->GetPropertyCount() == m_properties.size());
 	}
 
 	Nz::UInt32 ClassInstanceComponent::FindClientRpcIndex(std::string_view rpcName) const

@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -11,7 +11,7 @@
 #include <Nazara/Core/StateMachine.hpp>
 #include <Nazara/TextRenderer/SimpleTextDrawer.hpp>
 #include <Nazara/Widgets/LabelWidget.hpp>
-#include <fmt/format.h>
+#include <spdlog/spdlog.h>
 
 namespace tsom
 {
@@ -24,7 +24,7 @@ namespace tsom
 		m_connectingLabel = CreateWidget<Nz::LabelWidget>();
 	}
 
-	void ConnectionState::Connect(const Nz::IpAddress& serverAddress, std::variant<Packets::AuthRequest::AuthenticatedPlayerData, Packets::AuthRequest::AnonymousPlayerData> playerData, std::shared_ptr<Nz::State> previousState)
+	void ConnectionState::Connect(const Nz::IpAddress& serverAddress, std::variant<Packets::C_AuthRequest::AuthenticatedPlayerData, Packets::C_AuthRequest::AnonymousPlayerData> playerData, std::shared_ptr<Nz::State> previousState)
 	{
 		// Don't allow connection while we're switching to game state
 		if (m_nextState)
@@ -62,8 +62,8 @@ namespace tsom
 		m_serverSession.emplace(*reactor, peerId, serverAddress);
 		m_serverSession->SetProtocolVersion(IsDevVersion() ? Nz::MaxValue() : GameVersion);
 
-		ClientSessionHandler& sessionHandler = m_serverSession->SetupHandler<ClientSessionHandler>(*stateData.app, *stateData.world, *stateData.blockLibrary);
-		ConnectSignal(sessionHandler.OnAuthResponse, [this](const Packets::AuthResponse& authResponse)
+		ClientSessionHandler& sessionHandler = m_serverSession->SetupHandler<ClientSessionHandler>(*stateData.app, *stateData.config, *stateData.world, *stateData.blockLibrary);
+		ConnectSignal(sessionHandler.OnAuthResponse, [this](const Packets::S_AuthResponse& authResponse)
 		{
 			if (authResponse.authResult.IsOk())
 			{
@@ -121,8 +121,8 @@ namespace tsom
 
 			UpdateStatus(Nz::SimpleTextDrawer::Draw("Authenticating...", 36));
 
-			Packets::AuthRequest request;
-			request.gameVersion = GameVersion;
+			Packets::C_AuthRequest request;
+			request.gameVersion = (IsDevVersion()) ? Nz::MaxValue() : GameVersion;
 			request.token = m_playerData;
 
 			m_serverSession->SendPacket(request);
@@ -153,7 +153,7 @@ namespace tsom
 			stateData.networkSession = nullptr;
 			stateData.sessionHandler = nullptr;
 
-			fmt::print("Disconnected from server\n");
+			spdlog::info("Disconnected from server");
 			m_serverSession.reset();
 		};
 

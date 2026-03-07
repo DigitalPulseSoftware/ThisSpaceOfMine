@@ -1,12 +1,12 @@
-[nzsl_version("1.0")]
+[nzsl_version("1.1")]
 module TSOM.PlayerPBR;
 
 import InstanceData from Engine.InstanceData;
-import LightData from Engine.LightData;
+import LightData from Lighting.LightData;
 import SkeletalData from Engine.SkeletalData;
 import ViewerData from Engine.ViewerData;
 
-import * from Engine.LightShadow;
+import Lighting.Shadow;
 import SkinLinearPosition, SkinLinearPositionNormal from Engine.SkinningLinear;
 
 // Pass-specific options
@@ -29,30 +29,32 @@ option HasNormalTexture: bool = false;
 option HasRoughnessTexture: bool = false;
 option HasSpecularTexture: bool = false;
 
+const InvalidLoc = u32.Max;
+
 // Billboard related options
 option Billboard: bool = false;
 
 // Vertex declaration related options
-option VertexColorLoc: i32 = -1;
-option VertexNormalLoc: i32 = -1;
-option VertexPositionLoc: i32 = -1;
-option VertexSizeRotLocation: i32 = -1;
-option VertexTangentLoc: i32 = -1;
-option VertexUvLoc: i32 = -1;
+option VertexColorLoc: u32 = InvalidLoc;
+option VertexNormalLoc: u32 = InvalidLoc;
+option VertexPositionLoc: u32 = InvalidLoc;
+option VertexSizeRotLocation: u32 = InvalidLoc;
+option VertexTangentLoc: u32 = InvalidLoc;
+option VertexUvLoc: u32 = InvalidLoc;
 
-option VertexJointIndicesLoc: i32 = -1;
-option VertexJointWeightsLoc: i32 = -1;
+option VertexJointIndicesLoc: u32 = InvalidLoc;
+option VertexJointWeightsLoc: u32 = InvalidLoc;
 
-option MaxLightCount: u32 = u32(3); //< FIXME: Fix integral value types
+option MaxLightCount: u32 = 3;
 
-const HasNormal = (VertexNormalLoc >= 0);
-const HasVertexColor = (VertexColorLoc >= 0);
+const HasNormal = (VertexNormalLoc != InvalidLoc);
+const HasVertexColor = (VertexColorLoc != InvalidLoc);
 const HasColor = (HasVertexColor || Billboard);
-const HasTangent = (VertexTangentLoc >= 0);
-const HasVertexUV = (VertexUvLoc >= 0);
+const HasTangent = (VertexTangentLoc != InvalidLoc);
+const HasVertexUV = (VertexUvLoc != InvalidLoc);
 const HasUV = (HasVertexUV);
 const HasNormalMapping = HasNormalTexture && HasNormal && HasTangent && !DepthPass;
-const HasSkinning = (VertexJointIndicesLoc >= 0 && VertexJointWeightsLoc >= 0);
+const HasSkinning = (VertexJointIndicesLoc != InvalidLoc && VertexJointWeightsLoc != InvalidLoc);
 
 [layout(std140)]
 struct MaterialSettings
@@ -119,7 +121,7 @@ struct VertOut
 }
 
 // Fragment stage
-import ComputeLightRadiance, DistributionGGX, GeometrySmith, FresnelSchlick from Math.CookTorrancePBR;
+import Math.CookTorrancePBR;
 import Pi from Math.Constants;
 
 struct FragOut
@@ -204,8 +206,8 @@ fn ComputeLighting(color: vec3[f32], input: VertOut) -> vec3[f32]
 
 		let lambert = max(dot(normal, -light.direction), 0.0);
 
-		let shadowFactor = ComputeDirectionalLightShadow(light, shadowMapsDirectional[lightIndex], input.worldPos, lambert, viewerData.viewMatrix);
-		let radiance = ComputeLightRadiance(light.color.rgb, -light.direction, albedoFactor, eyeVec, F0, normal, metallic, roughness);
+		let shadowFactor = Shadow.ComputeDirectionalLightShadow(light, shadowMapsDirectional[lightIndex], input.worldPos, lambert, viewerData.viewMatrix);
+		let radiance = CookTorrancePBR.ComputeLightRadiance(light.color.rgb, -light.direction, albedoFactor, eyeVec, F0, normal, metallic, roughness);
 
 		lightRadiance += shadowFactor * radiance;
 	}
@@ -220,8 +222,8 @@ fn ComputeLighting(color: vec3[f32], input: VertOut) -> vec3[f32]
 		let attenuation = max(1.0 - dist * light.invRadius, 0.0);
 		let lightToPosNorm = lightToPos / max(dist, 0.0001);
 
-		let shadowFactor = ComputePointLightShadow(light, shadowMapsPoint[lightIndex], dist, lightToPosNorm);
-		let radiance = ComputeLightRadiance(light.color.rgb * attenuation, -lightToPosNorm, albedoFactor, eyeVec, F0, normal, metallic, roughness);
+		let shadowFactor = Shadow.ComputePointLightShadow(light, shadowMapsPoint[lightIndex], dist, lightToPosNorm);
+		let radiance = CookTorrancePBR.ComputeLightRadiance(light.color.rgb * attenuation, -lightToPosNorm, albedoFactor, eyeVec, F0, normal, metallic, roughness);
 
 		lightRadiance += shadowFactor * radiance;
 	}
@@ -242,8 +244,8 @@ fn ComputeLighting(color: vec3[f32], input: VertOut) -> vec3[f32]
 
 		let lambert = clamp(dot(normal, -lightToPosNorm), 0.0, 1.0);
 
-		let shadowFactor = ComputeSpotLightShadow(light, shadowMapsSpot[lightIndex], input.worldPos, lambert);
-		let radiance = ComputeLightRadiance(light.color.rgb * attenuation, -lightToPosNorm, albedoFactor, eyeVec, F0, normal, metallic, roughness);
+		let shadowFactor = Shadow.ComputeSpotLightShadow(light, shadowMapsSpot[lightIndex], input.worldPos, lambert);
+		let radiance = CookTorrancePBR.ComputeLightRadiance(light.color.rgb * attenuation, -lightToPosNorm, albedoFactor, eyeVec, F0, normal, metallic, roughness);
 
 		lightRadiance += shadowFactor * radiance;
 	}
@@ -420,7 +422,7 @@ fn VertMain(input: VertIn) -> VertOut
 	{
 		pos *= settings.ShadowPosScale;
 		const if (HasNormal)
-			pos -= input.normal * settings.ShadowMapNormalOffset;
+			pos -= normal * settings.ShadowMapNormalOffset;
 	}
 
 	let worldPosition = instanceData.worldMatrix * vec4[f32](pos, 1.0);
@@ -435,7 +437,7 @@ fn VertMain(input: VertIn) -> VertOut
 		output.color = input.color;
 
 	const if (HasNormal)
-		output.normal = rotationMatrix * input.normal;
+		output.normal = rotationMatrix * normal;
 
 	const if (HasVertexUV)
 		output.uv = input.uv;

@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -19,6 +19,9 @@ namespace tsom
 			~CrashHandlerFallback() = default;
 
 			bool Install() override;
+
+			void HandleUnhandledException(const std::exception* e, const cpptrace::stacktrace& stacktrace) override;
+
 			void Uninstall() override;
 	};
 }

@@ -1,11 +1,11 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/SessionHandler.hpp>
 #include <CommonLib/NetworkSession.hpp>
 #include <Nazara/Core/ByteArray.hpp>
-#include <fmt/format.h>
+#include <spdlog/spdlog.h>
 
 namespace tsom
 {
@@ -44,16 +44,16 @@ namespace tsom
 
 	void SessionHandler::OnDeserializationError(std::size_t packetIndex)
 	{
-		fmt::print("Serialization error of packet of type {}\n", PacketNames[packetIndex]);
+		spdlog::warn("Serialization error of packet of type {}", PacketNames[packetIndex]);
 	}
 
 	void SessionHandler::OnUnexpectedPacket(std::size_t packetIndex)
 	{
-		fmt::print("Received unexpected packet of type {}\n", PacketNames[packetIndex]);
+		spdlog::warn("Received unexpected packet of type {}", PacketNames[packetIndex]);
 	}
 
 	void SessionHandler::OnUnknownOpcode(Nz::UInt8 opcode)
 	{
-		fmt::print("Received packet with unknown opcode {}\n", +opcode);
+		spdlog::warn("Received packet with unknown opcode {}", +opcode);
 	}
 }

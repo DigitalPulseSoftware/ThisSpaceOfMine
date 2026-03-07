@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -34,7 +34,7 @@ namespace tsom
 
 			void Refresh(std::span<entt::registry*> registries, Nz::FunctionRef<void()> refreshCallback);
 
-			void RegisterClass(EntityClass entityClass);
+			std::shared_ptr<const EntityClass> RegisterClass(EntityClass entityClass);
 
 			template<typename T, typename... Args> void RegisterClassLibrary(Args&&... args);
 			void RegisterClassLibrary(std::unique_ptr<EntityClassLibrary>&& library);

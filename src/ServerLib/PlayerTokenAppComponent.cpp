@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -6,9 +6,8 @@
 #include <ServerLib/ServerConstants.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Network/WebServiceAppComponent.hpp>
-#include <fmt/color.h>
-#include <fmt/format.h>
 #include <nlohmann/json.hpp>
+#include <spdlog/spdlog.h>
 #include <chrono>
 
 namespace tsom
@@ -25,7 +24,7 @@ namespace tsom
 		auto it = m_playerTokens.find(playerUuid);
 		if (it == m_playerTokens.end())
 		{
-			fmt::print(fg(fmt::color::red), "player {} has no token entry, {} request cannot be queued\n", playerUuid.ToString(), route);
+			spdlog::error("player {} has no token entry, {} request cannot be queued", playerUuid.ToString(), route);
 			callback(0, "no player token entry");
 			return;
 		}
@@ -102,7 +101,7 @@ namespace tsom
 			{
 				if (!result.HasSucceeded())
 				{
-					fmt::print(fg(fmt::color::red), "player API request {} failed for player {}: {}\n", requestData.route, uuid.ToString(), result.GetErrorMessage());
+					spdlog::error("player API request {} failed for player {}: {}", requestData.route, uuid.ToString(), result.GetErrorMessage());
 					requestData.callback(0, result.GetErrorMessage());
 					return;
 				}
@@ -167,7 +166,7 @@ namespace tsom
 
 				if (!result.HasSucceeded())
 				{
-					fmt::print(fg(fmt::color::red), "failed to refresh token for player {}: {}\n", uuid.ToString(), result.GetErrorMessage());
+					spdlog::error("failed to refresh token for player {}: {}", uuid.ToString(), result.GetErrorMessage());
 					return;
 				}
 
@@ -186,7 +185,7 @@ namespace tsom
 						}
 					}
 					else
-						fmt::print(fg(fmt::color::red), "failed to refresh token for player {} (error {}): {}\n", uuid.ToString(), result.GetStatusCode(), result.GetBody());
+						spdlog::error("failed to refresh token for player {} (error {}): {}", uuid.ToString(), result.GetStatusCode(), result.GetBody());
 
 					return;
 				}
@@ -206,7 +205,7 @@ namespace tsom
 				}
 				catch (const std::exception& e)
 				{
-					fmt::print(fg(fmt::color::red), "failed to refresh token for player {}: {}\n", uuid.ToString(), e.what());
+					spdlog::error("failed to refresh token for player {}: {}", uuid.ToString(), e.what());
 					return;
 				}
 			});

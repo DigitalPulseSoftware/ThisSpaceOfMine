@@ -1,18 +1,12 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ClientLib/BlockSelectionBar.hpp>
 #include <ClientLib/ClientBlockLibrary.hpp>
-#include <CommonLib/GameConstants.hpp>
 #include <Nazara/Graphics/MaterialInstance.hpp>
 #include <Nazara/Graphics/RenderTarget.hpp>
-#include <Nazara/TextRenderer/Font.hpp>
 #include <Nazara/Widgets/ImageWidget.hpp>
-#include <Nazara/Widgets/RichTextAreaWidget.hpp>
-#include <Nazara/Widgets/ScrollAreaWidget.hpp>
-#include <Nazara/Widgets/TextAreaWidget.hpp>
-#include <fmt/format.h>
 
 namespace tsom
 {

@@ -1,28 +1,21 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <Game/States/CreatePlayerState.hpp>
-#include <CommonLib/GameConstants.hpp>
-#include <CommonLib/InternalConstants.hpp>
-#include <CommonLib/UpdaterAppComponent.hpp>
-#include <CommonLib/Version.hpp>
+#include <CommonLib/CommonConfigs.hpp>
 #include <Game/GameConfigAppComponent.hpp>
+#include <Game/GameConfigs.hpp>
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/GameState.hpp>
-#include <Game/States/UpdateState.hpp>
 #include <Nazara/Widgets.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/StateMachine.hpp>
-#include <Nazara/Core/StringExt.hpp>
-#include <Nazara/Network/Algorithm.hpp>
 #include <Nazara/Network/IpAddress.hpp>
-#include <Nazara/Network/Network.hpp>
 #include <Nazara/Network/WebServiceAppComponent.hpp>
 #include <Nazara/TextRenderer/SimpleTextDrawer.hpp>
-#include <fmt/color.h>
-#include <fmt/format.h>
 #include <nlohmann/json.hpp>
+#include <spdlog/spdlog.h>
 #include <optional>
 
 namespace tsom
@@ -96,7 +89,7 @@ namespace tsom
 		webService.QueueRequest([&, nickname](Nz::WebRequest& request) mutable
 		{
 			request.SetMethod(Nz::WebRequestMethod::Post);
-			request.SetURL(fmt::format("{}/v1/players", gameConfig.GetStringValue("Api.Url"), BuildConfig));
+			request.SetURL(fmt::format("{}/v1/players", gameConfig.GetStringValue(Config::Api_Url)));
 			request.SetServiceName("TSOM Player Create");
 
 			nlohmann::json createParams;
@@ -108,13 +101,13 @@ namespace tsom
 			{
 				if (!result.HasSucceeded())
 				{
-					fmt::print(fg(fmt::color::red), "failed to create player: {}\n", result.GetErrorMessage());
+					spdlog::error("failed to create player: {}", result.GetErrorMessage());
 					return;
 				}
 
 				if (result.GetStatusCode() != 200)
 				{
-					fmt::print(fg(fmt::color::red), "failed to create player (error {})\n", result.GetStatusCode());
+					spdlog::error("failed to create player (error {})", result.GetStatusCode());
 
 					try
 					{
@@ -125,7 +118,7 @@ namespace tsom
 					}
 					catch (const std::exception& e)
 					{
-						fmt::print(fg(fmt::color::red), "failed to decode error from API: {}\n", e.what());
+						spdlog::error("failed to decode error from API: {}", e.what());
 						UpdateStatus(Nz::SimpleTextDrawer::Draw("Failed to create player", 36, Nz::TextStyle_Regular, Nz::Color::Red()));
 					}
 
@@ -137,11 +130,11 @@ namespace tsom
 				std::string playerUuid = responseDoc["uuid"];
 				std::string connectToken = responseDoc["token"];
 
-				gameConfig.SetStringValue("Player.Token", std::string(connectToken));
+				gameConfig.SetStringValue(Config::Player_Token, std::string(connectToken));
 
 				gameConfigComponent.Save();
 
-				fmt::print(fg(fmt::color::green), "created player {}\n", nickname);
+				spdlog::info("created player {}", nickname);
 
 				UpdateStatus(Nz::SimpleTextDrawer::Draw(fmt::format("Player {} has been created!", nickname), 48, Nz::TextStyle_Regular, Nz::Color::Green()));
 				m_nextState = m_previousState;

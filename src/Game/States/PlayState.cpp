@@ -1,31 +1,26 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <Game/States/PlayState.hpp>
-#include <CommonLib/GameConstants.hpp>
-#include <CommonLib/InternalConstants.hpp>
+#include <CommonLib/CommonConfigs.hpp>
 #include <CommonLib/UpdaterAppComponent.hpp>
-#include <CommonLib/Version.hpp>
 #include <Game/GameConfigAppComponent.hpp>
+#include <Game/GameConfigs.hpp>
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/CreatePlayerState.hpp>
 #include <Game/States/DirectConnectionState.hpp>
 #include <Game/States/GameState.hpp>
-#include <Game/States/UpdateState.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/StateMachine.hpp>
-#include <Nazara/Core/StringExt.hpp>
 #include <Nazara/Network/Algorithm.hpp>
 #include <Nazara/Network/IpAddress.hpp>
-#include <Nazara/Network/Network.hpp>
 #include <Nazara/Network/WebServiceAppComponent.hpp>
 #include <Nazara/TextRenderer/SimpleTextDrawer.hpp>
 #include <Nazara/Widgets/BoxLayout.hpp>
 #include <Nazara/Widgets/ButtonWidget.hpp>
-#include <fmt/color.h>
-#include <fmt/format.h>
 #include <nlohmann/json.hpp>
+#include <spdlog/spdlog.h>
 #include <optional>
 
 namespace tsom
@@ -36,16 +31,16 @@ namespace tsom
 	{
 		auto& gameConfig = GetStateData().app->GetComponent<GameConfigAppComponent>().GetConfig();
 
-		std::string_view playerToken = gameConfig.GetStringValue("Player.Token");
+		bool devMode = gameConfig.GetBoolValue(Config::Api_DevMode);
 
 		m_layout = CreateWidget<Nz::BoxLayout>(Nz::BoxLayoutOrientation::TopToBottom);
 
 		m_createOrConnectButton = m_layout->Add<Nz::ButtonWidget>();
 		m_createOrConnectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Loading player info...", 30, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
 		m_createOrConnectButton->SetMaximumWidth(m_createOrConnectButton->GetPreferredWidth() * 1.5f);
-		ConnectSignal(m_createOrConnectButton->OnButtonTrigger, [this](const Nz::ButtonWidget*)
+		ConnectSignal(m_createOrConnectButton->OnButtonTrigger, [this, devMode](const Nz::ButtonWidget*)
 		{
-			OnCreateOrConnectPressed();
+			OnCreateOrConnectPressed(devMode);
 		});
 
 		m_directConnect = m_layout->Add<Nz::ButtonWidget>();
@@ -70,11 +65,10 @@ namespace tsom
 
 	void PlayState::Enter(Nz::StateMachine& fsm)
 	{
-		WidgetState::Enter(fsm);
-
 		auto& gameConfig = GetStateData().app->GetComponent<GameConfigAppComponent>().GetConfig();
 
-		std::string_view playerToken = gameConfig.GetStringValue("Player.Token");
+		std::string_view playerToken = gameConfig.GetStringValue(Config::Player_Token);
+		bool devMode = gameConfig.GetBoolValue(Config::Api_DevMode);
 
 		if (!playerToken.empty())
 		{
@@ -82,7 +76,7 @@ namespace tsom
 			m_createOrConnectButton->SetMaximumWidth(m_createOrConnectButton->GetPreferredWidth() * 1.5f);
 			m_createOrConnectButton->Disable();
 
-			FetchPlayerInfo();
+			FetchPlayerInfo(devMode);
 		}
 		else
 		{
@@ -95,8 +89,7 @@ namespace tsom
 			m_directConnect->Enable();
 		}
 
-		// First layout happens in WidgetState::Enter and doesn't take m_createPlayerButton state into account
-		LayoutWidgets(GetStateData().canvas->GetSize());
+		WidgetState::Enter(fsm);
 	}
 
 	bool PlayState::Update(Nz::StateMachine& fsm, Nz::Time elapsedTime)
@@ -116,11 +109,11 @@ namespace tsom
 		return true;
 	}
 
-	void PlayState::FetchPlayerInfo()
+	void PlayState::FetchPlayerInfo(bool devMode)
 	{
 		if (!GetStateData().app->HasComponent<Nz::WebServiceAppComponent>())
 		{
-			fmt::print(fg(fmt::color::red), "failed to retrieve player info: web services are unavailable\n");
+			spdlog::error("failed to retrieve player info: web services are unavailable");
 			m_createOrConnectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Web services are unavailable", 30, Nz::TextStyle_Regular, Nz::Color::Red()));
 			m_createOrConnectButton->Disable();
 			return;
@@ -129,12 +122,12 @@ namespace tsom
 		auto& gameConfig = GetStateData().app->GetComponent<GameConfigAppComponent>().GetConfig();
 		auto& webService = GetStateData().app->GetComponent<Nz::WebServiceAppComponent>();
 
-		std::string_view playerToken = gameConfig.GetStringValue("Player.Token");
+		std::string_view playerToken = gameConfig.GetStringValue(Config::Player_Token);
 
-		webService.QueueRequest([&](Nz::WebRequest& request)
+		webService.QueueRequest([&, devMode](Nz::WebRequest& request)
 		{
 			request.SetMethod(Nz::WebRequestMethod::Post);
-			request.SetURL(fmt::format("{}/v1/player/auth", gameConfig.GetStringValue("Api.Url"), BuildConfig));
+			request.SetURL(fmt::format("{}/v1/player/auth", gameConfig.GetStringValue(Config::Api_Url)));
 			request.SetServiceName("TSOM Player Info");
 
 			nlohmann::json connectBody;
@@ -142,7 +135,7 @@ namespace tsom
 
 			request.SetJSonContent(connectBody.dump());
 
-			request.SetResultCallback([widgetWeak = weak_from_this()](Nz::WebRequestResult&& result)
+			request.SetResultCallback([widgetWeak = weak_from_this(), devMode](Nz::WebRequestResult&& result)
 			{
 				std::shared_ptr<PlayState> playState = std::static_pointer_cast<PlayState>(widgetWeak.lock());
 				if (!playState)
@@ -150,7 +143,7 @@ namespace tsom
 
 				if (!result.HasSucceeded())
 				{
-					fmt::print(fg(fmt::color::red), "failed to retrieve player info: {}\n", result.GetErrorMessage());
+					spdlog::error("failed to retrieve player info: {}", result.GetErrorMessage());
 					playState->m_createOrConnectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Failed to connect to server", 30, Nz::TextStyle_Regular, Nz::Color::Red()));
 					playState->m_createOrConnectButton->Disable();
 					return;
@@ -158,7 +151,7 @@ namespace tsom
 
 				if (result.GetStatusCode() != 200)
 				{
-					fmt::print(fg(fmt::color::red), "failed to retrieve player info (error {}): {}\n", result.GetStatusCode(), result.GetBody());
+					spdlog::error("failed to retrieve player info (error {}): {}", result.GetStatusCode(), result.GetBody());
 					playState->m_createOrConnectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Failed to retrieve player", 30, Nz::TextStyle_Regular, Nz::Color::Red()));
 					playState->m_createOrConnectButton->Disable();
 					return;
@@ -171,12 +164,12 @@ namespace tsom
 					std::string playerUuid = responseDoc["uuid"];
 					std::string playerNickname = responseDoc["nickname"];
 
-					playState->m_createOrConnectButton->UpdateText(Nz::SimpleTextDrawer::Draw(fmt::format("Play as {}", playerNickname), 36, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
+					playState->m_createOrConnectButton->UpdateText(Nz::SimpleTextDrawer::Draw(fmt::format("Play as {}{}", playerNickname, devMode ? " (DEV)" : ""), 36, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
 					playState->m_createOrConnectButton->Enable();
 				}
 				catch (const std::exception& e)
 				{
-					fmt::print(fg(fmt::color::red), "failed to retrieve player info (failed to decode response: {})\n", e.what());
+					spdlog::error("failed to retrieve player info (failed to decode response: {})", e.what());
 					playState->m_createOrConnectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Failed to retrieve player", 30, Nz::TextStyle_Regular, Nz::Color::Red()));
 					playState->m_createOrConnectButton->Disable();
 					return;
@@ -193,26 +186,26 @@ namespace tsom
 		m_layout->Center();
 	}
 
-	void PlayState::OnCreateOrConnectPressed()
+	void PlayState::OnCreateOrConnectPressed(bool devMode)
 	{
 		auto& gameConfig = GetStateData().app->GetComponent<GameConfigAppComponent>();
-		std::string_view playerToken = gameConfig.GetConfig().GetStringValue("Player.Token");
+		std::string_view playerToken = gameConfig.GetConfig().GetStringValue(Config::Player_Token);
 
 		if (!playerToken.empty())
 		{
 			auto& gameConfig = GetStateData().app->GetComponent<GameConfigAppComponent>().GetConfig();
 			auto& webService = GetStateData().app->GetComponent<Nz::WebServiceAppComponent>();
 
-			std::string_view playerToken = gameConfig.GetStringValue("Player.Token");
-
-			webService.QueueRequest([&](Nz::WebRequest& request)
+			webService.QueueRequest([&, devMode](Nz::WebRequest& request)
 			{
 				request.SetMethod(Nz::WebRequestMethod::Post);
-				request.SetURL(fmt::format("{}/v1/game/connect", gameConfig.GetStringValue("Api.Url"), BuildConfig));
+				request.SetURL(fmt::format("{}/v1/game/connect", gameConfig.GetStringValue(Config::Api_Url)));
 				request.SetServiceName("TSOM Player Info");
 
 				nlohmann::json connectBody;
 				connectBody["token"] = playerToken;
+				if (devMode)
+					connectBody["dev"] = true;
 
 				request.SetJSonContent(connectBody.dump());
 
@@ -224,14 +217,14 @@ namespace tsom
 
 					if (!result.HasSucceeded())
 					{
-						fmt::print(fg(fmt::color::red), "failed to retrieve player info: {}\n", result.GetErrorMessage());
+						spdlog::error("failed to retrieve player info: {}", result.GetErrorMessage());
 						playState->m_createOrConnectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Failed to connect to server", 30, Nz::TextStyle_Regular, Nz::Color::Red()));
 						return;
 					}
 
 					if (result.GetStatusCode() != 200)
 					{
-						fmt::print(fg(fmt::color::red), "failed to retrieve player info (error {}): {}\n", result.GetStatusCode(), result.GetBody());
+						spdlog::error("failed to retrieve player info (error {}): {}", result.GetStatusCode(), result.GetBody());
 						playState->m_createOrConnectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Failed to retrieve connection token", 30, Nz::TextStyle_Regular, Nz::Color::Red()));
 						return;
 					}
@@ -250,7 +243,7 @@ namespace tsom
 						auto hostVec = Nz::IpAddress::ResolveHostname(Nz::NetProtocol::Any, token.gameServer.address, std::to_string(token.gameServer.port), &resolveError);
 						if (hostVec.empty())
 						{
-							fmt::print(fg(fmt::color::red), "failed to resolve {}:{}: {}\n", token.gameServer.address, token.gameServer.port, Nz::ErrorToString(resolveError));
+							spdlog::error("failed to resolve {}:{}: {}", token.gameServer.address, token.gameServer.port, Nz::ErrorToString(resolveError));
 							playState->m_createOrConnectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Failed to resolve server address", 30, Nz::TextStyle_Regular, Nz::Color::Red()));
 							return;
 						}
@@ -260,7 +253,7 @@ namespace tsom
 						auto& stateData = playState->GetStateData();
 						if (stateData.connectionState)
 						{
-							Packets::AuthRequest::AuthenticatedPlayerData playerData;
+							Packets::C_AuthRequest::AuthenticatedPlayerData playerData;
 							playerData.connectionToken = std::move(token);
 
 							stateData.connectionState->Connect(serverAddress, std::move(playerData), playState);
@@ -268,7 +261,7 @@ namespace tsom
 					}
 					catch (const std::exception& e)
 					{
-						fmt::print(fg(fmt::color::red), "failed to retrieve player token (failed to decode response: {})\n", e.what());
+						spdlog::error("failed to retrieve player token (failed to decode response: {})", e.what());
 						playState->m_createOrConnectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Failed to retrieve connection token", 30, Nz::TextStyle_Regular, Nz::Color::Red()));
 						return;
 					}

@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -8,6 +8,7 @@
 #define TSOM_COMMONLIB_FLATCHUNK_HPP
 
 #include <CommonLib/Chunk.hpp>
+#include <Nazara/Math/Box.hpp>
 #include <NazaraUtils/FunctionRef.hpp>
 
 namespace tsom
@@ -20,9 +21,11 @@ namespace tsom
 			FlatChunk(FlatChunk&&) = delete;
 			~FlatChunk() = default;
 
-			std::shared_ptr<Nz::Collider3D> BuildCollider() const override;
-			std::optional<Nz::Vector3ui> ComputeCoordinates(const Nz::Vector3f& position) const override;
-			Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> ComputeVoxelCorners(const Nz::Vector3ui& indices) const override;
+			std::pair<std::shared_ptr<Nz::Collider3D>, Nz::Vector3f> BuildBlockCollider(const Nz::Vector3ui& blockIndices, float scale = 1.f) const override;
+			std::shared_ptr<Nz::Collider3D> BuildCollider(std::size_t layerIndex) const override;
+
+			std::optional<Nz::Vector3ui> ComputeCoordinates(const Nz::Vector3f& position) const;
+			std::optional<HitBlock> ComputeHitCoordinates(const Nz::Vector3f& hitPos, const Nz::Vector3f& hitNormal, const Nz::Collider3D& collider, std::uint32_t hitSubshapeId) const override;
 
 			FlatChunk& operator=(const FlatChunk&) = delete;
 			FlatChunk& operator=(FlatChunk&&) = delete;

@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -23,6 +23,8 @@ namespace tsom
 			ChunkContainer(ChunkContainer&&) noexcept = default;
 			virtual ~ChunkContainer();
 
+			virtual void ClearChunks() = 0;
+
 			virtual void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, Chunk& chunk)> callback) = 0;
 			virtual void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, const Chunk& chunk)> callback) const = 0;
 
@@ -43,9 +45,11 @@ namespace tsom
 
 			static constexpr unsigned int ChunkSize = 32;
 
+			NazaraSignal(OnChunkLayerAdded, ChunkContainer* /*planet*/, Chunk* /*chunk*/, std::size_t /*layerIndex*/);
+			NazaraSignal(OnChunkLayerRemove, ChunkContainer* /*planet*/, Chunk* /*chunk*/, std::size_t /*layerIndex*/);
 			NazaraSignal(OnChunkAdded, ChunkContainer* /*planet*/, Chunk* /*chunk*/);
 			NazaraSignal(OnChunkRemove, ChunkContainer* /*planet*/, Chunk* /*chunk*/);
-			NazaraSignal(OnChunkUpdated, ChunkContainer* /*planet*/, Chunk* /*chunk*/, DirectionMask /*neighborUpdate*/);
+			NazaraSignal(OnChunkUpdated, ChunkContainer* /*planet*/, Chunk* /*chunk*/, NeighborChunkMask /*neighborMask*/, Nz::UInt32 /*layerMask*/);
 
 		protected:
 			float m_tileSize;

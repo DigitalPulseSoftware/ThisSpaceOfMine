@@ -17,10 +17,13 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-        - { runner: windows-latest, os: windows, arch: x64,    archive_ext: .zip }
-        - { runner: ubuntu-latest,  os: linux,   arch: x86_64, archive_ext: .tar.gz }
-        - { runner: macos-latest,   os: macos,   arch: x86_64, archive_ext: .tar.gz }
-        - { runner: macos-latest,   os: macos,   arch: arm64,  archive_ext: .tar.gz }
+        - { runner: windows-2022,      os: windows,      arch: x64,    archive_ext: .zip }
+        - { runner: ubuntu-22.04,      os: linux,        arch: x86_64, archive_ext: .tgz }
+        - { runner: ubuntu-22.04-arm,  os: linux,        arch: arm64,  archive_ext: .tgz }
+        - { runner: ubuntu-22.04,      os: linux-server, arch: x86_64, archive_ext: .tgz, config: --serveronly=y, cache_key: -server }
+        - { runner: ubuntu-22.04-arm,  os: linux-server, arch: arm64,  archive_ext: .tgz, config: --serveronly=y, cache_key: -server }
+        - { runner: macos-14,          os: macos,        arch: x86_64, archive_ext: .tgz }
+        - { runner: macos-14,          os: macos,        arch: arm64,  archive_ext: .tgz }
         mode: [debug, releasedbg]
 
     runs-on: ${{ matrix.platform.runner }}
@@ -44,7 +47,7 @@ jobs:
       shell: bash
 
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         fetch-depth: 0 # Clone the whole repository to get correct tags and branches
 
@@ -52,7 +55,6 @@ jobs:
     - name: Setup xmake
       uses: xmake-io/github-action-setup-xmake@v1
       with:
-        xmake-version: branch@dev
         actions-cache-folder: .xmake-cache-W${{ steps.cache_key.outputs.key }}
 
     # Update xmake repository (in order to have the file that will be cached)
@@ -68,18 +70,18 @@ jobs:
     # Retrieve xmake dependencies
     - name: Restore cached xmake dependencies
       id: restore-depcache
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@v5
       with:
         path: ${{ env.XMAKE_GLOBALDIR }}/.xmake/packages
-        key: ${{ matrix.platform.os }}-${{ matrix.platform.arch }}-${{ matrix.mode }}-${{ steps.dep_hash.outputs.hash }}-W${{ steps.cache_key.outputs.key }}
+        key: ${{ matrix.platform.os }}-${{ matrix.platform.arch }}-${{ matrix.mode }}-${{ steps.dep_hash.outputs.hash }}-W${{ steps.cache_key.outputs.key }}${{ matrix.platform.cache_key }}
 
     - name: Configure xmake and install dependencies
-      run: xmake config --arch=${{ matrix.platform.arch }} --mode=${{ matrix.mode }} --yes --policies=package.precompiled:n
+      run: xmake config --arch=${{ matrix.platform.arch }} --mode=${{ matrix.mode }} ${{ matrix.platform.config }} --yes --policies=package.precompiled:n
 
     # Save dependencies
     - name: Save cached xmake dependencies
       if: ${{ !steps.restore-depcache.outputs.cache-hit }}
-      uses: actions/cache/save@v4
+      uses: actions/cache/save@v5
       with:
         path: ${{ env.XMAKE_GLOBALDIR }}/.xmake/packages
         key: ${{ steps.restore-depcache.outputs.cache-primary-key }}

@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme Leclercq
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -63,6 +63,9 @@ namespace tsom
 			UnderlyingType& operator[](std::size_t i);
 			const UnderlyingType& operator[](std::size_t i) const;
 
+			bool operator==(const EntityPropertyArrayValue& rhs) const;
+			bool operator!=(const EntityPropertyArrayValue& rhs) const;
+
 			// To allow range-for loops
 			UnderlyingType* begin();
 			const UnderlyingType* begin() const;
@@ -91,12 +94,13 @@ namespace tsom
 		EntityPropertySingleValue(EntityPropertySingleValue&&) noexcept = default;
 
 		UnderlyingType& operator*() &;
-		UnderlyingType&& operator*() &&;
 		const UnderlyingType& operator*() const &;
 
 		operator UnderlyingType&() &;
-		operator UnderlyingType&&() &&;
 		operator const UnderlyingType&() const &;
+
+		bool operator==(const EntityPropertySingleValue& rhs) const;
+		bool operator!=(const EntityPropertySingleValue& rhs) const;
 
 		EntityPropertySingleValue& operator=(const EntityPropertySingleValue&) = default;
 		EntityPropertySingleValue& operator=(EntityPropertySingleValue&&) noexcept = default;

@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -18,11 +18,12 @@ namespace Nz
 namespace tsom
 {
 	class ClientSessionHandler;
+	class ConfigFile;
 
-	class TSOM_CLIENTLIB_API ClientScriptingLibrary : public ScriptingLibrary
+	class TSOM_CLIENTLIB_API ClientScriptingLibrary final : public ScriptingLibrary
 	{
 		public:
-			inline ClientScriptingLibrary(Nz::ApplicationBase& app, ClientSessionHandler& sessionHandler);
+			inline ClientScriptingLibrary(Nz::ApplicationBase& app, ConfigFile& configFile, ClientSessionHandler& sessionHandler);
 			ClientScriptingLibrary(const ClientScriptingLibrary&) = delete;
 			ClientScriptingLibrary(ClientScriptingLibrary&&) = delete;
 			~ClientScriptingLibrary() = default;
@@ -33,16 +34,13 @@ namespace tsom
 			ClientScriptingLibrary& operator=(ClientScriptingLibrary&&) = delete;
 
 		private:
-			void RegisterAssetLibrary(sol::state& state);
 			void RegisterClientSession(sol::state& state);
-			void RegisterMaterialInstance(sol::state& state);
-			void RegisterRenderables(sol::state& state);
-			void RegisterRenderStates(sol::state& state);
+			void RegisterConfig(sol::state& state);
 			void RegisterScripts(sol::state& state);
-			void RegisterTexture(sol::state& state);
 
 			Nz::ApplicationBase& m_app;
 			ClientSessionHandler& m_sessionHandler;
+			ConfigFile& m_config;
 	};
 }
 

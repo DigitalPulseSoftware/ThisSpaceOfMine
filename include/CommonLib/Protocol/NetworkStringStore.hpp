@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -23,7 +23,7 @@ namespace tsom
 			inline NetworkStringStore();
 			~NetworkStringStore() = default;
 
-			Packets::NetworkStrings BuildPacket(Nz::UInt32 firstId = 0) const;
+			Packets::S_NetworkStrings BuildPacket(Nz::UInt32 firstId = 0) const;
 
 			inline void Clear();
 

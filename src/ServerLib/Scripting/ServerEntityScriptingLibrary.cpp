@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -9,15 +9,45 @@
 #include <ServerLib/ServerPlanetEnvironment.hpp>
 #include <ServerLib/ServerPlayer.hpp>
 #include <ServerLib/ServerShipEnvironment.hpp>
+#include <ServerLib/Components/AtmosphereExchanger.hpp>
+#include <ServerLib/Components/AtmosphereMonitor.hpp>
+#include <ServerLib/Components/ServerEnvironmentSwitchComponent.hpp>
 #include <ServerLib/Components/ServerInteractibleComponent.hpp>
-#include <fmt/color.h>
-#include <fmt/format.h>
+#include <frozen/string.h>
+#include <frozen/unordered_map.h>
+#include <spdlog/spdlog.h>
 
 namespace tsom
 {
+	namespace
+	{
+		constexpr auto s_serverComponents = frozen::make_unordered_map<frozen::string, SharedEntityScriptingLibrary::ComponentEntry>({
+			{
+				"atmosphere_exchanger", SharedEntityScriptingLibrary::ComponentEntry::Default<AtmosphereExchanger>(),
+			},
+			{
+				"atmosphere_monitor", SharedEntityScriptingLibrary::ComponentEntry::Default<AtmosphereMonitor>()
+			}
+		});
+	}
+
+	void ServerEntityScriptingLibrary::Register(sol::state& state)
+	{
+		SharedEntityScriptingLibrary::Register(state);
+
+		RegisterServerComponents(state);
+	}
+
 	void ServerEntityScriptingLibrary::FillEntityMetatable(sol::state& state, sol::table entityMetatable)
 	{
 		SharedEntityScriptingLibrary::FillEntityMetatable(state, entityMetatable);
+
+		entityMetatable["AllowEnvironmentSwitch"] = LuaFunction([](sol::table entityTable)
+		{
+			entt::handle entity = AssertScriptEntity(entityTable);
+
+			entity.emplace<ServerEnvironmentSwitchComponent>();
+		});
 
 		entityMetatable["CallClientRPC"] = LuaFunction([](sol::table entityTable, std::string rpcName, std::optional<ServerPlayerHandle> targetPlayer)
 		{
@@ -74,7 +104,25 @@ namespace tsom
 				if (!res.valid())
 				{
 					sol::error err = res;
-					fmt::print(fg(fmt::color::red), "entity interact event failed: {}\n", err.what());
+					spdlog::error("entity interact event failed: {}", err.what());
+				}
+			};
+		}
+
+		sol::optional<sol::protected_function> envSwitchCallback = classMetatable["_EnvSwitch"];
+		if (envSwitchCallback)
+		{
+			auto& entityEnvSwitch = entity.get<ServerEnvironmentSwitchComponent>();
+			entityEnvSwitch.handleEnvironmentSwitch = [cb = std::move(*envSwitchCallback)](entt::handle previousEntity, entt::handle newEntity, const EnvironmentTransform& /*relativeTransform*/)
+			{
+				auto& previousEntityScripted = previousEntity.get<ScriptedEntityComponent>();
+				auto& newEntityScripted = newEntity.get<ScriptedEntityComponent>();
+
+				auto res = cb(newEntityScripted.entityTable, previousEntityScripted.entityTable);
+				if (!res.valid())
+				{
+					sol::error err = res;
+					spdlog::error("entity environment switch event failed: {}", err.what());
 				}
 			};
 		}
@@ -87,7 +135,63 @@ namespace tsom
 			classMetatable["_Interact"] = std::move(callback);
 			return true;
 		}
+		else if (eventName == "env_switch")
+		{
+			classMetatable["_EnvSwitch"] = std::move(callback);
+			return true;
+		}
 
 		return false;
+	}
+
+	void ServerEntityScriptingLibrary::RegisterServerComponents(sol::state& state)
+	{
+		state.new_usertype<AtmosphereExchanger>("AtmosphereExchanger",
+			sol::no_constructor,
+			"GetGasModifier", [](const AtmosphereExchanger& exchanger, GasType gasType)
+			{
+				return exchanger.gasModifier[gasType];
+			},
+			"GetTickRate", [](const AtmosphereExchanger& exchanger)
+			{
+				return exchanger.tickRate;
+			},
+			"SetGasModifier", [](AtmosphereExchanger& exchanger, GasType gasType, Nz::Int64 gasModifier)
+			{
+				exchanger.gasModifier[gasType] = gasModifier;
+			},
+			"SetTickRate", [](AtmosphereExchanger& exchanger, Nz::Time tickRate)
+			{
+				exchanger.tickRate = tickRate;
+			}
+		);
+
+		state.new_usertype<AtmosphereMonitor>("AtmosphereMonitor",
+			sol::no_constructor,
+			"Atmosphere", sol::readonly_property(&AtmosphereMonitor::atmosphere));
+	}
+
+	auto ServerEntityScriptingLibrary::RetrieveAddComponentHandler(std::string_view componentType) -> AddComponentFunc
+	{
+		if (AddComponentFunc addComponentHandler = SharedEntityScriptingLibrary::RetrieveAddComponentHandler(componentType))
+			return addComponentHandler;
+
+		auto it = s_serverComponents.find(componentType);
+		if (it == s_serverComponents.end())
+			return nullptr;
+
+		return it->second.addComponent;
+	}
+
+	auto ServerEntityScriptingLibrary::RetrieveGetComponentHandler(std::string_view componentType) -> GetComponentFunc
+	{
+		if (GetComponentFunc getComponentHandler = SharedEntityScriptingLibrary::RetrieveGetComponentHandler(componentType))
+			return getComponentHandler;
+
+		auto it = s_serverComponents.find(componentType);
+		if (it == s_serverComponents.end())
+			return nullptr;
+
+		return it->second.getComponent;
 	}
 }

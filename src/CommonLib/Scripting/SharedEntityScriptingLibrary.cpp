@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -10,20 +10,25 @@
 #include <CommonLib/PhysicsConstants.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Components/ScriptedEntityComponent.hpp>
+#include <CommonLib/Components/TickComponent.hpp>
 #include <CommonLib/Scripting/ScriptingProperties.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
 #include <ServerLib/ServerPlayer.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Collider3D.hpp>
+#include <Nazara/Physics3D/Components/PhysCharacter3DComponent.hpp>
 #include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
-#include <fmt/color.h>
-#include <fmt/format.h>
 #include <frozen/string.h>
 #include <frozen/unordered_map.h>
+#include <spdlog/spdlog.h>
 
 SOL_BASE_CLASSES(Nz::BoxCollider3D, Nz::Collider3D);
+SOL_BASE_CLASSES(Nz::NodeComponent, Nz::Node);
+SOL_BASE_CLASSES(Nz::PhysCharacter3DComponent, Nz::PhysCharacter3D);
 SOL_BASE_CLASSES(Nz::RigidBody3DComponent, Nz::RigidBody3D);
 SOL_DERIVED_CLASSES(Nz::Collider3D, Nz::BoxCollider3D);
+SOL_DERIVED_CLASSES(Nz::Node, Nz::NodeComponent);
+SOL_DERIVED_CLASSES(Nz::PhysCharacter3D, Nz::PhysCharacter3DComponent);
 SOL_DERIVED_CLASSES(Nz::RigidBody3D, Nz::RigidBody3DComponent);
 
 namespace tsom
@@ -44,6 +49,15 @@ namespace tsom
 				"node", SharedEntityScriptingLibrary::ComponentEntry::Default<Nz::NodeComponent>()
 			},
 			{
+				"physicscharacter3d", SharedEntityScriptingLibrary::ComponentEntry{
+					.addComponent = [](sol::this_state L, entt::handle entity, sol::optional<sol::table> parametersOpt) -> sol::object
+					{
+						throw std::runtime_error("physicscharacter3d cannot be added from Lua");
+					},
+					.getComponent = SharedEntityScriptingLibrary::ComponentEntry::DefaultGet<Nz::PhysCharacter3DComponent>()
+				}
+			},
+			{
 				"rigidbody3d", SharedEntityScriptingLibrary::ComponentEntry{
 					.addComponent = [](sol::this_state L, entt::handle entity, sol::optional<sol::table> parametersOpt)
 					{
@@ -55,7 +69,7 @@ namespace tsom
 
 						auto HandleCommonParameters = [](Nz::RigidBody3DComponent::CommonSettings& commonSettings, sol::table& parameters)
 						{
-							commonSettings.collider = parameters.get<std::shared_ptr<Nz::Collider3D>>("collider");
+							commonSettings.collider = parameters.get_or<std::shared_ptr<Nz::Collider3D>>("collider", commonSettings.collider);
 							commonSettings.initiallySleeping = parameters.get_or("initiallySleeping", commonSettings.initiallySleeping);
 							commonSettings.isSimulationEnabled = parameters.get_or("isSimulationEnabled", commonSettings.isSimulationEnabled);
 							commonSettings.isTrigger = parameters.get_or("isTrigger", commonSettings.isTrigger);
@@ -112,19 +126,24 @@ namespace tsom
 	sol::table SharedEntityScriptingLibrary::ToEntityTable(sol::state_view& state, entt::handle entity)
 	{
 		if (ScriptedEntityComponent* scriptedComponent = entity.try_get<ScriptedEntityComponent>())
-			return scriptedComponent->entityTable;
-		else
 		{
-			sol::table entityTable = state.create_table();
-			entityTable["_Entity"] = entity;
-			entityTable[sol::metatable_key] = m_entityMetatable;
-
-			return entityTable;
+			if (scriptedComponent->entityTable.lua_state() == state)
+				return scriptedComponent->entityTable;
 		}
+
+		//TODO: Expose the correct class metatable in this state if possible
+		sol::table entityTable = state.create_table();
+		entityTable["_Entity"] = EntityReference(entity);
+		entityTable[sol::metatable_key] = m_entityMetatable;
+
+		return entityTable;
 	}
 
 	void SharedEntityScriptingLibrary::FillConstants(sol::state& state, sol::table constants)
 	{
+		// Game
+		constants["PlayerOxygenConsumption"] = Constants::PlayerOxygenConsumption;
+
 		// Internal
 		constants["TickDuration"] = Constants::TickDuration;
 
@@ -132,9 +151,11 @@ namespace tsom
 		constants["BroadphaseStatic"] = Constants::BroadphaseStatic;
 		constants["BroadphaseDynamic"] = Constants::BroadphaseDynamic;
 		constants["ObjectLayerDynamic"] = Constants::ObjectLayerDynamic;
+		constants["ObjectLayerDynamicNoCollision"] = Constants::ObjectLayerDynamicNoCollision;
 		constants["ObjectLayerDynamicNoPlayer"] = Constants::ObjectLayerDynamicNoPlayer;
 		constants["ObjectLayerDynamicTrigger"] = Constants::ObjectLayerDynamicTrigger;
 		constants["ObjectLayerPlayer"] = Constants::ObjectLayerPlayer;
+		constants["ObjectLayerPlayerOnlyTrigger"] = Constants::ObjectLayerPlayerOnlyTrigger;
 		constants["ObjectLayerStatic"] = Constants::ObjectLayerStatic;
 		constants["ObjectLayerStaticNoPlayer"] = Constants::ObjectLayerStaticNoPlayer;
 		constants["ObjectLayerStaticTrigger"] = Constants::ObjectLayerStaticTrigger;
@@ -175,6 +196,17 @@ namespace tsom
 
 			sol::state_view state(L);
 			return TranslatePropertyToLua(state, classComponent.GetProperty(propertyIndex));
+		});
+
+		entityMetatable["SetTickInterval"] = LuaFunction([this](sol::this_state L, sol::table entityTable, Nz::UInt32 milliseconds)
+		{
+			entt::handle entity = AssertScriptEntity(entityTable);
+
+			TickComponent* entityTick = entity.try_get<TickComponent>();
+			if (!entityTick)
+				TriggerLuaError(L, "entity has no tick callback");
+
+			entityTick->tickRate = Nz::Time::Milliseconds(milliseconds);
 		});
 
 		entityMetatable["UpdateProperty"] = LuaFunction([this](sol::this_state L, sol::table entityTable, std::string_view propertyName, sol::object value)
@@ -246,7 +278,27 @@ namespace tsom
 			"Scale", LuaFunction([](Nz::NodeComponent& nodeComponent, const Nz::Vector3f& scale)
 			{
 				return nodeComponent.Scale(scale);
-			})
+			}),
+			"ToLocalDirection", LuaFunction(&Nz::NodeComponent::ToLocalDirection),
+			"ToLocalPosition", LuaFunction(&Nz::NodeComponent::ToLocalPosition),
+			"ToLocalRotation", LuaFunction(&Nz::NodeComponent::ToLocalRotation),
+			"ToLocalScale", LuaFunction(&Nz::NodeComponent::ToLocalScale)
+		);
+
+		state.new_usertype<Nz::PhysCharacter3DComponent>("PhysCharacter3DComponent",
+			sol::no_constructor,
+			sol::base_classes, sol::bases<Nz::PhysCharacter3D>(),
+			"GetAngularVelocity", LuaFunction(&Nz::PhysCharacter3DComponent::GetAngularVelocity),
+			"GetCollider", LuaFunction(&Nz::PhysCharacter3DComponent::GetCollider),
+			"GetLinearVelocity", LuaFunction(&Nz::PhysCharacter3DComponent::GetLinearVelocity),
+			"GetPosition", LuaFunction(&Nz::PhysCharacter3DComponent::GetPosition),
+			"GetObjectLayer", LuaFunction(&Nz::PhysCharacter3DComponent::GetObjectLayer),
+			"GetRotation", LuaFunction(&Nz::PhysCharacter3DComponent::GetRotation),
+			"SetAngularVelocity", LuaFunction(&Nz::PhysCharacter3DComponent::SetAngularVelocity),
+			"SetLinearVelocity", LuaFunction(&Nz::PhysCharacter3DComponent::SetLinearVelocity),
+			"SetObjectLayer", LuaFunction(&Nz::PhysCharacter3DComponent::SetObjectLayer),
+			"SetRotation", LuaFunction(&Nz::PhysCharacter3DComponent::SetRotation),
+			"TeleportTo", LuaFunction(&Nz::PhysCharacter3DComponent::TeleportTo)
 		);
 
 		state.new_usertype<Nz::RigidBody3DComponent>("Rigidbody3DComponent",
@@ -259,6 +311,7 @@ namespace tsom
 			"GetLinearDamping", LuaFunction(&Nz::RigidBody3DComponent::GetLinearDamping),
 			"GetLinearVelocity", LuaFunction(&Nz::RigidBody3DComponent::GetLinearVelocity),
 			"GetMass", LuaFunction(&Nz::RigidBody3DComponent::GetMass),
+			"GetObjectLayer", LuaFunction(&Nz::RigidBody3DComponent::GetObjectLayer),
 			"GetPosition", LuaFunction(&Nz::RigidBody3DComponent::GetPosition),
 			"GetRotation", LuaFunction(&Nz::RigidBody3DComponent::GetRotation),
 			"SetAngularDamping", LuaFunction(&Nz::RigidBody3DComponent::SetAngularDamping),
@@ -305,6 +358,10 @@ namespace tsom
 			{
 				if (eventName == "init")
 					entityBuilder.classMetatable["_Init"] = std::move(callback);
+				else if (eventName == "activate")
+					entityBuilder.classMetatable["_Activate"] = std::move(callback);
+				else if (eventName == "tick")
+					entityBuilder.classMetatable["_Tick"] = std::move(callback);
 				else
 				{
 					if (!RegisterEvent(entityBuilder.classMetatable, eventName, std::move(callback)))
@@ -325,7 +382,7 @@ namespace tsom
 					if (!res.valid())
 					{
 						sol::error err = res;
-						fmt::print(fg(fmt::color::red), "entity client rpc {} failed: {}\n", en, err.what());
+						spdlog::error("entity client rpc {} failed: {}", en, err.what());
 					}
 				};
 			}),
@@ -381,7 +438,25 @@ namespace tsom
 			sol::state_view state(L);
 
 			std::shared_ptr sharedCallbacks = std::make_shared<std::vector<sol::protected_function>>(std::move(entityBuilder.propertyUpdateCallbacks));
-			entityBuilder.callbacks.onInit = [this, state, metatable = std::move(entityBuilder.classMetatable), sharedCallbacks](entt::handle entity) mutable
+
+			if (sol::optional<sol::protected_function> activateCallback = entityBuilder.classMetatable["_Activate"])
+			{
+				entityBuilder.callbacks.onActivate = [this, callback = std::move(activateCallback)](entt::handle entity) mutable
+				{
+					auto& entityScripted = entity.get<ScriptedEntityComponent>();
+
+					auto res = (*callback)(entityScripted.entityTable);
+					if (!res.valid())
+					{
+						sol::error err = res;
+						spdlog::error("entity activate event failed: {}", err.what());
+					}
+				};
+			}
+
+			sol::optional<sol::protected_function> tickCallback = entityBuilder.classMetatable["_Tick"];
+
+			entityBuilder.callbacks.onInit = [this, state, metatable = std::move(entityBuilder.classMetatable), sharedCallbacks, tickCallback](entt::handle entity) mutable
 			{
 				auto& entityInstance = entity.get<ClassInstanceComponent>();
 				entityInstance.OnPropertyUpdate.Connect([entity, sharedCallbacks, state](ClassInstanceComponent* classInstance, Nz::UInt32 propertyIndex, const EntityProperty& newValue) mutable
@@ -398,7 +473,7 @@ namespace tsom
 						const auto& propertyData = classInstance->GetClass()->GetProperty(propertyIndex);
 
 						sol::error err = res;
-						fmt::print(fg(fmt::color::red), "entity {} property callback failed: {}\n", propertyData.name, err.what());
+						spdlog::error("entity {} property callback failed: {}", propertyData.name, err.what());
 					}
 				});
 
@@ -406,9 +481,24 @@ namespace tsom
 				entityScripted.classMetatable = metatable;
 				entityScripted.entityTable = state.create_table();
 				entityScripted.entityTable[sol::metatable_key] = entityScripted.classMetatable;
-				entityScripted.entityTable["_Entity"] = entity;
+				entityScripted.entityTable["_Entity"] = EntityReference(entity);
 
 				HandleInit(entityScripted.classMetatable, entity);
+
+				if (tickCallback)
+				{
+					auto& entityTick = entity.emplace<TickComponent>();
+					entityTick.onTick = [onTick = *tickCallback](entt::handle entity)
+					{
+						auto& entityScripted = entity.get<ScriptedEntityComponent>();
+						auto res = onTick(entityScripted.entityTable);
+						if (!res.valid())
+						{
+							sol::error err = res;
+							spdlog::error("entity tick callback failed: {}", err.what());
+						}
+					};
+				}
 
 				sol::optional<sol::protected_function> initCallback = entityScripted.classMetatable["_Init"];
 				if (initCallback)
@@ -417,7 +507,7 @@ namespace tsom
 					if (!res.valid())
 					{
 						sol::error err = res;
-						fmt::print(fg(fmt::color::red), "entity init event failed: {}\n", err.what());
+						spdlog::error("entity init event failed: {}", err.what());
 					}
 				}
 			};

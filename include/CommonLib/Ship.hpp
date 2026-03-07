@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -15,7 +15,7 @@
 #include <NazaraUtils/FunctionRef.hpp>
 #include <tsl/hopscotch_map.h>
 #include <memory>
-#include <vector>
+#include <mutex>
 
 namespace tsom
 {
@@ -34,6 +34,8 @@ namespace tsom
 			std::shared_ptr<Nz::Collider3D> BuildHullCollider() const;
 
 			GravityForce ComputeGravity(const Nz::Vector3f& position) const override;
+
+			void ClearChunks() override;
 
 			void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, Chunk& chunk)> callback) override;
 			void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, const Chunk& chunk)> callback) const override;
@@ -60,9 +62,14 @@ namespace tsom
 				std::shared_ptr<FlatChunk> chunk;
 
 				NazaraSlot(FlatChunk, OnBlockUpdated, onUpdated);
+				NazaraSlot(FlatChunk, OnLayerRegistered, onLayerRegistered);
+				NazaraSlot(FlatChunk, OnLayerUnregistered, onLayerUnregistered);
 				NazaraSlot(FlatChunk, OnReset, onReset);
 			};
 
+			std::mutex m_chunkLayerAddedSignalMutex;
+			std::mutex m_chunkLayerRemovedSignalMutex;
+			std::mutex m_chunkUpdatedSignalMutex;
 			tsl::hopscotch_map<ChunkIndices, ChunkData> m_chunks;
 			Nz::Vector3f m_upDirection;
 	};

@@ -1,0 +1,89 @@
+passlist "Forward Passlist"
+{
+    attachment "DepthBuffer"
+    {
+        format "Depth32F"
+    }
+
+    pass "DepthPrepass"
+    {
+        impl "Raster"
+        {
+            MatPass "DepthPass"
+        }
+
+        cleardepth "Viewer"
+        depthstenciloutput "DepthBuffer"
+    }
+
+    attachment "ForwardOutput"
+    {
+        format "RGBA16F"
+    }
+
+    pass "ForwardPass"
+    {
+        impl "Forward"
+        output "Output" "ForwardOutput"
+        {
+            clearcolor "Viewer"
+        }
+
+        depthstencilinput "DepthBuffer"
+        depthstenciloutput "DepthBuffer"
+        flag "LightShadowing"
+    }
+
+    attachment "AtmosphereOutput"
+    {
+        format "RGBA16F"
+    }
+
+    pass "AtmospherePass"
+    {
+        impl "TSOM_AtmosphereScattering"
+
+        input "Color" "ForwardOutput"
+        input "Depth" "DepthBuffer"
+        output "Output" "AtmosphereOutput"
+    }
+
+    attachment "Gamma corrected"
+    {
+        format "RGBA8"
+    }
+
+    pass "Gamma correction"
+    {
+        impl "PostProcess"
+        {
+            Shader "PostProcess.GammaCorrection"
+        }
+
+        input "Input" "AtmosphereOutput"
+        output "Output" "Gamma corrected"
+    }
+
+    attachmentproxy "Debug draw output" "Gamma corrected"
+    attachmentproxy "DebugDraw depth output" "DepthBuffer"
+
+    pass "Debug Draw"
+    {
+        impl "DebugDraw"
+        input "Input" "Gamma corrected"
+        output "Output" "Debug draw output"
+        depthstencilinput "DepthBuffer"
+        depthstenciloutput "DebugDraw depth output"
+    }
+
+    attachmentproxy "ImGui draw output" "Debug draw output"
+
+    pass "ImGui"
+    {
+        impl "ImGui"
+        input "Input" "Debug draw output"
+        output "Output" "ImGui draw output"
+    }
+
+    output "ImGui draw output"
+}

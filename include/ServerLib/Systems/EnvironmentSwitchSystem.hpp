@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -28,7 +28,7 @@ namespace tsom
 			static constexpr Nz::Int64 ExecutionOrder = -1; //< execute before physics
 			using Components = Nz::TypeList<Nz::NodeComponent, class EnvironmentEnterTriggerComponent>;
 
-			inline EnvironmentSwitchSystem(entt::registry& registry, ServerEnvironment* ownerEnvironment);
+			EnvironmentSwitchSystem(entt::registry& registry);
 			EnvironmentSwitchSystem(const EnvironmentSwitchSystem&) = delete;
 			EnvironmentSwitchSystem(EnvironmentSwitchSystem&&) = delete;
 			~EnvironmentSwitchSystem() = default;

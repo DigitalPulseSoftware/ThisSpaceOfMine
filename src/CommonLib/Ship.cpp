@@ -1,14 +1,13 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/Ship.hpp>
 #include <CommonLib/BlockLibrary.hpp>
+#include <CommonLib/ChunkLock.hpp>
 #include <CommonLib/FlatChunk.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <Nazara/Physics3D/Collider3D.hpp>
-#include <fmt/format.h>
-#include <random>
 
 namespace tsom
 {
@@ -24,38 +23,92 @@ namespace tsom
 		ChunkData chunkData;
 		chunkData.chunk = std::make_shared<FlatChunk>(blockLibrary, *this, indices, Nz::Vector3ui{ ChunkSize }, m_tileSize);
 
-		if (initCallback)
-			chunkData.chunk->Reset(initCallback);
+		chunkData.onLayerRegistered.Connect(chunkData.chunk->OnLayerRegistered, [this](Chunk* chunk, std::size_t layerIndex)
+		{
+			// FIXME: Nz::Signal operator() is not thread-safe!
+			std::lock_guard lock(m_chunkLayerAddedSignalMutex);
+			OnChunkLayerAdded(this, chunk, layerIndex);
+		});
+
+		chunkData.onLayerUnregistered.Connect(chunkData.chunk->OnLayerUnregistered, [this](Chunk* chunk, std::size_t layerIndex)
+		{
+			// FIXME: Nz::Signal operator() is not thread-safe!
+			std::lock_guard lock(m_chunkLayerRemovedSignalMutex);
+			OnChunkLayerRemove(this, chunk, layerIndex);
+		});
 
 		chunkData.onReset.Connect(chunkData.chunk->OnReset, [this](Chunk* chunk)
 		{
-			OnChunkUpdated(this, chunk, DirectionMask_All);
+			// FIXME: Nz::Signal operator() is not thread-safe!
+			std::lock_guard lock(m_chunkUpdatedSignalMutex);
+			OnChunkUpdated(this, chunk, NeighborChunkMask_All, chunk->GetActiveLayerMask());
 		});
 
-		chunkData.onUpdated.Connect(chunkData.chunk->OnBlockUpdated, [this](Chunk* chunk, const Nz::Vector3ui& indices, BlockIndex /*newBlock*/)
+		chunkData.onUpdated.Connect(chunkData.chunk->OnBlockUpdated, [this](Chunk* chunk, const Nz::Vector3ui& indices, BlockIndex /*oldBlock*/, BlockIndex newBlock, std::size_t prevLayerIndex, std::size_t newLayerIndex)
 		{
-			DirectionMask neighborMask;
+			NeighborChunkMask neighborMask;
+
+			// Find every neighbor chunk required, based on block position
+			std::array<Nz::Int32, 2> xs{ 0, 0 };
+			std::array<Nz::Int32, 2> ys{ 0, 0 };
+			std::array<Nz::Int32, 2> zs{ 0, 0 };
+
+			std::size_t nx = 1, ny = 1, nz = 1;
+
+			const Nz::Vector3ui& size = chunk->GetSize();
+
 			if (indices.x == 0)
-				neighborMask |= Direction::Left;
-			else if (indices.x == chunk->GetSize().x - 1)
-				neighborMask |= Direction::Right;
+				xs[nx++] = -1;
+			else if (indices.x == size.x - 1)
+				xs[nx++] = 1;
 
 			if (indices.y == 0)
-				neighborMask |= Direction::Front;
-			else if (indices.y == chunk->GetSize().y - 1)
-				neighborMask |= Direction::Back;
+				zs[nz++] = -1;
+			else if (indices.y == size.y - 1)
+				zs[nz++] = 1;
 
 			if (indices.z == 0)
-				neighborMask |= Direction::Up;
-			else if (indices.z == chunk->GetSize().z - 1)
-				neighborMask |= Direction::Down;
+				ys[ny++] = -1;
+			else if (indices.z == size.z - 1)
+				ys[ny++] = 1;
 
-			OnChunkUpdated(this, chunk, neighborMask);
+			for (std::size_t ix = 0; ix < nx; ++ix)
+			{
+				for (std::size_t iy = 0; iy < ny; ++iy)
+				{
+					for (std::size_t iz = 0; iz < nz; ++iz)
+					{
+						Nz::Int32 dx = xs[ix];
+						Nz::Int32 dy = ys[iy];
+						Nz::Int32 dz = zs[iz];
+
+						if (dx == 0 && dy == 0 && dz == 0)
+							continue;
+
+						ChunkIndices dir(dx, dy, dz);
+						neighborMask |= ToNeighborChunk({ dx, dy, dz });
+					}
+				}
+			}
+
+			Nz::UInt32 layerMask = 0;
+			layerMask |= 1u << prevLayerIndex;
+			if (newBlock != EmptyBlockIndex)
+				layerMask |= 1u << newLayerIndex;
+
+			// FIXME: Nz::Signal operator() is not thread-safe!
+			std::lock_guard lock(m_chunkUpdatedSignalMutex);
+			OnChunkUpdated(this, chunk, neighborMask, layerMask);
 		});
 
 		auto it = m_chunks.insert_or_assign(indices, std::move(chunkData)).first;
 
-		OnChunkAdded(this, it->second.chunk.get());
+		if (initCallback)
+			chunkData.chunk->Reset(initCallback);
+
+		FlatChunk* chunk = it->second.chunk.get();
+		for (std::size_t layerIndex : chunk->GetActiveLayers())
+			OnChunkLayerAdded(this, chunk, layerIndex);
 
 		return *it->second.chunk;
 	}
@@ -67,12 +120,12 @@ namespace tsom
 			std::vector<Nz::CompoundCollider3D::ChildCollider> childColliders;
 			for (auto&& [ChunkIndices, chunkData] : m_chunks)
 			{
-				auto chunkCollider = chunkData.chunk->BuildCollider();
+				auto chunkCollider = chunkData.chunk->BuildCollider(0);
 				if (!chunkCollider)
 					continue;
 
 				auto& childCollider = childColliders.emplace_back();
-				childCollider.collider = chunkData.chunk->BuildCollider();
+				childCollider.collider = chunkData.chunk->BuildCollider(0);
 				childCollider.offset = GetChunkOffset(chunkData.chunk->GetIndices());
 			}
 
@@ -86,7 +139,7 @@ namespace tsom
 			if (m_chunks.empty())
 				return nullptr;
 
-			return m_chunks.begin().value().chunk->BuildCollider();
+			return m_chunks.begin().value().chunk->BuildCollider(0);
 		}
 	}
 
@@ -97,6 +150,18 @@ namespace tsom
 			.acceleration = Constants::ShipGravityAcceleration,
 			.factor = 1.f
 		};
+	}
+
+	void Ship::ClearChunks()
+	{
+		for (auto&& [chunkIndices, chunkData] : m_chunks)
+		{
+			Chunk* chunk = chunkData.chunk.get();
+			for (std::size_t layerIndex : chunk->GetActiveLayers())
+				OnChunkLayerRemove(this, chunk, layerIndex);
+		}
+
+		m_chunks.clear();
 	}
 
 	void Ship::ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, Chunk& chunk)> callback)
@@ -125,7 +190,7 @@ namespace tsom
 		unsigned int height = (small) ? 4 : 6;
 		Nz::Vector3ui startPos = chunk.GetSize() / 2 - Nz::Vector3ui(boxSize / 2, boxSize / 2, height / 2);
 
-		chunk.LockWrite();
+		ChunkWriteLock lock(&chunk);
 		chunk.Reset();
 
 		for (unsigned int z = 0; z < height; ++z)
@@ -146,8 +211,6 @@ namespace tsom
 				}
 			}
 		}
-
-		chunk.UnlockWrite();
 	}
 
 	void Ship::RemoveChunk(const ChunkIndices& indices)
@@ -155,7 +218,10 @@ namespace tsom
 		auto it = m_chunks.find(indices);
 		assert(it != m_chunks.end());
 
-		OnChunkRemove(this, it->second.chunk.get());
+		Chunk* chunk = it->second.chunk.get();
+		for (std::size_t layerIndex : chunk->GetActiveLayers())
+			OnChunkLayerRemove(this, chunk, layerIndex);
+
 		m_chunks.erase(it);
 	}
 }

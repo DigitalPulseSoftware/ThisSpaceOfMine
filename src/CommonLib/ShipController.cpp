@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -20,7 +20,7 @@ namespace tsom
 
 		auto& shipInputs = std::get<PlayerInputs::Ship>(inputs.data);
 
-		auto& rigidBody = m_entity.get<Nz::RigidBody3DComponent>();
+		auto& rigidBody = m_entity->get<Nz::RigidBody3DComponent>();
 
 		Nz::Vector3f force = Nz::Vector3f::Zero();
 		if (shipInputs.moveForward)

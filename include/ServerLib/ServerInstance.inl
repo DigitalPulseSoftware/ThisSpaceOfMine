@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -8,6 +8,15 @@ namespace tsom
 	NetworkSessionManager& ServerInstance::AddSessionManager(Args&& ...args)
 	{
 		return *m_sessionManagers.emplace_back(std::make_unique<NetworkSessionManager>(std::forward<Args>(args)...));
+	}
+
+	inline ServerEnvironment* ServerInstance::FindEnvironmentFromDatabaseId(Nz::UInt32 databaseId) const
+	{
+		auto it = m_databaseEnvironments.find(databaseId);
+		if (it == m_databaseEnvironments.end())
+			return nullptr;
+
+		return it.value().get();
 	}
 
 	inline ServerPlayer* ServerInstance::FindPlayerByNickname(std::string_view nickname)
@@ -76,9 +85,9 @@ namespace tsom
 		return m_blockLibrary;
 	}
 
-	inline const std::array<std::uint8_t, 32>& ServerInstance::GetConnectionTokenEncryptionKey() const
+	inline auto ServerInstance::GetConfig() const -> const Config&
 	{
-		return m_connectionTokenEncryptionKey;
+		return m_config;
 	}
 
 	inline auto ServerInstance::GetDefaultSpawnpoint() const -> const Spawnpoint&
@@ -106,9 +115,24 @@ namespace tsom
 		return m_players.RetrieveFromIndex(playerIndex);
 	}
 
+	inline ServerDatabase& ServerInstance::GetServerDatabase()
+	{
+		return m_serverDatabase.GetOrCreate(m_application, m_config.databaseFile);
+	}
+
 	inline Nz::Time ServerInstance::GetTickDuration() const
 	{
 		return m_tickDuration;
+	}
+
+	inline Nz::TimerManager& ServerInstance::GetTickedTimerManager()
+	{
+		return m_tickedTimerManager;
+	}
+
+	inline void ServerInstance::ScheduleForNextTick(std::function<void()>&& callback)
+	{
+		m_scheduledTickFunctions.push_back(std::move(callback));
 	}
 
 	inline void ServerInstance::SetDefaultSpawnpoint(ServerEnvironment* environment, Nz::Vector3f position, Nz::Quaternionf rotation)

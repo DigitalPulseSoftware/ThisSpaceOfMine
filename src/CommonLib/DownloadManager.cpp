@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -7,9 +7,9 @@
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Network/WebServiceAppComponent.hpp>
 #include <NazaraUtils/PathUtils.hpp>
-#include <fmt/color.h>
 #include <fmt/core.h>
 #include <fmt/std.h>
+#include <spdlog/spdlog.h>
 #include <filesystem>
 
 namespace tsom
@@ -45,7 +45,7 @@ namespace tsom
 
 		if (!download->file.Open(download->filepath, Nz::OpenMode::Write))
 		{
-			fmt::print(fg(fmt::color::red), "failed to create file {0}", download->filepath);
+			spdlog::error("failed to create file {0}", download->filepath);
 			return {};
 		}
 
@@ -61,7 +61,7 @@ namespace tsom
 				download->isFinished = true;
 				if (!result.HasSucceeded())
 				{
-					fmt::print(fg(fmt::color::red), "failed to download {0}: {1}\n", download->filepath, result.GetErrorMessage());
+					spdlog::error("failed to download {0}: {1}", download->filepath, result.GetErrorMessage());
 					download->file.Delete();
 					download->OnDownloadFailed(*download);
 					return;
@@ -71,7 +71,7 @@ namespace tsom
 				{
 					if (std::string fileHash = download->hasher.End().ToHex(); fileHash != expectedHash)
 					{
-						fmt::print(fg(fmt::color::red), "failed to download {0}: hash doesn't match (file hash {1} doesn't match expected hash {2})\n", download->filepath, fileHash, expectedHash);
+						spdlog::error("failed to download {0}: hash doesn't match (file hash {1} doesn't match expected hash {2})", download->filepath, fileHash, expectedHash);
 						download->file.Delete();
 						download->OnDownloadFailed(*download);
 						return;
@@ -79,13 +79,13 @@ namespace tsom
 				}
 
 				download->file.Close();
-				fmt::print(fg(fmt::color::green), "{} download succeeded!\n", download->filepath);
+				spdlog::info("{} download succeeded!", download->filepath);
 				if (download->isExecutable)
 				{
 					std::error_code ec;
 					std::filesystem::permissions(download->filepath, std::filesystem::perms::owner_exec, std::filesystem::perm_options::add, ec);
 					if (ec)
-						fmt::print(fg(fmt::color::yellow), "download of {0} succeeded but executable permission could not be given ({1}), if update fails, give it permission (chmod +x) and try again\n", download->filepath, ec);
+						spdlog::warn("download of {0} succeeded but executable permission could not be given ({1}), if update fails, give it permission (chmod +x) and try again", download->filepath, ec);
 				}
 
 				download->OnDownloadFinished(*download);
@@ -123,7 +123,7 @@ namespace tsom
 
 				if (bytesTotal != 0 && download->totalSize != 0 && bytesTotal != download->totalSize)
 				{
-					fmt::print(fg(fmt::color::red), "error when downloading {0}: file size ({1}) doesn't match expected size ({2})!\n", download->filepath, ByteToString(bytesTotal), ByteToString(download->totalSize));
+					spdlog::error("error when downloading {0}: file size ({1}) doesn't match expected size ({2})!", download->filepath, ByteToString(bytesTotal), ByteToString(download->totalSize));
 					return false;
 				}
 

@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -15,15 +15,23 @@
 
 namespace tsom::Constants
 {
+	// Atmosphere constants
+	constexpr Nz::UInt64 OxygenAtmospherePct = 21;
+	constexpr Nz::Int64 PlayerOxygenConsumption = 100;
+	constexpr Nz::UInt64 SecondsToEmptyOxygenBlock = 5;
+
 	// Chat constants
 	constexpr std::size_t ChatMaxLines = 100;
 	constexpr std::size_t ChatMaxMessageLength = 1024;
 	constexpr std::size_t ChatMaxPlayerMessageLength = 256;
 	constexpr Nz::Time ChatPlayerMessageDisplayTime = Nz::Time::Seconds(60);
 
+	// Console constants
+	constexpr std::size_t ConsoleMaxCommandLength = 1024;
+
 	// Player constants
 	constexpr std::size_t PlayerMaxNicknameLength = 16;
-	constexpr float PlayerColliderRadius = 0.3f;
+	constexpr float PlayerColliderRadius = 0.2f;
 	constexpr float PlayerColliderHeight = 1.85f;
 	constexpr float PlayerEyesHeight = 1.75f;
 	constexpr float PlayerFlySpeed = 20.f;
@@ -32,6 +40,7 @@ namespace tsom::Constants
 	constexpr float PlayerWalkSpeed = 5.f;
 	constexpr Nz::DegreeAnglef GravityMaxRotationSpeed = 180.f;
 	constexpr Nz::DegreeAnglef PlayerRotationSpeed = 90.f;
+	constexpr Nz::Time PlayerRespawnTime = Nz::Time::Seconds(5);
 
 	// Ship constants
 	constexpr float ShipGravityAcceleration = 9.81f;

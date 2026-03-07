@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -8,9 +8,7 @@
 #define TSOM_COMMONLIB_SYSTEMS_GRAVITYPHYSICSSYSTEM_HPP
 
 #include <CommonLib/Export.hpp>
-#include <Nazara/Core/Time.hpp>
 #include <Nazara/Physics3D/PhysWorld3DStepListener.hpp>
-#include <NazaraUtils/TypeList.hpp>
 #include <entt/fwd.hpp>
 
 namespace Nz

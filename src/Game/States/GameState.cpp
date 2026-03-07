@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -15,14 +15,18 @@
 #include <ClientLib/Components/VisualEntityComponent.hpp>
 #include <ClientLib/Systems/AnimationSystem.hpp>
 #include <ClientLib/Systems/CameraFollowerSystem.hpp>
+#include <CommonLib/DeformedChunk.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/NetworkSession.hpp>
 #include <CommonLib/PlayerInputs.hpp>
 #include <CommonLib/Utils.hpp>
 #include <CommonLib/Components/ChunkComponent.hpp>
+#include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Components/PlanetComponent.hpp>
+#include <CommonLib/Components/ShipComponent.hpp>
 #include <Game/GameConfigAppComponent.hpp>
+#include <Game/GameConfigs.hpp>
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/StateData.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
@@ -48,11 +52,11 @@
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <Nazara/Platform/Window.hpp>
 #include <Nazara/Platform/WindowEventHandler.hpp>
+#include <Nazara/TextRenderer/RichTextBuilder.hpp>
 #include <Nazara/Widgets/LabelWidget.hpp>
 #include <Nazara/Widgets/SimpleLabelWidget.hpp>
-#include <fmt/color.h>
-#include <fmt/format.h>
 #include <fmt/ostream.h>
+#include <spdlog/spdlog.h>
 
 #define DEBUG_ROTATION 0
 
@@ -66,9 +70,8 @@ namespace tsom
 	m_tickAccumulator(Nz::Time::Zero()),
 	m_tickDuration(Constants::TickDuration),
 	m_nextInputIndex(1),
-	m_isMouseLocked(true),
-	m_isPilotingShip(false),
-	m_cameraMode(0)
+	m_cameraMode(CameraMode::Firstperson),
+	m_isMouseLocked(true)
 	{
 		auto& stateData = GetStateData();
 		auto& filesystem = stateData.app->GetComponent<Nz::FilesystemAppComponent>();
@@ -77,12 +80,20 @@ namespace tsom
 		{
 			auto& cameraNode = m_cameraEntity.emplace<Nz::NodeComponent>();
 
+#ifdef TSOM_DEV_TOOLS
+			auto passList = filesystem.Load<Nz::PipelinePassList>(stateData.imgui ? "assets/3d_dev.passlist" : "assets/3d.passlist");
+#else
 			auto passList = filesystem.Load<Nz::PipelinePassList>("assets/3d.passlist");
+#endif
 
 			auto& cameraComponent = m_cameraEntity.emplace<Nz::CameraComponent>(stateData.renderTarget, std::move(passList));
-			cameraComponent.UpdateClearColor(Nz::Color::Gray());
+			cameraComponent.EnableInfiniteZFar(true);
+			cameraComponent.EnableReversedZ(true);
+			cameraComponent.UpdateClearColor(Nz::Color::Black());
+			cameraComponent.UpdateClearDepth(0.f);
 			cameraComponent.UpdateRenderMask(tsom::Constants::RenderMask3D & ~tsom::Constants::RenderMaskLocalPlayer);
 			cameraComponent.UpdateZNear(0.1f);
+			cameraComponent.UpdateZFar(10000.f); //< when infinite zfar is enabled, zfar is used as a limit for directional lights
 
 			m_targetCameraFOV = cameraComponent.GetFOV();
 		}
@@ -98,6 +109,14 @@ namespace tsom
 			crosshairGfx.Hide();
 		}
 
+		m_healthOxygen.entity = CreateEntity();
+		{
+			m_healthOxygen.textSprite = std::make_shared<Nz::TextSprite>();
+
+			m_healthOxygen.entity.emplace<Nz::NodeComponent>();
+			m_healthOxygen.entity.emplace<Nz::GraphicsComponent>(m_healthOxygen.textSprite, tsom::Constants::RenderMask2D);
+		}
+
 		m_sunLightEntity = CreateEntity();
 		{
 			m_sunLightEntity.emplace<Nz::NodeComponent>(Nz::Vector3f::Zero(), Nz::EulerAnglesf(-30.f, 80.f, 0.f));
@@ -106,8 +125,12 @@ namespace tsom
 			auto& dirLight = lightComponent.AddLight<Nz::DirectionalLight>(tsom::Constants::RenderMask3D);
 			dirLight.UpdateAmbientFactor(0.05f);
 			dirLight.EnableShadowCasting(true);
-			dirLight.UpdateShadowMapSize(4096);
+			dirLight.UpdateShadowMapSize(2048);
 			dirLight.UpdateEnergy(5.f);
+			dirLight.EnableFixedShadowCascadSplit(true);
+
+			float splitFactors[] = { 0.002f, 0.006f, 0.02f };
+			dirLight.UpdateShadowCascadeFixedSplitFactors(splitFactors);
 		}
 
 		m_skyboxEntity = CreateEntity();
@@ -122,6 +145,7 @@ namespace tsom
 			// Setup only a forward pass (using the SkyboxMaterial module)
 			Nz::MaterialPass forwardPass;
 			forwardPass.states.depthBuffer = true;
+			forwardPass.states.depthCompare = Nz::RendererComparison::GreaterOrEqual;
 			forwardPass.shaders.push_back(std::make_shared<Nz::UberShader>(nzsl::ShaderStageType::Fragment | nzsl::ShaderStageType::Vertex, "SkyboxMaterial"));
 			skyboxSettings.AddPass("ForwardPass", forwardPass);
 
@@ -156,13 +180,7 @@ namespace tsom
 			skyboxNode.SetParent(m_cameraEntity);
 		}
 
-		m_controlledEntity = stateData.sessionHandler->GetControlledEntity();
-		m_onControlledEntityChanged.Connect(stateData.sessionHandler->OnControlledEntityChanged, [&](entt::handle entity)
-		{
-			m_controlledEntity = entity;
-		});
-
-		m_onControlledEntityStateUpdate.Connect(stateData.sessionHandler->OnControlledEntityStateUpdate, [&](InputIndex inputIndex, const Packets::EntitiesStateUpdate::ControlledCharacter& characterStates)
+		m_onControlledEntityStateUpdate.Connect(stateData.sessionHandler->OnControlledEntityStateUpdate, [&](InputIndex inputIndex, const Packets::S_EntitiesStateUpdate::ControlledCharacter& characterStates)
 		{
 			if (!m_controlledEntity)
 				return;
@@ -211,34 +229,56 @@ namespace tsom
 			float errAcc = std::abs(err.pitch.value) + std::abs(err.yaw.value) + std::abs(err.roll.value);
 			if (errAcc > 0.00001f)
 			{
-				fmt::print("RECONCILIATION ERROR\n");
+				spdlog::debug("RECONCILIATION ERROR");
 				m_predictedCameraRotation = Nz::EulerAnglesf(characterStates.cameraPitch, characterStates.cameraYaw, 0.f);
-				fmt::print("Starting rotation: {0}\n", fmt::streamed(m_predictedCameraRotation));
+				spdlog::debug("Starting rotation: {0}", fmt::streamed(m_predictedCameraRotation));
 				for (const InputRotation& predictedRotation : m_predictedInputRotations)
 				{
 					m_predictedCameraRotation.pitch = Nz::Clamp(m_predictedCameraRotation.pitch + predictedRotation.inputRotation.pitch, -89.f, 89.f);
 					m_predictedCameraRotation.yaw += predictedRotation.inputRotation.yaw;
 					m_predictedCameraRotation.Normalize();
-					fmt::print("Adding {0} from input {1} which gives {2}\n", fmt::streamed(predictedRotation.inputRotation), predictedRotation.inputIndex, fmt::streamed(m_predictedCameraRotation));
+					spdlog::debug("Adding {0} from input {1} which gives {2}", fmt::streamed(predictedRotation.inputRotation), predictedRotation.inputIndex, fmt::streamed(m_predictedCameraRotation));
 				}
-				fmt::print("Giving final rotation {0}\n", fmt::streamed(m_predictedCameraRotation));
+				spdlog::debug("Giving final rotation {0}", fmt::streamed(m_predictedCameraRotation));
 
-				fmt::print("Error: {0}\n------\n", fmt::streamed(err));
+				spdlog::debug("Error: {0}\n------", fmt::streamed(err));
 			}
 #endif
 		});
 
 		m_blockSelectionBar = CreateWidget<BlockSelectionBar>(*stateData.blockLibrary);
 
+		m_controlledEntity = stateData.sessionHandler->GetControlledEntity();
+		m_onControlledEntityChanged.Connect(stateData.sessionHandler->OnControlledEntityChanged, [&](entt::handle entity)
+		{
+			m_controlledEntity = entity;
+			if (m_controlledEntity)
+				BindControlledEntitySignals();
+			else
+				UpdateHealthAndOxygenText();
+		});
+
+		if (m_controlledEntity)
+			BindControlledEntitySignals();
+		else
+			UpdateHealthAndOxygenText();
+
 		m_mouseWheelMovedSlot.Connect(stateData.window->GetEventHandler().OnMouseWheelMoved, [&](const Nz::WindowEventHandler* /*eventHandler*/, const Nz::WindowEvent::MouseWheelEvent& event)
 		{
 			if (!m_isMouseLocked)
 				return;
 
-			if (event.delta < 0.f)
-				m_blockSelectionBar->SelectNext();
-			else
-				m_blockSelectionBar->SelectPrevious();
+			if (m_pilotedShip)
+			{
+				m_targetCameraDistance = Nz::Clamp(m_targetCameraDistance - event.delta, m_defaultCameraDistance * 0.5f, m_defaultCameraDistance * 2.f);
+			}
+			else if (m_blockSelectionBar->IsVisible())
+			{
+				if (event.delta < 0.f)
+					m_blockSelectionBar->SelectNext();
+				else
+					m_blockSelectionBar->SelectPrevious();
+			}
 		});
 
 		m_escapeMenu = CreateWidget<EscapeMenu>();
@@ -250,31 +290,43 @@ namespace tsom
 		m_chatBox = CreateWidget<Chatbox>();
 		m_chatBox->OnChatMessage.Connect([&](const std::string& message)
 		{
-			Packets::SendChatMessage messagePacket;
+			Packets::C_SendChatMessage messagePacket;
 			messagePacket.message = message;
 
 			stateData.networkSession->SendPacket(messagePacket);
 		});
 		m_chatBox->SetRenderLayerOffset(1);
 
-		m_console = CreateWidget<Console>();
-		m_console->SetBackgroundColor(Nz::Color(0.f, 0.f, 0.33f, 0.5f));
-		m_console->SetRenderLayerOffset(1);
+		m_localConsole = CreateWidget<Console>();
+		m_localConsole->SetBackgroundColor(Nz::Color(0.f, 0.f, 0.33f, 0.5f));
+		m_localConsole->SetRenderLayerOffset(1);
 
 		m_consoleExecutor.emplace(stateData.sessionHandler->GetScriptingContext());
-		m_console->OnCommand.Connect([this](std::string_view command)
+		m_localConsole->OnCommand.Connect([this](std::string_view command)
 		{
 			m_consoleExecutor->Execute(command, "client console");
 		});
 
 		m_consoleExecutor->OnError.Connect([this](ConsoleExecutor* /*executor*/, std::string_view error)
 		{
-			m_console->PrintMessage(std::string(error), Nz::Color::Red());
+			m_localConsole->PrintMessage(std::string(error), Nz::Color::Red());
 		});
 
 		m_consoleExecutor->OnOutput.Connect([this](ConsoleExecutor* /*executor*/, std::string_view error)
 		{
-			m_console->PrintMessage(std::string(error));
+			m_localConsole->PrintMessage(std::string(error));
+		});
+
+		m_remoteConsole = CreateWidget<Console>();
+		m_remoteConsole->SetBackgroundColor(Nz::Color(0.33f, 0.f, 0.f, 0.5f));
+		m_remoteConsole->SetRenderLayerOffset(1);
+
+		m_remoteConsole->OnCommand.Connect([this](std::string_view command)
+		{
+			Packets::C_SendConsoleCommand sendConsole;
+			sendConsole.command = command;
+
+			GetStateData().networkSession->SendPacket(sendConsole);
 		});
 
 		m_interactionLabel = CreateWidget<Nz::SimpleLabelWidget>();
@@ -287,17 +339,30 @@ namespace tsom
 			{
 				case Nz::Keyboard::Scancode::Tilde:
 				{
-					if (m_console->IsVisible())
-						m_console->Hide();
+					Console* targetConsole = (event.shift) ? m_remoteConsole : m_localConsole;
+
+					if (targetConsole == m_remoteConsole)
+					{
+						if (m_localConsole->IsVisible())
+							m_localConsole->Hide();
+					}
+					else if (targetConsole == m_localConsole)
+					{
+						if (m_remoteConsole->IsVisible())
+							m_remoteConsole->Hide();
+					}
+
+					if (targetConsole->IsVisible())
+						targetConsole->Hide();
 					else
 					{
-						m_console->Show();
+						targetConsole->Show();
 
 						// Execute next update to avoid the following TextEntered to be sent to the console
-						m_timerManager.AddImmediateTimer([this]
+						m_timerManager.AddImmediateTimer([this, targetConsole]
 						{
-							if (m_console->IsVisible())
-								m_console->SetFocus();
+							if (targetConsole->IsVisible())
+								targetConsole->SetFocus();
 						});
 					}
 					UpdateMouseLock();
@@ -309,16 +374,14 @@ namespace tsom
 				{
 					if (m_escapeMenu->IsVisible())
 						m_escapeMenu->Hide();
-					else if (m_console->IsVisible())
-						m_console->Hide();
+					else if (m_localConsole->IsVisible())
+						m_localConsole->Hide();
+					else if (m_remoteConsole->IsVisible())
+						m_remoteConsole->Hide();
 					else if (m_chatBox->IsOpen())
 						m_chatBox->Close();
-					else if (m_isPilotingShip)
-					{
-						stateData.networkSession->SendPacket(Packets::ExitShipControl{});
-						m_isPilotingShip = false;
-						m_crosshairEntity.get<Nz::GraphicsComponent>().Hide();
-					}
+					else if (m_pilotedShip)
+						stateData.networkSession->SendPacket(Packets::C_ExitShipControl{});
 					else
 						m_escapeMenu->Show();
 
@@ -349,7 +412,7 @@ namespace tsom
 						{
 							auto& entityNetId = raycastHit->hitEntity.get<ClientEntityNetworkIndex>();
 
-							Packets::Interact interact;
+							Packets::C_Interact interact;
 							interact.entityId = entityNetId.networkIndex;
 
 							stateData.networkSession->SendPacket(interact);
@@ -427,12 +490,13 @@ namespace tsom
 
 				case Nz::Keyboard::Scancode::F5:
 				{
-					m_cameraMode++;
-					if (m_cameraMode > 2)
-						m_cameraMode = 0;
+					if (m_cameraMode >= CameraMode::Last)
+						m_cameraMode = CameraMode::First;
+					else
+						m_cameraMode = static_cast<CameraMode>(Nz::UnderlyingCast(m_cameraMode) + 1);
 
 					auto& cameraComponent = m_cameraEntity.get<Nz::CameraComponent>();
-					if (m_cameraMode > 0)
+					if (m_cameraMode != CameraMode::Firstperson)
 						cameraComponent.UpdateRenderMask(tsom::Constants::RenderMask3D);
 					else
 						cameraComponent.UpdateRenderMask(tsom::Constants::RenderMask3D & ~tsom::Constants::RenderMaskLocalPlayer);
@@ -452,7 +516,30 @@ namespace tsom
 				}
 			});
 
-			fmt::print("{0}\n", message);
+			spdlog::info("{0}", message);
+		});
+
+		m_onConsoleOutput.Connect(stateData.sessionHandler->OnConsoleOutput, [this](const Nz::Color& color, std::string_view message)
+		{
+			if (m_remoteConsole)
+				m_remoteConsole->PrintMessage(std::string(message), color);
+		});
+
+		m_onDebugDrawLineList.Connect(stateData.sessionHandler->OnDebugDrawLineList, [this](const Packets::S_DebugDrawLineList& debugDrawLinePacket)
+		{
+			auto& debugDrawLines = m_debugDrawLines[debugDrawLinePacket.uniqueHash];
+			debugDrawLines.color = debugDrawLinePacket.color;
+			debugDrawLines.duration = Nz::Time::Seconds(debugDrawLinePacket.duration);
+			debugDrawLines.environmentId = debugDrawLinePacket.environmentId;
+			debugDrawLines.vertices.clear();
+
+			if (!debugDrawLinePacket.indices.empty())
+			{
+				for (Nz::UInt16 index : debugDrawLinePacket.indices)
+					debugDrawLines.vertices.push_back(debugDrawLinePacket.vertices[index]);
+			}
+			else
+				debugDrawLines.vertices = debugDrawLinePacket.vertices;
 		});
 
 		m_onPlayerChatMessage.Connect(stateData.sessionHandler->OnPlayerChatMessage, [this](const std::string& message, const ClientSessionHandler::PlayerInfo& playerInfo)
@@ -467,7 +554,7 @@ namespace tsom
 				}
 			});
 
-			fmt::print("{0}: {1}\n", playerInfo.nickname, message);
+			spdlog::info("{0}: {1}", playerInfo.nickname, message);
 		});
 
 		m_onPlayerJoined.Connect(stateData.sessionHandler->OnPlayerJoined, [this](const ClientSessionHandler::PlayerInfo& playerInfo)
@@ -481,7 +568,7 @@ namespace tsom
 				}
 				});
 
-			fmt::print("{0} joined the server\n", playerInfo.nickname);
+			spdlog::info("{0} joined the server", playerInfo.nickname);
 		});
 
 		m_onPlayerLeave.Connect(stateData.sessionHandler->OnPlayerLeave, [this](const ClientSessionHandler::PlayerInfo& playerInfo)
@@ -495,7 +582,7 @@ namespace tsom
 				}
 			});
 
-			fmt::print("{0} left the server\n", playerInfo.nickname);
+			spdlog::info("{0} left the server", playerInfo.nickname);
 		});
 
 		m_onPlayerNameUpdate.Connect(stateData.sessionHandler->OnPlayerNameUpdate, [this](const ClientSessionHandler::PlayerInfo& playerInfo, const std::string& newNickname)
@@ -511,13 +598,53 @@ namespace tsom
 				}
 			});
 
-			fmt::print("{0} renamed to {1}\n", playerInfo.nickname, newNickname);
+			spdlog::info("{0} renamed to {1}", playerInfo.nickname, newNickname);
 		});
 
-		m_onShipControlUpdated.Connect(stateData.sessionHandler->OnShipControlUpdated, [this](bool enable)
+		m_onControlledShip.Connect(stateData.sessionHandler->OnControlledShip, [this](entt::handle shipEntity, entt::handle shipExteriorEntity, const Nz::Quaternionf& referenceRotation)
 		{
-			m_isPilotingShip = enable;
-			m_crosshairEntity.get<Nz::GraphicsComponent>().Show(enable);
+			m_pilotedShip = PilotedShip{
+				.exteriorEntity = shipExteriorEntity,
+				.interiorEntity = shipEntity
+			};
+
+			bool isControllingShip = static_cast<bool>(shipExteriorEntity);
+
+			m_blockSelectionBar->Show(!isControllingShip);
+			m_crosshairEntity.get<Nz::GraphicsComponent>().Show(isControllingShip);
+
+			m_shipAABB = Nz::Boxf::Invalid();
+			m_shipReferenceRotation = referenceRotation;
+
+			if (auto* shipComponent = shipEntity.try_get<ShipComponent>())
+			{
+				for (auto& chunkEntitiesPtr : shipComponent->shipEntities)
+				{
+					if (!chunkEntitiesPtr)
+						continue;
+
+					chunkEntitiesPtr->ForEachChunk([&](const ChunkIndices& chunkIndices, entt::handle chunkEntity)
+					{
+						auto& chunkVisual = chunkEntity.get<VisualEntityComponent>();
+						auto& chunkGfx = chunkVisual.visualEntity.get<Nz::GraphicsComponent>();
+						if (m_shipAABB.IsValid())
+							m_shipAABB.ExtendTo(chunkGfx.GetAABB());
+						else
+							m_shipAABB = chunkGfx.GetAABB();
+					});
+				}
+			}
+
+			m_targetCameraDistance = m_currentCameraDistance = m_defaultCameraDistance = m_shipAABB.GetRadius();
+			LayoutWidgets(Nz::Vector2f(GetStateData().renderTarget->GetSize()));
+		});
+
+		m_onControlledShipFinished.Connect(stateData.sessionHandler->OnControlledShipFinished, [this]
+		{
+			m_pilotedShip = {};
+			m_blockSelectionBar->Show();
+			m_crosshairEntity.get<Nz::GraphicsComponent>().Show(false);
+			LayoutWidgets(Nz::Vector2f(GetStateData().renderTarget->GetSize()));
 		});
 
 		m_escapeMenu->OnDisconnect.Connect([this](EscapeMenu* /*menu*/)
@@ -541,7 +668,8 @@ namespace tsom
 
 		m_chatBox->Close();
 		m_escapeMenu->Hide();
-		m_console->Hide();
+		m_localConsole->Hide();
+		m_remoteConsole->Hide();
 
 		auto& stateData = GetStateData();
 		LayoutWidgets(Nz::Vector2f(stateData.renderTarget->GetSize()));
@@ -552,7 +680,7 @@ namespace tsom
 		m_remainingCameraRotation = Nz::EulerAnglesf::Zero();
 		m_predictedCameraRotation = Nz::EulerAnglesf::Zero();
 
-		float mouseSensitivity = config.GetFloatValue<float>("Input.MouseSensitivity");
+		float mouseSensitivity = config.GetFloatValue<float>(Config::Input_MouseSensitivity);
 		m_mouseMovedSlot.Connect(stateData.canvas->OnUnhandledMouseMoved, [&, mouseSensitivity](const Nz::WindowEventHandler*, const Nz::WindowEvent::MouseMoveEvent& event)
 		{
 			if (!m_isMouseLocked)
@@ -577,60 +705,56 @@ namespace tsom
 
 			auto& stateData = GetStateData();
 
-			if (!m_isPilotingShip)
+			if (!m_pilotedShip)
 			{
 				if (auto raycastHit = RaycastQuery())
 				{
 					if (auto* chunkComponent = raycastHit->hitEntity.try_get<ChunkComponent>())
 					{
 						auto& chunkNetworkMap = chunkComponent->parentEntity.get<ChunkNetworkMapComponent>();
+						auto& chunkRigidBody = raycastHit->hitEntity.get<Nz::RigidBody3DComponent>();
 						auto& chunkNode = raycastHit->hitEntity.get<Nz::NodeComponent>();
 
 						const Chunk& hitChunk = *chunkComponent->chunk;
 						const ChunkContainer& chunkContainer = hitChunk.GetContainer();
 
+						Nz::Vector3f localPos = chunkNode.ToLocalPosition(raycastHit->hitPos);
+						Nz::Vector3f localNormal = chunkNode.ToLocalDirection(raycastHit->hitNormal);
+
+						auto hitCoordinates = hitChunk.ComputeHitCoordinates(localPos, localNormal, *chunkRigidBody.GetCollider(), raycastHit->subShapeID);
+						if (!hitCoordinates)
+							return;
+
 						if (event.button == Nz::Mouse::Left)
 						{
 							// Mine
-							Nz::Vector3f blockPos = raycastHit->hitPos - raycastHit->hitNormal * chunkContainer.GetTileSize() * 0.25f;
-							auto coordinates = hitChunk.ComputeCoordinates(chunkNode.ToLocalPosition(blockPos));
-							if (!coordinates)
-								return;
-
-							Packets::MineBlock mineBlock;
+							Packets::C_MineBlock mineBlock;
 							mineBlock.chunkId = Nz::Retrieve(chunkNetworkMap.chunkNetworkIndices, &hitChunk);
-							mineBlock.voxelLoc.x = coordinates->x;
-							mineBlock.voxelLoc.y = coordinates->y;
-							mineBlock.voxelLoc.z = coordinates->z;
+							mineBlock.voxelLoc.x = hitCoordinates->blockIndices.x;
+							mineBlock.voxelLoc.y = hitCoordinates->blockIndices.y;
+							mineBlock.voxelLoc.z = hitCoordinates->blockIndices.z;
 
 							stateData.networkSession->SendPacket(mineBlock);
 						}
 						else
 						{
-							const Nz::Node* environmentNode = chunkNode.GetParent();
-							if NAZARA_UNLIKELY(!environmentNode)
-							{
-								fmt::print(fg(fmt::color::red), "chunk has no environment node\n");
-								return;
-							}
+							BlockIndices blockIndices = chunkContainer.GetBlockIndices(hitChunk.GetIndices(), hitCoordinates->blockIndices);
 
-							// Place
-							// Don't use hit chunk as it wouldn't work for borders blocks
-							Nz::Vector3f blockPos = environmentNode->ToLocalPosition(raycastHit->hitPos + raycastHit->hitNormal * chunkContainer.GetTileSize() * 0.25f);
-							ChunkIndices chunkIndices = chunkContainer.GetChunkIndicesByPosition(blockPos);
+							const DirectionAxis& dirAxis = s_dirAxis[hitCoordinates->direction];
+
+							blockIndices[dirAxis.upAxis] += dirAxis.upDir;
+
+							Nz::Vector3ui innerCoordinates;
+							ChunkIndices chunkIndices = chunkContainer.GetChunkIndicesByBlockIndices(blockIndices, &innerCoordinates);
 							const Chunk* chunk = chunkContainer.GetChunk(chunkIndices);
 							if (!chunk)
 								return;
 
-							auto coordinates = chunk->ComputeCoordinates(blockPos - chunkContainer.GetChunkOffset(chunkIndices));
-							if (!coordinates)
-								return;
-
-							Packets::PlaceBlock placeBlock;
+							Packets::C_PlaceBlock placeBlock;
 							placeBlock.chunkId = Nz::Retrieve(chunkNetworkMap.chunkNetworkIndices, chunk);
-							placeBlock.voxelLoc.x = coordinates->x;
-							placeBlock.voxelLoc.y = coordinates->y;
-							placeBlock.voxelLoc.z = coordinates->z;
+							placeBlock.voxelLoc.x = innerCoordinates.x;
+							placeBlock.voxelLoc.y = innerCoordinates.y;
+							placeBlock.voxelLoc.z = innerCoordinates.z;
 							placeBlock.newContent = Nz::SafeCast<Nz::UInt8>(m_blockSelectionBar->GetSelectedBlock());
 
 							stateData.networkSession->SendPacket(placeBlock);
@@ -647,7 +771,8 @@ namespace tsom
 	{
 		WidgetState::Leave(fsm);
 
-		Nz::Mouse::SetRelativeMouseMode(false);
+		if (Nz::Window* window = GetStateData().window)
+			window->SetRelativeMouseMode(false);
 
 		m_chatBox->Close();
 	}
@@ -674,19 +799,63 @@ namespace tsom
 			OnTick(m_tickDuration, m_tickAccumulator < m_tickDuration);
 		}
 
-		auto& debugDrawer = stateData.world->GetSystem<Nz::RenderSystem>().GetFramePipeline().GetDebugDrawer();
-		//debugDrawer.DrawLine(Nz::Vector3f::Zero(), Nz::Vector3f::Forward() * 20.f, Nz::Color::Green());
-		//debugDrawer.DrawLine(Nz::Vector3f::Zero(), Nz::Vector3f::Left() * 20.f, Nz::Color::Green());
-		//debugDrawer.DrawLine(Nz::Vector3f::Left() * 20.f, Nz::Vector3f::Left() * 20.f + Nz::Vector3f::Forward() * 10.f, Nz::Color::Green());
-		//debugDrawer.DrawLine(Nz::Vector3f::Forward() * 20.f, Nz::Vector3f::Left() * 20.f + Nz::Vector3f::Forward() * 10.f, Nz::Color::Green());
+		Nz::DebugDrawer* debugDrawer = m_cameraEntity.get<Nz::CameraComponent>().AccessDebugDrawer();
+		for (auto it = m_debugDrawLines.begin(); it != m_debugDrawLines.end();)
+		{
+			DebugDrawLines& debugDrawLines = it.value();
+			debugDrawLines.duration -= elapsedTime;
+			if (debugDrawLines.duration < Nz::Time::Zero())
+			{
+				it = m_debugDrawLines.erase(it);
+				continue;
+			}
 
-		//debugDrawer.DrawBox(m_skybox.get<Nz::GraphicsComponent>().GetAABB(), Nz::Color::Blue());
-		//debugDrawer.DrawFrustum(m_camera.get<Nz::CameraComponent>().GetViewerInsta, Nz::Color::Blue());
+			const Nz::Node* rootNode = stateData.sessionHandler->GetEnvironmentNode(debugDrawLines.environmentId);
+			if (rootNode->GetGlobalPosition().ApproxEqual(Nz::Vector3f::Zero()) && rootNode->GetGlobalRotation().ApproxEqual(Nz::Quaternionf::Identity()) && rootNode->GetGlobalScale().ApproxEqual(Nz::Vector3f::Unit()))
+			{
+				// Fast path, environment node has no transformation (root environment)
+				debugDrawer->DrawLines(debugDrawLines.vertices, debugDrawLines.color);
+			}
+			else
+			{
+				// Slow path, transform lines
+				for (std::size_t i = 0; i < debugDrawLines.vertices.size(); i += 2)
+					debugDrawer->DrawLine(rootNode->ToGlobalPosition(debugDrawLines.vertices[i]), rootNode->ToGlobalPosition(debugDrawLines.vertices[i + 1]), debugDrawLines.color);
+			}
+
+			++it;
+		}
+		//debugDrawer->DrawLine(Nz::Vector3f::Zero(), Nz::Vector3f::Forward() * 20.f, Nz::Color::Green());
+		//debugDrawer->DrawLine(Nz::Vector3f::Zero(), Nz::Vector3f::Left() * 20.f, Nz::Color::Green());
+		//debugDrawer->DrawLine(Nz::Vector3f::Left() * 20.f, Nz::Vector3f::Left() * 20.f + Nz::Vector3f::Forward() * 10.f, Nz::Color::Green());
+		//debugDrawer->DrawLine(Nz::Vector3f::Forward() * 20.f, Nz::Vector3f::Left() * 20.f + Nz::Vector3f::Forward() * 10.f, Nz::Color::Green());
+
+		//debugDrawer->DrawBox(Nz::Boxf(Nz::Vector3f(-1.f), Nz::Vector3f(2.f)), Nz::Color::Blue());
+		//debugDrawer->DrawBox(Nz::Boxf(Nz::Vector3f(Nz::Vector3f(m_planet->GetGridDimensions()) * -0.5f * m_planet->GetTileSize()), Nz::Vector3f(Nz::Vector3f(m_planet->GetGridDimensions()) * m_planet->GetTileSize())), Nz::Color::Green());
+		//debugDrawer->DrawFrustum(m_camera.get<Nz::CameraComponent>().GetViewerInsta, Nz::Color::Blue());
 
 		float cameraSpeed = (Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::LShift)) ? 50.f : 10.f;
 		float updateTime = elapsedTime.AsSeconds();
 
 		auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
+
+#if 0
+		if (Chunk* chunk = m_planet->GetChunkByPosition(cameraNode.GetPosition()))
+		{
+			Nz::Vector3f chunkOffset = m_planet->GetChunkOffset(chunk->GetIndices());
+			Nz::Boxf aabb(chunkOffset, Nz::Vector3f(Planet::ChunkSize) * m_planet->GetTileSize());
+			debugDrawer->DrawBox(aabb, Nz::Color::Blue());
+
+			for (const Nz::Vector3f& corner : aabb.GetCorners())
+			{
+				if (DeformedChunk::DeformPosition(corner, m_planet->GetCenter(), m_planet->GetCornerRadius()).ApproxEqual(corner, 0.001f))
+					debugDrawer->DrawBox(Nz::Boxf(corner - Nz::Vector3f(0.5f), Nz::Vector3f(1.f)), Nz::Color::Red());
+				else
+					debugDrawer->DrawBox(Nz::Boxf(corner - Nz::Vector3f(0.5f), Nz::Vector3f(1.f)), Nz::Color::Green());
+			}
+		}
+#endif
+
 		if (m_controlledEntity)
 		{
 			Nz::NodeComponent& characterNode = m_controlledEntity.get<Nz::NodeComponent>();
@@ -695,7 +864,7 @@ namespace tsom
 			Nz::Quaternionf characterRot = characterNode.GetGlobalRotation();
 
 			Nz::EulerAnglesf predictedCameraRotation = m_predictedCameraRotation;
-			if (!m_isPilotingShip)
+			if (!m_pilotedShip)
 			{
 				predictedCameraRotation.pitch = Nz::Clamp(predictedCameraRotation.pitch + m_incomingCameraRotation.pitch, -89.f, 89.f);
 				predictedCameraRotation.yaw += m_incomingCameraRotation.yaw;
@@ -704,58 +873,78 @@ namespace tsom
 
 			switch (m_cameraMode)
 			{
-				case 0:
+				case CameraMode::Firstperson:
 				{
 					const Nz::Node* environmentNode = characterNode.GetParent();
 					if NAZARA_UNLIKELY(!environmentNode)
 					{
-						fmt::print(fg(fmt::color::red), "character has no environment node\n");
+						spdlog::error("character has no environment node");
 						break;
 					}
 
 					cameraNode.SetPosition(characterPos + characterRot * (Nz::Vector3f::Up() * Constants::PlayerCameraHeight));
 
-					Nz::Quaternionf cameraRotation = environmentNode->GetRotation() * m_referenceRotation * Nz::Quaternionf(predictedCameraRotation);
+					Nz::Quaternionf cameraRotation = environmentNode->GetGlobalRotation() * m_referenceRotation * Nz::Quaternionf(predictedCameraRotation);
 					cameraRotation.Normalize();
 
-					if (m_isPilotingShip)
+					if (m_pilotedShip)
 						cameraRotation *= m_currentShipRotation;
 
 					cameraNode.SetRotation(cameraRotation);
+					break;
+				}
 
-					auto& cameraComponent = m_cameraEntity.get<Nz::CameraComponent>();
+				case CameraMode::Thirdperson:
+				case CameraMode::ThirdpersonRear:
+				{
+					Nz::Vector3f sourceCameraPos;
+					Nz::Vector3f targetCameraPos;
+					Nz::Quaternionf targetCameraRot;
 
-					Nz::DegreeAnglef cameraFov = cameraComponent.GetFOV();
-					if (!cameraFov.ApproxEqual(m_targetCameraFOV))
+					if (m_pilotedShip)
 					{
-						float factor = (m_targetCameraFOV == Constants::DefaultCameraFOV) ? 2.f * updateTime : 0.5f * updateTime;
-						cameraComponent.UpdateFOV(Nz::Lerp(cameraFov, m_targetCameraFOV, factor));
+						auto& shipNode = m_pilotedShip->exteriorEntity.get<Nz::NodeComponent>();
+
+						Nz::Quaternionf forwardRotation = m_shipReferenceRotation;
+						if (m_cameraMode == CameraMode::ThirdpersonRear)
+							forwardRotation *= Nz::Quaternionf(Nz::TurnAnglef(0.5f), Nz::Vector3f::Up());
+
+						Nz::Quaternionf cameraRotation = shipNode.GetGlobalRotation() * forwardRotation;
+						cameraRotation *= m_currentShipRotation;
+						cameraRotation.Normalize();
+
+						m_currentCameraDistance = Nz::Lerp(m_currentCameraDistance, m_targetCameraDistance, 2.f * updateTime);
+
+						sourceCameraPos = shipNode.ToGlobalPosition(m_shipAABB.GetCenter());
+
+						targetCameraPos = sourceCameraPos + cameraRotation * (Nz::Vector3f::Backward() * 2.f + Nz::Vector3f::Up()) * m_currentCameraDistance;
+						targetCameraRot = cameraRotation * Nz::Quaternionf(Nz::DegreeAnglef(-5.f), Nz::Vector3f::Right());
 					}
-					break;
-				}
+					else
+					{
+						sourceCameraPos = characterPos;
 
-				case 1:
-				{
-					Nz::Quaternionf cameraRotation = characterRot * Nz::EulerAnglesf(predictedCameraRotation.pitch, 0.f, 0.f);
-					cameraRotation.Normalize();
+						targetCameraRot = characterRot * Nz::EulerAnglesf(predictedCameraRotation.pitch, (m_cameraMode == CameraMode::Thirdperson) ? 0.f : 180.f, 0.f);
+						targetCameraRot.Normalize();
 
-					cameraNode.SetPosition(characterPos + characterRot * (Nz::Vector3f::Up() * 1.f) + cameraRotation * Nz::Vector3f::Backward() * 1.f);
-					cameraNode.SetRotation(cameraRotation);
-					break;
-				}
+						targetCameraPos = characterPos + characterRot * (Nz::Vector3f::Up() * 1.f) + targetCameraRot * Nz::Vector3f::Backward() * 1.f;
+					}
 
-				case 2:
-				{
-					Nz::Quaternionf cameraRotation = characterRot * Nz::EulerAnglesf(predictedCameraRotation.pitch, 180.f, 0.f);
-					cameraRotation.Normalize();
-
-					cameraNode.SetPosition(characterPos + characterRot * (Nz::Vector3f::Up() * 0.5f) + cameraRotation * Nz::Vector3f::Backward() * 1.f);
-					cameraNode.SetRotation(cameraRotation);
+					cameraNode.SetPosition(RaycastCamera(sourceCameraPos, targetCameraPos));
+					cameraNode.SetRotation(targetCameraRot);
 					break;
 				}
 
 				default:
 					break;
+			}
+
+			auto& cameraComponent = m_cameraEntity.get<Nz::CameraComponent>();
+			Nz::DegreeAnglef cameraFov = cameraComponent.GetFOV();
+			if (!cameraFov.ApproxEqual(m_targetCameraFOV))
+			{
+				float factor = (m_targetCameraFOV == Constants::DefaultCameraFOV) ? 2.f * updateTime : 0.5f * updateTime;
+				cameraComponent.UpdateFOV(Nz::Lerp(cameraFov, m_targetCameraFOV, factor));
 			}
 
 			if (m_debugOverlay)
@@ -821,41 +1010,44 @@ namespace tsom
 
 		// Raycast
 		entt::handle interactibleEntity;
-		if (m_cameraMode != 2 && !m_isPilotingShip)
+		if (m_cameraMode != CameraMode::ThirdpersonRear && !m_pilotedShip)
 		{
 			if (auto raycastHit = RaycastQuery())
 			{
 				if (auto* chunkComponent = raycastHit->hitEntity.try_get<ChunkComponent>())
 				{
+					auto& chunkRigidBody = raycastHit->hitEntity.get<Nz::RigidBody3DComponent>();
 					auto& chunkNode = raycastHit->hitEntity.get<Nz::NodeComponent>();
 
-					const Chunk& chunk = *chunkComponent->chunk;
-					const ChunkContainer& chunkContainer = chunk.GetContainer();
+					const Chunk& hitChunk = *chunkComponent->chunk;
+					const ChunkContainer& chunkContainer = hitChunk.GetContainer();
 
-					debugDrawer.DrawLine(raycastHit->hitPos, raycastHit->hitPos + raycastHit->hitNormal * 0.2f, Nz::Color::Cyan());
-
-					Nz::Vector3f blockPos = raycastHit->hitPos - raycastHit->hitNormal * chunkContainer.GetTileSize() * 0.25f;
+					debugDrawer->DrawLine(raycastHit->hitPos, raycastHit->hitPos + raycastHit->hitNormal * 0.2f, Nz::Color::Cyan());
 
 					if (m_debugOverlay && m_debugOverlay->mode >= 1)
 					{
-						const ChunkIndices& chunkIndices = chunk.GetIndices();
+						const ChunkIndices& chunkIndices = hitChunk.GetIndices();
 						m_debugOverlay->textDrawer.AppendText(fmt::format("{0:-^{1}}\n", "Target", 20));
 						m_debugOverlay->textDrawer.AppendText(fmt::format("Target chunk: {0};{1};{2}\n", chunkIndices.x, chunkIndices.y, chunkIndices.z));
 					}
 
-					if (auto coordinates = chunk.ComputeCoordinates(chunkNode.ToLocalPosition(blockPos)))
+					Nz::Vector3f localPos = chunkNode.ToLocalPosition(raycastHit->hitPos);
+					Nz::Vector3f localNormal = chunkNode.ToLocalDirection(raycastHit->hitNormal);
+
+					auto hitCoordinates = hitChunk.ComputeHitCoordinates(localPos, localNormal, *chunkRigidBody.GetCollider(), raycastHit->subShapeID);
+					if (hitCoordinates)
 					{
 						if (m_debugOverlay && m_debugOverlay->mode >= 1)
 						{
-							m_debugOverlay->textDrawer.AppendText(fmt::format("Target chunk block: {0};{1};{2}\n", coordinates->x, coordinates->y, coordinates->z));
+							m_debugOverlay->textDrawer.AppendText(fmt::format("Target chunk block: {0};{1};{2}\n", hitCoordinates->blockIndices.x, hitCoordinates->blockIndices.y, hitCoordinates->blockIndices.z));
 
 							Nz::Vector3ui chunkCount(5);
 
 							Nz::Vector3i maxHeight((Nz::Vector3i(chunkCount) + Nz::Vector3i(1)) / 2);
 							maxHeight *= int(Planet::ChunkSize);
 
-							const ChunkIndices& chunkIndices = chunk.GetIndices();
-							Nz::Vector3i blockIndices = chunkIndices * int(Planet::ChunkSize) + Nz::Vector3i(coordinates->x, coordinates->z, coordinates->y) - Nz::Vector3i(int(Planet::ChunkSize)) / 2;
+							const ChunkIndices& chunkIndices = hitChunk.GetIndices();
+							Nz::Vector3i blockIndices = chunkIndices * int(Planet::ChunkSize) + Nz::Vector3i(hitCoordinates->blockIndices.x, hitCoordinates->blockIndices.z, hitCoordinates->blockIndices.y) - Nz::Vector3i(int(Planet::ChunkSize)) / 2;
 							m_debugOverlay->textDrawer.AppendText(fmt::format("Target block global indices: {0};{1};{2}\n", blockIndices.x, blockIndices.y, blockIndices.z));
 							unsigned int depth = Nz::SafeCaster(std::min({
 								maxHeight.x - std::abs(blockIndices.x),
@@ -865,7 +1057,9 @@ namespace tsom
 							m_debugOverlay->textDrawer.AppendText(fmt::format("Target block depth: {0}\n", depth));
 						}
 
-						auto cornerPos = chunk.ComputeVoxelCorners(*coordinates);
+						auto cornerPos = hitChunk.ComputeBlockCorners(hitCoordinates->blockIndices);
+						for (Nz::Vector3f& pos : cornerPos)
+							pos = chunkNode.ToGlobalPosition(pos) + raycastHit->hitNormal * 0.02f;
 
 						constexpr Nz::EnumArray<Direction, std::array<Nz::BoxCorner, 4>> directionToCorners = {
 							// Back
@@ -882,13 +1076,12 @@ namespace tsom
 							std::array{ Nz::BoxCorner::RightBottomNear, Nz::BoxCorner::LeftBottomNear, Nz::BoxCorner::LeftTopNear, Nz::BoxCorner::RightTopNear },
 						};
 
-						Nz::Vector3f localHitNormal = chunkNode.GetGlobalRotation().GetConjugate() * raycastHit->hitNormal;
-						auto& corners = directionToCorners[DirectionFromNormal(localHitNormal)];
+						auto& corners = directionToCorners[hitCoordinates->direction];
 
-						debugDrawer.DrawLine(chunkNode.ToGlobalPosition(cornerPos[corners[0]]), chunkNode.ToGlobalPosition(cornerPos[corners[1]]), Nz::Color::Green());
-						debugDrawer.DrawLine(chunkNode.ToGlobalPosition(cornerPos[corners[1]]), chunkNode.ToGlobalPosition(cornerPos[corners[2]]), Nz::Color::Green());
-						debugDrawer.DrawLine(chunkNode.ToGlobalPosition(cornerPos[corners[2]]), chunkNode.ToGlobalPosition(cornerPos[corners[3]]), Nz::Color::Green());
-						debugDrawer.DrawLine(chunkNode.ToGlobalPosition(cornerPos[corners[3]]), chunkNode.ToGlobalPosition(cornerPos[corners[0]]), Nz::Color::Green());
+						debugDrawer->DrawLine(cornerPos[corners[0]], cornerPos[corners[1]], Nz::Color::Green());
+						debugDrawer->DrawLine(cornerPos[corners[1]], cornerPos[corners[2]], Nz::Color::Green());
+						debugDrawer->DrawLine(cornerPos[corners[2]], cornerPos[corners[3]], Nz::Color::Green());
+						debugDrawer->DrawLine(cornerPos[corners[3]], cornerPos[corners[0]], Nz::Color::Green());
 					}
 				}
 				else if (auto* interactible = raycastHit->hitEntity.try_get<ClientInteractibleComponent>(); interactible && interactible->isEnabled)
@@ -917,7 +1110,7 @@ namespace tsom
 			m_debugOverlay->label->SetPosition({ 0.f, stateData.canvas->GetHeight() - m_debugOverlay->label->GetHeight() });
 		}
 
-		if (m_isPilotingShip)
+		if (m_pilotedShip)
 		{
 			float factor = 2.f * updateTime;
 			m_currentShipRotation = Nz::Quaternionf::Slerp(m_currentShipRotation, m_targetShipRotation, factor);
@@ -928,19 +1121,104 @@ namespace tsom
 		return true;
 	}
 
+	void GameState::BindControlledEntitySignals()
+	{
+		auto& entityInstance = m_controlledEntity.get<ClassInstanceComponent>();
+
+		// TODO: Cache those
+		Nz::UInt32 healthIndex = entityInstance.GetClass()->FindProperty("health");
+		Nz::UInt32 oxygenIndex = entityInstance.GetClass()->FindProperty("oxygen");
+
+		m_controlledEntityPropertyUpdate.Connect(entityInstance.OnPropertyUpdate, [this, healthIndex, oxygenIndex](ClassInstanceComponent* /*classInstance*/, Nz::UInt32 propertyIndex, const EntityProperty& /*newValue*/)
+		{
+			if (propertyIndex == healthIndex || propertyIndex == oxygenIndex)
+			{
+				// Update next tick when property value has been updated
+				m_timerManager.AddImmediateTimer([this] { UpdateHealthAndOxygenText(); });
+			}
+		});
+
+		UpdateHealthAndOxygenText();
+	}
+
 	void GameState::LayoutWidgets(const Nz::Vector2f& newSize)
 	{
-		m_blockSelectionBar->Resize({ newSize.x, BlockSelectionBar::InventoryTileSize });
-		m_blockSelectionBar->SetPosition({ 0.f, 5.f });
+		float hudNextHeight = 0.f;
+		if (m_blockSelectionBar->IsVisible())
+		{
+			m_blockSelectionBar->Resize({ newSize.x, BlockSelectionBar::InventoryTileSize });
+			m_blockSelectionBar->SetPosition({ 0.f, 5.f });
+
+			hudNextHeight += m_blockSelectionBar->GetPosition().y + m_blockSelectionBar->GetHeight();
+		}
 
 		m_chatBox->Resize(newSize);
 
-		m_console->Resize({ newSize.x, newSize.y / 3.f });
-		m_console->SetPosition({ 0.f, newSize.y - m_console->GetHeight() });
+		for (Console* console : { m_localConsole, m_remoteConsole })
+		{
+			console->Resize({ newSize.x, newSize.y / 3.f });
+			console->SetPosition({ 0.f, newSize.y - console->GetHeight() });
+		}
 
 		m_crosshairEntity.get<Nz::NodeComponent>().SetPosition({ newSize.x * 0.5f, newSize.y * 0.5f });
+		m_healthOxygen.entity.get<Nz::NodeComponent>().SetPosition({ newSize.x * 0.5f - m_healthOxygen.entity.get<Nz::GraphicsComponent>().GetAABB().x / 2.f, hudNextHeight });
 
 		m_escapeMenu->Center();
+	}
+
+	Nz::Vector3f GameState::RaycastCamera(const Nz::Vector3f& from, const Nz::Vector3f& to)
+	{
+		auto& physSystem = GetStateData().world->GetSystem<Nz::Physics3DSystem>();
+
+		Nz::Vector3f targetPos = to;
+		auto callback = [&](const Nz::Physics3DSystem::RaycastHit& hitInfo)
+		{
+			targetPos = hitInfo.hitPosition + hitInfo.hitNormal * 0.2f;
+		};
+
+		struct OnlyStatic : Nz::PhysBroadphaseLayerFilter3D
+		{
+			bool ShouldCollide(Nz::PhysBroadphase3D layer) const override
+			{
+				return layer == Constants::BroadphaseStatic;
+			}
+		};
+
+		struct IgnoreShip : Nz::PhysBodyFilter3D
+		{
+			bool ShouldCollide(Nz::UInt32 bodyIndex) const override
+			{
+				entt::handle entity = physicsSystem->GetRigidBodyEntity(bodyIndex);
+				if (!entity)
+					return false;
+
+				ChunkComponent* chunkComponent = entity.try_get<ChunkComponent>();
+				if (!chunkComponent)
+					return false;
+
+				return chunkComponent->parentEntity != shipInteriorEntity;
+			}
+
+			bool ShouldCollideLocked(const Nz::PhysBody3D& body) const override
+			{
+				return ShouldCollide(body.GetBodyIndex());
+			}
+
+			Nz::Physics3DSystem* physicsSystem;
+			entt::handle shipInteriorEntity;
+		};
+
+		OnlyStatic onlyStatic;
+		IgnoreShip ignoreShip;
+		if (m_pilotedShip)
+		{
+			ignoreShip.shipInteriorEntity = m_pilotedShip->interiorEntity;
+			ignoreShip.physicsSystem = &physSystem;
+		}
+
+		physSystem.RaycastQueryFirst(from, to, callback, &onlyStatic, nullptr, (m_pilotedShip) ? &ignoreShip : nullptr);
+
+		return targetPos;
 	}
 
 	auto GameState::RaycastQuery() const -> std::optional<RaycastResult>
@@ -953,6 +1231,7 @@ namespace tsom
 			raycastResult.hitEntity = hitInfo.hitEntity;
 			raycastResult.hitPos = hitInfo.hitPosition;
 			raycastResult.hitNormal = hitInfo.hitNormal;
+			raycastResult.subShapeID = hitInfo.subShapeID;
 		};
 
 		struct IgnoreSelf : Nz::PhysBodyFilter3D
@@ -992,12 +1271,12 @@ namespace tsom
 
 	void GameState::SendInputs()
 	{
-		Packets::UpdatePlayerInputs inputPacket;
+		Packets::C_UpdatePlayerInputs inputPacket;
 		inputPacket.inputs.index = m_nextInputIndex++;
 
 		if (m_isMouseLocked)
 		{
-			if (m_isPilotingShip && !Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::LAlt))
+			if (m_pilotedShip && !Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::LAlt))
 			{
 				PlayerInputs::Ship& shipInputs = inputPacket.inputs.data.emplace<PlayerInputs::Ship>();
 				shipInputs.moveForward = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::W);
@@ -1030,7 +1309,7 @@ namespace tsom
 			else
 			{
 				PlayerInputs::Character& characterInputs = inputPacket.inputs.data.emplace<PlayerInputs::Character>();
-				if (!m_isPilotingShip)
+				if (!m_pilotedShip)
 				{
 					characterInputs.crouch = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::Scancode::LControl);
 					characterInputs.jump = Nz::Keyboard::IsKeyPressed(Nz::Keyboard::VKey::Space);
@@ -1076,12 +1355,48 @@ namespace tsom
 		GetStateData().networkSession->SendPacket(inputPacket);
 	}
 
+	void GameState::UpdateHealthAndOxygenText()
+	{
+		Nz::Vector2f size = Nz::Vector2f(GetStateData().renderTarget->GetSize());
+
+		m_healthOxygen.textDrawer.Clear();
+		Nz::RichTextBuilder richTextBuilder(m_healthOxygen.textDrawer);
+		richTextBuilder << richTextBuilder.CharacterSize(18);
+
+		if (m_controlledEntity)
+		{
+			auto& playerInstance = m_controlledEntity.get<ClassInstanceComponent>();
+
+			// TODO: cache those
+			Nz::UInt32 healthPropertyIndex = playerInstance.FindPropertyIndex("health");
+			Nz::UInt32 oxygenPropertyIndex = playerInstance.FindPropertyIndex("oxygen");
+
+			auto healthValue = std::get<EntityPropertySingleValue<EntityPropertyType::Integer>>(playerInstance.GetProperty(healthPropertyIndex));
+			auto oxygenValue = std::get<EntityPropertySingleValue<EntityPropertyType::Integer>>(playerInstance.GetProperty(oxygenPropertyIndex));
+
+			richTextBuilder << Nz::Color::Yellow() << "Status: " << Nz::Color::White() << fmt::format("{}%", *healthValue);
+			richTextBuilder << Nz::Color::White() << " - ";
+			richTextBuilder << Nz::Color::Cyan() << "Oxygen: " << Nz::Color::White() << fmt::format("{}%", *oxygenValue);
+		}
+		else
+		{
+			richTextBuilder << Nz::Color::Yellow() << "Status: ";
+			richTextBuilder << Nz::Color::Red() << "Dead";
+		}
+
+		m_healthOxygen.textSprite->Update(m_healthOxygen.textDrawer);
+
+		m_healthOxygen.entity.get<Nz::NodeComponent>().SetPosition({ size.x * 0.5f - m_healthOxygen.entity.get<Nz::GraphicsComponent>().GetAABB().x / 2.f, m_blockSelectionBar->GetPosition().y + m_blockSelectionBar->GetHeight() });
+	}
+
 	void GameState::UpdateMouseLock()
 	{
-		m_isMouseLocked = !m_chatBox->IsTyping() && !m_escapeMenu->IsVisible() && !m_console->IsVisible();
+		m_isMouseLocked = !m_chatBox->IsTyping() && !m_escapeMenu->IsVisible() && !m_localConsole->IsVisible() && !m_remoteConsole->IsVisible();
 		m_chatBox->EnableMouseInput(!m_isMouseLocked);
-		m_console->EnableMouseInput(!m_isMouseLocked);
+		m_localConsole->EnableMouseInput(!m_isMouseLocked);
+		m_remoteConsole->EnableMouseInput(!m_isMouseLocked);
 
-		Nz::Mouse::SetRelativeMouseMode(m_isMouseLocked);
+		if (Nz::Window* window = GetStateData().window)
+			window->SetRelativeMouseMode(m_isMouseLocked);
 	}
 }

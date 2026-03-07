@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -40,10 +40,13 @@ namespace tsom
 		m_refreshMap.clear();
 	}
 
-	void EntityRegistry::RegisterClass(EntityClass entityClass)
+	std::shared_ptr<const EntityClass> EntityRegistry::RegisterClass(EntityClass entityClass)
 	{
 		std::string name = entityClass.GetName();
-		m_classes[std::move(name)] = std::make_shared<EntityClass>(std::move(entityClass));
+		std::shared_ptr<EntityClass> entityClassPtr = std::make_shared<EntityClass>(std::move(entityClass));
+		m_classes[std::move(name)] = entityClassPtr;
+
+		return entityClassPtr;
 	}
 
 	void EntityRegistry::RegisterClassLibrary(std::unique_ptr<EntityClassLibrary>&& library)

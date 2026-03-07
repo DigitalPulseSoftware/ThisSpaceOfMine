@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -11,12 +11,15 @@
 #include <ClientLib/ClientSessionHandler.hpp>
 #include <CommonLib/ConsoleExecutor.hpp>
 #include <CommonLib/NetworkReactor.hpp>
+#include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <Game/States/WidgetState.hpp>
 #include <Nazara/Core/State.hpp>
 #include <Nazara/Core/Time.hpp>
 #include <Nazara/Core/TimerManager.hpp>
+#include <Nazara/Math/Box.hpp>
 #include <Nazara/Math/EulerAngles.hpp>
 #include <Nazara/Platform/WindowEventHandler.hpp>
+#include <Nazara/TextRenderer/RichTextDrawer.hpp>
 #include <Nazara/TextRenderer/SimpleTextDrawer.hpp>
 #include <Nazara/Widgets/Canvas.hpp>
 #include <entt/entt.hpp>
@@ -56,32 +59,59 @@ namespace tsom
 			GameState& operator=(GameState&&) = delete;
 
 		private:
+			enum class CameraMode
+			{
+				Firstperson,
+				Thirdperson,
+				ThirdpersonRear,
+
+				First = Firstperson,
+				Last = ThirdpersonRear
+			};
+
 			struct RaycastResult
 			{
 				entt::handle hitEntity;
 				Nz::Vector3f hitPos;
 				Nz::Vector3f hitNormal;
+				Nz::UInt32 subShapeID;
 			};
 
+			void BindControlledEntitySignals();
 			void LayoutWidgets(const Nz::Vector2f& newSize) override;
+			Nz::Vector3f RaycastCamera(const Nz::Vector3f& from, const Nz::Vector3f& to);
 			std::optional<RaycastResult> RaycastQuery() const;
 			void OnTick(Nz::Time elapsedTime, bool lastTick);
 			void SendInputs();
+			void UpdateHealthAndOxygenText();
 			void UpdateMouseLock();
 
+			NazaraSlot(ClassInstanceComponent, OnPropertyUpdate, m_controlledEntityPropertyUpdate);
 			NazaraSlot(ClientSessionHandler, OnChatMessage, m_onChatMessage);
+			NazaraSlot(ClientSessionHandler, OnConsoleOutput, m_onConsoleOutput);
 			NazaraSlot(ClientSessionHandler, OnControlledEntityChanged, m_onControlledEntityChanged);
 			NazaraSlot(ClientSessionHandler, OnControlledEntityStateUpdate, m_onControlledEntityStateUpdate);
+			NazaraSlot(ClientSessionHandler, OnControlledShip, m_onControlledShip);
+			NazaraSlot(ClientSessionHandler, OnControlledShipFinished, m_onControlledShipFinished);
+			NazaraSlot(ClientSessionHandler, OnDebugDrawLineList, m_onDebugDrawLineList);
 			NazaraSlot(ClientSessionHandler, OnPlayerChatMessage, m_onPlayerChatMessage);
 			NazaraSlot(ClientSessionHandler, OnPlayerJoined, m_onPlayerJoined);
 			NazaraSlot(ClientSessionHandler, OnPlayerLeave, m_onPlayerLeave);
 			NazaraSlot(ClientSessionHandler, OnPlayerNameUpdate, m_onPlayerNameUpdate);
-			NazaraSlot(ClientSessionHandler, OnShipControlUpdated, m_onShipControlUpdated);
 			NazaraSlot(Nz::Canvas, OnUnhandledKeyPressed, m_onUnhandledKeyPressed);
 			NazaraSlot(Nz::Canvas, OnUnhandledKeyReleased, m_onUnhandledKeyReleased);
 			NazaraSlot(Nz::Canvas, OnUnhandledMouseButtonPressed, m_mouseButtonReleasedSlot);
 			NazaraSlot(Nz::Canvas, OnUnhandledMouseMoved, m_mouseMovedSlot);
 			NazaraSlot(Nz::Canvas, OnUnhandledMouseWheelMoved, m_mouseWheelMovedSlot);
+
+			struct DebugDrawLines
+			{
+				std::size_t environmentId;
+				std::vector<Nz::Vector3f> vertices;
+				Nz::Color color;
+				Nz::Quaternionf rotation;
+				Nz::Time duration;
+			};
 
 			struct DebugOverlay
 			{
@@ -91,41 +121,61 @@ namespace tsom
 				unsigned int mode = 0;
 			};
 
+			struct HealthOxygen
+			{
+				Nz::RichTextDrawer textDrawer;
+				std::shared_ptr<Nz::TextSprite> textSprite;
+				entt::handle entity;
+			};
+
 			struct InputRotation
 			{
 				InputIndex inputIndex;
 				Nz::EulerAnglesf inputRotation;
 			};
 
+			struct PilotedShip
+			{
+				entt::handle exteriorEntity;
+				entt::handle interiorEntity;
+			};
+
 			std::optional<ConsoleExecutor> m_consoleExecutor;
+			std::optional<PilotedShip> m_pilotedShip;
 			std::shared_ptr<DebugOverlay> m_debugOverlay;
-			std::unique_ptr<ClientChunkEntities> m_planetEntities;
 			std::vector<InputRotation> m_predictedInputRotations;
+			tsl::hopscotch_map<Nz::UInt64, DebugDrawLines> m_debugDrawLines;
 			entt::handle m_cameraEntity;
 			entt::handle m_controlledEntity;
 			entt::handle m_crosshairEntity;
 			entt::handle m_skyboxEntity;
 			entt::handle m_sunLightEntity;
+			Nz::Boxf m_shipAABB;
 			Nz::DegreeAnglef m_targetCameraFOV;
 			Nz::EulerAnglesf m_incomingCameraRotation;  //< Accumulated rotation from inputs (will be applied on inputs)
 			Nz::EulerAnglesf m_predictedCameraRotation; //< Rotation sent to the server but not yet acknowledged
 			Nz::EulerAnglesf m_remainingCameraRotation; //< Remaining rotation to send to the server (in case we rotate too fast)
 			Nz::Quaternionf m_currentShipRotation;
 			Nz::Quaternionf m_referenceRotation;
+			Nz::Quaternionf m_shipReferenceRotation;
 			Nz::Quaternionf m_targetShipRotation;
 			Nz::Quaternionf m_upCorrection;
 			Nz::Time m_tickAccumulator;
 			Nz::Time m_tickDuration;
 			Nz::TimerManager m_timerManager;
 			Nz::UInt8 m_nextInputIndex;
+			CameraMode m_cameraMode;
+			HealthOxygen m_healthOxygen;
 			Nz::SimpleLabelWidget* m_interactionLabel;
 			BlockSelectionBar* m_blockSelectionBar;
 			Chatbox* m_chatBox;
-			Console* m_console;
+			Console* m_localConsole;
+			Console* m_remoteConsole;
 			EscapeMenu* m_escapeMenu;
 			bool m_isMouseLocked;
-			bool m_isPilotingShip;
-			unsigned int m_cameraMode;
+			float m_currentCameraDistance;
+			float m_defaultCameraDistance;
+			float m_targetCameraDistance;
 	};
 }
 

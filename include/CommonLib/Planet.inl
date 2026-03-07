@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -25,6 +25,14 @@ namespace tsom
 			return nullptr;
 
 		return it->second.chunk.get();
+	}
+
+	inline DirectionMask Planet::GetChunkVisibilityMask(const ChunkIndices& chunkIndices) const
+	{
+		auto it = m_chunks.find(chunkIndices);
+		NazaraAssert(it != m_chunks.end());
+
+		return it->second.visibilityMask;
 	}
 
 	inline std::size_t Planet::GetChunkCount() const

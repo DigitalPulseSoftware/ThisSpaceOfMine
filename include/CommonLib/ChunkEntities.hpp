@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -10,10 +10,12 @@
 #include <CommonLib/ChunkContainer.hpp>
 #include <Nazara/Core/Node.hpp>
 #include <NazaraUtils/FixedVector.hpp>
+#include <NazaraUtils/FunctionRef.hpp>
 #include <entt/entt.hpp>
 #include <tsl/hopscotch_map.h>
 #include <tsl/hopscotch_set.h>
 #include <atomic>
+#include <mutex>
 #include <vector>
 
 namespace Nz
@@ -29,10 +31,12 @@ namespace tsom
 	class TSOM_COMMONLIB_API ChunkEntities
 	{
 		public:
-			ChunkEntities(Nz::ApplicationBase& app, Nz::EnttWorld& world, ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary);
+			ChunkEntities(Nz::ApplicationBase& app, Nz::EnttWorld& world, ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary, std::size_t layerIndex);
 			ChunkEntities(const ChunkEntities&) = delete;
 			ChunkEntities(ChunkEntities&&) = delete;
 			~ChunkEntities();
+
+			void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, entt::handle chunkEntity)> callback);
 
 			void SetParentEntity(entt::handle entity);
 
@@ -45,14 +49,15 @@ namespace tsom
 			struct NoInit {};
 			struct UpdateJob;
 
-			ChunkEntities(Nz::ApplicationBase& app, Nz::EnttWorld& world, ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary, NoInit);
+			ChunkEntities(Nz::ApplicationBase& app, Nz::EnttWorld& world, ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary, std::size_t layerIndex, NoInit);
 
-			void CreateChunkEntity(const ChunkIndices& chunkIndices, Chunk& chunk);
+			void CreateChunkEntity(const ChunkIndices& chunkIndices);
 			void DestroyChunkEntity(const ChunkIndices& chunkIndices);
 			void FillChunks();
-			virtual UpdateJob* ProcessChunkUpdate(const Chunk& chunk, DirectionMask neighborMask);
+			virtual UpdateJob* ProcessChunkUpdate(const Chunk& chunk, NeighborChunkMask neighborMask);
 			void OnParentNodeInvalidated(const Nz::Node* node);
-			inline void UpdateChunkEntity(const ChunkIndices& chunkIndices, DirectionMask neighborMask);
+			void RebuildAllChunks();
+			inline void UpdateChunkEntity(const ChunkIndices& chunkIndices, NeighborChunkMask neighborMask);
 
 			struct UpdateJob
 			{
@@ -73,17 +78,26 @@ namespace tsom
 				std::shared_ptr<Nz::Collider3D> collider;
 			};
 
-			NazaraSlot(ChunkContainer, OnChunkAdded, m_onChunkAdded);
-			NazaraSlot(ChunkContainer, OnChunkRemove, m_onChunkRemove);
+			struct FinishedJob
+			{
+				ChunkIndices chunkIndices;
+				std::shared_ptr<UpdateJob> job;
+			};
+
+			NazaraSlot(ChunkContainer, OnChunkLayerAdded, m_onChunkAdded);
+			NazaraSlot(ChunkContainer, OnChunkLayerRemove, m_onChunkRemove);
 			NazaraSlot(ChunkContainer, OnChunkUpdated, m_onChunkUpdated);
 			NazaraSlot(Nz::Node, OnNodeInvalidation, m_onParentNodeInvalidated);
 
+			std::mutex m_chunkLock;
 			std::mutex m_invalidatedChunkMutex;
+			std::size_t m_layerIndex;
+			std::vector<FinishedJob> m_finishedJobs;
 			entt::handle m_parentEntity;
-			tsl::hopscotch_map<ChunkIndices, DirectionMask> m_invalidatedChunks;
+			tsl::hopscotch_map<ChunkIndices, NeighborChunkMask> m_invalidatedChunks;
 			tsl::hopscotch_map<ChunkIndices, std::shared_ptr<UpdateJob>> m_updateJobs;
 			tsl::hopscotch_map<ChunkIndices, entt::handle> m_chunkEntities;
-			std::vector<ChunkIndices> m_finishedJobs;
+			tsl::hopscotch_map<ChunkIndices, bool /*created*/> m_createdDestroyedChunks;
 			Nz::ApplicationBase& m_application;
 			Nz::EnttWorld& m_world;
 			const BlockLibrary& m_blockLibrary;

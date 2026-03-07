@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -8,6 +8,8 @@
 #define TSOM_COMMONLIB_UTILITY_CRASHHANDLER_HPP
 
 #include <CommonLib/Export.hpp>
+#include <cpptrace/forward.hpp>
+#include <iosfwd>
 #include <memory>
 
 namespace tsom
@@ -19,9 +21,15 @@ namespace tsom
 			virtual ~CrashHandler();
 
 			virtual bool Install() = 0;
+
+			virtual void HandleUnhandledException(const std::exception* e, const cpptrace::stacktrace& stacktrace) = 0;
+
 			virtual void Uninstall() = 0;
 
 			static std::unique_ptr<CrashHandler> PlatformCrashHandler();
+
+		protected:
+			virtual void WriteHeader(std::ostream& filestream);
 	};
 }
 

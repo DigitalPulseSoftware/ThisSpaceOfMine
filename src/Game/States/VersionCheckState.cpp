@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -17,9 +17,8 @@
 #include <Nazara/Widgets/BoxLayout.hpp>
 #include <Nazara/Widgets/ButtonWidget.hpp>
 #include <Nazara/Widgets/LabelWidget.hpp>
-#include <fmt/color.h>
-#include <fmt/format.h>
 #include <nlohmann/json.hpp>
+#include <spdlog/spdlog.h>
 
 namespace tsom
 {
@@ -68,11 +67,11 @@ namespace tsom
 		if (!updater)
 			return;
 
-		updater->FetchLastVersion([state = std::static_pointer_cast<VersionCheckState>(shared_from_this())](Nz::Result<UpdateInfo, std::string>&& result)
+		updater->FetchLastVersion(false, [state = std::static_pointer_cast<VersionCheckState>(shared_from_this())](Nz::Result<UpdateInfo, std::string>&& result)
 		{
 			if (!result)
 			{
-				fmt::print(fg(fmt::color::red), "failed to get version update: {}\n", result.GetError());
+				spdlog::error("failed to get version update: {}", result.GetError());
 				return;
 			}
 
@@ -93,18 +92,18 @@ namespace tsom
 		if (updateInfo.assetVersion > currentGameVersion || updateInfo.binaryVersion > currentGameVersion)
 		{
 			m_newVersionInfo = std::move(updateInfo);
-			fmt::print(fg(fmt::color::yellow), "new version available: {}\n", m_newVersionInfo->binaryVersion.to_string());
+			spdlog::warn("new version available: {}", m_newVersionInfo->binaryVersion.str());
 
 			// We're not supposed to be able to have asset-only version but let's prepare for this
 			semver::version biggestVer = std::max(m_newVersionInfo->assetVersion, m_newVersionInfo->binaryVersion);
 
-			m_updateButton->UpdateText(Nz::SimpleTextDrawer::Draw("Update game to " + biggestVer.to_string(), 18, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
+			m_updateButton->UpdateText(Nz::SimpleTextDrawer::Draw("Update game to " + biggestVer.str(), 18, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
 			m_updateButton->SetMaximumWidth(m_updateButton->GetPreferredWidth());
 
 			m_updateLayout->Show();
 		}
 		else
-			fmt::print("no new version available\n");
+			spdlog::info("no new version available");
 	}
 
 	void VersionCheckState::OnUpdatePressed()

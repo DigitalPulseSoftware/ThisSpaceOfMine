@@ -1,10 +1,13 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ClientLib/ClientChunkEntities.hpp>
+#include <ClientLib/ClientConfigs.hpp>
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Components/VisualEntityComponent.hpp>
+#include <CommonLib/ChunkLock.hpp>
+#include <CommonLib/ConfigFile.hpp>
 #include <CommonLib/Components/EntityOwnerComponent.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/EnttWorld.hpp>
@@ -12,6 +15,7 @@
 #include <Nazara/Core/IndexBuffer.hpp>
 #include <Nazara/Core/TaskSchedulerAppComponent.hpp>
 #include <Nazara/Core/VertexBuffer.hpp>
+#include <Nazara/Core/VertexMapper.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Graphics/GraphicalMesh.hpp>
 #include <Nazara/Graphics/Graphics.hpp>
@@ -25,8 +29,10 @@
 
 namespace tsom
 {
-	ClientChunkEntities::ClientChunkEntities(Nz::ApplicationBase& app, Nz::EnttWorld& world, ChunkContainer& chunkContainer, const ClientBlockLibrary& blockLibrary) :
-	ChunkEntities(app, world, chunkContainer, blockLibrary, NoInit{})
+	ClientChunkEntities::ClientChunkEntities(Nz::ApplicationBase& app, ConfigFile& config, Nz::EnttWorld& world, ChunkContainer& chunkContainer, const ClientBlockLibrary& blockLibrary, std::size_t layerIndex) :
+	ChunkEntities(app, world, chunkContainer, blockLibrary, layerIndex, NoInit{}),
+	m_configFile(config),
+	m_isCollisionGenerationEnabled(true)
 	{
 		auto& filesystem = app.GetComponent<Nz::FilesystemAppComponent>();
 
@@ -75,6 +81,7 @@ namespace tsom
 
 		Nz::MaterialPass forwardPass;
 		forwardPass.states.depthBuffer = true;
+		forwardPass.states.depthCompare = Nz::RendererComparison::GreaterOrEqual;
 		forwardPass.shaders.push_back(std::make_shared<Nz::UberShader>(nzsl::ShaderStageType::Fragment | nzsl::ShaderStageType::Vertex, "TSOM.BlockPBR"));
 		settings.AddPass(forwardPassIndex, forwardPass);
 
@@ -84,6 +91,7 @@ namespace tsom
 
 		Nz::MaterialPass shadowPass = depthPass;
 		shadowPass.options[nzsl::Ast::HashOption("ShadowPass")] = true;
+		shadowPass.states.depthCompare = Nz::RendererComparison::LessOrEqual; //< TODO: Reverse depth for shadow pass?
 		shadowPass.states.frontFace = Nz::FrontFace::Clockwise;
 		shadowPass.states.depthClamp = Nz::Graphics::Instance()->GetRenderDevice()->GetEnabledFeatures().depthClamping;
 		settings.AddPass(shadowPassIndex, shadowPass);
@@ -108,6 +116,9 @@ namespace tsom
 			states.depthBiasSlopeFactor = 2.5f;
 			return true;
 		});
+
+		if (blockLibrary.GetLayerData(layerIndex).isBlended)
+			m_chunkMaterial->ApplyPreset(Nz::MaterialInstancePreset::AdditiveBlended);
 
 		// VertexDeclaration
 		auto NewDeclaration = [](Nz::VertexInputRate inputRate, std::initializer_list<Nz::VertexDeclaration::ComponentEntry> components)
@@ -138,6 +149,11 @@ namespace tsom
 			}
 		});
 
+		m_onVisualChunkNormalSmoothAngleUpdatedSlot.Connect(m_configFile.GetFloatUpdateSignal(Config::Visual_ChunkNormalSmoothAngle), [this](double /*newValue*/)
+		{
+			RebuildAllChunks();
+		});
+
 		FillChunks();
 	}
 
@@ -146,12 +162,12 @@ namespace tsom
 		std::vector<Nz::UInt32> indices;
 		std::vector<VertexStruct> vertices;
 
-		auto AddVertices = [&](Nz::UInt32 count)
+		auto AddVertices = [&](const Nz::Vector3ui& /*blockIndices*/, Direction /*direction*/)
 		{
 			Chunk::VertexAttributes vertexAttributes;
 
 			vertexAttributes.firstIndex = Nz::SafeCast<Nz::UInt32>(vertices.size());
-			vertices.resize(vertices.size() + count);
+			vertices.resize(vertices.size() + 4);
 			vertexAttributes.position = Nz::SparsePtr<Nz::Vector3f>(&vertices[vertexAttributes.firstIndex].position, sizeof(vertices.front()));
 			vertexAttributes.normal = Nz::SparsePtr<Nz::Vector3f>(&vertices[vertexAttributes.firstIndex].normal, sizeof(vertices.front()));
 			vertexAttributes.tangent = Nz::SparsePtr<Nz::Vector3f>(&vertices[vertexAttributes.firstIndex].tangent, sizeof(vertices.front()));
@@ -160,7 +176,7 @@ namespace tsom
 			return vertexAttributes;
 		};
 
-		chunk.BuildMesh(indices, m_chunkContainer.GetCenter() - m_chunkContainer.GetChunkOffset(chunk.GetIndices()), AddVertices);
+		chunk.BuildMesh(m_layerIndex, indices, m_chunkContainer.GetCenter() - m_chunkContainer.GetChunkOffset(chunk.GetIndices()), AddVertices);
 		if (indices.empty())
 			return nullptr;
 
@@ -169,7 +185,47 @@ namespace tsom
 
 		std::shared_ptr<Nz::StaticMesh> staticMesh = std::make_shared<Nz::StaticMesh>(std::move(vertexBuffer), std::move(indexBuffer));
 		staticMesh->GenerateAABB();
-		staticMesh->GenerateTangents();
+
+		Nz::DegreeAnglef smoothLimitAngle = m_configFile.GetFloatValue<float>(Config::Visual_ChunkNormalSmoothAngle);
+		if (smoothLimitAngle > 0.0f)
+		{
+			Nz::VertexMapper mapper(*staticMesh);
+			Nz::UInt32 vertexCount = mapper.GetVertexCount();
+
+			Nz::SparsePtr<Nz::Vector3f> normals = mapper.GetComponentPtr<Nz::Vector3f>(Nz::VertexComponent::Normal);
+			Nz::SparsePtr<Nz::Vector3f> positions = mapper.GetComponentPtr<Nz::Vector3f>(Nz::VertexComponent::Position);
+
+			// TODO: Replace by a vertex finder-like
+			std::map<Nz::Vector3i, Nz::HybridVector<Nz::UInt32, 6>> posToVerts;
+			for (Nz::UInt32 i = 0; i < vertexCount; ++i)
+			{
+				Nz::Vector3i p = Nz::Vector3i(Nz::Vector3f::Apply(positions[i] * 100.f, std::roundf));
+				posToVerts[p].push_back(i);
+			}
+
+			float fLimit = smoothLimitAngle.GetCos();
+			for (Nz::UInt32 i = 0; i < vertexCount; ++i)
+			{
+				Nz::Vector3i p = Nz::Vector3i(Nz::Vector3f::Apply(positions[i] * 100.f, std::roundf));
+
+				Nz::Vector3f vr = normals[i];
+
+				auto& verticesFound = posToVerts[p];
+				Nz::Vector3f pcNor;
+				for (Nz::UInt32 j : verticesFound)
+				{
+					Nz::Vector3f v = normals[j];
+
+					// Check whether the angle between the two normals is not too large.
+					// Skip the angle check on our own normal to avoid false negatives
+					// (v*v is not guaranteed to be 1.0 for all unit vectors v)
+					if ((j == i || (Nz::Vector3f::DotProduct(v, vr) >= fLimit)))
+						pcNor += v;
+				}
+
+				normals[i] = pcNor.Normalize();
+			}
+		}
 
 		std::shared_ptr<Nz::Mesh> chunkMesh = std::make_shared<Nz::Mesh>();
 		chunkMesh->CreateStatic();
@@ -178,9 +234,9 @@ namespace tsom
 		return chunkMesh;
 	}
 
-	auto ClientChunkEntities::ProcessChunkUpdate(const Chunk& chunk, DirectionMask neighborMask) -> ColliderModelUpdateJob*
+	auto ClientChunkEntities::ProcessChunkUpdate(const Chunk& chunk, NeighborChunkMask neighborMask) -> ColliderModelUpdateJob*
 	{
-		assert(chunk.HasContent());
+		NazaraAssert(chunk.HasContent());
 
 		// Try to cancel current update job to void useless work
 		if (auto it = m_updateJobs.find(chunk.GetIndices()); it != m_updateJobs.end())
@@ -190,7 +246,7 @@ namespace tsom
 		}
 
 		std::shared_ptr<ColliderModelUpdateJob> updateJob = std::make_shared<ColliderModelUpdateJob>();
-		updateJob->taskCount = 2;
+		updateJob->taskCount = (m_isCollisionGenerationEnabled) ? 2 : 1;
 
 		updateJob->applyFunc = [this](const ChunkIndices& chunkIndices, UpdateJob&& job)
 		{
@@ -198,8 +254,11 @@ namespace tsom
 
 			entt::handle chunkEntity = Nz::Retrieve(m_chunkEntities, chunkIndices);
 
-			auto& rigidBody = chunkEntity.get<Nz::RigidBody3DComponent>();
-			rigidBody.SetCollider(std::move(colliderUpdateJob.collider), false);
+			if (m_isCollisionGenerationEnabled)
+			{
+				auto& rigidBody = chunkEntity.get<Nz::RigidBody3DComponent>();
+				rigidBody.SetCollider(std::move(colliderUpdateJob.collider), false);
+			}
 
 			entt::handle visualEntity;
 			if (VisualEntityComponent* visualEntityComponent = chunkEntity.try_get<VisualEntityComponent>())
@@ -235,6 +294,7 @@ namespace tsom
 
 				std::shared_ptr<Nz::Model> model = std::make_shared<Nz::Model>(std::move(gfxMesh));
 				model->SetMaterial(0, m_chunkMaterial);
+				model->UpdateRenderLayer(m_blockLibrary.GetLayerData(m_layerIndex).renderLayer);
 
 				gfxComponent.AttachRenderable(std::move(model), tsom::Constants::RenderMask3D);
 			}
@@ -243,43 +303,42 @@ namespace tsom
 		};
 
 		auto& taskScheduler = m_application.GetComponent<Nz::TaskSchedulerAppComponent>();
+		if (m_isCollisionGenerationEnabled)
+		{
+			taskScheduler.AddTask([this, updateJob, chunkPtr = chunk.shared_from_this()]
+			{
+				if (updateJob->cancelled)
+					return;
+
+				ChunkReadLock lock(chunkPtr.get());
+				updateJob->collider = chunkPtr->BuildCollider(m_layerIndex);
+				updateJob->jobDone++;
+			});
+		}
+
 		taskScheduler.AddTask([this, updateJob, chunkPtr = chunk.shared_from_this()]
 		{
 			if (updateJob->cancelled)
 				return;
 
-			chunkPtr->LockRead();
-			updateJob->collider = chunkPtr->BuildCollider();
-			chunkPtr->UnlockRead();
-
-			updateJob->jobDone++;
-		});
-
-		taskScheduler.AddTask([this, updateJob, chunkPtr = chunk.shared_from_this()]
-		{
-			if (updateJob->cancelled)
-				return;
-
-			chunkPtr->LockRead();
+			ChunkReadLock lock(chunkPtr.get());
 			updateJob->mesh = BuildMesh(*chunkPtr);
-			chunkPtr->UnlockRead();
-
 			updateJob->jobDone++;
 		});
 
 		// Add neighbor chunks
-		for (Direction neighborDir : neighborMask)
+		for (NeighborChunk neighborChunk : neighborMask)
 		{
-			ChunkIndices neighborIndices = chunk.GetIndices() + s_chunkDirOffset[neighborDir];
-			const Chunk* neighborChunk = m_chunkContainer.GetChunk(neighborIndices);
-			if (!neighborChunk || !neighborChunk->HasContent())
+			ChunkIndices neighborIndices = chunk.GetIndices() + s_neighborChunkOffset[neighborChunk];
+			const Chunk* neighborChunkPtr = m_chunkContainer.GetChunk(neighborIndices);
+			if (!neighborChunkPtr || !neighborChunkPtr->HasContent() || !neighborChunkPtr->IsLayerRegistered(m_layerIndex))
 				continue;
 
 			updateJob->chunkDependencies.push_back(neighborIndices);
 
 			// Trigger our neighbor update
 			if (!m_updateJobs.contains(neighborIndices))
-				ProcessChunkUpdate(*neighborChunk, 0);
+				ProcessChunkUpdate(*neighborChunkPtr, 0);
 		}
 
 		ColliderModelUpdateJob* jobPtr = updateJob.get();
@@ -297,10 +356,11 @@ namespace tsom
 
 			auto& rigidBodyComponent = chunkEntity.get<Nz::RigidBody3DComponent>();
 			const std::shared_ptr<Nz::Collider3D>& collider = rigidBodyComponent.GetCollider();
-			if (!collider)
+			if (collider->GetType() == Nz::ColliderType3D::Empty)
 				return;
 
 			std::shared_ptr<Nz::MaterialInstance> colliderMat = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic);
+			colliderMat->ApplyPreset(Nz::MaterialInstancePreset::ReverseZ);
 			colliderMat->SetValueProperty("BaseColor", Nz::Color::Green());
 			colliderMat->UpdatePassesStates([](Nz::RenderStates& states)
 			{
@@ -308,7 +368,11 @@ namespace tsom
 				return true;
 			});
 
-			std::shared_ptr<Nz::Mesh> colliderMesh = Nz::Mesh::Build(collider->GenerateDebugMesh());
+			std::shared_ptr<Nz::StaticMesh> colliderSubmesh = collider->GenerateDebugMesh();
+			if (!colliderSubmesh)
+				return;
+
+			std::shared_ptr<Nz::Mesh> colliderMesh = Nz::Mesh::Build(std::move(colliderSubmesh));
 			std::shared_ptr<Nz::GraphicalMesh> colliderGraphicalMesh = Nz::GraphicalMesh::BuildFromMesh(*colliderMesh);
 
 			colliderModel = std::make_shared<Nz::Model>(colliderGraphicalMesh);

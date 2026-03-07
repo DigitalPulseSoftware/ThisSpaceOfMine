@@ -1,14 +1,14 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <Game/GameAppComponent.hpp>
 #include <ClientLib/RenderConstants.hpp>
+#include <ClientLib/Rendering/AtmosphereScatteringPipelinePass.hpp>
 #include <ClientLib/Systems/AnimationSystem.hpp>
 #include <ClientLib/Systems/CameraFollowerSystem.hpp>
 #include <ClientLib/Systems/NetworkMovementInterpolationSystem.hpp>
 #include <ClientLib/Systems/PhysicsInterpolationSystem.hpp>
-#include <ClientLib/Systems/PlayerAnimationSystem.hpp>
 #include <ClientLib/Systems/TransformCopySystem.hpp>
 #include <CommonLib/DownloadManager.hpp>
 #include <CommonLib/GameConstants.hpp>
@@ -18,11 +18,12 @@
 #include <CommonLib/Physics/PhysicsSettings.hpp>
 #include <CommonLib/Systems/PlanetSystem.hpp>
 #include <CommonLib/Systems/ShipSystem.hpp>
+#include <Game/GameConfigAppComponent.hpp>
 #include <Game/States/BackgroundState.hpp>
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/DebugInfoState.hpp>
 #include <Game/States/MenuState.hpp>
-#include <Game/States/ShipEditionState.hpp>
+#include <Game/States/PlanetEditorState.hpp>
 #include <Game/States/VersionCheckState.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/Clock.hpp>
@@ -37,9 +38,12 @@
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <Nazara/Platform/MessageBox.hpp>
 #include <Nazara/Platform/WindowingAppComponent.hpp>
-#include <fmt/color.h>
-#include <fmt/core.h>
+#include <spdlog/spdlog.h>
 #include <charconv>
+
+#ifdef TSOM_DEV_TOOLS
+#include <imgui.h>
+#endif
 
 namespace tsom
 {
@@ -50,39 +54,106 @@ namespace tsom
 
 	void GameAppComponent::Start()
 	{
+		// Check if GPU has minimum required specs
+		const Nz::RenderDevice& renderDevice = *Nz::Graphics::Instance()->GetRenderDevice();
+		if (!renderDevice.IsTextureFormatSupported(Nz::PixelFormat::Depth32F, Nz::TextureUsage::DepthStencilAttachment))
+		{
+			const Nz::RenderDeviceInfo& deviceInfo = renderDevice.GetDeviceInfo();
+			Nz::MessageBox requestBox(Nz::MessageBoxType::Error, "Missing GPU feature",
+				Nz::Format(
+					"Your GPU ({}) doesn't seem to support floating-point depth buffer (missing Depth32F support).\n"
+					"This is required for the game, try to update your drivers.{}",
+					deviceInfo.name,
+					(deviceInfo.type == Nz::RenderDeviceType::Integrated) ? "\nThe detected GPU seems to be integrated, try to use a dedicated GPU if possible.": ""
+				)
+			);
+
+			requestBox.AddButton(0, Nz::MessageBoxStandardButton::Close);
+
+			requestBox.Show();
+			GetApp().Quit();
+			return;
+		}
+
 		if (CheckAssets())
 		{
 			auto& window = SetupWindow();
 			auto& world = SetupWorld();
+			auto& swapchain = SetupSwapchain(world, window);
 
-			auto renderTarget = SetupRenderTarget(world, window);
+#ifdef TSOM_DEV_TOOLS
+			m_imguiRuntime.emplace(GetApp(), window, swapchain);
+#endif
+
+			// TODO: Find a better place
+			tsom::AtmosphereScatteringPipelinePass::Register(world);
+
+			auto renderWindow = std::make_shared<Nz::RenderWindow>(swapchain);
 
 			SetupCanvas(world, window);
-			SetupCamera(renderTarget, world);
+			SetupCamera(renderWindow, world);
+
+			auto& gameConfig = GetApp().GetComponent<GameConfigAppComponent>();
 
 			std::shared_ptr<tsom::StateData> stateData = std::make_shared<tsom::StateData>();
 			stateData->app = &GetApp();
 			stateData->blockLibrary = &m_blockLibrary.value();
 			stateData->canvas = &m_canvas.value();
-			stateData->renderTarget = std::move(renderTarget);
+			stateData->config = &gameConfig.GetConfig();
+			stateData->renderTarget = std::move(renderWindow);
 			stateData->window = &window;
+			stateData->swapchain = &swapchain;
 			stateData->world = &world;
 
-			std::shared_ptr<tsom::ConnectionState> connectionState = std::make_shared<tsom::ConnectionState>(stateData);
-			stateData->connectionState = connectionState.get();
+#ifdef TSOM_DEV_TOOLS
+			stateData->imgui = &m_imguiRuntime.value();
+#endif
 
-			m_stateMachine.PushState(std::make_shared<tsom::DebugInfoState>(stateData));
-			m_stateMachine.PushState(std::move(connectionState));
-			m_stateMachine.PushState(std::make_shared<tsom::BackgroundState>(stateData));
-			m_stateMachine.PushState(std::make_shared<tsom::VersionCheckState>(stateData));
-			m_stateMachine.PushState(std::make_shared<tsom::MenuState>(stateData));
+			// Window may be destroyed before application ends, be sure to not get a dangling pointer
+			m_onWindowDestruction.Connect(window.GetEventHandler().OnDestruction, [stateData](const Nz::WindowEventHandler*)
+			{
+				stateData->swapchain = nullptr;
+				stateData->window = nullptr;
+			});
+
+			auto& commandLineParams = GetApp().GetCommandLineParameters();
+			if (commandLineParams.HasFlag("planet-editor"))
+			{
+				m_stateMachine.PushState(std::make_shared<tsom::DebugInfoState>(stateData));
+				m_stateMachine.PushState(std::make_shared<tsom::PlanetEditorState>(stateData));
+			}
+			else
+			{
+				std::shared_ptr<tsom::ConnectionState> connectionState = std::make_shared<tsom::ConnectionState>(stateData);
+				stateData->connectionState = connectionState.get();
+
+				m_stateMachine.PushState(std::make_shared<tsom::DebugInfoState>(stateData));
+				m_stateMachine.PushState(std::move(connectionState));
+				m_stateMachine.PushState(std::make_shared<tsom::BackgroundState>(stateData));
+				m_stateMachine.PushState(std::make_shared<tsom::VersionCheckState>(stateData));
+				m_stateMachine.PushState(std::make_shared<tsom::MenuState>(stateData));
+			}
 		}
 	}
 
 	void GameAppComponent::Update(Nz::Time elapsedTime)
 	{
+#ifdef TSOM_DEV_TOOLS
+		if (m_imguiRuntime)
+		{
+			m_imguiRuntime->BeginFrame(elapsedTime);
+
+			ImGui::SetCurrentContext(m_imguiRuntime->GetContext());
+		}
+#endif
+
 		if (!m_stateMachine.Update(elapsedTime))
 			GetApp().Quit();
+
+#ifdef TSOM_DEV_TOOLS
+		if (m_imguiRuntime)
+			m_imguiRuntime->EndFrame();
+#endif
 	}
 
 	bool GameAppComponent::CheckAssets()
@@ -92,7 +163,7 @@ namespace tsom
 		std::filesystem::path assetPath = Nz::Utf8Path("assets");
 		if (!std::filesystem::is_directory(assetPath))
 		{
-			fmt::print(fg(fmt::color::red), "assets are missing!\n");
+			spdlog::error("assets are missing!");
 
 			if (auto* updater = app.TryGetComponent<UpdaterAppComponent>())
 			{
@@ -101,7 +172,7 @@ namespace tsom
 				requestBox.AddButton(1, Nz::MessageBoxStandardButton::Yes);
 				if (auto result = requestBox.Show(); !result)
 				{
-					fmt::print(fg(fmt::color::red), "failed to open the prompt message box: {0}!\n", result.GetError());
+					spdlog::error("failed to open the prompt message box: {0}!", result.GetError());
 					app.Quit();
 					return false;
 				}
@@ -111,7 +182,7 @@ namespace tsom
 					return false;
 				}
 
-				updater->FetchLastVersion([updater](Nz::Result<UpdateInfo, std::string>&& result)
+				updater->FetchLastVersion(false, [updater](Nz::Result<UpdateInfo, std::string>&& result)
 				{
 					if (!result)
 					{
@@ -119,7 +190,7 @@ namespace tsom
 						errorBox.AddButton(0, Nz::MessageBoxStandardButton::Close);
 
 						if (auto result = errorBox.Show(); !result)
-							fmt::print(fg(fmt::color::red), "failed to open the error message box: {0}!\n", result.GetError());
+							spdlog::error("failed to open the error message box: {0}!", result.GetError());
 
 						Nz::ApplicationBase::Instance()->Quit();
 						return;
@@ -131,7 +202,7 @@ namespace tsom
 						errorBox.AddButton(0, Nz::MessageBoxStandardButton::Close);
 
 						if (auto result = errorBox.Show(); !result)
-							fmt::print(fg(fmt::color::red), "failed to open the error message box: {0}!\n", result.GetError());
+							spdlog::error("failed to open the error message box: {0}!", result.GetError());
 
 						Nz::ApplicationBase::Instance()->Quit();
 					});
@@ -139,15 +210,15 @@ namespace tsom
 					updater->OnDownloadProgress.Connect([lastPrint = Nz::MillisecondClock()](std::size_t activeDownloadCount, Nz::UInt64 downloaded, Nz::UInt64 total) mutable
 					{
 						if (lastPrint.RestartIfOver(Nz::Time::Second()))
-							fmt::print("downloading {} file(s) ({}/{}) - {}%\n", activeDownloadCount, ByteToString(downloaded), ByteToString(total), 100 * downloaded / total);
+							spdlog::info("downloading {} file(s) ({}/{}) - {}%", activeDownloadCount, ByteToString(downloaded), ByteToString(total), 100 * downloaded / total);
 					});
 
 					updater->OnUpdateStarting.Connect([]
 					{
-						fmt::print("update is starting...\n");
+						spdlog::info("update is starting...");
 					});
 
-					updater->DownloadAndUpdate(result.GetValue(), true, false);
+					updater->DownloadAndUpdate(result.GetValue(), true, false, true, true);
 				});
 			}
 			else
@@ -156,7 +227,7 @@ namespace tsom
 				errorBox.AddButton(0, Nz::MessageBoxStandardButton::Close);
 
 				if (auto result = errorBox.Show(); !result)
-					fmt::print(fg(fmt::color::red), "failed to open the error message box: {0}!\n", result.GetError());
+					spdlog::error("failed to open the error message box: {0}!", result.GetError());
 
 				app.Quit();
 			}
@@ -167,7 +238,7 @@ namespace tsom
 		std::filesystem::path scriptPath = Nz::Utf8Path("scripts");
 		if (!std::filesystem::is_directory(scriptPath))
 		{
-			fmt::print(fg(fmt::color::red), "scripts are missing!\n");
+			spdlog::critical("scripts are missing!");
 			app.Quit();
 			return false;
 		}
@@ -201,7 +272,7 @@ namespace tsom
 
 	void GameAppComponent::SetupCanvas(Nz::EnttWorld& world, Nz::Window& window)
 	{
-		m_canvas.emplace(world.GetRegistry(), window.GetEventHandler(), window.GetCursorController().CreateHandle(), Constants::RenderMaskUI);
+		m_canvas.emplace(world.GetRegistry(), window, Constants::RenderMaskUI);
 		m_canvas->Resize(Nz::Vector2f(window.GetSize()));
 		window.GetEventHandler().OnResized.Connect([&](const Nz::WindowEventHandler* /*eventHandler*/, const Nz::WindowEvent::SizeEvent& sizeEvent)
 		{
@@ -209,7 +280,7 @@ namespace tsom
 		});
 	}
 
-	std::shared_ptr<Nz::RenderTarget> GameAppComponent::SetupRenderTarget(Nz::EnttWorld& world, Nz::Window& window)
+	Nz::WindowSwapchain& GameAppComponent::SetupSwapchain(Nz::EnttWorld& world, Nz::Window& window)
 	{
 		auto& app = GetApp();
 
@@ -222,9 +293,7 @@ namespace tsom
 			swapchainParams.presentMode = { Nz::PresentMode::RelaxedVerticalSync, Nz::PresentMode::VerticalSync };
 
 		auto& renderSystem = world.GetSystem<Nz::RenderSystem>();
-		auto& windowSwapchain = renderSystem.CreateSwapchain(window, swapchainParams);
-
-		return std::make_shared<Nz::RenderWindow>(windowSwapchain);
+		return renderSystem.CreateSwapchain(window, swapchainParams);
 	}
 
 	Nz::Window& GameAppComponent::SetupWindow()
@@ -240,7 +309,7 @@ namespace tsom
 			{
 				if (auto err = std::from_chars(param.data(), param.data() + param.size(), size); err.ec != std::errc{} || size == 0)
 				{
-					fmt::print(fg(fmt::color::red), "failed to parse {0} commandline parameter ({1}) as a strictly positive number\n", parameterName, param);
+					spdlog::error("failed to parse {0} commandline parameter ({1}) as a strictly positive number", parameterName, param);
 					return defaultValue;
 				}
 			}

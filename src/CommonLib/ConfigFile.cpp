@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme Leclercq
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -6,10 +6,9 @@
 #include <Nazara/Core/StringExt.hpp>
 #include <NazaraUtils/PathUtils.hpp>
 #include <NazaraUtils/TypeTraits.hpp>
-#include <fmt/color.h>
-#include <fmt/format.h>
 #include <fmt/std.h>
 #include <sol/sol.hpp>
+#include <spdlog/spdlog.h>
 #include <fstream>
 
 namespace tsom
@@ -53,7 +52,7 @@ namespace tsom
 			if (auto result = lua.safe_script_file(path, configEnv, sol::load_mode::text); !result.valid())
 			{
 				sol::error err = result;
-				fmt::print(fg(fmt::color::red), "failed to load config {0}: {1}\n", path, err.what());
+				spdlog::error("failed to load config {0}: {1}", path, err.what());
 				return false;
 			}
 
@@ -67,22 +66,15 @@ namespace tsom
 			{
 				ConfigOption& option = m_options[optionIndex];
 
-				bool hasDefaultDefault = std::visit([](auto&& arg)
+				bool hasDefaultValue = std::visit([](auto&& arg)
 				{
 					return arg.defaultValue.has_value();
 				}, option.data);
 
-				if (!hasDefaultDefault)
+				if (!hasDefaultValue)
 				{
-					fmt::print(fg(fmt::color::red), "missing config option \"{0}\"\n", option.name);
+					spdlog::error("missing config option \"{0}\"", option.name);
 					hasError = true;
-				}
-				else
-				{
-					std::visit([&](auto&& arg)
-					{
-						fmt::print(fg(fmt::color::green), "option \"{0}\" has no value, setting it to default value ({1})...\n", option.name, arg.defaultValue.value());
-					}, option.data);
 				}
 			}
 
@@ -91,7 +83,7 @@ namespace tsom
 		}
 		catch (const sol::error& e)
 		{
-			fmt::print(fg(fmt::color::red), "failed to parse config \"{0}\": {1}\n", path, e.what());
+			spdlog::error("failed to parse config \"{0}\": {1}", path, e.what());
 			return false;
 		}
 
@@ -103,7 +95,7 @@ namespace tsom
 		std::fstream file(filePath, std::ios::out | std::ios::trunc);
 		if (!file.is_open())
 		{
-			fmt::print(fg(fmt::color::red), "failed to open config file {0}\n", filePath);
+			spdlog::error("failed to open config file {0}", filePath);
 			return false;
 		}
 
@@ -124,7 +116,7 @@ namespace tsom
 			{
 				if (!value.is<sol::table>())
 				{
-					fmt::print(fg(fmt::color::red), "\"{0}{1}\" is a subsection and was expected to be a table (got {2})\n", prefix, keyName, sol::type_name(table.lua_state(), value.get_type()));
+					spdlog::error("\"{0}{1}\" is a subsection and was expected to be a table (got {2})", prefix, keyName, sol::type_name(table.lua_state(), value.get_type()));
 					return;
 				}
 
@@ -210,7 +202,7 @@ namespace tsom
 				}
 				catch (const std::exception& e)
 				{
-					fmt::print(fg(fmt::color::red), "failed to load \"{0}{1}\": {2}\n", prefix, option.name, e.what());
+					spdlog::error("failed to load \"{0}{1}\": {2}", prefix, option.name, e.what());
 
 					if (!hasDefaultDefault)
 					{
@@ -221,7 +213,7 @@ namespace tsom
 			}
 			else
 			{
-				fmt::print(fg(fmt::color::yellow), "unknown config section \"{0}{1}\"\n", prefix, keyName);
+				spdlog::warn("unknown config section \"{0}{1}\"", prefix, keyName);
 				return;
 			}
 		});
@@ -231,7 +223,7 @@ namespace tsom
 
 	void ConfigFile::RegisterConfig(std::string optionName, ConfigData data)
 	{
-		NazaraAssert(m_optionByName.find(optionName) == m_optionByName.end(), "Option already exists");
+		NazaraAssertMsg(m_optionByName.find(optionName) == m_optionByName.end(), "option %s already exists", optionName.c_str());
 
 		std::size_t optionIndex = m_options.size();
 		auto& option = m_options.emplace_back();
@@ -323,20 +315,20 @@ namespace tsom
 		}
 	}
 
-	bool ConfigFile::SetFloatValue(const std::string& optionName, double value)
+	bool ConfigFile::SetFloatValue(FloatOptionName optionName, double value)
 	{
-		std::size_t optionIndex = GetOptionIndex(optionName);
+		std::size_t optionIndex = GetOptionIndex(optionName.name);
 
 		FloatOption& option = std::get<FloatOption>(m_options[optionIndex].data);
 		if (value > option.maxBounds)
 		{
-			fmt::print(fg(fmt::color::red), "option {0} value ({1}) is too big (max: {2})\n", m_options[optionIndex].name, value, option.maxBounds);
+			spdlog::error("option {0} value ({1}) is too big (max: {2})", m_options[optionIndex].name, value, option.maxBounds);
 			return false;
 		}
 
 		if (value < option.minBounds)
 		{
-			fmt::print(fg(fmt::color::red), "option {0} value ({1}) is too small (min: {2})\n", m_options[optionIndex].name, value, option.minBounds);
+			spdlog::error("option {0} value ({1}) is too small (min: {2})", m_options[optionIndex].name, value, option.minBounds);
 			return false;
 		}
 
@@ -345,7 +337,7 @@ namespace tsom
 			auto valueOrErr = option.validation(value);
 			if (!valueOrErr)
 			{
-				fmt::print(fg(fmt::color::red), "option {0} value ({1}) failed validation: {2}\n", m_options[optionIndex].name, value, valueOrErr.GetError());
+				spdlog::error("option {0} value ({1}) failed validation: {2}", m_options[optionIndex].name, value, valueOrErr.GetError());
 				return false;
 			}
 
@@ -361,20 +353,20 @@ namespace tsom
 		return true;
 	}
 
-	bool ConfigFile::SetIntegerValue(const std::string& optionName, long long value)
+	bool ConfigFile::SetIntegerValue(IntegerOptionName optionName, long long value)
 	{
-		std::size_t optionIndex = GetOptionIndex(optionName);
+		std::size_t optionIndex = GetOptionIndex(optionName.name);
 
 		IntegerOption& option = std::get<IntegerOption>(m_options[optionIndex].data);
 		if (value > option.maxBounds)
 		{
-			fmt::print(fg(fmt::color::red), "option {0} value ({1}) is too big (max: {2})\n", m_options[optionIndex].name, value, option.maxBounds);
+			spdlog::error("option {0} value ({1}) is too big (max: {2})", m_options[optionIndex].name, value, option.maxBounds);
 			return false;
 		}
 
 		if (value < option.minBounds)
 		{
-			fmt::print(fg(fmt::color::red), "option {0} value ({1}) is too small (min: {2})\n", m_options[optionIndex].name, value, option.minBounds);
+			spdlog::error("option {0} value ({1}) is too small (min: {2})", m_options[optionIndex].name, value, option.minBounds);
 			return false;
 		}
 
@@ -383,7 +375,7 @@ namespace tsom
 			auto valueOrErr = option.validation(value);
 			if (!valueOrErr)
 			{
-				fmt::print(fg(fmt::color::red), "option {0} value ({1}) failed validation: {2}\n", m_options[optionIndex].name, value, valueOrErr.GetError());
+				spdlog::error("option {0} value ({1}) failed validation: {2}", m_options[optionIndex].name, value, valueOrErr.GetError());
 				return false;
 			}
 
@@ -399,9 +391,9 @@ namespace tsom
 		return true;
 	}
 
-	bool ConfigFile::SetStringValue(const std::string& optionName, std::string value)
+	bool ConfigFile::SetStringValue(StringOptionName optionName, std::string value)
 	{
-		std::size_t optionIndex = GetOptionIndex(optionName);
+		std::size_t optionIndex = GetOptionIndex(optionName.name);
 
 		StringOption& option = std::get<StringOption>(m_options[optionIndex].data);
 
@@ -410,7 +402,7 @@ namespace tsom
 			auto valueOrErr = option.validation(value);
 			if (!valueOrErr)
 			{
-				fmt::print(fg(fmt::color::red), "option {0} value ({1}) failed validation: {2}\n", m_options[optionIndex].name, value, valueOrErr.GetError());
+				spdlog::error("option {0} value ({1}) failed validation: {2}", m_options[optionIndex].name, value, valueOrErr.GetError());
 				return false;
 			}
 

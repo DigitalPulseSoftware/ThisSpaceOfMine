@@ -1,4 +1,4 @@
-[nzsl_version("1.0")]
+[nzsl_version("1.1")]
 module SkyboxMaterial;
 
 import ViewerData from Engine.ViewerData;
@@ -6,11 +6,13 @@ import ViewerData from Engine.ViewerData;
 // Material options
 option HasBaseColorTexture: bool = false;
 
-// Vertex declaration related options
-option VertexColorLoc: i32 = -1;
-option VertexPositionLoc: i32;
+const InvalidLoc = u32.Max;
 
-const HasColor = (VertexColorLoc >= 0);
+// Vertex declaration related options
+option VertexColorLoc: u32 = InvalidLoc;
+option VertexPositionLoc: u32 = InvalidLoc;
+
+const HasColor = (VertexColorLoc != InvalidLoc);
 
 [layout(std140)]
 struct MaterialSettings
@@ -48,7 +50,7 @@ struct FragOut
 	[builtin(frag_depth)] depth: f32
 }
 
-[entry(frag), depth_write(greater)]
+[entry(frag), depth_write(less)]
 fn main(input: VertOut) -> FragOut
 {
 	let color = settings.BaseColor;
@@ -61,7 +63,7 @@ fn main(input: VertOut) -> FragOut
 
 	let output: FragOut;
 	output.color = color;
-	output.depth = 1.0;
+	output.depth = 0.0;
 
 	return output;
 }

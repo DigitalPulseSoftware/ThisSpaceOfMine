@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -33,13 +33,17 @@ namespace tsom
 
 			inline void EnableFlying(bool enable = true);
 
-			inline const Nz::EulerAnglesf& GetCameraRotation() const;
+			inline const Nz::EulerAnglesf& GetCameraAngles() const;
+			inline Nz::Quaternionf GetCameraRotation() const;
 			inline const Nz::Vector3f& GetCharacterPosition() const;
 			inline const Nz::Quaternionf& GetCharacterRotation() const;
+			Nz::Vector3f GetEyePosition() const;
 			inline const PlayerInputs& GetInputs() const;
 			inline const Nz::Quaternionf& GetReferenceRotation() const;
+			inline const std::shared_ptr<ShipController>& GetShipController() const;
 
 			inline bool IsFlying() const;
+			inline bool IsInWater() const;
 
 			void PostSimulate(Nz::PhysCharacter3D& character, float elapsedTime) override;
 			void PreSimulate(Nz::PhysCharacter3D& character, float elapsedTime) override;
@@ -49,6 +53,7 @@ namespace tsom
 			inline void SetGravityController(const GravityController* planet);
 
 			void SetInputs(const PlayerInputs& inputs);
+			void SetInWater(bool isInWater);
 			void SetShipController(std::shared_ptr<ShipController> shipController);
 
 			void UpdatePosition(Nz::PhysCharacter3D& character);
@@ -58,7 +63,7 @@ namespace tsom
 
 		private:
 			std::shared_ptr<ShipController> m_shipController;
-			Nz::EulerAnglesf m_cameraRotation;
+			Nz::EulerAnglesf m_cameraAngles;
 			Nz::Quaternionf m_referenceRotation;
 			Nz::Quaternionf m_characterRotation;
 			Nz::Vector3f m_characterPosition;
@@ -67,6 +72,7 @@ namespace tsom
 			const GravityController* m_gravityController;
 			bool m_allowInputRotation;
 			bool m_isFlying;
+			bool m_isInWater;
 	};
 }
 

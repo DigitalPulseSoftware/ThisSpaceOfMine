@@ -1,75 +1,57 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ServerLib/ServerEnvironment.hpp>
 #include <CommonLib/Physics/PhysicsSettings.hpp>
+#include <CommonLib/Systems/TickSystem.hpp>
+#include <ServerLib/Components/AtmosphereCarrier.hpp>
+#include <ServerLib/Debug/DebugDrawBroadcaster.hpp>
+#include <ServerLib/Systems/AtmosphereSystem.hpp>
 #include <ServerLib/Systems/EnvironmentProxySystem.hpp>
 #include <ServerLib/Systems/NetworkedEntitiesSystem.hpp>
+#include <Nazara/Core/Components/DisabledComponent.hpp>
+#include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 
 namespace tsom
 {
-	ServerEnvironment::ServerEnvironment(ServerInstance& serverInstance, ServerEnvironmentType type) :
+	ServerEnvironment::ServerEnvironment(ServerInstance& serverInstance, ServerEnvironmentType type, bool isRoot) :
+	m_registeredPlayers(serverInstance),
 	m_type(type),
-	m_serverInstance(serverInstance)
+	m_serverInstance(serverInstance),
+	m_isRoot(isRoot)
 	{
 		m_world = m_serverInstance.RegisterEnvironment(this);
+
+		if (serverInstance.GetConfig().enableDebugDrawer)
+			m_debugDrawer = std::make_unique<DebugDrawBroadcaster>(this);
 
 		auto& registry = m_world->GetRegistry();
 		registry.ctx().insert_or_assign<ServerEnvironment*>(this);
 
+		m_world->AddSystem<AtmosphereSystem>();
 		m_world->AddSystem<EnvironmentProxySystem>();
 		m_world->AddSystem<NetworkedEntitiesSystem>(*this);
+		m_world->AddSystem<TickSystem>();
 
 		// Setup physics
 		Nz::Physics3DSystem::Settings physSettings = Physics::BuildSettings();
 		physSettings.stepSize = m_serverInstance.GetTickDuration();
 
-		m_world->AddSystem<Nz::Physics3DSystem>(std::move(physSettings));
+		auto& physicsSystem = m_world->AddSystem<Nz::Physics3DSystem>(std::move(physSettings));
+		physicsSystem.SetContactListener(Physics::BuildContactListener());
 	}
 
 	ServerEnvironment::~ServerEnvironment()
 	{
-		// Destroy all entities first
-		auto& registry = m_world->GetRegistry();
-		registry.clear();
-
 		ForEachPlayer([this](ServerPlayer& player)
 		{
 			player.RemoveFromEnvironment(this);
 		});
 
-		for (auto&& [environment, transform] : m_connectedEnvironments)
-			environment->Disconnect(*this);
-
 		m_world->ClearSystems();
 		m_serverInstance.UnregisterEnvironment(this, std::move(m_world));
-	}
-
-	void ServerEnvironment::Connect(ServerEnvironment& environment, const EnvironmentTransform& transform)
-	{
-		NazaraAssert(!m_connectedEnvironments.contains(&environment), "environment is already connected");
-		m_connectedEnvironments.emplace(&environment, transform);
-
-		environment.ForEachPlayer([&](ServerPlayer& player)
-		{
-			if (player.GetRootEnvironment() == &environment)
-				player.AddToEnvironment(this);
-		});
-	}
-
-	void ServerEnvironment::Disconnect(ServerEnvironment& environment)
-	{
-		auto it = m_connectedEnvironments.find(&environment);
-		NazaraAssert(it != m_connectedEnvironments.end(), "environment is not connected");
-		m_connectedEnvironments.erase(it);
-
-		environment.ForEachPlayer([&](ServerPlayer& player)
-		{
-			if (player.GetRootEnvironment() == &environment)
-				player.RemoveFromEnvironment(this);
-		});
 	}
 
 	entt::handle ServerEnvironment::CreateEntity()
@@ -77,27 +59,73 @@ namespace tsom
 		return m_world->CreateEntity();
 	}
 
+	void ServerEnvironment::ForEachAtmosphere(Nz::FunctionRef<void(ServerAtmosphere*)> callback)
+	{
+		auto& registry = m_world->GetRegistry();
+		auto carrierView = registry.view<Nz::NodeComponent, AtmosphereCarrier>(entt::exclude<Nz::DisabledComponent>);
+
+		for (entt::entity carrierEntity : carrierView)
+		{
+			AtmosphereCarrier& carrier = carrierView.get<AtmosphereCarrier>(carrierEntity);
+			callback(carrier.atmosphere);
+		}
+	}
+
+	void ServerEnvironment::ForEachAtmosphere(Nz::FunctionRef<void(const ServerAtmosphere*)> callback) const
+	{
+		auto& registry = m_world->GetRegistry();
+		auto carrierView = registry.view<Nz::NodeComponent, AtmosphereCarrier>(entt::exclude<Nz::DisabledComponent>);
+
+		for (entt::entity carrierEntity : carrierView)
+		{
+			AtmosphereCarrier& carrier = carrierView.get<AtmosphereCarrier>(carrierEntity);
+			callback(carrier.atmosphere);
+		}
+	}
+
+	ServerAtmosphere* ServerEnvironment::GetAtmosphereAtPosition(const Nz::Vector3f& position)
+	{
+		auto& registry = m_world->GetRegistry();
+		auto carrierView = registry.view<Nz::NodeComponent, AtmosphereCarrier>(entt::exclude<Nz::DisabledComponent>);
+
+		for (auto&& [carrierEntity, carrierNode, carrier] : carrierView.each())
+		{
+			Nz::Vector3f localPos = carrierNode.ToLocalPosition(position);
+
+			// Use AABB as a cheap test
+			if NAZARA_LIKELY(!carrier.aabb.Contains(localPos))
+				continue;
+
+			if (carrier.collider)
+			{
+				if (!carrier.collider->CollisionQuery(localPos - carrier.collider->GetCenterOfMass())) //< https://jrouwe.github.io/JoltPhysics/index.html#center-of-mass
+					continue;
+			}
+
+			return carrier.atmosphere;
+		}
+
+		return GetFallbackAtmosphereAtPosition(position);
+	}
+
 	void ServerEnvironment::OnTick(Nz::Time elapsedTime)
 	{
 		m_world->Update(elapsedTime);
 	}
 
-	void ServerEnvironment::RegisterPlayer(ServerPlayer* player)
+	void ServerEnvironment::RegisterPlayer(ServerPlayer* player, bool createEntities)
 	{
-		NazaraAssert(!m_registeredPlayers.UnboundedTest(player->GetPlayerIndex()), "player was already registered");
-		m_registeredPlayers.UnboundedSet(player->GetPlayerIndex());
+		m_registeredPlayers.RegisterPlayer(player);
+		m_world->GetSystem<NetworkedEntitiesSystem>().RegisterPlayer(player, createEntities);
 	}
 
 	void ServerEnvironment::UnregisterPlayer(ServerPlayer* player)
 	{
-		NazaraAssert(m_registeredPlayers.UnboundedTest(player->GetPlayerIndex()), "player is not registered");
-		m_registeredPlayers.Reset(player->GetPlayerIndex());
+		m_world->GetSystem<NetworkedEntitiesSystem>().UnregisterPlayer(player);
+		m_registeredPlayers.UnregisterPlayer(player);
 	}
 
-	void ServerEnvironment::UpdateConnectedTransform(ServerEnvironment& environment, const EnvironmentTransform& transform)
+	void ServerEnvironment::Update()
 	{
-		auto it = m_connectedEnvironments.find(&environment);
-		NazaraAssert(it != m_connectedEnvironments.end(), "unknown environment");
-		it.value() = transform;
 	}
 }

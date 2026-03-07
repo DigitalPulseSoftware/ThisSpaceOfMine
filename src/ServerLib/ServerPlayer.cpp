@@ -1,29 +1,49 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ServerLib/ServerPlayer.hpp>
 #include <CommonLib/CharacterController.hpp>
-#include <CommonLib/GameConstants.hpp>
-#include <CommonLib/PhysicsConstants.hpp>
-#include <CommonLib/Components/PlanetComponent.hpp>
+#include <CommonLib/ConsoleExecutor.hpp>
+#include <CommonLib/ShipController.hpp>
+#include <CommonLib/Components/ClassInstanceComponent.hpp>
+#include <CommonLib/Scripting/AssetScriptingLibrary.hpp>
+#include <CommonLib/Scripting/ChunkScriptingLibrary.hpp>
+#include <CommonLib/Scripting/MathScriptingLibrary.hpp>
+#include <CommonLib/Scripting/ScriptingContext.hpp>
+#include <CommonLib/Scripting/SharedScriptingLibrary.hpp>
 #include <ServerLib/ServerInstance.hpp>
 #include <ServerLib/ServerPlanetEnvironment.hpp>
 #include <ServerLib/ServerShipEnvironment.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
 #include <ServerLib/Components/ServerPlayerControlledComponent.hpp>
-#include <ServerLib/Systems/NetworkedEntitiesSystem.hpp>
+#include <ServerLib/Scripting/ServerEntityScriptingLibrary.hpp>
+#include <ServerLib/Scripting/ServerScriptingLibrary.hpp>
+#include <ServerLib/Systems/EnvironmentProxySystem.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
-#include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <cassert>
 
 namespace tsom
 {
+	struct ServerPlayer::Console
+	{
+		Console(Nz::ApplicationBase& app) :
+		scriptingContext(app),
+		executor(scriptingContext)
+		{
+		}
+
+		ScriptingContext scriptingContext;
+		ConsoleExecutor executor;
+	};
+
 	ServerPlayer::ServerPlayer(ServerInstance& instance, PlayerIndex playerIndex, NetworkSession* session, const std::optional<Nz::Uuid>& uuid, std::string nickname, PlayerPermissionFlags permissions) :
 	m_uuid(uuid),
 	m_nickname(std::move(nickname)),
+	m_console(nullptr),
+	m_respawnTimer(Nz::Time::Zero()),
+	m_inputQueueAdvancement(0),
 	m_session(session),
-	m_controlledEntityEnvironment(nullptr),
 	m_rootEnvironment(nullptr),
 	m_visibilityHandler(m_session),
 	m_serverInstance(instance),
@@ -35,22 +55,30 @@ namespace tsom
 	ServerPlayer::~ServerPlayer()
 	{
 		if (m_controlledEntity)
-			m_controlledEntity.destroy();
+			m_controlledEntity->destroy();
 
 		for (ServerEnvironment* environment : m_registeredEnvironments)
 			environment->UnregisterPlayer(this);
 	}
 
-	void ServerPlayer::AddToEnvironment(ServerEnvironment* environment)
+	void ServerPlayer::AddToEnvironment(ServerEnvironment* environment, entt::handle environmentOwner)
 	{
 		assert(m_rootEnvironment);
 		assert(!IsInEnvironment(environment));
+		m_registeredEnvironments.push_back(environment);
 
-		EnvironmentTransform transform;
-		if (!m_rootEnvironment->GetEnvironmentTransformation(*environment, &transform))
-			assert(false && "environment is not linked to root environment");
+		bool shouldCreateEntities = m_visibilityHandler.CreateEnvironment(*environment, environmentOwner);
+		environment->RegisterPlayer(this, shouldCreateEntities);
+	}
 
-		HandleNewEnvironment(environment, transform);
+	void ServerPlayer::ClearEnvironments()
+	{
+		for (ServerEnvironment* environment : m_registeredEnvironments)
+		{
+			environment->UnregisterPlayer(this);
+			m_visibilityHandler.DestroyEnvironment(*environment);
+		}
+		m_registeredEnvironments.clear();
 	}
 
 	void ServerPlayer::Destroy()
@@ -58,84 +86,85 @@ namespace tsom
 		m_serverInstance.DestroyPlayer(m_playerIndex);
 	}
 
-	void ServerPlayer::MoveEntityToEnvironment(ServerEnvironment* environment, const Nz::Vector3f& envLinearVelocity)
+	void ServerPlayer::ExecuteConsoleCommand(std::string_view command)
 	{
-		assert(IsInEnvironment(environment));
+		if (!m_console)
+		{
+			Nz::ApplicationBase& applicationBase = m_serverInstance.GetApplication();
 
-		if (m_controlledEntityEnvironment == environment)
-			return;
+			m_console.Emplace(applicationBase);
+			m_console->scriptingContext.RegisterLibrary<AssetScriptingLibrary>(applicationBase);
+			m_console->scriptingContext.RegisterLibrary<MathScriptingLibrary>();
+			m_console->scriptingContext.RegisterLibrary<ChunkScriptingLibrary>();
+			ServerEntityScriptingLibrary& entityScriptingLibrary = m_console->scriptingContext.RegisterLibrary<ServerEntityScriptingLibrary>(m_serverInstance.GetEntityRegistry());
+			m_console->scriptingContext.RegisterLibrary<SharedScriptingLibrary>(entityScriptingLibrary);
+			m_console->scriptingContext.RegisterLibrary<ServerScriptingLibrary>(m_serverInstance, entityScriptingLibrary);
 
+			sol::state& state = m_console->scriptingContext.GetState();
+			state["CurrentPlayer"] = CreateHandle();
+
+			m_console->executor.OnError.Connect([this](ConsoleExecutor* /*executor*/, std::string_view error)
+			{
+				Packets::S_ConsoleOutput consoleOutputPacket;
+				consoleOutputPacket.color = Nz::Color::Red();
+				consoleOutputPacket.output = std::string(error);
+
+				GetSession()->SendPacket(std::move(consoleOutputPacket));
+			});
+
+			m_console->executor.OnOutput.Connect([this](ConsoleExecutor* /*executor*/, std::string_view error)
+			{
+				Packets::S_ConsoleOutput consoleOutputPacket;
+				consoleOutputPacket.color = Nz::Color::White();
+				consoleOutputPacket.output = std::string(error);
+
+				GetSession()->SendPacket(std::move(consoleOutputPacket));
+			});
+		}
+
+		m_console->executor.Execute(command, "remote client");
+	}
+
+	void ServerPlayer::ExitPiloting()
+	{
 		if (!m_controlledEntity)
 			return;
 
-		entt::handle previousEntity = m_controlledEntity;
-		Nz::NodeComponent& previousNode = previousEntity.get<Nz::NodeComponent>();
-		Nz::Vector3f position = previousNode.GetPosition();
-		Nz::Quaternionf rotation = previousNode.GetRotation();
-		Nz::Vector3f up = previousNode.GetUp();
+		m_controller->SetShipController(nullptr);
+		m_visibilityHandler.SetControlledShip({}, {}, Nz::Quaternionf::Identity());
+	}
 
-		auto& previousCharacter = previousEntity.get<Nz::PhysCharacter3DComponent>();
-		auto [linearVel, angularVel] = previousCharacter.GetLinearAndAngularVelocity();
+	ServerEnvironment* ServerPlayer::GetControlledEntityEnvironment()
+	{
+		if (!m_controlledEntity)
+			return nullptr;
 
-		auto& networkedSystem = m_controlledEntityEnvironment->GetWorld().GetSystem<NetworkedEntitiesSystem>();
-		networkedSystem.ForgetEntity(previousEntity);
+		return ServerEnvironment::GetEnvironment(m_controlledEntity);
+	}
 
-		EnvironmentTransform prevToNewTransform;
-		if (!environment->GetEnvironmentTransformation(*m_controlledEntityEnvironment, &prevToNewTransform))
-			assert(false && "old environment is not linked to the new");
+	const ServerEnvironment* ServerPlayer::GetControlledEntityEnvironment() const
+	{
+		if (!m_controlledEntity)
+			return nullptr;
 
-		Nz::Vector3f prevEnvironmentUp = -m_controlledEntityEnvironment->GetGravityController()->ComputeGravity(position).direction;
-		Nz::Quaternionf environmentRotationCorrection = Nz::Quaternionf::RotationBetween(prevEnvironmentUp, Nz::Vector3f::Up());
+		return ServerEnvironment::GetEnvironment(m_controlledEntity);
+	}
 
-		position = prevToNewTransform.Translate(position);
-		rotation = prevToNewTransform.Rotate(rotation);
-		linearVel = prevToNewTransform.Rotate(linearVel);
-		angularVel = prevToNewTransform.Rotate(angularVel);
+	void ServerPlayer::PilotShip(EntityReference shipEntity, EntityReference shipExteriorEntity, const Nz::Quaternionf& referenceRotation)
+	{
+		if (!m_controlledEntity)
+			return;
 
-		linearVel += envLinearVelocity;
-
-		m_controlledEntity = environment->CreateEntity();
-		m_controlledEntity.emplace<Nz::NodeComponent>(position, rotation);
-		m_controlledEntity.emplace<NetworkedComponent>(false); //< Don't create entity
-
-		m_controller->SetGravityController(environment->GetGravityController());
-		m_controller->RotateInstantaneously(prevToNewTransform.rotation);
-
-		Nz::PhysCharacter3DComponent::Settings characterSettings;
-		characterSettings.collider = previousCharacter.GetCollider();
-		characterSettings.position = position;
-		characterSettings.rotation = rotation;
-		characterSettings.objectLayer = previousCharacter.GetObjectLayer();
-
-		auto& characterComponent = m_controlledEntity.emplace<Nz::PhysCharacter3DComponent>(std::move(characterSettings));
-		characterComponent.SetImpl(m_controller);
-		characterComponent.SetLinearAndAngularVelocity(linearVel, angularVel);
-		characterComponent.SetUp(rotation * environmentRotationCorrection * up);
-		characterComponent.DisableSleeping();
-
-		// Force controller update to ensure new position will be sent
-		m_controller->UpdatePosition(characterComponent);
-
-		m_controlledEntity.emplace<ServerPlayerControlledComponent>(CreateHandle());
-
-		m_controlledEntityEnvironment->ForEachPlayer([&](ServerPlayer& serverPlayer)
-		{
-			auto& visibilityHandler = serverPlayer.GetVisibilityHandler();
-			visibilityHandler.UpdateEntityEnvironment(*environment, previousEntity, m_controlledEntity);
-		});
-
-		// Destroy previous entity before updating controlled entity, as entity destruction will not be forwarded to visibility handler
-		// we need it to not add back entity to its moving entity list (FIXME: maybe the visibility handler should be the only one to handle that)
-		previousEntity.destroy();
-
-		m_visibilityHandler.UpdateControlledEntity(m_controlledEntity, m_controller.get()); // TODO: Reset to nullptr when player entity is destroyed
-
-		m_controlledEntityEnvironment = environment;
+		m_controller->SetShipController(std::make_shared<ShipController>(shipExteriorEntity, referenceRotation));
+		m_visibilityHandler.SetControlledShip(shipEntity, shipExteriorEntity, referenceRotation);
 	}
 
 	void ServerPlayer::PushInputs(const PlayerInputs& inputs)
 	{
-		m_inputQueue.push_back(inputs);
+		if (m_inputBuffer.size() == m_inputBuffer.capacity())
+			m_inputBuffer.erase(m_inputBuffer.begin());
+
+		m_inputBuffer.push_back(inputs);
 	}
 
 	void ServerPlayer::RemoveFromEnvironment(ServerEnvironment* environment)
@@ -153,36 +182,31 @@ namespace tsom
 	{
 		assert(IsInEnvironment(environment));
 
+		ExitPiloting();
+
 		if (m_controlledEntity)
-			m_controlledEntity.destroy();
+			m_controlledEntity->destroy();
 
-		m_controlledEntityEnvironment = environment;
+		std::shared_ptr<const EntityClass> playerClass = m_serverInstance.GetEntityRegistry().FindClass("player");
+		NazaraAssert(playerClass);
 
-		m_controlledEntity = environment->CreateEntity();
-		m_controlledEntity.emplace<Nz::NodeComponent>(position, rotation);
-		m_controlledEntity.emplace<NetworkedComponent>();
+		entt::handle playerEntity = environment->CreateEntity();
+		playerEntity.emplace<Nz::NodeComponent>(position, rotation);
+		playerEntity.emplace<ClassInstanceComponent>(playerClass);
+		playerEntity.emplace<NetworkedComponent>();
+		playerEntity.emplace<ServerPlayerControlledComponent>(CreateHandle());
 
 		m_controller = std::make_shared<CharacterController>();
 		m_controller->SetGravityController(environment->GetGravityController());
 
-		m_visibilityHandler.UpdateControlledEntity(m_controlledEntity, m_controller.get()); // TODO: Reset to nullptr when player entity is destroyed
+		playerClass->InitAndActivateEntity(playerEntity);
 
-		Nz::PhysCharacter3DComponent::Settings characterSettings;
-		characterSettings.collider = std::make_shared<Nz::CapsuleCollider3D>(Constants::PlayerCapsuleHeight, Constants::PlayerColliderRadius);
-		characterSettings.position = position;
-		characterSettings.rotation = rotation;
-		characterSettings.objectLayer = Constants::ObjectLayerPlayer;
-
-		auto& characterComponent = m_controlledEntity.emplace<Nz::PhysCharacter3DComponent>(std::move(characterSettings));
-		characterComponent.SetImpl(m_controller);
-		characterComponent.DisableSleeping();
-
-		m_controlledEntity.emplace<ServerPlayerControlledComponent>(CreateHandle());
+		m_controlledEntity = playerEntity;
 	}
 
 	void ServerPlayer::SendChatMessage(std::string chatMessage)
 	{
-		Packets::ChatMessage chatMessagePacket;
+		Packets::S_ChatMessage chatMessagePacket;
 		chatMessagePacket.message = std::move(chatMessage);
 
 		GetSession()->SendPacket(std::move(chatMessagePacket));
@@ -195,16 +219,53 @@ namespace tsom
 
 	void ServerPlayer::Tick()
 	{
-		if (!m_inputQueue.empty())
+		// Handle auto-respawn
+		if (!m_controlledEntity)
 		{
-			const PlayerInputs& inputs = m_inputQueue.front();
+			if (m_respawnTimer > Nz::Time::Zero())
+			{
+				m_respawnTimer -= Constants::TickDuration;
+				if (m_respawnTimer <= Nz::Time::Zero())
+				{
+					const auto& spawnpoint = m_serverInstance.GetDefaultSpawnpoint();
+					Respawn(spawnpoint.env, spawnpoint.position, spawnpoint.rotation);
+				}
+			}
+			else
+				m_respawnTimer = Constants::PlayerRespawnTime;
+		}
+
+		if (m_inputBuffer.empty())
+			return;
+
+		// Downstream throttle jitter buffer (TODO: Convert to upstream throttle)
+		// Adjust input consumption depending on how many inputs are sitting in the input queue
+		Nz::UInt32 advancement = 1000;
+		if (m_inputBuffer.size() > Constants::TargetInputBufferSize)
+			advancement += std::min<std::size_t>((m_inputBuffer.size() - Constants::TargetInputBufferSize) * 100, 500);
+		else if (m_inputBuffer.size() < Constants::TargetInputBufferSize)
+			advancement -= std::min<std::size_t>((Constants::TargetInputBufferSize - m_inputBuffer.size()) * 100, 500);
+
+		m_inputQueueAdvancement += advancement;
+		if (m_inputQueueAdvancement >= 1000)
+		{
+			m_inputQueueAdvancement -= 1000;
+
+			PlayerInputs inputs = m_inputBuffer.front();
+			m_inputBuffer.erase(m_inputBuffer.begin());
+
+			// Combine inputs
+			while (!m_inputBuffer.empty() && m_inputQueueAdvancement >= 1000)
+			{
+				inputs.Merge(m_inputBuffer.front());
+				m_inputBuffer.erase(m_inputBuffer.begin());
+				m_inputQueueAdvancement -= 1000;
+			}
 
 			m_visibilityHandler.UpdateLastInputIndex(inputs.index);
 
 			if (m_controller)
 				m_controller->SetInputs(inputs);
-
-			m_inputQueue.erase(m_inputQueue.begin());
 		}
 	}
 
@@ -216,48 +277,16 @@ namespace tsom
 	void ServerPlayer::UpdateRootEnvironment(ServerEnvironment* environment)
 	{
 		assert(environment);
+		if (m_rootEnvironment == environment)
+			return;
 
-		EnvironmentTransform oldToNewEnv(Nz::Vector3f::Zero(), Nz::Quaternionf::Identity());
-		if (m_rootEnvironment)
-		{
-			m_rootEnvironment->GetEnvironmentTransformation(*environment, &oldToNewEnv);
-			ClearEnvironments();
-		}
-
+		ClearEnvironments();
 		m_rootEnvironment = environment;
-		HandleNewEnvironment(m_rootEnvironment, oldToNewEnv);
 
-		m_rootEnvironment->ForEachConnectedEnvironment([&](ServerEnvironment& connectedEnvironment, const EnvironmentTransform& transform)
-		{
-			// avoid cycles
-			EnvironmentTransform globalTransform = oldToNewEnv + transform;
-			HandleNewEnvironment(&connectedEnvironment, oldToNewEnv + transform);
-		});
+		AddToEnvironment(environment, entt::handle{});
 
-		m_visibilityHandler.UpdateRootEnvironment(*m_rootEnvironment);
-	}
-
-	void ServerPlayer::ClearEnvironments()
-	{
-		for (ServerEnvironment* environment : m_registeredEnvironments)
-		{
-			environment->UnregisterPlayer(this);
-			m_visibilityHandler.DestroyEnvironment(*environment);
-		}
-		m_registeredEnvironments.clear();
-	}
-
-	void ServerPlayer::HandleNewEnvironment(ServerEnvironment* environment, const EnvironmentTransform& transform)
-	{
-		assert(!IsInEnvironment(environment));
-		m_registeredEnvironments.push_back(environment);
-		environment->RegisterPlayer(this);
-
-		if (m_visibilityHandler.CreateEnvironment(*environment, transform))
-		{
-			auto& networkedEntities = environment->GetWorld().GetSystem<NetworkedEntitiesSystem>();
-			networkedEntities.CreateAllEntities(m_visibilityHandler);
-		}
+		auto& envProxySystem = m_rootEnvironment->GetWorld().GetSystem<EnvironmentProxySystem>();
+		envProxySystem.AddEnvironmentRecursively(this);
 	}
 
 	void ServerPlayer::UpdateNickname(std::string nickname)

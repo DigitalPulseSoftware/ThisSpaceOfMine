@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -51,21 +51,13 @@ namespace tsom
 		return Nz::Retrieve(m_environmentIndices, environment);
 	}
 
-	inline void SessionVisibilityHandler::MoveEnvironment(ServerEnvironment& environment, const EnvironmentTransform& transform)
+	inline void SessionVisibilityHandler::SetControlledShip(entt::handle shipEntity, entt::handle shipExteriorEntity, const Nz::Quaternionf& referenceRotation)
 	{
-		auto it = std::find_if(m_environmentTransformations.begin(), m_environmentTransformations.end(), [&](const EnvironmentTransformation& transform) { return transform.environment == &environment; });
-		if (it == m_environmentTransformations.end())
-		{
-			m_environmentTransformations.push_back({
-				.environment = &environment,
-				.transform = transform
-			});
-		}
-		else
-		{
-			EnvironmentTransformation& transformation = *it;
-			transformation.transform = transform;
-		}
+		m_pilotedShipUpdate = PilotShipUpdate{
+			.referenceRotation = referenceRotation,
+			.shipEntity = shipEntity,
+			.shipExteriorEntity = shipExteriorEntity
+		};
 	}
 
 	inline void SessionVisibilityHandler::TriggerEntityRpc(entt::handle entity, Nz::UInt32 rpcIndex)
@@ -83,19 +75,28 @@ namespace tsom
 		m_movingEntities.erase(m_controlledEntity);
 	}
 
-	inline void SessionVisibilityHandler::UpdateEntityProperty(entt::handle entity, Nz::UInt32 propertyIndex)
+	inline void SessionVisibilityHandler::UpdateEntityProperty(entt::handle entity, Nz::UInt32 propertyIndex, const EntityProperty& newValue)
 	{
-		m_propertyUpdatedEntities[entity] |= 1u << propertyIndex;
+		Nz::UInt32 propertyMask = 1u << propertyIndex;
+
+		auto& propertyUpdateData = m_propertyUpdatedEntities[entity];
+		std::size_t propertyValueIndex = Nz::CountBits(propertyUpdateData.propertiesMask & (propertyMask - 1));
+
+		if ((propertyUpdateData.propertiesMask & propertyMask) != 0)
+		{
+			// Update value (find value index and then update it)
+			propertyUpdateData.values[propertyValueIndex] = newValue;
+		}
+		else
+		{
+			propertyUpdateData.propertiesMask |= propertyMask;
+			propertyUpdateData.values.insert(propertyUpdateData.values.begin() + propertyValueIndex, newValue);
+		}
 	}
 
 	inline void SessionVisibilityHandler::UpdateLastInputIndex(InputIndex inputIndex)
 	{
 		m_lastInputIndex = inputIndex;
-	}
-
-	inline void SessionVisibilityHandler::UpdateRootEnvironment(ServerEnvironment& environment)
-	{
-		m_nextRootEnvironment = &environment;
 	}
 
 	inline std::size_t SessionVisibilityHandler::HandlerHasher::operator()(const entt::handle& handle) const

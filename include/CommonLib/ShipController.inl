@@ -1,11 +1,11 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 namespace tsom
 {
-	inline ShipController::ShipController(entt::handle entity, const Nz::Quaternionf& rotation) :
-	m_entity(entity),
+	inline ShipController::ShipController(EntityReference entity, const Nz::Quaternionf& rotation) :
+	m_entity(std::move(entity)),
 	m_rotation(rotation)
 	{
 	}
@@ -13,5 +13,10 @@ namespace tsom
 	inline const Nz::Quaternionf& ShipController::GetReferenceRotation() const
 	{
 		return m_rotation;
+	}
+
+	inline entt::handle tsom::ShipController::GetShipEntity() const
+	{
+		return m_entity;
 	}
 }

@@ -1,20 +1,24 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <Game/GameConfigAppComponent.hpp>
-#include <Nazara/Core/SystemDirectory.hpp>
+#include <ClientLib/ClientConfigs.hpp>
+#include <CommonLib/CommonConfigs.hpp>
 #include <CommonLib/Version.hpp>
+#include <Game/GameConfigs.hpp>
+#include <Nazara/Core/SystemDirectory.hpp>
 #include <NazaraUtils/PathUtils.hpp>
-#include <fmt/color.h>
-#include <fmt/format.h>
+#include <spdlog/spdlog.h>
 
 namespace tsom
 {
 	GameConfigFile::GameConfigFile()
 	{
-		RegisterStringOption("Api.Url");
-		RegisterStringOption("Menu.Login", "Mingebag", [](std::string value) -> Nz::Result<std::string, std::string>
+		RegisterBoolOption(Config::Api_DevMode, false);
+		RegisterStringOption(Config::Api_Url);
+
+		RegisterStringOption(Config::Menu_Login, "Mingebag", [](std::string value) -> Nz::Result<std::string, std::string>
 		{
 			if (value.empty())
 				return Nz::Err("name cannot be empty");
@@ -25,11 +29,11 @@ namespace tsom
 			return Nz::Ok(std::move(value));
 		});
 
-		RegisterStringOption("Menu.ServerAddress", "tsom.digitalpulse.software");
+		RegisterStringOption(Config::Menu_ServerAddress, "tsom.digitalpulse.software");
 
-		RegisterFloatOption("Input.MouseSensitivity", 0.0, 1.0, 0.3);
+		RegisterFloatOption(Config::Input_MouseSensitivity, 0.0, 1.0, 0.3);
 
-		RegisterStringOption("Player.Token", "", [](std::string value) -> Nz::Result<std::string, std::string>
+		RegisterStringOption(Config::Player_Token, "", [](std::string value) -> Nz::Result<std::string, std::string>
 		{
 			if (value.size() > 64)
 				return Nz::Err("Invalid token");
@@ -37,7 +41,9 @@ namespace tsom
 			return Nz::Ok(std::move(value));
 		});
 
-		RegisterIntegerOption("Server.Port", 1, 0xFFFF, 29536);
+		RegisterIntegerOption(Config::Server_Port, 1, 0xFFFF, 29536);
+
+		RegisterFloatOption(Config::Visual_ChunkNormalSmoothAngle, 0.0, 180.0, 0.0);
 	}
 
 	std::filesystem::path GameConfigFile::GetPath()
@@ -45,7 +51,7 @@ namespace tsom
 		Nz::Result appDir = Nz::GetApplicationDirectory(Nz::ApplicationDirectory::Config, "ThisSpaceOfMine");
 		if (!appDir)
 		{
-			fmt::print(fg(fmt::color::red), "failed to get application directory: {}\n", appDir.GetError());
+			spdlog::error("failed to get application directory: {}", appDir.GetError());
 			return {};
 		}
 
@@ -59,7 +65,14 @@ namespace tsom
 	ApplicationComponent(app)
 	{
 		std::filesystem::path configPath;
-		if (!IsDevVersion())
+		if (IsDevVersion())
+		{
+			configPath = Nz::Utf8Path(GameConfigFile::FileName);
+			if (!std::filesystem::is_regular_file(configPath))
+				configPath.clear();
+		}
+
+		if (configPath.empty())
 		{
 			configPath = GameConfigFile::GetPath();
 			if (!configPath.empty())
@@ -74,9 +87,6 @@ namespace tsom
 			}
 		}
 
-		if (configPath.empty())
-			configPath = Nz::Utf8Path(GameConfigFile::FileName);
-
 		if (!std::filesystem::is_regular_file(configPath))
 		{
 			// Load gameconfig.lua.default if config file is missing
@@ -87,7 +97,7 @@ namespace tsom
 		}
 
 		if (!m_configFile.LoadFromFile(configPath))
-			fmt::print(fg(fmt::color::red), "failed to load game config\n");
+			spdlog::error("failed to load game config");
 	}
 
 	void GameConfigAppComponent::Save()
@@ -100,6 +110,6 @@ namespace tsom
 			configPath = Nz::Utf8Path(GameConfigFile::FileName);
 
 		if (!m_configFile.SaveToFile(configPath))
-			fmt::print(fg(fmt::color::red), "failed to save game config\n");
+			spdlog::error("failed to save game config");
 	}
 }

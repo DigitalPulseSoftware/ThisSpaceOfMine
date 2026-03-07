@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -14,10 +14,11 @@
 #include <NazaraUtils/FunctionRef.hpp>
 #include <tsl/hopscotch_map.h>
 #include <memory>
-#include <vector>
+#include <mutex>
 
 namespace Nz
 {
+	class ApplicationBase;
 	class TaskScheduler;
 }
 
@@ -26,26 +27,30 @@ namespace tsom
 	class TSOM_COMMONLIB_API Planet : public ChunkContainer, public GravityController
 	{
 		public:
-			Planet(float tileSize, float cornerRadius, float gravity);
+			Planet(Nz::ApplicationBase& app, float tileSize, float cornerRadius, float gravity);
 			Planet(const Planet&) = delete;
 			Planet(Planet&&) = delete;
 			~Planet() = default;
 
 			Chunk& AddChunk(const BlockLibrary& blockLibrary, const ChunkIndices& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback = nullptr);
+			void AddChunks(const BlockLibrary& blockLibrary, const Nz::Vector3ui& chunkCount);
 
 			GravityForce ComputeGravity(const Nz::Vector3f& position) const override;
 			Nz::Vector3f ComputeUpDirection(const Nz::Vector3f& position) const;
 
+			void ClearChunks() override;
+
 			void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, Chunk& chunk)> callback) override;
 			void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, const Chunk& chunk)> callback) const override;
 
-			void GenerateChunk(const BlockLibrary& blockLibrary, Chunk& chunk, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount);
-			void GenerateChunks(const BlockLibrary& blockLibrary, Nz::TaskScheduler& taskScheduler, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount);
+			void GenerateChunk(Chunk& chunk, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, std::string_view scriptName);
+			void GenerateChunks(Nz::TaskScheduler& taskScheduler, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, std::string_view scriptName);
 			void GeneratePlatform(const BlockLibrary& blockLibrary, Direction upDirection, const BlockIndices& platformCenter);
 
 			inline Nz::Vector3f GetCenter() const override;
 			inline Chunk* GetChunk(const ChunkIndices& chunkIndices) override;
 			inline const Chunk* GetChunk(const ChunkIndices& chunkIndices) const override;
+			inline DirectionMask GetChunkVisibilityMask(const ChunkIndices& chunkIndices) const;
 			inline std::size_t GetChunkCount() const override;
 			inline float GetCornerRadius() const;
 			inline float GetGravity() const;
@@ -57,18 +62,28 @@ namespace tsom
 			Planet& operator=(const Planet&) = delete;
 			Planet& operator=(Planet&&) = delete;
 
+			NazaraSignal(OnChunkVisibilityMaskUpdated, Planet* /*planet*/, Chunk* /*chunk*/, DirectionMask /*oldVisibilityMask*/, DirectionMask /*newVisibilityMask*/);
+
 			static constexpr unsigned int ChunkSize = 32;
 
 		protected:
 			struct ChunkData
 			{
+				Nz::EnumArray<Direction, Nz::UInt16> directionHoleCount;
 				std::shared_ptr<Chunk> chunk;
+				DirectionMask visibilityMask;
 
 				NazaraSlot(Chunk, OnBlockUpdated, onUpdated);
+				NazaraSlot(Chunk, OnLayerRegistered, onLayerRegistered);
+				NazaraSlot(Chunk, OnLayerUnregistered, onLayerUnregistered);
 				NazaraSlot(Chunk, OnReset, onReset);
 			};
 
+			std::mutex m_chunkLayerAddedSignalMutex;
+			std::mutex m_chunkLayerRemovedSignalMutex;
+			std::mutex m_chunkUpdatedSignalMutex;
 			tsl::hopscotch_map<ChunkIndices, ChunkData> m_chunks;
+			Nz::ApplicationBase& m_app;
 			float m_cornerRadius;
 			float m_gravity;
 	};

@@ -1,16 +1,20 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/FlatChunk.hpp>
-#include <CommonLib/ChunkContainer.hpp>
 #include <Nazara/Physics3D/Collider3D.hpp>
 #include <NazaraUtils/Bitset.hpp>
-#include <fmt/format.h>
 
 namespace tsom
 {
-	std::shared_ptr<Nz::Collider3D> FlatChunk::BuildCollider() const
+	std::pair<std::shared_ptr<Nz::Collider3D>, Nz::Vector3f> FlatChunk::BuildBlockCollider(const Nz::Vector3ui& blockIndices, float scale) const
+	{
+		Nz::Vector3f offset = (Nz::Vector3f(blockIndices.x, blockIndices.z, blockIndices.y) - Nz::Vector3f(m_size) * 0.5f + Nz::Vector3f(0.5f)) * m_blockSize;
+		return { std::make_shared<Nz::BoxCollider3D>(Nz::Vector3f(m_blockSize * scale)), offset };
+	}
+
+	std::shared_ptr<Nz::Collider3D> FlatChunk::BuildCollider(std::size_t layerIndex) const
 	{
 		std::vector<Nz::CompoundCollider3D::ChildCollider> childColliders;
 
@@ -21,7 +25,7 @@ namespace tsom
 			childCollider.collider = std::make_shared<Nz::BoxCollider3D>(box.GetLengths() * m_blockSize);
 		};
 
-		BuildCollider(m_size, GetCollisionCellMask(), AddBox);
+		BuildCollider(m_size, GetCollisionCellMask(layerIndex), AddBox);
 
 		if (childColliders.empty())
 			return nullptr;
@@ -45,12 +49,17 @@ namespace tsom
 		return pos;
 	}
 
-	Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> FlatChunk::ComputeVoxelCorners(const Nz::Vector3ui& indices) const
+	std::optional<Chunk::HitBlock> FlatChunk::ComputeHitCoordinates(const Nz::Vector3f& hitPos, const Nz::Vector3f& hitNormal, const Nz::Collider3D& collider, std::uint32_t hitSubshapeId) const
 	{
-		Nz::Vector3f blockPos = (Nz::Vector3f(indices) - Nz::Vector3f(m_size) * 0.5f) * m_blockSize;
+		Nz::Vector3f blockPos = hitPos - hitNormal * m_blockSize * 0.25f;
+		std::optional<Nz::Vector3ui> blockIndices = ComputeCoordinates(blockPos);
+		if (!blockIndices)
+			return std::nullopt;
 
-		Nz::Boxf box(blockPos.x, blockPos.z, blockPos.y, m_blockSize, m_blockSize, m_blockSize);
-		return box.GetCorners();
+		return HitBlock{
+			.direction = DirectionFromNormal(hitNormal),
+			.blockIndices = *blockIndices
+		};
 	}
 
 	void FlatChunk::BuildCollider(const Nz::Vector3ui& dims, Nz::Bitset<Nz::UInt64> collisionCellMask, Nz::FunctionRef<void(const Nz::Boxf& box)> callback)

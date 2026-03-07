@@ -1,3 +1,5 @@
+set_xmakever("2.9.7")
+
 includes("xmake/actions/*.lua")
 includes("xmake/rules/*.lua")
 
@@ -5,6 +7,8 @@ includes("xmake/rules/*.lua")
 option("commonlib_static", { default = false, defines = "TSOM_COMMONLIB_STATIC"})
 option("clientlib_static", { default = false, defines = "TSOM_CLIENTLIB_STATIC"})
 option("serverlib_static", { default = false, defines = "TSOM_SERVERLIB_STATIC"})
+option("serveronly", { default = false })
+option("dev_tools", { default = false, defines = "TSOM_DEV_TOOLS" })
 
 -- Simple rule to make targets inherit their version from CommonLib version (which is extracted from git in on_config callback)
 rule("inherit_version", function ()
@@ -14,34 +18,54 @@ rule("inherit_version", function ()
 end)
 
 add_repositories("nazara-repo https://github.com/NazaraEngine/xmake-repo.git")
-add_requires("nazaraengine >=2023.08.15", { configs = { debug = is_mode("debug"), symbols = true }})
-add_requires("fmt", { configs = { header_only = false }})
-add_requires("libcurl", { configs = { shared = true }, system = false })
+add_requires("fmt[header_only=n]")
+add_requires("libcurl[shared]", { system = false, configs = { openssl = is_plat("linux", "android", "cross") } })
+add_requires("nazaraengine >=2025.02.25", { debug = is_mode("debug"), configs = { symbols = true, plugin_imgui = true }})
 add_requires(
 	"concurrentqueue",
 	"cppcodec",
+	"cpptrace",
+	"cpp-semver",
+	"fast_float",
 	"frozen",
-	"libsodium",
+	"libsodium 1.0.20",
 	"lz4",
 	"hopscotch-map",
 	"nazarautils",
 	"nlohmann_json",
 	"perlinnoise",
-	"semver",
-	"sol2"
+	"sol2",
+	"spdlog[fmt_external=y,header_only=n]",
+	"sqlitecpp[sqlite3_external]"
 )
 
-if is_plat("windows") then
-	add_requires("stackwalker 5b0df7a4db8896f6b6dc45d36e383c52577e3c6b")
-elseif is_plat("macosx") then
-	add_requires("moltenvk", { configs = { shared = true }})
+if has_config("serveronly") then
+	add_requireconfs("nazaraengine", {
+		debug = is_mode("debug"),
+		override = true,
+		configs = { 
+			symbols = true,
+			audio = false,
+			graphics = false,
+			physics2d = false,
+			platform = false,
+			renderer = false,
+			textrenderer = false, 
+			widgets = false,
+			plugin_imgui = false
+		}
+	})
 end
 
-add_requireconfs("fmt", "stackwalker", { debug = is_mode("debug") })
+if is_plat("macosx") then
+	add_requires("moltenvk[shared]")
+end
+
+add_requireconfs("fmt", { debug = is_mode("debug") })
 
 -- Don't link with system-installed libs on CI
 if os.getenv("CI") then
-	add_requireconfs("*", { system = false })
+	add_requireconfs("**", { system = false })
 end
 
 add_rules("mode.debug", "mode.releasedbg", "mode.release")
@@ -64,10 +88,13 @@ set_targetdir("./bin/$(plat)_$(arch)_$(mode)")
 if is_mode("debug") then
 	add_defines("NAZARA_DEBUG")
 	set_symbols("debug", "edit")
+elseif is_mode("releasedbg") then
+	add_defines("NAZARA_ENABLE_ASSERTS")
 end
 
 if is_plat("windows") then
 	set_runtimes(is_mode("debug") and "MDd" or "MD")
+	add_cxflags("cl::/diagnostics:caret")
 end
 
 add_rules("@nazarautils/compiler_setup")
@@ -84,15 +111,14 @@ target("CommonLib", function ()
 	end)
 
 	add_defines("TSOM_COMMONLIB_BUILD")
+	add_defines("SOL_SAFE_FUNCTION_CALLS", { public = true })
+	add_defines("SOL_SAFE_USERTYPE", { public = true })
 	add_options("commonlib_static")
+	add_options("dev_tools", { public = true })
 
 	add_packages("nazaraengine", { components = { "physics3d", "network" }, public = true })
-	add_packages("concurrentqueue", "cppcodec", "semver", "fmt", "hopscotch-map", "nlohmann_json", "sol2", { public = true })
-	add_packages("frozen", "libsodium", "lz4", "perlinnoise")
-
-	if is_plat("windows") then
-		add_packages("stackwalker")
-	end
+	add_packages("concurrentqueue", "cppcodec", "cpp-semver", "fast_float", "fmt", "hopscotch-map", "nlohmann_json", "sol2", "spdlog", { public = true })
+	add_packages("cpptrace", "frozen", "libsodium", "lz4", "perlinnoise")
 
 	on_config(function (target, opt)
 		import("core.base.semver")
@@ -162,30 +188,34 @@ target("CommonLib", function ()
 		if targetplat == "macosx" then
 			targetplat = "macos"
 		end
-		local buildconf = string.format("%s_%s", targetplat, target:arch())
+		local targetarch = target:arch()
 
 		local dependfile = target:dependfile("versioninfo")
 		depend.on_changed(function ()
 			progress.show(opt.progress, "${color.build.target}updating version info (%s on %s@%s)", targetversion:shortstr(), commitHash, branch)
-			io.writefile(targetfile, string.format([[
+			local content = string.format([[
 // this file was automatically generated
 // no header guards
 
 std::uint32_t GameMajorVersion = %s;
 std::uint32_t GameMinorVersion = %s;
 std::uint32_t GamePatchVersion = %s;
-std::string_view BuildConfig = "%s";
+std::string_view BuildPlatform = "%s";
+std::string_view BuildArch = "%s";
 std::string_view BuildSystem = "%s";
 std::string_view BuildBranch = "%s";
 std::string_view BuildCommit = "%s";
 std::string_view BuildCommitDate = "%s";
-]], targetversion:major(), targetversion:minor(), targetversion:patch(), buildconf, system, branch, commitHash, commitDate))
+]], targetversion:major(), targetversion:minor(), targetversion:patch(), targetplat, targetarch, system, branch, commitHash, commitDate)
+			if not os.isfile(targetfile) or io.readfile(targetfile) ~= content then
+				io.writefile(targetfile, content)
+			end
 		end,
 		{
 			dependfile = dependfile, 
 			files = targetfile,
 			changed = target:is_rebuilt(),
-			values = {targetversion:shortstr(), buildconf, system, branch, commitHash, commitDate}
+			values = {targetversion:shortstr(), targetplat, targetarch, system, branch, commitHash, commitDate}
 		})
 	end)
 end)
@@ -196,8 +226,11 @@ target("ServerLib", function ()
 	add_headerfiles("include/(ServerLib/**.hpp)", "include/(ServerLib/**.inl)")
 	add_headerfiles("src/ServerLib/**.hpp", "src/ServerLib/**.inl", { install = false })
 	add_files("src/ServerLib/**.cpp")
+
 	add_deps("CommonLib", { public = true })
+	add_packages("frozen")
 	add_packages("libcurl", { links = {}, public = true })
+	add_packages("sqlitecpp", { public = true })
 	add_rules("inherit_version")
 
 	after_load(function (target)
@@ -206,26 +239,6 @@ target("ServerLib", function ()
 
 	add_defines("TSOM_SERVERLIB_BUILD")
 	add_options("serverlib_static")
-end)
-
-target("ClientLib", function ()
-	set_group("Common")
-	set_basename("TSOMClient")
-	add_headerfiles("include/(ClientLib/**.hpp)", "include/(ClientLib/**.inl)")
-	add_headerfiles("src/ClientLib/**.hpp", "src/ClientLib/**.inl", { install = false })
-	add_files("src/ClientLib/**.cpp")
-	add_deps("CommonLib", { public = true })
-	add_packages("frozen")
-	add_rules("inherit_version")
-
-	after_load(function (target)
-		target:set("kind", target:dep("clientlib_static") and "static" or "shared")
-	end)
-
-	add_defines("TSOM_CLIENTLIB_BUILD")
-	add_options("clientlib_static")
-
-	add_packages("nazaraengine", { components = { "audio", "graphics", "widgets" }, public = true })
 end)
 
 target("Main", function ()
@@ -242,44 +255,7 @@ target("Main", function ()
 	add_headerfiles("src/Main/**.hpp", "src/Main/**.inl")
 	add_files("src/Main/**.cpp")
 	add_packages("nazaraengine", { components = { "core" }, public = true })
-end)
-
-target("TSOMGame", function ()
-	set_group("Executable")
-	set_basename("ThisSpaceOfMine")
-	add_deps("ClientLib", "Main")
-	add_rules("inherit_version")
-
-	add_defines("TSOM_GAME_BUILD")
-
-	add_headerfiles("src/Game/**.hpp", "src/Game/**.inl")
-	add_files("src/Game/**.cpp")
-	add_installfiles("gameconfig.lua.default", { prefixdir = "bin" })
-	add_installfiles("(scripts/**.lua)", { prefixdir = "bin" })
-
-	if is_plat("windows", "mingw") then
-		add_files("src/Game/resources.rc")
-	end
-
-	add_rpathdirs("@executable_path")
-
-	add_packages("nazaraengine", { components = { "widgets" }, public = true })
-	add_packages("libcurl", { links = {} })
-	if is_plat("macosx") then
-		add_packages("moltenvk", { links = {} })
-	end
-
-	after_install(function (target)
-		local curl = target:pkg("libcurl")
-		if not curl then
-			return
-		end
-
-		local bin = path.join(curl:installdir(), "bin")
-		os.vcp(path.join(bin, "*.dll"), target:installdir("bin"))
-		os.vcp(path.join(bin, "*.so"), target:installdir("bin"))
-		os.vcp(path.join(bin, "*.dynlib"), target:installdir("bin"))
-	end)
+	add_packages("cpptrace")
 end)
 
 target("TSOMServer", function ()
@@ -293,9 +269,71 @@ target("TSOMServer", function ()
 	add_headerfiles("src/Server/**.hpp", "src/Server/**.inl")
 	add_files("src/Server/**.cpp")
 	add_installfiles("serverconfig.lua.default", { prefixdir = "bin" })
+	add_installfiles("(database/**.sql)", { prefixdir = "bin" })
 	add_installfiles("(scripts/**.lua)", { prefixdir = "bin" })
 
 	add_rpathdirs("@executable_path")
 end)
+
+if not has_config("serveronly") then
+	target("ClientLib", function ()
+		set_group("Common")
+		set_basename("TSOMClient")
+		add_headerfiles("include/(ClientLib/**.hpp)", "include/(ClientLib/**.inl)")
+		add_headerfiles("src/ClientLib/**.hpp", "src/ClientLib/**.inl", { install = false })
+		add_files("src/ClientLib/**.cpp")
+
+		add_deps("CommonLib", { public = true })
+		add_packages("frozen")
+		add_rules("inherit_version")
+
+		after_load(function (target)
+			target:set("kind", target:dep("clientlib_static") and "static" or "shared")
+		end)
+
+		add_defines("TSOM_CLIENTLIB_BUILD")
+		add_options("clientlib_static")
+
+		add_packages("nazaraengine", { components = { "audio", "graphics", "widgets" }, public = true })
+	end)
+
+	target("TSOMGame", function ()
+		set_group("Executable")
+		set_basename("ThisSpaceOfMine")
+		add_deps("ClientLib", "Main")
+		add_rules("inherit_version")
+
+		add_defines("TSOM_GAME_BUILD")
+
+		add_headerfiles("src/Game/**.hpp", "src/Game/**.inl")
+		add_files("src/Game/**.cpp")
+		add_installfiles("gameconfig.lua.default", { prefixdir = "bin" })
+		add_installfiles("(scripts/**.lua)", { prefixdir = "bin" })
+
+		if is_plat("windows", "mingw") then
+			add_files("src/Game/resources.rc")
+		end
+
+		add_rpathdirs("@executable_path")
+
+		add_packages("nazaraengine", { components = { "widgets" }, public = true })
+		add_packages("libcurl", { links = {} })
+		if is_plat("macosx") then
+			add_packages("moltenvk", { links = {} })
+		end
+
+		after_install(function (target)
+			local curl = target:pkg("libcurl")
+			if not curl then
+				return
+			end
+
+			local bin = path.join(curl:installdir(), "bin")
+			os.vcp(path.join(bin, "*.dll"), target:installdir("bin"))
+			os.vcp(path.join(bin, "*.so"), target:installdir("bin"))
+			os.vcp(path.join(bin, "*.dynlib"), target:installdir("bin"))
+		end)
+	end)
+end
 
 includes("tests/xmake.lua")

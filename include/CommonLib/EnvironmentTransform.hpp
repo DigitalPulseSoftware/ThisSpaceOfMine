@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -17,8 +17,7 @@ namespace tsom
 		EnvironmentTransform() = default;
 		inline EnvironmentTransform(const Nz::Vector3f& translation, const Nz::Quaternionf& rotation);
 
-		Nz::Quaternionf rotation;
-		Nz::Vector3f translation;
+		inline bool ApproxEqual(const EnvironmentTransform& other, float translationEpsilon = 0.01f, float rotationEpsilon = 0.0001f) const;
 
 		inline Nz::Quaternionf Rotate(const Nz::Quaternionf& localRotation) const;
 		inline Nz::Vector3f Rotate(const Nz::Vector3f& direction) const;
@@ -31,6 +30,9 @@ namespace tsom
 		inline EnvironmentTransform operator-() const;
 
 		static inline EnvironmentTransform Identity();
+
+		Nz::Quaternionf rotation;
+		Nz::Vector3f translation;
 	};
 }
 

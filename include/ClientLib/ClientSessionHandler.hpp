@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -24,12 +24,14 @@ namespace Nz
 	class ApplicationBase;
 	class EnttWorld;
 	class Model;
+	class Node;
 	class TextSprite;
 }
 
 namespace tsom
 {
 	class ClientBlockLibrary;
+	class ConfigFile;
 	class GravityController;
 	struct PlayerAnimationAssets;
 
@@ -38,49 +40,53 @@ namespace tsom
 		public:
 			struct PlayerInfo;
 
-			ClientSessionHandler(NetworkSession* session, Nz::ApplicationBase& app, Nz::EnttWorld& world, ClientBlockLibrary& blockLibrary);
+			ClientSessionHandler(NetworkSession* session, Nz::ApplicationBase& app, ConfigFile& config, Nz::EnttWorld& world, ClientBlockLibrary& blockLibrary);
 			~ClientSessionHandler();
 
-			void EnableShipControl(bool enable);
-
 			inline entt::handle GetControlledEntity() const;
+			const Nz::Node* GetEnvironmentNode(std::size_t environmentIndex) const;
 			inline const GravityController* GetGravityController(std::size_t environmentIndex) const;
 			inline ScriptingContext& GetScriptingContext();
 
-			void HandlePacket(Packets::AuthResponse&& authResponse);
-			void HandlePacket(Packets::ChatMessage&& chatMessage);
-			void HandlePacket(Packets::ChunkCreate&& chunkCreate);
-			void HandlePacket(Packets::ChunkDestroy&& chunkDestroy);
-			void HandlePacket(Packets::ChunkReset&& chunkReset);
-			void HandlePacket(Packets::ChunkUpdate&& chunkUpdate);
-			void HandlePacket(Packets::DebugDrawLineList&& debugDrawLineList);
-			void HandlePacket(Packets::EntitiesCreation&& entitiesCreation);
-			void HandlePacket(Packets::EntitiesDelete&& entitiesDelete);
-			void HandlePacket(Packets::EntitiesStateUpdate&& stateUpdate);
-			void HandlePacket(Packets::EntityEnvironmentUpdate&& environmentUpdate);
-			void HandlePacket(Packets::EntityProcedureCall&& procedureCall);
-			void HandlePacket(Packets::EntityPropertyUpdate&& propertyUpdate);
-			void HandlePacket(Packets::EnvironmentCreate&& envCreate);
-			void HandlePacket(Packets::EnvironmentDestroy&& envDestroy);
-			void HandlePacket(Packets::EnvironmentUpdate&& envUpdate);
-			void HandlePacket(Packets::GameData&& gameData);
-			void HandlePacket(Packets::NetworkStrings&& networkStrings);
-			void HandlePacket(Packets::PlayerJoin&& playerJoin);
-			void HandlePacket(Packets::PlayerLeave&& playerLeave);
-			void HandlePacket(Packets::PlayerNameUpdate&& playerNameUpdate);
-			void HandlePacket(Packets::UpdateRootEnvironment&& playerEnv);
+			void HandlePacket(Packets::S_AuthResponse&& authResponse);
+			void HandlePacket(Packets::S_ChatMessage&& chatMessage);
+			void HandlePacket(Packets::S_ChunkCreate&& chunkCreate);
+			void HandlePacket(Packets::S_ChunkDestroy&& chunkDestroy);
+			void HandlePacket(Packets::S_ChunkReset&& chunkReset);
+			void HandlePacket(Packets::S_ChunkUpdate&& chunkUpdate);
+			void HandlePacket(Packets::S_ConsoleOutput&& consoleOutput);
+			void HandlePacket(Packets::S_DebugDrawLineList&& debugDrawLineList);
+			void HandlePacket(Packets::S_EntitiesCreation&& entitiesCreation);
+			void HandlePacket(Packets::S_EntitiesDelete&& entitiesDelete);
+			void HandlePacket(Packets::S_EntitiesStateUpdate&& stateUpdate);
+			void HandlePacket(Packets::S_EntityEnvironmentUpdate&& environmentUpdate);
+			void HandlePacket(Packets::S_EntityProcedureCall&& procedureCall);
+			void HandlePacket(Packets::S_EntityPropertiesUpdate&& propertyUpdate);
+			void HandlePacket(Packets::S_EnvironmentCreate&& envCreate);
+			void HandlePacket(Packets::S_EnvironmentDestroy&& envDestroy);
+			void HandlePacket(Packets::S_EnvironmentsUpdateOwner&& envOwnerUpdate);
+			void HandlePacket(Packets::S_GameData&& gameData);
+			void HandlePacket(Packets::S_NetworkStrings&& networkStrings);
+			void HandlePacket(Packets::S_PilotShip&& pilotShip);
+			void HandlePacket(Packets::S_PilotShipFinish&& pilotShipFinish);
+			void HandlePacket(Packets::S_PlayerJoin&& playerJoin);
+			void HandlePacket(Packets::S_PlayerLeave&& playerLeave);
+			void HandlePacket(Packets::S_PlayerNameUpdate&& playerNameUpdate);
 
 			void LoadScripts(bool isReloading = false);
 
-			NazaraSignal(OnAuthResponse, const Packets::AuthResponse& /*authResponse*/);
+			NazaraSignal(OnAuthResponse, const Packets::S_AuthResponse& /*authResponse*/);
 			NazaraSignal(OnChatMessage, const std::string& /*message*/);
+			NazaraSignal(OnConsoleOutput, const Nz::Color& /*color*/, std::string_view /*message*/);
 			NazaraSignal(OnControlledEntityChanged, entt::handle /*newEntity*/);
-			NazaraSignal(OnControlledEntityStateUpdate, InputIndex /*lastInputIndex*/, const Packets::EntitiesStateUpdate::ControlledCharacter& /*characterData*/);
+			NazaraSignal(OnControlledEntityStateUpdate, InputIndex /*lastInputIndex*/, const Packets::S_EntitiesStateUpdate::ControlledCharacter& /*characterData*/);
+			NazaraSignal(OnControlledShip, entt::handle /*controlledShip*/, entt::handle /*controlledShipExterior*/, const Nz::Quaternionf& /*referenceRotation*/);
+			NazaraSignal(OnControlledShipFinished);
+			NazaraSignal(OnDebugDrawLineList, const Packets::S_DebugDrawLineList& /*debugDrawLineList*/);
 			NazaraSignal(OnPlayerChatMessage, const std::string& /*message*/, const PlayerInfo& /*playerInfo*/);
 			NazaraSignal(OnPlayerJoined, const PlayerInfo& /*playerInfo*/);
 			NazaraSignal(OnPlayerLeave, const PlayerInfo& /*playerInfo*/);
 			NazaraSignal(OnPlayerNameUpdate, const PlayerInfo& /*playerInfo*/, const std::string& /*newNickname*/);
-			NazaraSignal(OnShipControlUpdated, bool /*isControllingShip*/);
 
 			static constexpr Packets::Helper::EntityId InvalidEntity = Nz::MaxValue();
 
@@ -94,14 +100,26 @@ namespace tsom
 		private:
 			inline PlayerInfo* FetchPlayerInfo(PlayerIndex playerIndex);
 			inline const PlayerInfo* FetchPlayerInfo(PlayerIndex playerIndex) const;
+			void HandleEntityCreation(Packets::Helper::EntityData&& entityData);
 			void SetupEntity(entt::handle entity, Packets::Helper::PlayerControlledData&& entityData);
+
+			struct DebugDrawLines
+			{
+				Nz::UInt64 uniqueHash = 0;
+				std::size_t environmentId;
+				std::vector<Nz::UInt16> indices;
+				std::vector<Nz::Vector3f> vertices;
+				Nz::Color color;
+				Nz::Quaternionf rotation;
+				Nz::Vector3f position;
+				float duration;
+			};
 
 			struct EnvironmentData
 			{
 				Nz::Bitset<Nz::UInt64> entities;
 				entt::handle rootEntity;
 				entt::handle visualRootEntity;
-				EnvironmentTransform transform;
 				GravityController* gravityController;
 			};
 
@@ -125,9 +143,9 @@ namespace tsom
 			Nz::ApplicationBase& m_app;
 			Nz::EnttWorld& m_world;
 			ClientBlockLibrary& m_blockLibrary;
+			ConfigFile& m_config;
 			Nz::UInt16 m_lastTickIndex;
 			Nz::UInt16 m_ownPlayerIndex;
-			Packets::Helper::EnvironmentId m_currentEnvironmentIndex;
 			ScriptingContext m_scriptingContext;
 			EntityRegistry m_entityRegistry;
 			InputIndex m_lastInputIndex;

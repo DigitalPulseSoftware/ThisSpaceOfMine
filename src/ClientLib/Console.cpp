@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -6,7 +6,7 @@
 #include <Nazara/Widgets/RichTextAreaWidget.hpp>
 #include <Nazara/Widgets/ScrollAreaWidget.hpp>
 #include <Nazara/Widgets/TextAreaWidget.hpp>
-#include <fmt/format.h>
+#include <spdlog/spdlog.h>
 
 namespace tsom
 {
@@ -38,7 +38,7 @@ namespace tsom
 
 		m_inputArea->OnTextAreaKeyReturn.Connect([this](const Nz::AbstractTextAreaWidget* textArea, bool* ignoreDefaultAction)
 		{
-			NazaraAssert(textArea == m_inputArea, "Unexpected signal from an other text area");
+			NazaraAssertMsg(textArea == m_inputArea, "unexpected signal from an other text area");
 
 			*ignoreDefaultAction = true;
 
@@ -49,8 +49,11 @@ namespace tsom
 
 			m_inputArea->SetText(std::string(CommandPrefix));
 
-			m_historyPosition = m_commandHistory.size();
-			m_commandHistory.push_back(std::string(inputCmd));
+			if (m_commandHistory.empty() || m_commandHistory.back() != inputCmd)
+			{
+				m_commandHistory.push_back(std::string(inputCmd));
+				m_historyPosition = m_commandHistory.size();
+			}
 
 			PrintMessage(std::move(input)); //< With the input prefix
 

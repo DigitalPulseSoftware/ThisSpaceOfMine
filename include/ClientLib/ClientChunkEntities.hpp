@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -32,13 +32,17 @@ namespace tsom
 		Nz::Vector3f tangent;
 	};
 
+	class ConfigFile;
+
 	class TSOM_CLIENTLIB_API ClientChunkEntities final : public ChunkEntities
 	{
 		public:
-			ClientChunkEntities(Nz::ApplicationBase& app, Nz::EnttWorld& world, ChunkContainer& chunkContainer, const ClientBlockLibrary& blockLibrary);
+			ClientChunkEntities(Nz::ApplicationBase& app, ConfigFile& config, Nz::EnttWorld& world, ChunkContainer& chunkContainer, const ClientBlockLibrary& blockLibrary, std::size_t layerIndex);
 			ClientChunkEntities(const ClientChunkEntities&) = delete;
 			ClientChunkEntities(ClientChunkEntities&&) = delete;
 			~ClientChunkEntities() = default;
+
+			inline void EnableCollisionGeneration(bool enable);
 
 			ClientChunkEntities& operator=(const ClientChunkEntities&) = delete;
 			ClientChunkEntities& operator=(ClientChunkEntities&&) = delete;
@@ -51,11 +55,14 @@ namespace tsom
 			};
 
 			std::shared_ptr<Nz::Mesh> BuildMesh(const Chunk& chunk);
-			ColliderModelUpdateJob* ProcessChunkUpdate(const Chunk& chunk, DirectionMask neighborMask) override;
+			ColliderModelUpdateJob* ProcessChunkUpdate(const Chunk& chunk, NeighborChunkMask neighborMask) override;
 			void UpdateChunkDebugCollider(const ChunkIndices& chunkIndices);
 
 			std::shared_ptr<Nz::MaterialInstance> m_chunkMaterial;
 			std::shared_ptr<Nz::VertexDeclaration> m_chunkVertexDeclaration;
+			Nz::Signal<double>::ConnectionGuard m_onVisualChunkNormalSmoothAngleUpdatedSlot;
+			ConfigFile& m_configFile;
+			bool m_isCollisionGenerationEnabled;
 	};
 }
 

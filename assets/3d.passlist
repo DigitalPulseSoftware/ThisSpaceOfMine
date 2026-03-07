@@ -2,16 +2,17 @@ passlist "Forward Passlist"
 {
     attachment "DepthBuffer"
     {
-        format "PreferredDepthStencil"
+        format "Depth32F"
     }
 
     pass "DepthPrepass"
     {
-        impl "Depth"
+        impl "Raster"
         {
             MatPass "DepthPass"
         }
 
+        cleardepth "Viewer"
         depthstenciloutput "DepthBuffer"
     }
 
@@ -24,9 +25,27 @@ passlist "Forward Passlist"
     {
         impl "Forward"
         output "Output" "ForwardOutput"
+        {
+            clearcolor "Viewer"
+        }
+
         depthstencilinput "DepthBuffer"
         depthstenciloutput "DepthBuffer"
         flag "LightShadowing"
+    }
+
+    attachment "AtmosphereOutput"
+    {
+        format "RGBA16F"
+    }
+
+    pass "AtmospherePass"
+    {
+        impl "TSOM_AtmosphereScattering"
+
+        input "Color" "ForwardOutput"
+        input "Depth" "DepthBuffer"
+        output "Output" "AtmosphereOutput"
     }
 
     attachment "Gamma corrected"
@@ -41,7 +60,7 @@ passlist "Forward Passlist"
             Shader "PostProcess.GammaCorrection"
         }
 
-        input "Input" "ForwardOutput"
+        input "Input" "AtmosphereOutput"
         output "Output" "Gamma corrected"
     }
 

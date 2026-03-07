@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -6,9 +6,9 @@
 
 namespace tsom
 {
-	Packets::NetworkStrings NetworkStringStore::BuildPacket(Nz::UInt32 firstId) const
+	Packets::S_NetworkStrings NetworkStringStore::BuildPacket(Nz::UInt32 firstId) const
 	{
-		Packets::NetworkStrings packet;
+		Packets::S_NetworkStrings packet;
 		packet.startId = firstId;
 		packet.strings.reserve(m_strings.size() - firstId);
 		for (Nz::UInt32 i = firstId; i < m_strings.size(); ++i)

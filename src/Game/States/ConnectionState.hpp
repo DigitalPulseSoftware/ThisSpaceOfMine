@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -35,7 +35,7 @@ namespace tsom
 			ConnectionState(std::shared_ptr<StateData> stateData);
 			~ConnectionState() = default;
 
-			void Connect(const Nz::IpAddress& serverAddress, std::variant<Packets::AuthRequest::AuthenticatedPlayerData, Packets::AuthRequest::AnonymousPlayerData> playerData, std::shared_ptr<Nz::State> previousState);
+			void Connect(const Nz::IpAddress& serverAddress, std::variant<Packets::C_AuthRequest::AuthenticatedPlayerData, Packets::C_AuthRequest::AnonymousPlayerData> playerData, std::shared_ptr<Nz::State> previousState);
 			void Disconnect();
 
 			inline const ConnectionInfo* GetConnectionInfo() const;
@@ -68,7 +68,7 @@ namespace tsom
 			std::shared_ptr<Nz::State> m_connectedState;
 			std::shared_ptr<Nz::State> m_nextState;
 			std::shared_ptr<Nz::State> m_previousState;
-			std::variant<Packets::AuthRequest::AuthenticatedPlayerData, Packets::AuthRequest::AnonymousPlayerData> m_playerData;
+			std::variant<Packets::C_AuthRequest::AuthenticatedPlayerData, Packets::C_AuthRequest::AnonymousPlayerData> m_playerData;
 			Nz::HighPrecisionClock m_sessionInfoClock;
 			Nz::FixedVector<NetworkReactor, 2> m_reactors;
 			Nz::LabelWidget* m_connectingLabel;

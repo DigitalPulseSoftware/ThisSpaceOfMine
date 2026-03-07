@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -10,24 +10,23 @@
 namespace tsom
 {
 	NetworkMovementInterpolationSystem::NetworkMovementInterpolationSystem(entt::registry& registry, Nz::Time movementTickDuration, std::size_t targetMovementPointsy) :
-	m_interpolatedObserver(registry, entt::collector.group<Nz::NodeComponent, NetworkInterpolationComponent>(entt::exclude<Nz::DisabledComponent>)),
 	m_targetMovementPoints(targetMovementPointsy),
+	m_interpolatedObserver(registry),
 	m_movementTickDuration(movementTickDuration),
 	m_registry(registry)
 	{
-	}
-
-	void NetworkMovementInterpolationSystem::Update(Nz::Time elapsedTime)
-	{
-		// Setup new entities
-		m_interpolatedObserver.each([&](entt::entity entity)
+		m_interpolatedObserver.OnEntityAdded.Connect([&](entt::entity entity)
 		{
+			// Setup new entities
 			auto& entityNode = m_registry.get<Nz::NodeComponent>(entity);
 			auto& entityInterpolation = m_registry.get<NetworkInterpolationComponent>(entity);
 
 			entityInterpolation.Fill(m_targetMovementPoints, entityNode.GetPosition(), entityNode.GetRotation());
 		});
+	}
 
+	void NetworkMovementInterpolationSystem::Update(Nz::Time elapsedTime)
+	{
 		float deltaIncrement = elapsedTime.AsSeconds() / m_movementTickDuration.AsSeconds();
 
 		// Interpolation

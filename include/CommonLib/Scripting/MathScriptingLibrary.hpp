@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -26,11 +26,14 @@ namespace tsom
 			MathScriptingLibrary& operator=(MathScriptingLibrary&&) = delete;
 
 		private:
-			void RegisterBox(sol::state& state);
-			void RegisterEulerAngles(sol::state& state);
-			void RegisterQuaternion(sol::state& state);
-			void RegisterVector2(sol::state& state);
-			void RegisterVector3(sol::state& state);
+			template<typename T> void RegisterBox(sol::state& state, const char* name);
+			void RegisterColor(sol::state& state);
+			template<typename T> void RegisterEulerAngles(sol::state& state, const char* name);
+			void RegisterPerlinNoise(sol::state& state);
+			template<typename T> void RegisterQuaternion(sol::state& state, const char* name);
+			void RegisterTime(sol::state& state);
+			template<typename T> void RegisterVector2(sol::state& state, const char* name);
+			template<typename T> void RegisterVector3(sol::state& state, const char* name);
 	};
 }
 

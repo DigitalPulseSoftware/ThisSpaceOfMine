@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -7,8 +7,8 @@
 #ifndef TSOM_CLIENTLIB_RENDERCONSTANTS_HPP
 #define TSOM_CLIENTLIB_RENDERCONSTANTS_HPP
 
-#include <NazaraUtils/Prerequisites.hpp>
 #include <Nazara/Math/Angle.hpp>
+#include <NazaraUtils/Prerequisites.hpp>
 
 namespace tsom::Constants
 {

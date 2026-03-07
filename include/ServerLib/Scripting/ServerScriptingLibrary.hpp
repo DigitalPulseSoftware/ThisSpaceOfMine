@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -9,23 +9,20 @@
 
 #include <ServerLib/Export.hpp>
 #include <CommonLib/Scripting/ScriptingLibrary.hpp>
-
-namespace Nz
-{
-	class ApplicationBase;
-}
+#include <memory>
 
 namespace tsom
 {
 	class ServerEntityScriptingLibrary;
+	class ServerInstance;
 
 	class TSOM_SERVERLIB_API ServerScriptingLibrary : public ScriptingLibrary
 	{
 		public:
-			inline ServerScriptingLibrary(Nz::ApplicationBase& app, ServerEntityScriptingLibrary& entityScriptingLibrary);
+			inline ServerScriptingLibrary(ServerInstance& serverInstance, ServerEntityScriptingLibrary& entityScriptingLibrary);
 			ServerScriptingLibrary(const ServerScriptingLibrary&) = delete;
 			ServerScriptingLibrary(ServerScriptingLibrary&&) = delete;
-			~ServerScriptingLibrary() = default;
+			inline ~ServerScriptingLibrary();
 
 			void Register(sol::state& state) override;
 
@@ -33,11 +30,15 @@ namespace tsom
 			ServerScriptingLibrary& operator=(ServerScriptingLibrary&&) = delete;
 
 		private:
+			void RegisterAtmosphere(sol::state& state);
 			void RegisterEnvironment(sol::state& state);
 			void RegisterPlayer(sol::state& state);
+			void RegisterServer(sol::state& state);
+			void RegisterServerDatabase(sol::state& state);
 
-			Nz::ApplicationBase& m_app;
+			std::shared_ptr<bool> m_aliveSignal;
 			ServerEntityScriptingLibrary& m_entityScriptingLibrary;
+			ServerInstance& m_serverInstance;
 	};
 }
 

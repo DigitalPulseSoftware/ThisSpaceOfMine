@@ -5,8 +5,8 @@
 #include <Main/Main.hpp>
 #include <CommonLib/Version.hpp>
 #include <CommonLib/Utility/CrashHandler.hpp>
-#include <fmt/color.h>
-#include <fmt/format.h>
+#include <cpptrace/from_current.hpp>
+#include <spdlog/spdlog.h>
 #include <cstdio>
 #include <exception>
 
@@ -26,12 +26,12 @@ int TSOMEntry(int argc, char* argv[], int(*mainFunc)(int argc, char* argv[]))
 	if (struct stat stat; fstat(STDOUT_FILENO, &stat) == 0)
 		buffSize = stat.st_blksize;
 	else
-		fmt::print(fg(fmt::color::yellow), "failed to fstat stdout ({})", errno);
+		spdlog::warn("failed to fstat stdout ({})", errno);
 #endif
 
 	std::setvbuf(stdout, nullptr, _IOLBF, buffSize);
 
-	fmt::print(fg(fmt::color::white), "TSOM {0}.{1}.{2} {3} ({4}) - {5}\n", tsom::GameMajorVersion, tsom::GameMinorVersion, tsom::GamePatchVersion, tsom::BuildBranch, tsom::BuildCommit, tsom::BuildCommitDate);
+	spdlog::info("TSOM {0}.{1}.{2} {3} ({4}) - {5}", tsom::GameMajorVersion, tsom::GameMinorVersion, tsom::GamePatchVersion, tsom::BuildBranch, tsom::BuildCommit, tsom::BuildCommitDate);
 
 #ifdef NAZARA_PLATFORM_WINDOWS
 	if (::IsDebuggerPresent())
@@ -41,20 +41,24 @@ int TSOMEntry(int argc, char* argv[], int(*mainFunc)(int argc, char* argv[]))
 	std::unique_ptr<tsom::CrashHandler> crashHandler = tsom::CrashHandler::PlatformCrashHandler();
 	crashHandler->Install();
 
-	try
+	int retCode = EXIT_FAILURE;
+	cpptrace::try_catch(
+	[&]
 	{
-		return mainFunc(argc, argv);
-	}
-	catch (const std::exception& e)
+		retCode = mainFunc(argc, argv);
+	},
+	[&](const std::exception& e)
 	{
-		fmt::print(stderr, "unhandled exception: {0}\n", e.what());
-		throw;
-	}
-	catch (...)
+		spdlog::critical("unhandled exception: {0}", e.what());
+		crashHandler->HandleUnhandledException(&e, cpptrace::from_current_exception());
+	},
+	[&](/*...*/)
 	{
-		fmt::print(stderr, "unhandled non-standard exception\n");
-		throw;
-	}
+		spdlog::critical("unhandled non-standard exception");
+		crashHandler->HandleUnhandledException(nullptr, cpptrace::from_current_exception());
+	});
+
+	return retCode;
 }
 
 //TODO: Handle WinMain

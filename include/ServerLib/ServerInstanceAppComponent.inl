@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -8,5 +8,12 @@ namespace tsom
 	ServerInstance& ServerInstanceAppComponent::AddInstance(Args&& ...args)
 	{
 		return *m_instances.emplace_back(std::make_unique<ServerInstance>(GetApp(), std::forward<Args>(args)...));
+	}
+
+	template<typename F>
+	void ServerInstanceAppComponent::ForEachInstance(F&& callback)
+	{
+		for (auto& instancePtr : m_instances)
+			callback(*instancePtr);
 	}
 }

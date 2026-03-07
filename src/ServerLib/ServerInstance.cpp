@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -7,34 +7,38 @@
 #include <CommonLib/Entities/ChunkClassLibrary.hpp>
 #include <CommonLib/Scripting/MathScriptingLibrary.hpp>
 #include <CommonLib/Scripting/SharedScriptingLibrary.hpp>
+#include <ServerLib/ServerConfig.hpp>
 #include <ServerLib/ServerPlanetEnvironment.hpp>
+#include <ServerLib/Components/EnvironmentEnterTriggerComponent.hpp>
+#include <ServerLib/Components/EnvironmentProxyComponent.hpp>
+#include <ServerLib/Components/NetworkedComponent.hpp>
+#include <ServerLib/Entities/ServerEntityClassLibrary.hpp>
 #include <ServerLib/Scripting/ServerEntityScriptingLibrary.hpp>
 #include <ServerLib/Scripting/ServerScriptingLibrary.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
+#include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
-#include <fmt/color.h>
-#include <fmt/format.h>
+#include <spdlog/spdlog.h>
 #include <memory>
 
 namespace tsom
 {
 	ServerInstance::ServerInstance(Nz::ApplicationBase& application, Config config) :
-	m_connectionTokenEncryptionKey(config.connectionTokenEncryptionKey),
 	m_players(256),
-	m_saveInterval(config.saveInterval),
 	m_tickAccumulator(Nz::Time::Zero()),
 	m_tickDuration(Constants::TickDuration),
 	m_tickIndex(0),
 	m_application(application),
-	m_scriptingContext(application),
-	m_pauseWhenEmpty(config.pauseWhenEmpty)
+	m_config(std::move(config)),
+	m_scriptingContext(application)
 	{
 		m_entityRegistry.RegisterClassLibrary<ChunkClassLibrary>(m_application, m_blockLibrary);
+		m_entityRegistry.RegisterClassLibrary<ServerEntityClassLibrary>(m_application);
 
 		m_scriptingContext.RegisterLibrary<MathScriptingLibrary>();
-		m_scriptingContext.RegisterLibrary<SharedScriptingLibrary>();
-		ServerEntityScriptingLibrary& entityScriptingLibrary = m_scriptingContext.RegisterLibrary<ServerEntityScriptingLibrary>(m_entityRegistry);
-		m_scriptingContext.RegisterLibrary<ServerScriptingLibrary>(m_application, entityScriptingLibrary);
+		auto& entityScriptingLibrary = m_scriptingContext.RegisterLibrary<ServerEntityScriptingLibrary>(m_entityRegistry);
+		m_scriptingContext.RegisterLibrary<SharedScriptingLibrary>(entityScriptingLibrary);
+		m_scriptingContext.RegisterLibrary<ServerScriptingLibrary>(*this, entityScriptingLibrary);
 
 		LoadScripts();
 	}
@@ -49,7 +53,7 @@ namespace tsom
 
 	void ServerInstance::BroadcastChatMessage(std::string message, std::optional<PlayerIndex> senderIndex)
 	{
-		Packets::ChatMessage chatMessage;
+		Packets::S_ChatMessage chatMessage;
 		chatMessage.message = std::move(message);
 		chatMessage.playerIndex = senderIndex;
 
@@ -64,7 +68,7 @@ namespace tsom
 	{
 		if (!m_defaultSpawnpoint.env)
 		{
-			fmt::print(fg(fmt::color::red), "cannot create player: no spawnpoint set\n");
+			spdlog::error("cannot create player: no spawnpoint set");
 			return nullptr;
 		}
 
@@ -100,7 +104,7 @@ namespace tsom
 	{
 		if (!m_defaultSpawnpoint.env)
 		{
-			fmt::print(fg(fmt::color::red), "cannot create player: no spawnpoint set\n");
+			spdlog::error("cannot create player: no spawnpoint set");
 			return nullptr;
 		}
 
@@ -149,6 +153,67 @@ namespace tsom
 		m_players.Free(playerIndex);
 	}
 
+	void ServerInstance::LinkDatabaseEnvironments(Nz::UInt32 sourceDatabaseId, Nz::UInt32 destinationDatabaseId, const Nz::Vector3f& position)
+	{
+		auto sourceIt = m_databaseEnvironments.find(sourceDatabaseId);
+		if (sourceIt == m_databaseEnvironments.end())
+		{
+			spdlog::error("LinkDatabaseEnvironments: unknown source database id {}", sourceDatabaseId);
+			return;
+		}
+
+		auto destinationIt = m_databaseEnvironments.find(destinationDatabaseId);
+		if (destinationIt == m_databaseEnvironments.end())
+		{
+			spdlog::error("LinkDatabaseEnvironments: unknown destination database id {}", destinationDatabaseId);
+			return;
+		}
+
+		ServerEnvironment& sourceEnvironment = *sourceIt->second;
+		ServerEnvironment& destinationEnvironment = *destinationIt->second;
+
+		entt::handle switchTriggerEntity = sourceEnvironment.CreateEntity();
+		switchTriggerEntity.emplace<Nz::NodeComponent>(position);
+		switchTriggerEntity.emplace<EnvironmentProxyComponent>().targetEnvironment = &destinationEnvironment;
+		switchTriggerEntity.emplace<NetworkedComponent>();
+
+		auto& enterTrigger = switchTriggerEntity.emplace<EnvironmentEnterTriggerComponent>();
+		enterTrigger.aabb = destinationEnvironment.ComputeBoundingBox().ScaleAroundCenter(2.f);
+		enterTrigger.targetEnvironment = &destinationEnvironment;
+		enterTrigger.updateRoot = true;
+	}
+
+	void ServerInstance::LoadFromDatabase()
+	{
+		ServerDatabase& serverDatabase = GetServerDatabase();
+		ServerConfig databaseConfig = ServerConfig::Load(serverDatabase);
+
+		m_databaseEnvironments.clear();
+		serverDatabase.GetAllPlanets([&](Database::Planet&& planetData)
+		{
+			RegisterDatabaseEnvironment(planetData.id, std::make_unique<ServerPlanetEnvironment>(*this, planetData.id, std::string(planetData.generatorName), planetData.seed, planetData.chunkCount, planetData.blockSize, planetData.cornerRadius));
+			return true;
+		});
+
+		serverDatabase.GetAllPlanetLinks([&](Database::PlanetLink&& planetLink)
+		{
+			LinkDatabaseEnvironments(planetLink.sourcePlanet, planetLink.destinationPlanet, planetLink.position);
+			return true;
+		});
+
+		if (auto it = m_databaseEnvironments.find(databaseConfig.defaultSpawnpoint.planetId); it != m_databaseEnvironments.end())
+		{
+			ServerEnvironment* planetEnv = it->second.get();
+			SetDefaultSpawnpoint(planetEnv, databaseConfig.defaultSpawnpoint.position, databaseConfig.defaultSpawnpoint.rotation);
+		}
+	}
+
+	void ServerInstance::RegisterDatabaseEnvironment(Nz::UInt32 databaseId, std::unique_ptr<ServerEnvironment>&& serverEnvironment)
+	{
+		NazaraAssert(!m_databaseEnvironments.contains(databaseId));
+		m_databaseEnvironments[databaseId] = std::move(serverEnvironment);
+	}
+
 	std::unique_ptr<Nz::EnttWorld> ServerInstance::RegisterEnvironment(ServerEnvironment* environment)
 	{
 		assert(std::find(m_environments.begin(), m_environments.end(), environment) == m_environments.end());
@@ -176,15 +241,18 @@ namespace tsom
 
 	Nz::Time ServerInstance::Update(Nz::Time elapsedTime)
 	{
-		if (m_saveClock.RestartIfOver(m_saveInterval))
+		if (m_saveClock.RestartIfOver(m_config.saveInterval))
 			OnSave();
 
 		for (auto&& sessionManagerPtr : m_sessionManagers)
 			sessionManagerPtr->Poll();
 
-		// No player? Pause instance for 100ms
-		if (m_pauseWhenEmpty && m_players.begin() == m_players.end())
-			return Nz::Time::Milliseconds(100);
+		for (ServerEnvironment* env : m_environments)
+			env->Update();
+
+		// No player? Pause instance for 50ms
+		if (m_config.pauseWhenEmpty && m_players.begin() == m_players.end())
+			return Nz::Time::Milliseconds(50);
 
 		m_tickAccumulator += elapsedTime;
 		while (m_tickAccumulator >= m_tickDuration)
@@ -192,6 +260,8 @@ namespace tsom
 			OnTick(m_tickDuration);
 			m_tickAccumulator -= m_tickDuration;
 		}
+
+		OnNetworkTick();
 
 		return m_tickDuration - m_tickAccumulator;
 	}
@@ -214,12 +284,12 @@ namespace tsom
 		});
 	}
 
-	void ServerInstance::OnNetworkTick()
+	void ServerInstance::HandleNetworkEvents()
 	{
 		// Handle disconnected players
 		for (std::size_t playerIndex : m_disconnectedPlayers.IterBits())
 		{
-			Packets::PlayerLeave playerLeave;
+			Packets::S_PlayerLeave playerLeave;
 			playerLeave.index = Nz::SafeCast<PlayerIndex>(playerIndex);
 
 			ForEachPlayer([&](ServerPlayer& serverPlayer)
@@ -241,7 +311,7 @@ namespace tsom
 		// Handle renaming
 		for (auto&& [playerIndex, newNickname] : m_pendingPlayerRename)
 		{
-			Packets::PlayerNameUpdate playerNameUpdate;
+			Packets::S_PlayerNameUpdate playerNameUpdate;
 			playerNameUpdate.index = Nz::SafeCast<PlayerIndex>(playerIndex);
 			playerNameUpdate.newNickname = std::move(newNickname);
 
@@ -259,7 +329,7 @@ namespace tsom
 			ServerPlayer* player = m_players.RetrieveFromIndex(playerIndex);
 
 			// Send a packet to existing players telling them someone just arrived
-			Packets::PlayerJoin playerJoined;
+			Packets::S_PlayerJoin playerJoined;
 			playerJoined.index = Nz::SafeCast<PlayerIndex>(playerIndex);
 			playerJoined.nickname = player->GetNickname();
 			playerJoined.isAuthenticated = player->IsAuthenticated();
@@ -277,7 +347,7 @@ namespace tsom
 			// Send a packet to the new player containing all existing players
 			if (NetworkSession* session = player->GetSession())
 			{
-				Packets::GameData gameData;
+				Packets::S_GameData gameData;
 				gameData.tickIndex = m_tickIndex;
 
 				ForEachPlayer([&](ServerPlayer& serverPlayer)
@@ -292,7 +362,10 @@ namespace tsom
 			}
 		}
 		m_newPlayers.Clear();
+	}
 
+	void ServerInstance::OnNetworkTick()
+	{
 		ForEachPlayer([&](ServerPlayer& serverPlayer)
 		{
 			serverPlayer.GetVisibilityHandler().Dispatch(m_tickIndex);
@@ -308,6 +381,13 @@ namespace tsom
 	void ServerInstance::OnTick(Nz::Time elapsedTime)
 	{
 		m_tickIndex++;
+		m_tickedTimerManager.Update(elapsedTime);
+
+		// Use two lists to avoid reallocation issues if a callback were to call ScheduleForNextTick itself
+		std::swap(m_scheduledTickFunctions, m_nextScheduledTickFunctions);
+		for (auto& callback : m_nextScheduledTickFunctions)
+			callback();
+		m_nextScheduledTickFunctions.clear();
 
 		ForEachPlayer([&](ServerPlayer& serverPlayer)
 		{
@@ -317,6 +397,6 @@ namespace tsom
 		for (ServerEnvironment* env : m_environments)
 			env->OnTick(elapsedTime);
 
-		OnNetworkTick();
+		HandleNetworkEvents();
 	}
 }

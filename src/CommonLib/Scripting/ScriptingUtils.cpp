@@ -1,8 +1,9 @@
-// Copyright (C) 2024 Jérôme Leclercq
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
+#include <CommonLib/EntityReference.hpp>
 #include <entt/entt.hpp>
 #include <stdexcept>
 
@@ -23,7 +24,7 @@ namespace tsom
 		if (!entityObject)
 			return {};
 
-		return entityObject.as<entt::handle>();
+		return entityObject.as<EntityReference>();
 	}
 
 	[[noreturn]] void TriggerLuaError(lua_State* L, const std::string& errMessage)

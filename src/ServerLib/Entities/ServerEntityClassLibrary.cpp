@@ -1,0 +1,225 @@
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// This file is part of the "This Space Of Mine" project
+// For conditions of distribution and use, see copyright notice in LICENSE
+
+#include <ServerLib/Entities/ServerEntityClassLibrary.hpp>
+#include <CommonLib/CharacterController.hpp>
+#include <CommonLib/EntityClass.hpp>
+#include <CommonLib/PhysicsConstants.hpp>
+#include <CommonLib/Ship.hpp>
+#include <CommonLib/ShipController.hpp>
+#include <CommonLib/Components/BuoyancyComponent.hpp>
+#include <ServerLib/ServerPlayer.hpp>
+#include <ServerLib/ServerShipEnvironment.hpp>
+#include <ServerLib/Components/AtmosphereExchanger.hpp>
+#include <ServerLib/Components/AtmosphereMonitor.hpp>
+#include <ServerLib/Components/EnvironmentEnterTriggerComponent.hpp>
+#include <ServerLib/Components/EnvironmentProxyComponent.hpp>
+#include <ServerLib/Components/ServerEnvironmentSwitchComponent.hpp>
+#include <ServerLib/Components/ServerPlayerControlledComponent.hpp>
+#include <ServerLib/Components/ShipExteriorComponent.hpp>
+#include <ServerLib/Systems/NetworkedEntitiesSystem.hpp>
+#include <Nazara/Core/Components/NodeComponent.hpp>
+#include <Nazara/Physics3D/Components/PhysCharacter3DComponent.hpp>
+#include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
+#include <spdlog/spdlog.h>
+
+namespace tsom
+{
+	void ServerEntityClassLibrary::OnPlayerActivate(entt::handle entity)
+	{
+		SharedEntityClassLibrary::OnPlayerActivate(entity);
+
+		// TODO: Cache those
+		Nz::UInt32 healthIndex = m_playerClass->FindProperty("health");
+		Nz::UInt32 oxygenIndex = m_playerClass->FindProperty("oxygen");
+		Nz::UInt32 deathRpc = m_playerClass->FindClientRpc("death");
+
+		auto& atmosphereExchanger = entity.get<AtmosphereExchanger>();
+
+		atmosphereExchanger.OnExchangeFailed.Connect([healthIndex, oxygenIndex, deathRpc](entt::handle playerEntity, AtmosphereExchanger*)
+		{
+			auto& playerInstance = playerEntity.get<ClassInstanceComponent>();
+
+			auto oxygenValue = std::get<EntityPropertySingleValue<EntityPropertyType::Integer>>(playerInstance.GetProperty(oxygenIndex));
+			if (*oxygenValue > 0)
+			{
+				*oxygenValue = std::max<Nz::Int64>(*oxygenValue - 10, 0);
+				playerInstance.UpdateProperty(oxygenIndex, oxygenValue);
+			}
+			else
+			{
+				auto healthValue = std::get<EntityPropertySingleValue<EntityPropertyType::Integer>>(playerInstance.GetProperty(healthIndex));
+				*healthValue = std::max<Nz::Int64>(*healthValue - 10, 0);
+
+				playerInstance.UpdateProperty(healthIndex, healthValue);
+				if (*healthValue == 0)
+				{
+					playerInstance.TriggerClientRpc(deathRpc, nullptr);
+
+					// FIXME: Make this automatic
+					auto& playerControlled = playerEntity.get<ServerPlayerControlledComponent>();
+					playerControlled.GetPlayer()->ExitPiloting();
+
+					playerEntity.destroy();
+				}
+			}
+		});
+
+		atmosphereExchanger.OnExchange.Connect([oxygenIndex](entt::handle playerEntity, AtmosphereExchanger*)
+		{
+			auto& playerInstance = playerEntity.get<ClassInstanceComponent>();
+
+			auto oxygenValue = std::get<EntityPropertySingleValue<EntityPropertyType::Integer>>(playerInstance.GetProperty(oxygenIndex));
+			if (*oxygenValue < 100)
+			{
+				*oxygenValue = std::min<Nz::Int64>(*oxygenValue + 10, 100);
+				playerInstance.UpdateProperty(oxygenIndex, oxygenValue);
+			}
+		});
+	}
+
+	void ServerEntityClassLibrary::OnPlayerInit(entt::handle entity)
+	{
+		auto& playerControlled = entity.get<ServerPlayerControlledComponent>();
+		ServerPlayer* player = playerControlled.GetPlayer();
+		NazaraAssert(player);
+
+		Nz::PhysCharacter3DComponent::Settings characterSettings;
+		characterSettings.collider = m_playerCollider;
+		characterSettings.objectLayer = Constants::ObjectLayerPlayer;
+
+		auto characterController = player->GetCharacterController();
+
+		entity.emplace<AtmosphereMonitor>();
+
+		auto& atmosphereExchanger = entity.emplace<AtmosphereExchanger>();
+		atmosphereExchanger.gasModifier[GasType::Oxygen] = -Constants::PlayerOxygenConsumption;
+		atmosphereExchanger.gasModifier[GasType::CarbonDioxyde] = Constants::PlayerOxygenConsumption;
+
+		auto& characterComponent = entity.emplace<Nz::PhysCharacter3DComponent>(std::move(characterSettings));
+		characterComponent.SetImpl(characterController);
+		characterComponent.DisableSleeping();
+
+		player->GetVisibilityHandler().UpdateControlledEntity(entity, characterController.get()); // TODO: Reset to nullptr when player entity is destroyed
+
+		auto& envSwitchComponent = entity.emplace<ServerEnvironmentSwitchComponent>();
+		envSwitchComponent.handleEnvironmentSwitch = [](entt::handle previousEntity, entt::handle newEntity, const EnvironmentTransform& envTransform)
+		{
+			ServerEnvironment* previousEnvironment = ServerEnvironment::GetEnvironment(previousEntity);
+			ServerEnvironment* newEnvironment = ServerEnvironment::GetEnvironment(newEntity);
+
+			auto& oldPlayerControlled = previousEntity.get<ServerPlayerControlledComponent>();
+			ServerPlayer* player = oldPlayerControlled.GetPlayer();
+
+			auto& newNode = newEntity.get<Nz::NodeComponent>();
+
+			auto& previousCharacter = previousEntity.get<Nz::PhysCharacter3DComponent>();
+			auto [linearVel, angularVel] = previousCharacter.GetLinearAndAngularVelocity();
+			linearVel = envTransform.Rotate(linearVel);
+			angularVel = envTransform.Rotate(angularVel);
+
+			auto& characterController = player->GetCharacterController();
+			characterController->SetGravityController(newEnvironment->GetGravityController());
+			characterController->RotateInstantaneously(envTransform.rotation);
+
+			Nz::PhysCharacter3DComponent::Settings characterSettings;
+			characterSettings.collider = previousCharacter.GetCollider();
+			characterSettings.objectLayer = previousCharacter.GetObjectLayer();
+			characterSettings.position = newNode.GetPosition();
+			characterSettings.rotation = newNode.GetRotation();
+
+			auto& characterComponent = newEntity.emplace<Nz::PhysCharacter3DComponent>(std::move(characterSettings));
+			characterComponent.SetImpl(characterController);
+			characterComponent.SetLinearAndAngularVelocity(linearVel, angularVel);
+			characterComponent.SetUp(newNode.GetUp());
+			characterComponent.DisableSleeping();
+
+			// Force controller update to ensure new position will be sent
+			characterController->UpdatePosition(characterComponent);
+
+			newEntity.emplace<ServerPlayerControlledComponent>(player->CreateHandle());
+
+			newEntity.get<ClassInstanceComponent>().GetClass()->ActivateEntity(newEntity);
+
+			if (newEnvironment->IsRoot())
+				player->UpdateRootEnvironment(newEnvironment);
+		};
+	}
+
+	void ServerEntityClassLibrary::OnShipExteriorActivate(entt::handle entity)
+	{
+		auto& shipExterior = entity.get<ShipExteriorComponent>();
+		ServerShipEnvironment* shipEnvironment = shipExterior.ownerShip;
+
+		auto& envProxy = entity.emplace<EnvironmentProxyComponent>();
+		envProxy.targetEnvironment = shipEnvironment;
+
+		auto& shipEntry = entity.emplace<EnvironmentEnterTriggerComponent>();
+		shipEntry.targetEnvironment = shipEnvironment;
+
+		if (const auto& interiorAreaCollider = shipEnvironment->GetInteriorAreaCollider())
+		{
+			shipEntry.entryTrigger = interiorAreaCollider;
+			shipEntry.aabb = interiorAreaCollider->GetBoundingBox();
+			shipEntry.aabb.Translate(interiorAreaCollider->GetCenterOfMass());
+		}
+		else
+			shipEntry.enabled = false;
+
+		shipExterior.onInteriorColliderUpdated.Connect(shipEnvironment->OnInteriorColliderUpdated, [entity, shipEnvironment]()
+		{
+			auto& shipEntry = entity.get<EnvironmentEnterTriggerComponent>();
+			if (const auto& interiorAreaCollider = shipEnvironment->GetInteriorAreaCollider())
+			{
+				shipEntry.enabled = true;
+				shipEntry.entryTrigger = interiorAreaCollider;
+				shipEntry.aabb = interiorAreaCollider->GetBoundingBox();
+				shipEntry.aabb.Translate(interiorAreaCollider->GetCenterOfMass());
+			}
+			else
+				shipEntry.enabled = false;
+		});
+	}
+
+	void ServerEntityClassLibrary::OnShipExteriorInit(entt::handle entity)
+	{
+		auto& shipExterior = entity.get<ShipExteriorComponent>();
+
+		ServerShipEnvironment* shipEnvironment = shipExterior.ownerShip;
+
+		Nz::RigidBody3D::DynamicSettings physSettings(shipEnvironment->GetShip().BuildHullCollider(), 100.f);
+		physSettings.objectLayer = Constants::ObjectLayerDynamic;
+		physSettings.linearDamping = 0.f;
+
+		entity.emplace<Nz::RigidBody3DComponent>(physSettings);
+		entity.emplace<BuoyancyComponent>();
+
+		auto& envSwitchComponent = entity.emplace<ServerEnvironmentSwitchComponent>();
+		envSwitchComponent.handleEnvironmentSwitch = [shipEnvironment](entt::handle previousEntity, entt::handle newEntity, const EnvironmentTransform& envTransform)
+		{
+			ServerEnvironment* previousEnvironment = ServerEnvironment::GetEnvironment(previousEntity);
+			ServerEnvironment* newEnvironment = ServerEnvironment::GetEnvironment(newEntity);
+
+			newEntity.emplace<ShipExteriorComponent>().ownerShip = shipEnvironment;
+			newEntity.emplace<BuoyancyComponent>();
+
+			newEntity.get<ClassInstanceComponent>().GetClass()->ActivateEntity(newEntity);
+
+			shipEnvironment->UpdateExterior(newEnvironment, newEntity);
+
+			// Change the root environment of players in the ship as well
+			if (newEnvironment->IsRoot())
+			{
+				entt::registry& registry = shipEnvironment->GetWorld().GetRegistry();
+				auto playerView = registry.view<ServerPlayerControlledComponent>();
+				for (entt::entity entity : playerView)
+				{
+					ServerPlayer* player = playerView.get<ServerPlayerControlledComponent>(entity).GetPlayer();
+					if (player)
+						player->UpdateRootEnvironment(newEnvironment);
+				}
+			}
+		};
+	}
+}

@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -8,11 +8,10 @@
 #define TSOM_SERVERLIB_SERVERENVIRONMENT_HPP
 
 #include <ServerLib/Export.hpp>
-#include <CommonLib/EnvironmentTransform.hpp>
+#include <CommonLib/Debug/DebugDrawInterface.hpp>
 #include <ServerLib/ServerInstance.hpp>
+#include <ServerLib/ServerPlayerList.hpp>
 #include <Nazara/Core/EnttWorld.hpp>
-#include <Nazara/Core/Node.hpp>
-#include <tsl/hopscotch_map.h>
 #include <memory>
 
 namespace Nz
@@ -23,6 +22,7 @@ namespace Nz
 namespace tsom
 {
 	class GravityController;
+	class ServerAtmosphere;
 	class ServerPlayer;
 
 	enum class ServerEnvironmentType
@@ -38,40 +38,52 @@ namespace tsom
 			ServerEnvironment(ServerEnvironment&&) = delete;
 			virtual ~ServerEnvironment();
 
-			void Connect(ServerEnvironment& environment, const EnvironmentTransform& transform);
-			void Disconnect(ServerEnvironment& environment);
+			virtual Nz::Boxf ComputeBoundingBox() const = 0;
 
 			virtual entt::handle CreateEntity() = 0;
 
-			template<typename F> void ForEachConnectedEnvironment(F&& callback) const;
+			virtual void ForEachAtmosphere(Nz::FunctionRef<void(ServerAtmosphere*)> callback);
+			virtual void ForEachAtmosphere(Nz::FunctionRef<void(const ServerAtmosphere*)> callback) const;
+
 			template<typename F> void ForEachPlayer(F&& callback);
 			template<typename F> void ForEachPlayer(F&& callback) const;
 
-			inline bool GetEnvironmentTransformation(ServerEnvironment& targetEnv, EnvironmentTransform* transform) const;
+			virtual ServerAtmosphere* GetAtmosphereAtPosition(const Nz::Vector3f& position);
 			virtual const GravityController* GetGravityController() const = 0;
+			inline ServerInstance& GetServerInstance();
 			inline ServerEnvironmentType GetType() const;
 			inline Nz::EnttWorld& GetWorld();
 			inline const Nz::EnttWorld& GetWorld() const;
 
+			inline bool IsRoot() const;
+
 			virtual void OnSave() = 0;
 			virtual void OnTick(Nz::Time elapsedTime);
 
-			void RegisterPlayer(ServerPlayer* player);
+			void RegisterPlayer(ServerPlayer* player, bool createEntities);
 			void UnregisterPlayer(ServerPlayer* player);
 
-			void UpdateConnectedTransform(ServerEnvironment& environment, const EnvironmentTransform& transform);
+			virtual void Update();
 
 			ServerEnvironment& operator=(const ServerEnvironment&) = delete;
 			ServerEnvironment& operator=(ServerEnvironment&&) = delete;
 
+			static inline ServerEnvironment* GetEnvironment(entt::handle entity);
+			static inline ServerEnvironment* GetEnvironment(entt::registry& registry);
+
 		protected:
-			ServerEnvironment(ServerInstance& serverInstance, ServerEnvironmentType type);
+			ServerEnvironment(ServerInstance& serverInstance, ServerEnvironmentType type, bool isRoot);
+
+			inline void ClearEntities();
+
+			virtual ServerAtmosphere* GetFallbackAtmosphereAtPosition(const Nz::Vector3f& position) = 0;
 
 			std::unique_ptr<Nz::EnttWorld> m_world;
-			tsl::hopscotch_map<ServerEnvironment*, EnvironmentTransform> m_connectedEnvironments;
-			Nz::Bitset<Nz::UInt64> m_registeredPlayers;
+			std::unique_ptr<DebugDrawInterface> m_debugDrawer;
+			ServerPlayerList m_registeredPlayers;
 			ServerEnvironmentType m_type;
 			ServerInstance& m_serverInstance;
+			bool m_isRoot;
 	};
 }
 

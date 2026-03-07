@@ -1,40 +1,24 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
-
-#include <Nazara/Core/Error.hpp>
 
 namespace tsom
 {
 	template<typename F>
-	void ServerEnvironment::ForEachConnectedEnvironment(F&& callback) const
-	{
-		for (auto&& [environment, transform] : m_connectedEnvironments)
-			callback(*environment, transform);
-	}
-
-	template<typename F>
 	void ServerEnvironment::ForEachPlayer(F&& callback)
 	{
-		for (std::size_t playerIndex : m_registeredPlayers.IterBits())
-			callback(*m_serverInstance.GetPlayer(playerIndex));
+		m_registeredPlayers.ForEachPlayer(std::forward<F>(callback));
 	}
 
 	template<typename F>
 	void ServerEnvironment::ForEachPlayer(F&& callback) const
 	{
-		for (std::size_t playerIndex : m_registeredPlayers.IterBits())
-			callback(*m_serverInstance.GetPlayer(playerIndex));
+		m_registeredPlayers.ForEachPlayer(std::forward<F>(callback));
 	}
 
-	inline bool ServerEnvironment::GetEnvironmentTransformation(ServerEnvironment& targetEnv, EnvironmentTransform* transform) const
+	inline ServerInstance& ServerEnvironment::GetServerInstance()
 	{
-		auto it = m_connectedEnvironments.find(&targetEnv);
-		if (it == m_connectedEnvironments.end())
-			return false;
-
-		*transform = it->second;
-		return true;
+		return m_serverInstance;
 	}
 
 	inline ServerEnvironmentType ServerEnvironment::GetType() const
@@ -50,5 +34,26 @@ namespace tsom
 	inline const Nz::EnttWorld& ServerEnvironment::GetWorld() const
 	{
 		return *m_world;
+	}
+
+	inline bool ServerEnvironment::IsRoot() const
+	{
+		return m_isRoot;
+	}
+
+	inline ServerEnvironment* ServerEnvironment::GetEnvironment(entt::handle entity)
+	{
+		NazaraAssert(entity.registry());
+		return GetEnvironment(*entity.registry());
+	}
+
+	inline ServerEnvironment* ServerEnvironment::GetEnvironment(entt::registry& registry)
+	{
+		return registry.ctx().get<ServerEnvironment*>();
+	}
+
+	inline void ServerEnvironment::ClearEntities()
+	{
+		m_world->GetRegistry().clear();
 	}
 }

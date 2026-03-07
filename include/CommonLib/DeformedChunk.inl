@@ -1,6 +1,8 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
+
+#include <Nazara/Math/Box.hpp>
 
 namespace tsom
 {
@@ -9,10 +11,45 @@ namespace tsom
 	m_deformationCenter(deformationCenter),
 	m_deformationRadius(deformationRadius)
 	{
+		SetPerFaceCollision();
 	}
 
 	inline void DeformedChunk::UpdateDeformationRadius(float deformationRadius)
 	{
 		m_deformationRadius = deformationRadius;
+	}
+
+	inline Nz::Vector3f DeformedChunk::DeformPosition(const Nz::Vector3f& position, const Nz::Vector3f& deformationCenter, float deformationRadius)
+	{
+		float distToCenter = std::max({
+			std::abs(position.x - deformationCenter.x),
+			std::abs(position.y - deformationCenter.y),
+			std::abs(position.z - deformationCenter.z),
+		});
+
+		float innerReductionSize = std::max(distToCenter - deformationRadius, 0.f);
+		Nz::Boxf innerBox(deformationCenter - Nz::Vector3f(innerReductionSize), Nz::Vector3f(innerReductionSize * 2.f));
+
+		Nz::Vector3f innerPos = Nz::Vector3f::Clamp(position, innerBox.GetMinimum(), innerBox.GetMaximum());
+		Nz::Vector3f normal = Nz::Vector3f::Normalize(position - innerPos);
+
+		return innerPos + normal * std::min(deformationRadius, distToCenter);
+	}
+
+	inline Nz::Quaternionf DeformedChunk::GetNormalDeformation(const Nz::Vector3f& position, const Nz::Vector3f& faceNormal, const Nz::Vector3f& deformationCenter, float deformationRadius)
+	{
+		float distToCenter = std::max({
+			std::abs(position.x - deformationCenter.x),
+			std::abs(position.y - deformationCenter.y),
+			std::abs(position.z - deformationCenter.z),
+		});
+
+		float innerReductionSize = std::max(distToCenter - deformationRadius, 0.f);
+		Nz::Boxf innerBox(deformationCenter - Nz::Vector3f(innerReductionSize), Nz::Vector3f(innerReductionSize * 2.f));
+
+		Nz::Vector3f innerPos = Nz::Vector3f::Clamp(position, innerBox.GetMinimum(), innerBox.GetMaximum());
+		Nz::Vector3f normal = Nz::Vector3f::Normalize(position - innerPos);
+
+		return Nz::Quaternionf::RotationBetween(faceNormal, normal);
 	}
 }

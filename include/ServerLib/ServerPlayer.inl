@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -9,19 +9,14 @@ namespace tsom
 		return m_controller;
 	}
 
-	inline entt::handle ServerPlayer::GetControlledEntity() const
+	inline EntityReference& ServerPlayer::GetControlledEntityReference()
 	{
 		return m_controlledEntity;
 	}
 
-	inline ServerEnvironment* ServerPlayer::GetControlledEntityEnvironment()
+	inline const EntityReference& ServerPlayer::GetControlledEntityReference() const
 	{
-		return m_controlledEntityEnvironment;
-	}
-
-	inline const ServerEnvironment* ServerPlayer::GetControlledEntityEnvironment() const
-	{
-		return m_controlledEntityEnvironment;
+		return m_controlledEntity;
 	}
 
 	inline ServerEnvironment* ServerPlayer::GetRootEnvironment()

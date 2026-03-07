@@ -13,7 +13,13 @@ passlist "2D"
     pass "UI Pass"
     {
         impl "Forward"
+
         output "Output" "ForwardOutput"
+        {
+            clearcolor "Viewer"
+        }
+        cleardepth "Viewer"
+
         depthstenciloutput "DepthBuffer"
         flag "LightShadowing"
     }

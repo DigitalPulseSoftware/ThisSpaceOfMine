@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -25,6 +25,8 @@ namespace tsom
 	class ClientBlockLibrary;
 	class ClientSessionHandler;
 	class ConnectionState;
+	class ConfigFile;
+	class ImGuiRuntime;
 	class NetworkSession;
 
 	struct StateData : std::enable_shared_from_this<StateData>
@@ -34,10 +36,16 @@ namespace tsom
 		Nz::Canvas* canvas;
 		Nz::EnttWorld* world;
 		Nz::Window* window;
-		ConnectionState* connectionState = nullptr;
+		Nz::WindowSwapchain* swapchain;
 		ClientBlockLibrary* blockLibrary = nullptr;
 		ClientSessionHandler* sessionHandler = nullptr;
+		ConfigFile* config;
+		ConnectionState* connectionState = nullptr;
 		NetworkSession* networkSession = nullptr;
+
+#ifdef TSOM_DEV_TOOLS
+		ImGuiRuntime* imgui = nullptr;
+#endif
 	};
 }
 

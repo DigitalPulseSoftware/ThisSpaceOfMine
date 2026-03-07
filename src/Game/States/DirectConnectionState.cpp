@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -8,6 +8,7 @@
 #include <CommonLib/UpdaterAppComponent.hpp>
 #include <CommonLib/Version.hpp>
 #include <Game/GameConfigAppComponent.hpp>
+#include <Game/GameConfigs.hpp>
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/GameState.hpp>
 #include <Game/States/UpdateState.hpp>
@@ -19,9 +20,8 @@
 #include <Nazara/Network/IpAddress.hpp>
 #include <Nazara/Network/Network.hpp>
 #include <Nazara/TextRenderer/SimpleTextDrawer.hpp>
-#include <fmt/color.h>
-#include <fmt/format.h>
 #include <nlohmann/json.hpp>
+#include <spdlog/spdlog.h>
 #include <optional>
 
 namespace tsom
@@ -32,8 +32,8 @@ namespace tsom
 	{
 		auto& gameConfig = GetStateData().app->GetComponent<GameConfigAppComponent>().GetConfig();
 
-		std::string_view address = gameConfig.GetStringValue("Menu.ServerAddress");
-		std::string_view nickname = gameConfig.GetStringValue("Menu.Login");
+		std::string_view address = gameConfig.GetStringValue(Config::Menu_ServerAddress);
+		std::string_view nickname = gameConfig.GetStringValue(Config::Menu_Login);
 
 		const Nz::CommandLineParameters& cmdParams = GetStateData().app->GetCommandLineParameters();
 		cmdParams.GetParameter("server-address", &address);
@@ -111,42 +111,42 @@ namespace tsom
 	{
 		if (m_serverAddressArea->GetText().empty())
 		{
-			fmt::print(fg(fmt::color::red), "missing server address\n");
+			spdlog::error("missing server address");
 			return;
 		}
 
 		std::string login = std::string(Nz::Trim(m_loginArea->GetText(), Nz::UnicodeAware{}));
 		if (login.empty())
 		{
-			fmt::print(fg(fmt::color::red), "login cannot be blank\n");
+			spdlog::error("login cannot be blank");
 			return;
 		}
 
 		auto& gameConfig = GetStateData().app->GetComponent<GameConfigAppComponent>();
-		Nz::UInt16 serverPort = gameConfig.GetConfig().GetIntegerValue<Nz::UInt16>("Server.Port");
+		Nz::UInt16 serverPort = gameConfig.GetConfig().GetIntegerValue<Nz::UInt16>(Config::Server_Port);
 
 		Nz::ResolveError resolveError;
 		auto hostVec = Nz::IpAddress::ResolveHostname(Nz::NetProtocol::Any, m_serverAddressArea->GetText(), std::to_string(serverPort), &resolveError);
 
 		if (hostVec.empty())
 		{
-			fmt::print(fg(fmt::color::red), "failed to resolve {}: {}\n", m_serverAddressArea->GetText(), Nz::ErrorToString(resolveError));
+			spdlog::error("failed to resolve {}: {}", m_serverAddressArea->GetText(), Nz::ErrorToString(resolveError));
 			return;
 		}
 
-		gameConfig.GetConfig().SetStringValue("Menu.Login", login);
-		gameConfig.GetConfig().SetStringValue("Menu.ServerAddress", m_serverAddressArea->GetText());
+		gameConfig.GetConfig().SetStringValue(Config::Menu_Login, login);
+		gameConfig.GetConfig().SetStringValue(Config::Menu_ServerAddress, m_serverAddressArea->GetText());
 
 		gameConfig.Save();
 
 		Nz::IpAddress serverAddress = hostVec[0].address;
 
-		fmt::print("connecting to {}...\n", serverAddress.ToString());
+		spdlog::info("connecting to {}...", serverAddress.ToString());
 
 		auto& stateData = GetStateData();
 		if (stateData.connectionState)
 		{
-			Packets::AuthRequest::AnonymousPlayerData anonymousPlayer;
+			Packets::C_AuthRequest::AnonymousPlayerData anonymousPlayer;
 			anonymousPlayer.nickname = login;
 
 			stateData.connectionState->Connect(serverAddress, std::move(anonymousPlayer), shared_from_this());

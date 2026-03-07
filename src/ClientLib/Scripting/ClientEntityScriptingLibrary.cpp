@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -7,7 +7,10 @@
 #include <ClientLib/Components/ClientInteractibleComponent.hpp>
 #include <ClientLib/Components/VisualEntityComponent.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
+#include <Nazara/Graphics/PointLight.hpp>
 #include <Nazara/Graphics/Components/GraphicsComponent.hpp>
+#include <Nazara/Graphics/Components/LightComponent.hpp>
+#include <NazaraUtils/FunctionTraits.hpp>
 #include <frozen/string.h>
 #include <frozen/unordered_map.h>
 
@@ -35,6 +38,20 @@ namespace tsom
 					{
 						auto& visualEntityComp = entity.get<VisualEntityComponent>();
 						return sol::make_object(L, &visualEntityComp.visualEntity.get<Nz::GraphicsComponent>());
+					}
+				}
+			},
+			{
+				"light", SharedEntityScriptingLibrary::ComponentEntry{
+					.addComponent = [](sol::this_state L, entt::handle entity, sol::optional<sol::table> parametersOpt)
+					{
+						auto& visualEntityComp = entity.get<VisualEntityComponent>();
+						return sol::make_object(L, &visualEntityComp.visualEntity.emplace<Nz::LightComponent>());
+					},
+					.getComponent = [](sol::this_state L, entt::handle entity)
+					{
+						auto& visualEntityComp = entity.get<VisualEntityComponent>();
+						return sol::make_object(L, &visualEntityComp.visualEntity.get<Nz::LightComponent>());
 					}
 				}
 			}
@@ -95,7 +112,22 @@ namespace tsom
 	{
 		state.new_usertype<Nz::GraphicsComponent>("GraphicsComponent",
 			sol::no_constructor,
-			"AttachRenderable", LuaFunction(&Nz::GraphicsComponent::AttachRenderable));
+			"AttachRenderable", LuaFunction(&Nz::GraphicsComponent::AttachRenderable)
+		);
+
+		state.new_usertype<Nz::LightComponent>("LightComponent",
+			sol::no_constructor,
+			"AddPointLight", LuaFunction([](Nz::LightComponent& lightComponent)
+			{
+				auto& pointLight = lightComponent.AddLight<Nz::PointLight>();
+				pointLight.UpdateEnergy(20.f);
+			}),
+			"Hide", LuaFunction(&Nz::LightComponent::Hide),
+			"Show", sol::overload(
+				LuaFunction([](Nz::LightComponent& lightComponent) { lightComponent.Show(); }),
+				LuaFunction(&Nz::LightComponent::Show)
+			)
+		);
 	}
 
 	auto ClientEntityScriptingLibrary::RetrieveAddComponentHandler(std::string_view componentType) -> AddComponentFunc

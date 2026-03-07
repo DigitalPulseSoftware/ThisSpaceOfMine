@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -13,7 +13,10 @@
 #include <CommonLib/NetworkSessionManager.hpp>
 #include <CommonLib/Scripting/ScriptingContext.hpp>
 #include <ServerLib/ServerPlayer.hpp>
+#include <ServerLib/Database/ServerDatabase.hpp>
 #include <Nazara/Core/Clock.hpp>
+#include <Nazara/Core/ThreadLocalData.hpp>
+#include <Nazara/Core/TimerManager.hpp>
 #include <NazaraUtils/Bitset.hpp>
 #include <NazaraUtils/MemoryPool.hpp>
 #include <NazaraUtils/PathUtils.hpp>
@@ -48,12 +51,13 @@ namespace tsom
 
 			template<typename... Args> NetworkSessionManager& AddSessionManager(Args&&... args);
 
-			void BroadcastChatMessage(std::string message, std::optional<PlayerIndex> senderIndex);
+			void BroadcastChatMessage(std::string message, std::optional<PlayerIndex> senderIndex = std::nullopt);
 
 			ServerPlayer* CreateAnonymousPlayer(NetworkSession* session, std::string nickname);
 			ServerPlayer* CreateAuthenticatedPlayer(NetworkSession* session, const Nz::Uuid& uuid, std::string nickname, PlayerPermissionFlags permissions);
 			void DestroyPlayer(PlayerIndex playerIndex);
 
+			inline ServerEnvironment* FindEnvironmentFromDatabaseId(Nz::UInt32 databaseId) const;
 			inline ServerPlayer* FindPlayerByNickname(std::string_view nickname);
 			inline const ServerPlayer* FindPlayerByNickname(std::string_view nickname) const;
 			inline ServerPlayer* FindPlayerByUuid(const Nz::Uuid& uuid);
@@ -64,15 +68,23 @@ namespace tsom
 
 			inline Nz::ApplicationBase& GetApplication();
 			inline const BlockLibrary& GetBlockLibrary() const;
-			inline const std::array<std::uint8_t, 32>& GetConnectionTokenEncryptionKey() const;
+			inline const Config& GetConfig() const;
 			inline const Spawnpoint& GetDefaultSpawnpoint() const;
 			inline EntityRegistry& GetEntityRegistry();
 			inline const EntityRegistry& GetEntityRegistry() const;
 			inline ServerPlayer* GetPlayer(PlayerIndex playerIndex);
 			inline const ServerPlayer* GetPlayer(PlayerIndex playerIndex) const;
+			inline ServerDatabase& GetServerDatabase();
 			inline Nz::Time GetTickDuration() const;
+			inline Nz::TimerManager& GetTickedTimerManager();
 
+			void LinkDatabaseEnvironments(Nz::UInt32 sourceDatabaseId, Nz::UInt32 destinationDatabaseId, const Nz::Vector3f& position);
+			void LoadFromDatabase();
+
+			void RegisterDatabaseEnvironment(Nz::UInt32 databaseId, std::unique_ptr<ServerEnvironment>&& serverEnvironment);
 			std::unique_ptr<Nz::EnttWorld> RegisterEnvironment(ServerEnvironment* environment);
+
+			inline void ScheduleForNextTick(std::function<void()>&& callback);
 
 			inline void SetDefaultSpawnpoint(ServerEnvironment* environment, Nz::Vector3f position, Nz::Quaternionf rotation);
 
@@ -86,7 +98,9 @@ namespace tsom
 			struct Config
 			{
 				std::array<std::uint8_t, 32> connectionTokenEncryptionKey;
+				std::string databaseFile;
 				Nz::Time saveInterval = Nz::Time::Seconds(30);
+				bool enableDebugDrawer = false;
 				bool pauseWhenEmpty = true;
 			};
 
@@ -99,6 +113,7 @@ namespace tsom
 
 		private:
 			void LoadScripts(bool isReloading = false);
+			void HandleNetworkEvents();
 			void OnNetworkTick();
 			void OnSave();
 			void OnTick(Nz::Time elapsedTime);
@@ -109,25 +124,28 @@ namespace tsom
 				std::string newNickname;
 			};
 
-			std::array<std::uint8_t, 32> m_connectionTokenEncryptionKey;
 			std::vector<std::unique_ptr<NetworkSessionManager>> m_sessionManagers;
 			std::vector<PlayerRename> m_pendingPlayerRename;
 			std::vector<ServerEnvironment*> m_environments;
 			std::vector<std::unique_ptr<Nz::EnttWorld>> m_envWorldPool;
+			std::vector<std::function<void()>> m_scheduledTickFunctions;
+			std::vector<std::function<void()>> m_nextScheduledTickFunctions;
+			tsl::hopscotch_map<Nz::UInt32 /*databaseId*/, std::unique_ptr<ServerEnvironment>> m_databaseEnvironments;
 			Nz::Bitset<> m_disconnectedPlayers;
 			Nz::Bitset<> m_newPlayers;
 			Nz::MemoryPool<ServerPlayer> m_players;
 			Nz::MillisecondClock m_saveClock;
-			Nz::Time m_saveInterval;
+			Nz::ThreadLocalData<ServerDatabase> m_serverDatabase;
 			Nz::Time m_tickAccumulator;
 			Nz::Time m_tickDuration;
+			Nz::TimerManager m_tickedTimerManager;
 			Nz::UInt16 m_tickIndex;
 			Nz::ApplicationBase& m_application;
 			BlockLibrary m_blockLibrary;
+			Config m_config;
 			ScriptingContext m_scriptingContext;
 			EntityRegistry m_entityRegistry;
 			Spawnpoint m_defaultSpawnpoint;
-			bool m_pauseWhenEmpty;
 	};
 }
 

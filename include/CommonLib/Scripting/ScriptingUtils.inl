@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme Leclercq
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -34,7 +34,7 @@ namespace tsom
 				{
 					try
 					{
-						return std::invoke(funcPtr, args...);
+						return std::invoke(funcPtr, std::forward<Args>(args)...);
 					}
 					catch (const std::exception& e)
 					{
@@ -54,7 +54,7 @@ namespace tsom
 				{
 					try
 					{
-						return std::invoke(func, args...);
+						return std::invoke(func, std::forward<Args>(args)...);
 					}
 					catch (const std::exception& e)
 					{
@@ -78,10 +78,10 @@ namespace tsom
 							if (!object.IsValid())
 								TriggerLuaError(L, "invalid object");
 
-							return std::invoke(func, *object, args...);
+							return std::invoke(func, *object, std::forward<Args>(args)...);
 						}
 						else
-							return std::invoke(func, object, args...);
+							return std::invoke(func, object, std::forward<Args>(args)...);
 					}
 					catch (const std::exception& e)
 					{
@@ -101,28 +101,8 @@ namespace tsom
 			}
 		};
 
-		template<typename O, typename Ret, typename... Args>
-		struct LuaCallWrapper<Ret(O::*)(Args...) const>
-		{
-			template<typename F>
-			static auto Wrap(F&& funcPtr)
-			{
-				return LuaWrapper<O, Ret, Args...>::template WrapMethod(std::forward<F>(funcPtr));
-			}
-		};
-
 		template<typename T, typename O, typename Ret, typename... Args>
 		struct LuaLambdaWrapper<Ret(T::*)(O&, Args...)>
-		{
-			template<typename F>
-			static auto Wrap(F&& funcPtr)
-			{
-				return LuaWrapper<O, Ret, Args...>::template WrapMethod(std::forward<F>(funcPtr));
-			}
-		};
-
-		template<typename T, typename O, typename Ret, typename... Args>
-		struct LuaLambdaWrapper<Ret(T::*)(O&, Args...) const>
 		{
 			template<typename F>
 			static auto Wrap(F&& funcPtr)
@@ -141,15 +121,32 @@ namespace tsom
 			}
 		};
 
+		template<typename O, typename Ret, typename... Args>
+		struct LuaCallWrapper<Ret(O::*)(Args...) noexcept> : LuaCallWrapper<Ret(O::*)(Args...)> {};
+
+		template<typename O, typename Ret, typename... Args>
+		struct LuaCallWrapper<Ret(O::*)(Args...) const> : LuaCallWrapper<Ret(O::*)(Args...)> {};
+
+		template<typename O, typename Ret, typename... Args>
+		struct LuaCallWrapper<Ret(O::*)(Args...) const noexcept> : LuaCallWrapper<Ret(O::*)(Args...)> {};
+
 		template<typename T, typename O, typename Ret, typename... Args>
-		struct LuaLambdaWrapper<Ret(T::*)(const O&, Args...) const>
-		{
-			template<typename F>
-			static auto Wrap(F&& funcPtr)
-			{
-				return LuaWrapper<const O, Ret, Args...>::template WrapMethod(std::forward<F>(funcPtr));
-			}
-		};
+		struct LuaLambdaWrapper<Ret(T::*)(O&, Args...) noexcept> : LuaLambdaWrapper<Ret(T::*)(O&, Args...)> {};
+
+		template<typename T, typename O, typename Ret, typename... Args>
+		struct LuaLambdaWrapper<Ret(T::*)(O&, Args...) const> : LuaLambdaWrapper<Ret(T::*)(O&, Args...)> {};
+
+		template<typename T, typename O, typename Ret, typename... Args>
+		struct LuaLambdaWrapper<Ret(T::*)(O&, Args...) const noexcept> : LuaLambdaWrapper<Ret(T::*)(O&, Args...)> {};
+
+		template<typename T, typename O, typename Ret, typename... Args>
+		struct LuaLambdaWrapper<Ret(T::*)(const O&, Args...) noexcept> : LuaLambdaWrapper<Ret(T::*)(const O&, Args...)> {};
+
+		template<typename T, typename O, typename Ret, typename... Args>
+		struct LuaLambdaWrapper<Ret(T::*)(const O&, Args...) const> : LuaLambdaWrapper<Ret(T::*)(const O&, Args...)> {};
+
+		template<typename T, typename O, typename Ret, typename... Args>
+		struct LuaLambdaWrapper<Ret(T::*)(const O&, Args...) const noexcept> : LuaLambdaWrapper<Ret(T::*)(const O&, Args...)> {};
 
 		template<typename T, typename Ret, typename... Args>
 		struct LuaLambdaWrapper<Ret(T::*)(Args...)>
@@ -162,14 +159,13 @@ namespace tsom
 		};
 
 		template<typename T, typename Ret, typename... Args>
-		struct LuaLambdaWrapper<Ret(T::*)(Args...) const>
-		{
-			template<typename F>
-			static auto Wrap(F&& funcPtr)
-			{
-				return LuaWrapper<T, Ret, Args...>::template Wrap(std::forward<F>(funcPtr));
-			}
-		};
+		struct LuaLambdaWrapper<Ret(T::*)(Args...) noexcept> : LuaLambdaWrapper<Ret(T::*)(Args...)> {};
+
+		template<typename T, typename Ret, typename... Args>
+		struct LuaLambdaWrapper<Ret(T::*)(Args...) const> : LuaLambdaWrapper<Ret(T::*)(Args...)> {};
+
+		template<typename T, typename Ret, typename... Args>
+		struct LuaLambdaWrapper<Ret(T::*)(Args...) const noexcept> : LuaLambdaWrapper<Ret(T::*)(Args...)> {};
 	}
 
 	template<typename... Args>

@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -12,14 +12,13 @@
 #include <ServerLib/ServerPlayer.hpp>
 #include <ServerLib/Session/PlayerSessionHandler.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
-#include <fmt/color.h>
-#include <fmt/format.h>
+#include <spdlog/spdlog.h>
 
 namespace tsom
 {
 	constexpr SessionHandler::SendAttributeTable s_packetAttributes = SessionHandler::BuildAttributeTable({
-		{ PacketIndex<Packets::AuthResponse>,   { .channel = 0, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::NetworkStrings>, { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } }
+		{ PacketIndex<Packets::S_AuthResponse>,   { .channel = 0, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::S_NetworkStrings>, { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } }
 	});
 
 	InitialSessionHandler::InitialSessionHandler(ServerInstance& instance, NetworkSession* session) :
@@ -36,14 +35,14 @@ namespace tsom
 		});
 	}
 
-	void InitialSessionHandler::HandlePacket(Packets::AuthRequest&& authRequest)
+	void InitialSessionHandler::HandlePacket(Packets::C_AuthRequest&& authRequest)
 	{
 		std::uint32_t majorVersion, minorVersion, patchVersion;
 		DecodeVersion(authRequest.gameVersion, majorVersion, minorVersion, patchVersion);
 
 		auto FailAuth = [&](AuthError err)
 		{
-			Packets::AuthResponse response;
+			Packets::S_AuthResponse response;
 			response.authResult = Nz::Err(err);
 
 			GetSession()->SendPacket(response);
@@ -56,22 +55,22 @@ namespace tsom
 		PlayerPermissionFlags permissions;
 		bool success = std::visit(Nz::Overloaded
 		{
-			[&](Packets::AuthRequest::AnonymousPlayerData& anonymousData) -> bool
+			[&](Packets::C_AuthRequest::AnonymousPlayerData& anonymousData) -> bool
 			{
 				login = std::move(anonymousData.nickname).Str();
 
-				fmt::print("{0} authenticated (anonymous)\n", login);
+				spdlog::info("{0} authenticated (anonymous)", login);
 				return true;
 			},
-			[&](Packets::AuthRequest::AuthenticatedPlayerData& authenticatedData) -> bool
+			[&](Packets::C_AuthRequest::AuthenticatedPlayerData& authenticatedData) -> bool
 			{
-				const std::array<Nz::UInt8, 32>& key = m_instance.GetConnectionTokenEncryptionKey();
+				const std::array<Nz::UInt8, 32>& key = m_instance.GetConfig().connectionTokenEncryptionKey;
 
 				ConnectionTokenPrivate tokenPrivate;
 				ConnectionTokenAuth errorCode = ConnectionTokenPrivate::AuthAndDecrypt(authenticatedData.connectionToken, key, &tokenPrivate);
 				if (errorCode != ConnectionTokenAuth::Success)
 				{
-					fmt::print(fg(fmt::color::red), "connection token is invalid\n", login);
+					spdlog::error("connection token is invalid", login);
 					FailAuth(AuthError::InvalidToken);
 					return false;
 				}
@@ -84,14 +83,14 @@ namespace tsom
 					if (std::optional<PlayerPermission> permissionOpt = PlayerPermissionFromString(permissionStr))
 						permissions |= *permissionOpt;
 					else
-						fmt::print(fg(fmt::color::yellow), "unknown permission \"{}\"\n", permissionStr);
+						spdlog::warn("unknown permission \"{}\"", permissionStr);
 				}
 
 				// Register player token (FIXME: not really the right place)
 				auto& playerTokens = m_instance.GetApplication().GetComponent<PlayerTokenAppComponent>();
 				playerTokens.Register(tokenPrivate.player.uuid, tokenPrivate.api.url, tokenPrivate.api.refreshToken);
 
-				fmt::print("{0} authenticated\n", login);
+				spdlog::info("{0} authenticated", login);
 				return true;
 			}
 		}, authRequest.token);
@@ -101,27 +100,24 @@ namespace tsom
 
 		if (login.empty() || login != Nz::Trim(login, Nz::UnicodeAware{}))
 		{
-			fmt::print(fg(fmt::color::red), "{0} nickname hasn't been trimmed\n", login);
+			spdlog::error("{0} nickname hasn't been trimmed", login);
 			return FailAuth(AuthError::ProtocolError);
 		}
 
-		fmt::print("Auth request from {0} (version {1}.{2}.{3})\n", login, majorVersion, minorVersion, patchVersion);
+		spdlog::info("Auth request from {0} (version {1}.{2}.{3})", login, majorVersion, minorVersion, patchVersion);
 
 		if (authRequest.gameVersion < Constants::ProtocolRequiredClientVersion)
 		{
-			fmt::print(fg(fmt::color::red), "{0} authentication failed (version is too old)\n", login);
+			spdlog::error("{0} authentication failed (version is too old)", login);
 			return FailAuth(AuthError::UpgradeRequired);
 		}
 
-		if (authRequest.gameVersion > GameVersion)
+		// Disallow more recent client than the server (except in dev mode for dev version)
+		if (authRequest.gameVersion > GameVersion && (!IsDevVersion() || authRequest.gameVersion != Nz::MaxValue<Nz::UInt32>()))
 		{
-			fmt::print(fg(fmt::color::red), "{0} authentication failed (version is more recent than server's)\n", login);
+			spdlog::error("{0} authentication failed (version is more recent than server's)", login);
 			return FailAuth(AuthError::ServerIsOutdated);
 		}
-
-		// Make a special dev version
-		if (IsDevVersion())
-			authRequest.gameVersion = Nz::MaxValue();
 
 		NetworkSession* session = GetSession();
 		session->SetProtocolVersion(authRequest.gameVersion);
@@ -135,7 +131,7 @@ namespace tsom
 		if (!player)
 			return FailAuth(AuthError::InternalError);
 
-		Packets::AuthResponse response;
+		Packets::S_AuthResponse response;
 		response.authResult = Nz::Ok();
 		response.ownPlayerIndex = player->GetPlayerIndex();
 
@@ -148,11 +144,11 @@ namespace tsom
 
 	void InitialSessionHandler::OnDeserializationError(std::size_t packetIndex)
 	{
-		if (packetIndex == PacketIndex<Packets::AuthRequest>)
+		if (packetIndex == PacketIndex<Packets::C_AuthRequest>)
 		{
-			fmt::print("failed to deserialize Auth packet from peer {0}\n", GetSession()->GetPeerId());
+			spdlog::warn("failed to deserialize Auth packet from peer {0}", GetSession()->GetPeerId());
 
-			Packets::AuthResponse response;
+			Packets::S_AuthResponse response;
 			response.authResult = Nz::Err(AuthError::ProtocolError);
 
 			GetSession()->SendPacket(response);
@@ -162,20 +158,20 @@ namespace tsom
 		}
 		else
 		{
-			fmt::print("failed to deserialize unexpected packet {1} from peer {0}\n", GetSession()->GetPeerId(), PacketNames[packetIndex]);
+			spdlog::warn("failed to deserialize unexpected packet {1} from peer {0}", GetSession()->GetPeerId(), PacketNames[packetIndex]);
 			GetSession()->Disconnect(DisconnectionType::Kick);
 		}
 	}
 
 	void InitialSessionHandler::OnUnexpectedPacket(std::size_t packetIndex)
 	{
-		fmt::print("received unexpected packet {1} from peer {0}\n", GetSession()->GetPeerId(), PacketNames[packetIndex]);
+		spdlog::warn("received unexpected packet {1} from peer {0}", GetSession()->GetPeerId(), PacketNames[packetIndex]);
 		GetSession()->Disconnect(DisconnectionType::Kick);
 	}
 
 	void InitialSessionHandler::OnUnknownOpcode(Nz::UInt8 opcode)
 	{
-		fmt::print("received unknown packet (opcode: {1}) from peer {0}\n", GetSession()->GetPeerId(), +opcode);
+		spdlog::warn("received unknown packet (opcode: {1}) from peer {0}", GetSession()->GetPeerId(), +opcode);
 		GetSession()->Disconnect(DisconnectionType::Kick);
 	}
 }

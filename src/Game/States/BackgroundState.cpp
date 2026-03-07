@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -37,9 +37,11 @@ namespace tsom
 			auto skyboxPasses = filesystem.Load<Nz::PipelinePassList>("assets/skybox.passlist");
 
 			auto& cameraComponent = m_camera.emplace<Nz::CameraComponent>(GetStateData().renderTarget, std::move(skyboxPasses), Nz::ProjectionType::Perspective);
+			cameraComponent.UpdateClearDepth(0.f);
 			cameraComponent.UpdateFOV(Nz::DegreeAnglef(45.f));
 			cameraComponent.UpdateRenderMask(tsom::Constants::RenderMask3D);
 			cameraComponent.UpdateRenderOrder(-1);
+			cameraComponent.EnableReversedZ(true);
 		}
 
 		m_skybox = CreateEntity();
@@ -54,6 +56,7 @@ namespace tsom
 			// Setup only a forward pass (using the SkyboxMaterial module)
 			Nz::MaterialPass forwardPass;
 			forwardPass.states.depthBuffer = true;
+			forwardPass.states.depthCompare = Nz::RendererComparison::GreaterOrEqual;
 			forwardPass.shaders.push_back(std::make_shared<Nz::UberShader>(nzsl::ShaderStageType::Fragment | nzsl::ShaderStageType::Vertex, "SkyboxMaterial"));
 			skyboxSettings.AddPass("ForwardPass", forwardPass);
 

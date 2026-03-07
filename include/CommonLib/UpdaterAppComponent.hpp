@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -30,20 +30,20 @@ namespace tsom
 
 			void CancelUpdate();
 
-			void DownloadAndUpdate(const UpdateInfo& updateInfo, bool downloadAssets, bool downloadBinaries);
+			void DownloadAndUpdate(const UpdateInfo& updateInfo, bool downloadAssets, bool downloadBinaries, bool downloadUpdater, bool startUpdateWhenReady);
 
-			void FetchLastVersion(std::function<void(Nz::Result<UpdateInfo, std::string>&& updateInfo)>&& callback);
+			void FetchLastVersion(bool server, std::function<void(Nz::Result<UpdateInfo, std::string>&& updateInfo)>&& callback);
 
 			UpdaterAppComponent& operator=(const UpdaterAppComponent&) = delete;
 			UpdaterAppComponent& operator=(UpdaterAppComponent&&) = delete;
 
 			NazaraSignal(OnDownloadProgress, std::size_t /*activeDownloadCount*/, Nz::UInt64 /*totalDownloaded*/, Nz::UInt64 /*totalSize*/);
 			NazaraSignal(OnUpdateFailed);
+			NazaraSignal(OnUpdateReady);
 			NazaraSignal(OnUpdateStarting);
 
 		private:
 			void StartUpdaterAndQuit();
-			void Update(Nz::Time elapsedTime) override;
 			void UpdateProgression();
 
 			Nz::FixedVector<std::shared_ptr<const DownloadManager::Download>, 3> m_activeDownloads;

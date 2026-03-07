@@ -1,13 +1,14 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/Chunk.hpp>
 #include <CommonLib/BlockLibrary.hpp>
 #include <CommonLib/ChunkContainer.hpp>
+#include <CommonLib/ChunkLock.hpp>
 #include <CommonLib/InternalConstants.hpp>
 #include <Nazara/Core/ByteStream.hpp>
-#include <Nazara/Core/VertexStruct.hpp>
+#include <Nazara/Math/Box.hpp>
 #include <NazaraUtils/CallOnExit.hpp>
 #include <NazaraUtils/EnumArray.hpp>
 #include <cassert>
@@ -17,12 +18,20 @@ namespace tsom
 {
 	Chunk::~Chunk() = default;
 
-	void Chunk::BuildMesh(std::vector<Nz::UInt32>& indices, const Nz::Vector3f& gravityCenter, const Nz::FunctionRef<VertexAttributes(Nz::UInt32)>& addVertices) const
+	void Chunk::BuildMesh(std::size_t layerIndex, std::vector<Nz::UInt32>& indices, const Nz::Vector3f& gravityCenter, const Nz::FunctionRef<VertexAttributes(const Nz::Vector3ui& blockIndices, Direction direction)>& addFace) const
 	{
-		auto DrawFace = [&](BlockIndex blockIndex, const Nz::Vector3f& blockCenter, const std::array<Nz::Vector3f, 4>& pos)
+		auto DrawFace = [&](BlockIndex blockContent, const Nz::Vector3ui& blockIndices, Direction direction, const Nz::Vector3f& blockCenter, const std::array<Nz::Vector3f, 4>& pos)
 		{
-			VertexAttributes vertexAttributes = addVertices(pos.size());
+			VertexAttributes vertexAttributes = addFace(blockIndices, direction);
 			assert(vertexAttributes.position);
+
+			indices.push_back(vertexAttributes.firstIndex);
+			indices.push_back(vertexAttributes.firstIndex + 2);
+			indices.push_back(vertexAttributes.firstIndex + 1);
+
+			indices.push_back(vertexAttributes.firstIndex + 1);
+			indices.push_back(vertexAttributes.firstIndex + 2);
+			indices.push_back(vertexAttributes.firstIndex + 3);
 
 			for (std::size_t i = 0; i < pos.size(); ++i)
 				vertexAttributes.position[i] = pos[i];
@@ -36,9 +45,17 @@ namespace tsom
 					vertexAttributes.normal[i] = faceDirection;
 			}
 
+			if (vertexAttributes.tangent)
+			{
+				Nz::Vector3f edgeCenter = (pos[0] + pos[1]) * 0.5f;
+				Nz::Vector3f tangent = Nz::Vector3f::Normalize(edgeCenter - faceCenter);
+
+				for (std::size_t i = 0; i < pos.size(); ++i)
+					vertexAttributes.tangent[i] = tangent;
+			}
+
 			if (vertexAttributes.uv)
 			{
-				// Get face up vector
 				Nz::Vector3f faceUp = s_dirNormals[DirectionFromNormal(Nz::Vector3f::Normalize(faceCenter - gravityCenter))];
 
 				// Make up the rotation from the face up to the regular up
@@ -47,7 +64,7 @@ namespace tsom
 				// Compute texture direction based on face direction in regular orientation
 				Direction texDirection = DirectionFromNormal(upRotation * faceDirection);
 
-				const auto& blockData = m_blockLibrary.GetBlockData(blockIndex);
+				const auto& blockData = m_blockLibrary.GetBlockData(blockContent);
 				std::size_t textureIndex = blockData.texIndices[texDirection];
 
 				// Compute UV
@@ -92,34 +109,26 @@ namespace tsom
 				}
 			}
 
-			indices.push_back(vertexAttributes.firstIndex);
-			indices.push_back(vertexAttributes.firstIndex + 2);
-			indices.push_back(vertexAttributes.firstIndex + 1);
-
-			indices.push_back(vertexAttributes.firstIndex + 1);
-			indices.push_back(vertexAttributes.firstIndex + 2);
-			indices.push_back(vertexAttributes.firstIndex + 3);
+			// deform positions after generating UV
+			if (DeformPositions(vertexAttributes.position, pos.size()))
+			{
+				if (vertexAttributes.normal && vertexAttributes.tangent)
+					DeformNormalsAndTangents(vertexAttributes.normal, vertexAttributes.tangent, faceDirection, vertexAttributes.position, pos.size());
+				else if (vertexAttributes.normal)
+					DeformNormals(vertexAttributes.normal, faceDirection, vertexAttributes.position, pos.size());
+			}
 		};
 
-		// Find and lock all neighbor chunks to avoid discrepancies between chunks
 		Nz::EnumArray<Direction, const Chunk*> neighborChunks;
+		MultiChunkReadLock chunkLock;
 		for (auto&& [dir, chunk] : neighborChunks.iter_kv())
 		{
 			chunk = m_owner.GetChunk(m_indices + s_chunkDirOffset[dir]);
-			if (!chunk)
-				continue;
-
-			chunk->LockRead();
+			if (chunk)
+				chunkLock.AddChunk(chunk);
 		}
 
-		NAZARA_DEFER(
-		{
-			for (const Chunk* chunk : neighborChunks)
-			{
-				if (chunk)
-					chunk->UnlockRead();
-			}
-		});
+		chunkLock.Lock();
 
 		auto GetNeighborBlock = [&](Nz::Vector3ui indices, Direction direction) -> std::optional<BlockIndex>
 		{
@@ -177,13 +186,18 @@ namespace tsom
 			{
 				for (unsigned int x = 0; x < m_size.x; ++x)
 				{
-					BlockIndex blockIndex = GetBlockContent({ x, y, z });
+					Nz::Vector3ui blockIndices(x, y, z);
+
+					BlockIndex blockIndex = GetBlockContent(blockIndices);
 					if (blockIndex == EmptyBlockIndex)
 						continue;
 
 					const auto& blockData = m_blockLibrary.GetBlockData(blockIndex);
+					if (blockData.layerIndex != layerIndex)
+						continue;
 
-					Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> corners = ComputeVoxelCorners({ x, y, z });
+					// Get unaltered voxel corners and deform them next
+					Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> corners = Chunk::ComputeBlockCorners(blockIndices);
 
 					Nz::Vector3f blockCenter = std::accumulate(corners.begin(), corners.end(), Nz::Vector3f::Zero()) / corners.size();
 
@@ -198,55 +212,78 @@ namespace tsom
 					};
 
 					// Up
-					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, Direction::Up); !neighborOpt || IsTransparent(*neighborOpt))
+					if (auto neighborOpt = GetNeighborBlock(blockIndices, Direction::Up); !neighborOpt || IsTransparent(*neighborOpt))
 					{
-						DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::RightTopNear], corners[Nz::BoxCorner::LeftTopNear], corners[Nz::BoxCorner::RightBottomNear], corners[Nz::BoxCorner::LeftBottomNear] });
+						DrawFace(blockIndex, blockIndices, Direction::Up, blockCenter, { corners[Nz::BoxCorner::RightTopNear], corners[Nz::BoxCorner::LeftTopNear], corners[Nz::BoxCorner::RightBottomNear], corners[Nz::BoxCorner::LeftBottomNear] });
 						if (blockData.isDoubleSided)
-							DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::LeftTopNear], corners[Nz::BoxCorner::RightTopNear], corners[Nz::BoxCorner::LeftBottomNear], corners[Nz::BoxCorner::RightBottomNear] });
+							DrawFace(blockIndex, blockIndices, Direction::Up, blockCenter, { corners[Nz::BoxCorner::LeftTopNear], corners[Nz::BoxCorner::RightTopNear], corners[Nz::BoxCorner::LeftBottomNear], corners[Nz::BoxCorner::RightBottomNear] });
 					}
 
 					// Down
-					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, Direction::Down); !neighborOpt || IsTransparent(*neighborOpt))
+					if (auto neighborOpt = GetNeighborBlock(blockIndices, Direction::Down); !neighborOpt || IsTransparent(*neighborOpt))
 					{
-						DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::LeftTopFar], corners[Nz::BoxCorner::RightTopFar], corners[Nz::BoxCorner::LeftBottomFar], corners[Nz::BoxCorner::RightBottomFar] });
+						DrawFace(blockIndex, blockIndices, Direction::Down, blockCenter, { corners[Nz::BoxCorner::LeftTopFar], corners[Nz::BoxCorner::RightTopFar], corners[Nz::BoxCorner::LeftBottomFar], corners[Nz::BoxCorner::RightBottomFar] });
 						if (blockData.isDoubleSided)
-							DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::RightTopFar], corners[Nz::BoxCorner::LeftTopFar], corners[Nz::BoxCorner::RightBottomFar], corners[Nz::BoxCorner::LeftBottomFar] });
+							DrawFace(blockIndex, blockIndices, Direction::Down, blockCenter, { corners[Nz::BoxCorner::RightTopFar], corners[Nz::BoxCorner::LeftTopFar], corners[Nz::BoxCorner::RightBottomFar], corners[Nz::BoxCorner::LeftBottomFar] });
 					}
 
 					// Front
-					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, Direction::Front); !neighborOpt || IsTransparent(*neighborOpt))
+					if (auto neighborOpt = GetNeighborBlock(blockIndices, Direction::Front); !neighborOpt || IsTransparent(*neighborOpt))
 					{
-						DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::RightTopFar], corners[Nz::BoxCorner::RightTopNear], corners[Nz::BoxCorner::RightBottomFar], corners[Nz::BoxCorner::RightBottomNear] });
+						DrawFace(blockIndex, blockIndices, Direction::Front, blockCenter, { corners[Nz::BoxCorner::RightTopFar], corners[Nz::BoxCorner::RightTopNear], corners[Nz::BoxCorner::RightBottomFar], corners[Nz::BoxCorner::RightBottomNear] });
 						if (blockData.isDoubleSided)
-							DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::RightTopNear], corners[Nz::BoxCorner::RightTopFar], corners[Nz::BoxCorner::RightBottomNear], corners[Nz::BoxCorner::RightBottomFar] });
+							DrawFace(blockIndex, blockIndices, Direction::Front, blockCenter, { corners[Nz::BoxCorner::RightTopNear], corners[Nz::BoxCorner::RightTopFar], corners[Nz::BoxCorner::RightBottomNear], corners[Nz::BoxCorner::RightBottomFar] });
 					}
 
 					// Back
-					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, Direction::Back); !neighborOpt || IsTransparent(*neighborOpt))
+					if (auto neighborOpt = GetNeighborBlock(blockIndices, Direction::Back); !neighborOpt || IsTransparent(*neighborOpt))
 					{
-						DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::LeftTopNear], corners[Nz::BoxCorner::LeftTopFar], corners[Nz::BoxCorner::LeftBottomNear], corners[Nz::BoxCorner::LeftBottomFar] });
+						DrawFace(blockIndex, blockIndices, Direction::Back, blockCenter, { corners[Nz::BoxCorner::LeftTopNear], corners[Nz::BoxCorner::LeftTopFar], corners[Nz::BoxCorner::LeftBottomNear], corners[Nz::BoxCorner::LeftBottomFar] });
 						if (blockData.isDoubleSided)
-							DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::LeftTopFar], corners[Nz::BoxCorner::LeftTopNear], corners[Nz::BoxCorner::LeftBottomFar], corners[Nz::BoxCorner::LeftBottomNear] });
+							DrawFace(blockIndex, blockIndices, Direction::Back, blockCenter, { corners[Nz::BoxCorner::LeftTopFar], corners[Nz::BoxCorner::LeftTopNear], corners[Nz::BoxCorner::LeftBottomFar], corners[Nz::BoxCorner::LeftBottomNear] });
 					}
 
 					// Left
-					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, Direction::Left); !neighborOpt || IsTransparent(*neighborOpt))
+					if (auto neighborOpt = GetNeighborBlock(blockIndices, Direction::Left); !neighborOpt || IsTransparent(*neighborOpt))
 					{
-						DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::RightBottomNear], corners[Nz::BoxCorner::LeftBottomNear], corners[Nz::BoxCorner::RightBottomFar], corners[Nz::BoxCorner::LeftBottomFar] });
+						DrawFace(blockIndex, blockIndices, Direction::Left, blockCenter, { corners[Nz::BoxCorner::RightBottomNear], corners[Nz::BoxCorner::LeftBottomNear], corners[Nz::BoxCorner::RightBottomFar], corners[Nz::BoxCorner::LeftBottomFar] });
 						if (blockData.isDoubleSided)
-							DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::LeftBottomNear], corners[Nz::BoxCorner::RightBottomNear], corners[Nz::BoxCorner::LeftBottomFar], corners[Nz::BoxCorner::RightBottomFar] });
+							DrawFace(blockIndex, blockIndices, Direction::Left, blockCenter, { corners[Nz::BoxCorner::LeftBottomNear], corners[Nz::BoxCorner::RightBottomNear], corners[Nz::BoxCorner::LeftBottomFar], corners[Nz::BoxCorner::RightBottomFar] });
 					}
 
 					// Right
-					if (auto neighborOpt = GetNeighborBlock({ x, y, z }, Direction::Right); !neighborOpt || IsTransparent(*neighborOpt))
+					if (auto neighborOpt = GetNeighborBlock(blockIndices, Direction::Right); !neighborOpt || IsTransparent(*neighborOpt))
 					{
-						DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::LeftTopNear], corners[Nz::BoxCorner::RightTopNear], corners[Nz::BoxCorner::LeftTopFar], corners[Nz::BoxCorner::RightTopFar] });
+						DrawFace(blockIndex, blockIndices, Direction::Right, blockCenter, { corners[Nz::BoxCorner::LeftTopNear], corners[Nz::BoxCorner::RightTopNear], corners[Nz::BoxCorner::LeftTopFar], corners[Nz::BoxCorner::RightTopFar] });
 						if (blockData.isDoubleSided)
-							DrawFace(blockIndex, blockCenter, { corners[Nz::BoxCorner::RightTopNear], corners[Nz::BoxCorner::LeftTopNear], corners[Nz::BoxCorner::RightTopFar], corners[Nz::BoxCorner::LeftTopFar] });
+							DrawFace(blockIndex, blockIndices, Direction::Right, blockCenter, { corners[Nz::BoxCorner::RightTopNear], corners[Nz::BoxCorner::LeftTopNear], corners[Nz::BoxCorner::RightTopFar], corners[Nz::BoxCorner::LeftTopFar] });
 					}
 				}
 			}
 		}
+	}
+
+	Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> Chunk::ComputeBlockCorners(const Nz::Vector3ui& indices) const
+	{
+		Nz::Vector3f blockPos = (Nz::Vector3f(indices) - Nz::Vector3f(m_size) * 0.5f) * m_blockSize;
+		Nz::Boxf box(blockPos.x, blockPos.z, blockPos.y, m_blockSize, m_blockSize, m_blockSize);
+		return box.GetCorners();
+	}
+
+	void Chunk::DeformNormals(Nz::SparsePtr<Nz::Vector3f> normals, const Nz::Vector3f& referenceNormal, Nz::SparsePtr<const Nz::Vector3f> positions, std::size_t vertexCount) const
+	{
+		/* nothing to do */
+	}
+
+	void Chunk::DeformNormalsAndTangents(Nz::SparsePtr<Nz::Vector3f> normals, Nz::SparsePtr<Nz::Vector3f> tangents, const Nz::Vector3f& referenceNormal, Nz::SparsePtr<const Nz::Vector3f> positions, std::size_t vertexCount) const
+	{
+		/* nothing to do */
+	}
+
+	bool Chunk::DeformPositions(Nz::SparsePtr<Nz::Vector3f> /*positions*/, std::size_t /*positionCount*/) const
+	{
+		/* nothing to do */
+		return false;
 	}
 
 	void Chunk::Deserialize(Nz::ByteStream& byteStream)
@@ -345,34 +382,59 @@ namespace tsom
 		}
 	}
 
-	void Chunk::UpdateBlock(const Nz::Vector3ui& indices, BlockIndex newBlock)
+	void Chunk::UpdateBlock(const Nz::Vector3ui& indices, BlockIndex newBlock, bool ensureContent)
 	{
-		NazaraAssert(!m_blocks.empty(), "chunk has not been reset");
+		if (ensureContent && !HasContent())
+			Reset();
 
-		const auto& blockData = m_blockLibrary.GetBlockData(newBlock);
+		NazaraAssertMsg(HasContent(), "chunk has not been reset");
+
+		const auto& newBlockData = m_blockLibrary.GetBlockData(newBlock);
 
 		unsigned int blockIndex = GetBlockLocalIndex(indices);
-		BlockIndex oldContent = m_blocks[blockIndex];
+		BlockIndex oldBlock = m_blocks[blockIndex];
+		const auto& oldBlockData = m_blockLibrary.GetBlockData(oldBlock);
+		assert(IsLayerRegistered(oldBlockData.layerIndex));
 		m_blocks[blockIndex] = newBlock;
-		m_collisionCellMask[blockIndex] = blockData.hasCollisions;
 
-		m_blockTypeCount[oldContent]--;
+		if (!IsLayerRegistered(newBlockData.layerIndex))
+			RegisterLayer(newBlockData.layerIndex);
+
+		m_layers[oldBlockData.layerIndex]->collisionCellMasks[blockIndex] = false;
+		m_layers[newBlockData.layerIndex]->collisionCellMasks[blockIndex] = newBlockData.hasCollisions;
+		m_layers[newBlockData.layerIndex]->blockCount++;
+
+		m_blockTypeCount[oldBlock]--;
 		if (newBlock >= m_blockTypeCount.size())
 			m_blockTypeCount.resize(newBlock + 1);
 
 		m_blockTypeCount[newBlock]++;
 
-		OnBlockUpdated(this, indices, newBlock);
+		OnBlockUpdated(this, indices, oldBlock, newBlock, oldBlockData.layerIndex, newBlockData.layerIndex);
+
+		// Unregister layer only after update to avoid triggering chunk update (OnBlockUpodated)
+		assert(m_layers[oldBlockData.layerIndex]->blockCount > 0);
+		if (--m_layers[oldBlockData.layerIndex]->blockCount == 0)
+			UnregisterLayer(oldBlockData.layerIndex);
 	}
 
 	void Chunk::OnChunkReset()
 	{
 		std::fill(m_blockTypeCount.begin(), m_blockTypeCount.end(), 0);
+
 		for (std::size_t blockIndex = 0; blockIndex < m_blocks.size(); ++blockIndex)
 		{
 			BlockIndex blockContent = m_blocks[blockIndex];
 			const auto& blockData = m_blockLibrary.GetBlockData(blockContent);
-			m_collisionCellMask[blockIndex] = blockData.hasCollisions;
+
+			if NAZARA_UNLIKELY(!IsLayerRegistered(blockData.layerIndex))
+			{
+				// First block on this layer, register it
+				RegisterLayer(blockData.layerIndex);
+			}
+
+			m_layers[blockData.layerIndex]->blockCount++;
+			m_layers[blockData.layerIndex]->collisionCellMasks[blockIndex] = blockData.hasCollisions;
 
 			if (blockContent >= m_blockTypeCount.size())
 				m_blockTypeCount.resize(blockContent + 1);

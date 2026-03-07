@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -18,7 +18,8 @@ namespace tsom
 	TSOM_COMMONLIB_API extern std::uint32_t GamePatchVersion;
 	TSOM_COMMONLIB_API extern std::uint32_t GameVersion;
 
-	TSOM_COMMONLIB_API extern std::string_view BuildConfig;
+	TSOM_COMMONLIB_API extern std::string_view BuildPlatform;
+	TSOM_COMMONLIB_API extern std::string_view BuildArch;
 	TSOM_COMMONLIB_API extern std::string_view BuildSystem;
 	TSOM_COMMONLIB_API extern std::string_view BuildBranch;
 	TSOM_COMMONLIB_API extern std::string_view BuildCommit;
