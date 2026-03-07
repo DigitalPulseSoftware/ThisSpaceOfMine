@@ -54,10 +54,20 @@ namespace tsom
 
 		auto& planetComponent = m_planetEntity.get<PlanetComponent>();
 
+		ChunkIndices firstChunkIndices(-int(m_chunkCount.x / 2), -int(m_chunkCount.y / 2), -int(m_chunkCount.z / 2));
+
 		m_chunkLoadingData = std::make_shared<ChunkLoadingData>();
 		m_chunkLoadingData->chunkCount = m_chunkCount;
 		m_chunkLoadingData->planet = planetComponent.planet;
-		m_chunkLoadingData->remainingChunks.emplace(-int(m_chunkCount.x / 2), -int(m_chunkCount.y / 2), -int(m_chunkCount.z / 2));
+		m_chunkLoadingData->remainingChunks.emplace(firstChunkIndices);
+		m_chunkLoadingData->visitedChunks.emplace(firstChunkIndices, true);
+
+		GetPlanet().OnChunkVisibilityMaskUpdated.Connect([chunkLoadingData = m_chunkLoadingData](Planet* /*planet*/, Chunk* chunk, DirectionMask oldVisibilityMask, DirectionMask newVisibilityMask)
+		{
+			DirectionMask newDirectionMask = newVisibilityMask & ~oldVisibilityMask;
+			chunkLoadingData->visitedChunks[chunk->GetIndices()] = true;
+			chunkLoadingData->HandleChunkLoaded(chunk->GetIndices(), newDirectionMask);
+		});
 
 		//planetComponent.planet->GeneratePlatform(blockLibrary, Direction::Right, { 65, -18, -39 });
 		//planetComponent.planet->GeneratePlatform(blockLibrary, Direction::Back, { -34, 2, 53 });
@@ -264,7 +274,8 @@ namespace tsom
 			if (!chunkFound)
 				chunkLoadingData->planet->GenerateChunk(*chunk, seed, chunkCount, generatorName);
 
-			chunkLoadingData->HandleChunkLoaded(chunk->GetIndices());
+			DirectionMask visibilityMask = chunkLoadingData->planet->GetChunkVisibilityMask(chunk->GetIndices());
+			chunkLoadingData->HandleChunkLoaded(chunk->GetIndices(), visibilityMask);
 
 			if (--chunkLoadingData->chunkLoadingCount == 0 && chunkLoadingData->remainingChunks.empty())
 				spdlog::debug("planet chunk loading finished, total chunks: {} (out of {})", chunkLoadingData->visitedChunks.size(), chunkCount.x * chunkCount.y * chunkCount.z);
@@ -344,26 +355,36 @@ namespace tsom
 		});
 	}
 
-	void ServerPlanetEnvironment::ChunkLoadingData::HandleChunkLoaded(const ChunkIndices& chunkIndices)
+	void ServerPlanetEnvironment::ChunkLoadingData::HandleChunkLoaded(const ChunkIndices& chunkIndices, DirectionMask visibilityMask)
 	{
 		ChunkIndices minIndices(-int(chunkCount.x / 2), -int(chunkCount.y / 2), -int(chunkCount.z / 2));
 		ChunkIndices maxIndices = minIndices + ChunkIndices(chunkCount) - ChunkIndices(1);
 
 		std::unique_lock lock(mutex);
 
-		DirectionMask visibilityMask = planet->GetChunkVisibilityMask(chunkIndices);
-		for (Direction visibleNeighborDir : visibilityMask)
+		// Direct neighbor can trigger indirect neighbor
+		bool isPrimaryChunk = Nz::Retrieve(visitedChunks, chunkIndices);
+
+		for (Direction direction : DirectionMask_All)
 		{
-			ChunkIndices neighborIndices = chunkIndices + s_chunkDirOffset[visibleNeighborDir];
-			if (neighborIndices.x < minIndices.x || neighborIndices.x > maxIndices.x ||
-			    neighborIndices.y < minIndices.y || neighborIndices.y > maxIndices.y ||
-			    neighborIndices.z < minIndices.z || neighborIndices.z > maxIndices.z)
+			bool isNeighborPrimaryChunk = visibilityMask.Test(direction);
+			if (!isPrimaryChunk && !isNeighborPrimaryChunk)
 				continue;
 
-			if (visitedChunks.contains(neighborIndices))
+			ChunkIndices neighborIndices = chunkIndices + s_chunkDirOffset[direction];
+			if (neighborIndices.x < minIndices.x || neighborIndices.x > maxIndices.x
+			 || neighborIndices.y < minIndices.y || neighborIndices.y > maxIndices.y
+			 || neighborIndices.z < minIndices.z || neighborIndices.z > maxIndices.z)
 				continue;
 
-			visitedChunks.insert(neighborIndices);
+			auto it = visitedChunks.find(neighborIndices);
+			if (it != visitedChunks.end())
+			{
+				it.value() |= isNeighborPrimaryChunk;
+				continue;
+			}
+
+			visitedChunks.emplace(neighborIndices, isNeighborPrimaryChunk);
 			remainingChunks.push(neighborIndices);
 		}
 	}

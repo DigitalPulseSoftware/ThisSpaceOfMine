@@ -110,11 +110,17 @@ namespace tsom
 					}
 				}
 
+				DirectionMask oldVisibilityMask = chunkData.visibilityMask;
+				chunkData.visibilityMask.Clear();
+
 				for (auto&& [direction, holeCount] : chunkData.directionHoleCount.iter_kv())
 				{
 					if (holeCount > 0)
 						chunkData.visibilityMask |= direction;
 				}
+
+				if (oldVisibilityMask != chunkData.visibilityMask)
+					OnChunkVisibilityMaskUpdated(this, chunk, oldVisibilityMask, chunkData.visibilityMask);
 			}
 
 			// FIXME: Nz::Signal operator() is not thread-safe!
@@ -196,6 +202,8 @@ namespace tsom
 					NazaraAssert(chunkIt != m_chunks.end());
 					ChunkData& chunkData = chunkIt.value();
 
+					DirectionMask oldVisibilityMask = chunkData.visibilityMask;
+
 					if (previousBlockData.isTransparent)
 					{
 						// We're putting an opaque block on a transparent one
@@ -215,6 +223,9 @@ namespace tsom
 							chunkData.visibilityMask |= direction;
 						}
 					}
+
+					if (oldVisibilityMask != chunkData.visibilityMask)
+						OnChunkVisibilityMaskUpdated(this, chunk, oldVisibilityMask, chunkData.visibilityMask);
 				}
 			}
 

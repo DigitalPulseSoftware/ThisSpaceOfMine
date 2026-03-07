@@ -62,6 +62,8 @@ namespace tsom
 			Planet& operator=(const Planet&) = delete;
 			Planet& operator=(Planet&&) = delete;
 
+			NazaraSignal(OnChunkVisibilityMaskUpdated, Planet* /*planet*/, Chunk* /*chunk*/, DirectionMask /*oldVisibilityMask*/, DirectionMask /*newVisibilityMask*/);
+
 			static constexpr unsigned int ChunkSize = 32;
 
 		protected:
