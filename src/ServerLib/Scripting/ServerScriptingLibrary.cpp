@@ -198,7 +198,7 @@ namespace tsom
 
 	void ServerScriptingLibrary::RegisterServer(sol::state& state)
 	{
-		state.create_named_table("server",
+		state.create_named_table("Server",
 			"Execute", LuaFunction([this](sol::this_state L, std::string_view command, sol::optional<sol::table> params)
 			{
 				auto& fs = m_serverInstance.GetApplication().GetComponent<Nz::FilesystemAppComponent>();
@@ -288,7 +288,7 @@ namespace tsom
 
 	void ServerScriptingLibrary::RegisterServerDatabase(sol::state& state)
 	{
-		state.create_named_table("serverDatabase",
+		state.create_named_table("ServerDatabase",
 			"CreatePlanet", [this](sol::stack_table table)
 			{
 				std::string generatorName = table["generatorName"];
