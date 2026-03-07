@@ -11,7 +11,7 @@
 #include <CommonLib/Chunk.hpp>
 #include <ServerLib/ServerAtmosphere.hpp>
 #include <ServerLib/ServerEnvironment.hpp>
-#include <tsl/hopscotch_set.h>
+#include <tsl/hopscotch_map.h>
 #include <atomic>
 #include <filesystem>
 #include <mutex>
@@ -63,9 +63,9 @@ namespace tsom
 				std::mutex mutex;
 				std::shared_ptr<Planet> planet;
 				std::queue<ChunkIndices> remainingChunks;
-				tsl::hopscotch_set<ChunkIndices> visitedChunks;
+				tsl::hopscotch_map<ChunkIndices, bool> visitedChunks;
 
-				void HandleChunkLoaded(const ChunkIndices& chunkIndices);
+				void HandleChunkLoaded(const ChunkIndices& chunkIndices, DirectionMask visibilityMask);
 			};
 
 			ServerAtmosphere m_atmosphere;

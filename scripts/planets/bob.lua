@@ -63,7 +63,7 @@ return function (chunk, seed)
                             table.insert(content, dirtBlock)
                         end
                     else
-                        table.insert(content, emptyBlock)
+                        table.insert(content, stoneBlock)
                     end
                 else
                     local baseMountainous = perlin:normalizedOctave3D_01((blockPosNorm.x * moutainScale)+10, blockPosNorm.y * moutainScale, blockPosNorm.z * moutainScale, 4, 0.1)
