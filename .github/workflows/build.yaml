@@ -181,13 +181,13 @@ jobs:
       - name: Download x86_64 binaries
         uses: actions/download-artifact@v4
         with:
-          name: artifact-macOS_x86_64_${{ matrix.mode }}
+          name: macOS_x86_64_${{ matrix.mode }}
           path: output/x86_64
 
       - name: Download arm64 binaries
         uses: actions/download-artifact@v4
         with:
-          name: artifact-macOS_arm64_${{ matrix.mode }}
+          name: macOS_arm64_${{ matrix.mode }}
           path: output/arm64
 
       - run: ls -R output
