@@ -17,7 +17,7 @@ namespace tsom
 {
 	bool SessionVisibilityHandler::CreateChunk(entt::handle entity, Chunk& chunk)
 	{
-		assert(m_chunkNetworkMaps.contains(entity));
+		NazaraAssert(m_chunkNetworkMaps.contains(entity));
 		auto& chunkNetworkIndices = m_chunkNetworkMaps[entity];
 
 		ChunkIndices chunkIndices = chunk.GetIndices();
@@ -42,7 +42,7 @@ namespace tsom
 			m_freeChunkIds.Set(chunkIndex, false);
 			m_newlyVisibleChunk.UnboundedSet(chunkIndex);
 
-			assert(!chunkNetworkIndices.contains(chunkIndices));
+			NazaraAssert(!chunkNetworkIndices.contains(chunkIndices));
 			chunkNetworkIndices.emplace(chunkIndices, Nz::SafeCaster(chunkIndex));
 
 			if (chunkIndex >= m_visibleChunks.size())
@@ -59,13 +59,13 @@ namespace tsom
 
 	void SessionVisibilityHandler::CreateEntity(entt::handle entity, CreateEntityData entityData)
 	{
-		assert(!m_entityIndices.contains(entity));
+		NazaraAssert(!m_entityIndices.contains(entity));
 
-		assert(!m_deletedEntities.contains(entity)); //< resurrecting entities shouldn't be possible
+		NazaraAssert(!m_deletedEntities.contains(entity)); //< resurrecting entities shouldn't be possible
 
 		if (entity.try_get<PlanetComponent>() || entity.try_get<ShipComponent>())
 		{
-			assert(!m_chunkNetworkMaps.contains(entity));
+			NazaraAssert(!m_chunkNetworkMaps.contains(entity));
 			m_chunkNetworkMaps.emplace(entity, ChunkNetworkMap{});
 		}
 

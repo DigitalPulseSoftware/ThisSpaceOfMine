@@ -37,6 +37,8 @@ namespace tsom
 
 			void AddEnvironmentRecursively(ServerPlayer* player);
 
+			void Update(Nz::Time /*elapsedTime*/);
+
 			EnvironmentProxySystem& operator=(const EnvironmentProxySystem&) = delete;
 			EnvironmentProxySystem& operator=(EnvironmentProxySystem&&) = delete;
 

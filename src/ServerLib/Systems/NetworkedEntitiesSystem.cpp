@@ -148,7 +148,7 @@ namespace tsom
 
 			auto& entityNetwork = m_registry.get<NetworkedComponent>(entity);
 			if (!entityNetwork.ShouldSignalCreation())
-				return;
+				continue;
 
 			SessionVisibilityHandler::CreateEntityData createData = BuildCreateEntityData(entity);
 			ForEachVisibility([&](SessionVisibilityHandler& visibility)

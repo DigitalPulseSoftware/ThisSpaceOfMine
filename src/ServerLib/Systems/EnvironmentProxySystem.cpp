@@ -15,22 +15,6 @@ namespace tsom
 	m_observer(registry),
 	m_registry(registry)
 	{
-		m_observer.OnEntityAdded.Connect([&](entt::entity entity)
-		{
-			ServerEnvironment* environment = ServerEnvironment::GetEnvironment(m_registry);
-
-			auto& envProxy = m_registry.get<EnvironmentProxyComponent>(entity);
-			environment->ForEachPlayer([&](ServerPlayer& player)
-			{
-				if (player.IsInEnvironment(envProxy.targetEnvironment))
-					return;
-
-				player.AddToEnvironment(envProxy.targetEnvironment, entt::handle(m_registry, entity));
-
-				auto& envProxySystem = envProxy.targetEnvironment->GetWorld().GetSystem<EnvironmentProxySystem>();
-				envProxySystem.AddEnvironmentRecursively(&player);
-			});
-		});
 	}
 
 	void EnvironmentProxySystem::AddEnvironmentRecursively(ServerPlayer* player)
@@ -49,5 +33,26 @@ namespace tsom
 			auto& envProxySystem = envProxy.targetEnvironment->GetWorld().GetSystem<EnvironmentProxySystem>();
 			envProxySystem.AddEnvironmentRecursively(player);
 		}
+	}
+
+	void EnvironmentProxySystem::Update(Nz::Time /*elapsedTime*/)
+	{
+		for (entt::entity entity : m_observer)
+		{
+			ServerEnvironment* environment = ServerEnvironment::GetEnvironment(m_registry);
+
+			auto& envProxy = m_registry.get<EnvironmentProxyComponent>(entity);
+			environment->ForEachPlayer([&](ServerPlayer& player)
+			{
+				if (player.IsInEnvironment(envProxy.targetEnvironment))
+					return;
+
+				player.AddToEnvironment(envProxy.targetEnvironment, entt::handle(m_registry, entity));
+
+				auto& envProxySystem = envProxy.targetEnvironment->GetWorld().GetSystem<EnvironmentProxySystem>();
+				envProxySystem.AddEnvironmentRecursively(&player);
+			});
+		}
+		m_observer.Clear();
 	}
 }
