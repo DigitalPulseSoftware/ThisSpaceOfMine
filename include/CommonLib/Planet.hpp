@@ -11,7 +11,9 @@
 #include <CommonLib/ChunkContainer.hpp>
 #include <CommonLib/Direction.hpp>
 #include <CommonLib/GravityController.hpp>
+#include <CommonLib/Scripting/ScriptingContext.hpp>
 #include <NazaraUtils/FunctionRef.hpp>
+#include <Nazara/Core/ThreadLocalData.hpp>
 #include <tsl/hopscotch_map.h>
 #include <memory>
 #include <mutex>
@@ -83,6 +85,7 @@ namespace tsom
 			std::mutex m_chunkLayerRemovedSignalMutex;
 			std::mutex m_chunkUpdatedSignalMutex;
 			tsl::hopscotch_map<ChunkIndices, ChunkData> m_chunks;
+			Nz::ThreadLocalData<ScriptingContext> m_scriptingContexts;
 			Nz::ApplicationBase& m_app;
 			float m_cornerRadius;
 			float m_gravity;

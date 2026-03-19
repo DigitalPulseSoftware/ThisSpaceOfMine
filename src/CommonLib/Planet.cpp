@@ -370,48 +370,59 @@ namespace tsom
 	{
 		ChunkIndices chunkIndices = chunk.GetIndices();
 
-		ScriptingContext scriptingContext(m_app);
-		scriptingContext.RegisterLibrary<MathScriptingLibrary>();
-		scriptingContext.RegisterLibrary<ChunkScriptingLibrary>();
+		bool created;
+		ScriptingContext& scriptingContext = m_scriptingContexts.GetOrCreate(created, m_app);
+		if (created)
+		{
+			scriptingContext.RegisterLibrary<MathScriptingLibrary>();
+			scriptingContext.RegisterLibrary<ChunkScriptingLibrary>();
+		}
 
 		Nz::Result execResult = scriptingContext.LoadFile(fmt::format("scripts/planets/{}.lua", scriptName));
 		if (!execResult)
 			return;
 
 		sol::protected_function generationFunction = execResult.GetValue();
-
-		ChunkWriteLock lock(&chunk);
-
 		auto result = generationFunction(chunk, seed, chunkCount);
 		if (!result.valid())
 		{
 			sol::error err = result;
 			spdlog::error("chunk {};{};{} failed to generate: {}", chunkIndices.x, chunkIndices.y, chunkIndices.z, err.what());
 		}
+
+		std::size_t blockCount = chunk.GetBlockCount();
+
+		sol::table blockTable = result;
+
+		std::size_t contentSize = blockTable.size();
+		if (contentSize != blockCount)
+			spdlog::error("Chunk generator returned a table containing {} entries, {} expected", contentSize, blockCount);
+
+		auto& blockLibrary = chunk.GetBlockLibrary();
+
+		std::vector<BlockIndex> blocks(blockCount, EmptyBlockIndex);
+		std::size_t maxEntries = std::min<std::size_t>(blockCount, contentSize);
+		for (std::size_t i = 0; i < maxEntries; ++i)
+		{
+			BlockIndex blockIndex = blockTable[i + 1].get<BlockIndex>();
+			if (!blockLibrary.IsValidBlock(blockIndex))
+			{
+				spdlog::error("Chunk:Reset content table #{} contained invalid block index \"{}\"", i, blockIndex);
+				blockIndex = EmptyBlockIndex;
+			}
+
+			blocks[i] = blockIndex;
+		}
+
+		ChunkWriteLock lock(&chunk);
+		chunk.Reset([&](BlockIndex* blockIndices)
+		{
+			std::memcpy(blockIndices, blocks.data(), blockCount * sizeof(BlockIndex));
+		});
 	}
 
 	void Planet::GenerateChunks(Nz::TaskScheduler& taskScheduler, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, std::string_view scriptName)
 	{
-		struct ThreadState
-		{
-			ThreadState(Nz::ApplicationBase& app) :
-			scriptingContext(app)
-			{
-			}
-
-			ScriptingContext scriptingContext;
-			sol::protected_function generationFunction;
-		};
-
-		struct GenerationContext
-		{
-			std::mutex threadMutex;
-			std::unordered_map<std::thread::id, std::unique_ptr<ThreadState>> threadStates;
-		};
-
-		auto context = std::make_shared<GenerationContext>();
-		std::string scriptPath = fmt::format("scripts/planets/{}.lua", scriptName);
-
 		ForEachChunk([=, this, &taskScheduler](const ChunkIndices& chunkIndices, Chunk& chunk)
 		{
 			if (chunk.HasContent())
@@ -419,42 +430,7 @@ namespace tsom
 
 			taskScheduler.AddTask([=, this, &chunk]
 			{
-				ThreadState* currentThreadState = nullptr;
-				{
-					std::unique_lock lock(context->threadMutex);
-					auto id = std::this_thread::get_id();
-					auto it = context->threadStates.find(id);
-					if (it == context->threadStates.end())
-					{
-						lock.unlock();
-
-						std::unique_ptr<ThreadState> threadState = std::make_unique<ThreadState>(m_app);
-						threadState->scriptingContext.RegisterLibrary<MathScriptingLibrary>();
-						threadState->scriptingContext.RegisterLibrary<ChunkScriptingLibrary>();
-
-						Nz::Result execResult = threadState->scriptingContext.LoadFile(scriptPath);
-						if (!execResult)
-							return;
-
-						threadState->generationFunction = execResult.GetValue();
-
-						currentThreadState = threadState.get();
-
-						lock.lock();
-						context->threadStates.emplace(id, std::move(threadState));
-					}
-					else
-						currentThreadState = it->second.get();
-				}
-
-				ChunkWriteLock lock(&chunk);
-
-				auto result = currentThreadState->generationFunction(chunk, seed, chunkCount);
-				if (!result.valid())
-				{
-					sol::error err = result;
-					spdlog::error("chunk {};{};{} failed to generate: {}", chunkIndices.x, chunkIndices.y, chunkIndices.z, err.what());
-				}
+				GenerateChunk(chunk, seed, chunkCount, scriptName);
 			});
 		});
 	}

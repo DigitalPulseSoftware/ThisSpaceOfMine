@@ -68,5 +68,6 @@ return function (chunk, seed, chunkcount)
             end
         end
     end
-    chunk:Reset(content)
+
+    return content
 end

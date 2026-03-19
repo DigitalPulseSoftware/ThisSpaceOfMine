@@ -111,6 +111,6 @@ return function (chunk, seed)
             end
         end
     end
-    
-    chunk:Reset(content)
+
+    return content
 end
