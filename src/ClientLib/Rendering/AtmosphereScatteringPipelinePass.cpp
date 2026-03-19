@@ -115,7 +115,7 @@ namespace tsom
 	{
 		std::shared_ptr<Nz::RenderDevice> renderDevice = Nz::Graphics::Instance()->GetRenderDevice();
 
-		m_passDataBufferPool = std::make_shared<Nz::RenderBufferPool>(renderDevice, Nz::BufferType::Uniform, AtmosphereScatteringPassFields.totalSize, 32);
+		m_passDataBufferPool = std::make_shared<Nz::RenderBufferPool>(renderDevice, Nz::BufferUsage::UniformBuffer, AtmosphereScatteringPassFields.totalSize, 32);
 
 		Nz::RenderPipelineLayoutInfo layoutInfo;
 		layoutInfo.bindings.assign({
