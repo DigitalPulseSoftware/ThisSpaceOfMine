@@ -84,6 +84,7 @@ namespace tsom
 			std::mutex m_chunkLayerAddedSignalMutex;
 			std::mutex m_chunkLayerRemovedSignalMutex;
 			std::mutex m_chunkUpdatedSignalMutex;
+			std::mutex m_chunkMutex;
 			tsl::hopscotch_map<ChunkIndices, ChunkData> m_chunks;
 			Nz::ThreadLocalData<ScriptingContext> m_scriptingContexts;
 			Nz::ApplicationBase& m_app;

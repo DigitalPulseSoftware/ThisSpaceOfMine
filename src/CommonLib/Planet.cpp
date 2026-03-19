@@ -49,6 +49,7 @@ namespace tsom
 		chunkData.onReset.Connect(chunkData.chunk->OnReset, [this, &blockLibrary](Chunk* chunk)
 		{
 			// Build direction blockers
+			std::unique_lock chunkLock(m_chunkMutex);
 			auto chunkIt = m_chunks.find(chunk->GetIndices());
 			NazaraAssert(chunkIt != m_chunks.end());
 			ChunkData& chunkData = chunkIt.value();
@@ -198,6 +199,8 @@ namespace tsom
 
 				if (previousBlockData.isTransparent != newBlockData.isTransparent)
 				{
+					std::unique_lock chunkLock(m_chunkMutex);
+
 					auto chunkIt = m_chunks.find(chunk->GetIndices());
 					NazaraAssert(chunkIt != m_chunks.end());
 					ChunkData& chunkData = chunkIt.value();
@@ -239,7 +242,11 @@ namespace tsom
 			OnChunkUpdated(this, chunk, neighborMask, layerMask);
 		});
 
+		std::unique_lock chunkLock(m_chunkMutex);
+
 		auto it = m_chunks.insert_or_assign(indices, std::move(chunkData)).first;
+
+		chunkLock.unlock();
 
 		if (initCallback)
 			it->second.chunk->Reset(initCallback);

@@ -65,6 +65,8 @@ namespace tsom
 		GetPlanet().OnChunkVisibilityMaskUpdated.Connect([chunkLoadingData = m_chunkLoadingData](Planet* /*planet*/, Chunk* chunk, DirectionMask oldVisibilityMask, DirectionMask newVisibilityMask)
 		{
 			DirectionMask newDirectionMask = newVisibilityMask & ~oldVisibilityMask;
+
+			std::unique_lock lock(chunkLoadingData->mutex);
 			chunkLoadingData->visitedChunks[chunk->GetIndices()] = true;
 			chunkLoadingData->HandleChunkLoaded(chunk->GetIndices(), newDirectionMask);
 		});
@@ -275,6 +277,8 @@ namespace tsom
 				chunkLoadingData->planet->GenerateChunk(*chunk, seed, chunkCount, generatorName);
 
 			DirectionMask visibilityMask = chunkLoadingData->planet->GetChunkVisibilityMask(chunk->GetIndices());
+
+			std::unique_lock lock(chunkLoadingData->mutex);
 			chunkLoadingData->HandleChunkLoaded(chunk->GetIndices(), visibilityMask);
 
 			if (--chunkLoadingData->chunkLoadingCount == 0 && chunkLoadingData->remainingChunks.empty())
@@ -359,8 +363,6 @@ namespace tsom
 	{
 		ChunkIndices minIndices(-int(chunkCount.x / 2), -int(chunkCount.y / 2), -int(chunkCount.z / 2));
 		ChunkIndices maxIndices = minIndices + ChunkIndices(chunkCount) - ChunkIndices(1);
-
-		std::unique_lock lock(mutex);
 
 		// Direct neighbor can trigger indirect neighbor
 		bool isPrimaryChunk = Nz::Retrieve(visitedChunks, chunkIndices);
