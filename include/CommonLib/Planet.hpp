@@ -46,13 +46,13 @@ namespace tsom
 			void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, const Chunk& chunk)> callback) const override;
 
 			void GenerateChunk(Chunk& chunk, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, std::string_view scriptName);
+			void GenerateChunkNative(Chunk& chunk, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, std::string_view scriptName);
 			void GenerateChunks(Nz::TaskScheduler& taskScheduler, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, std::string_view scriptName);
 			void GeneratePlatform(const BlockLibrary& blockLibrary, Direction upDirection, const BlockIndices& platformCenter);
 
 			inline Nz::Vector3f GetCenter() const override;
 			inline Chunk* GetChunk(const ChunkIndices& chunkIndices) override;
 			inline const Chunk* GetChunk(const ChunkIndices& chunkIndices) const override;
-			inline DirectionMask GetChunkVisibilityMask(const ChunkIndices& chunkIndices) const;
 			inline std::size_t GetChunkCount() const override;
 			inline float GetCornerRadius() const;
 			inline float GetGravity() const;
@@ -64,16 +64,12 @@ namespace tsom
 			Planet& operator=(const Planet&) = delete;
 			Planet& operator=(Planet&&) = delete;
 
-			NazaraSignal(OnChunkVisibilityMaskUpdated, Planet* /*planet*/, Chunk* /*chunk*/, DirectionMask /*oldVisibilityMask*/, DirectionMask /*newVisibilityMask*/);
-
 			static constexpr unsigned int ChunkSize = 32;
 
 		protected:
 			struct ChunkData
 			{
-				Nz::EnumArray<Direction, Nz::UInt16> directionHoleCount;
 				std::shared_ptr<Chunk> chunk;
-				DirectionMask visibilityMask;
 
 				NazaraSlot(Chunk, OnBlockUpdated, onUpdated);
 				NazaraSlot(Chunk, OnLayerRegistered, onLayerRegistered);
@@ -84,7 +80,6 @@ namespace tsom
 			std::mutex m_chunkLayerAddedSignalMutex;
 			std::mutex m_chunkLayerRemovedSignalMutex;
 			std::mutex m_chunkUpdatedSignalMutex;
-			std::mutex m_chunkMutex;
 			tsl::hopscotch_map<ChunkIndices, ChunkData> m_chunks;
 			Nz::ThreadLocalData<ScriptingContext> m_scriptingContexts;
 			Nz::ApplicationBase& m_app;

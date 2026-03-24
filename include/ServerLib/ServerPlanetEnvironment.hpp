@@ -62,7 +62,7 @@ namespace tsom
 				std::atomic_uint chunkLoadingCount;
 				std::mutex mutex;
 				std::shared_ptr<Planet> planet;
-				std::queue<ChunkIndices> remainingChunks;
+				std::vector<ChunkIndices> remainingChunks;
 				tsl::hopscotch_map<ChunkIndices, bool> visitedChunks;
 
 				void HandleChunkLoaded(const ChunkIndices& chunkIndices, DirectionMask visibilityMask);

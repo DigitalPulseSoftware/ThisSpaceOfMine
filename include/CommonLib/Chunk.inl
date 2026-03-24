@@ -126,6 +126,11 @@ namespace tsom
 		return m_size;
 	}
 
+	inline DirectionMask Chunk::GetVisibilityMask() const
+	{
+		return m_visibilityMask;
+	}
+
 	inline bool Chunk::HasContent() const
 	{
 		return !m_blocks.empty();

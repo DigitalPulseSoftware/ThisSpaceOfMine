@@ -95,6 +95,7 @@ namespace tsom
 			inline ChunkFlags GetFlags() const;
 			inline const ChunkIndices& GetIndices() const;
 			inline const Nz::Vector3ui& GetSize() const;
+			inline DirectionMask GetVisibilityMask() const;
 
 			inline bool HasContent() const;
 			inline bool HasFlags(ChunkFlags flags) const;
@@ -126,6 +127,7 @@ namespace tsom
 			NazaraSignal(OnLayerRegistered, Chunk* /*emitter*/, std::size_t /*layerIndex*/);
 			NazaraSignal(OnLayerUnregistered, Chunk* /*emitter*/, std::size_t /*layerIndex*/);
 			NazaraSignal(OnReset, Chunk* /*emitter*/);
+			NazaraSignal(OnVisibilityMaskUpdated, Chunk* /*emitter*/, DirectionMask /*oldVisibilityMask*/, DirectionMask /*newVisibilityMask*/);
 
 			struct Layer
 			{
@@ -159,10 +161,12 @@ namespace tsom
 			std::array<std::optional<Layer>, Constants::MaxChunkLayerCount> m_layers;
 			std::vector<BlockIndex> m_blocks;
 			std::vector<Nz::UInt16> m_blockTypeCount;
+			Nz::EnumArray<Direction, Nz::UInt16> m_directionHoleCount;
 			Nz::FixedVector<std::size_t, Constants::MaxChunkLayerCount> m_activeLayers;
 			Nz::Vector3ui m_size;
 			ChunkFlags m_flags;
 			ChunkIndices m_indices;
+			DirectionMask m_visibilityMask;
 			const BlockLibrary& m_blockLibrary;
 			ChunkContainer& m_owner;
 			bool m_hasPerFaceCollision;
