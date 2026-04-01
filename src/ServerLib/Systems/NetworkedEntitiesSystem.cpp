@@ -62,9 +62,7 @@ namespace tsom
 		if (it != m_pendingPlayers.end())
 			m_pendingPlayers.erase(it);
 		else
-		{
 			m_players.UnregisterPlayer(player);
-		}
 	}
 
 	void NetworkedEntitiesSystem::Update(Nz::Time /*elapsedTime*/)

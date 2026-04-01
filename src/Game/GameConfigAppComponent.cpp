@@ -43,7 +43,7 @@ namespace tsom
 
 		RegisterIntegerOption(Config::Server_Port, 1, 0xFFFF, 29536);
 
-		RegisterFloatOption(Config::Visual_ChunkNormalSmoothAngle, 0.0, 180.0, 0.0);
+		RegisterFloatOption(Config::Visual_ChunkNormalSmoothAngle, 0.0, 180.0, 60.0);
 	}
 
 	std::filesystem::path GameConfigFile::GetPath()

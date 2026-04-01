@@ -5,6 +5,9 @@
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
 #include <Nazara/Core/HandledObject.hpp>
 #include <Nazara/Core/ObjectHandle.hpp>
+#include <Nazara/Math/Rect.hpp>
+#include <Nazara/Math/Vector2.hpp>
+#include <Nazara/Math/Vector3.hpp>
 
 namespace tsom
 {
@@ -180,5 +183,111 @@ namespace tsom
 	{
 		using Wrapper = Detail::LuaCallWrapper<F>;
 		return Wrapper::Wrap(std::move(funcPtr));
+	}
+}
+
+namespace sol
+{
+	template<typename T>
+	struct lua_size<Nz::Rect<T>> : std::integral_constant<int, 1> {};
+
+	template<typename T>
+	struct lua_size<Nz::Vector2<T>> : std::integral_constant<int, 1> {};
+
+	template<typename T>
+	struct lua_size<Nz::Vector3<T>> : std::integral_constant<int, 1> {};
+
+	template<typename T>
+	struct lua_type_of<Nz::Rect<T>> : std::integral_constant<sol::type, sol::type::table> {};
+
+	template<typename T>
+	struct lua_type_of<Nz::Vector2<T>> : std::integral_constant<sol::type, sol::type::table> {};
+
+	template<typename T>
+	struct lua_type_of<Nz::Vector3<T>> : std::integral_constant<sol::type, sol::type::table> {};
+
+	template<typename T>
+	inline Nz::Rect<T> sol_lua_get(sol::types<Nz::Rect<T>>, lua_State* L, int index, sol::stack::record& tracking)
+	{
+		int absoluteIndex = lua_absindex(L, index);
+
+		sol::table rect = sol::stack::get<sol::table>(L, absoluteIndex);
+		T x = rect["x"];
+		T y = rect["y"];
+		T width = rect["width"];
+		T height = rect["height"];
+
+		tracking.use(1);
+
+		return Nz::Rect<T>(x, y, width, height);
+	}
+
+	template<typename T>
+	Nz::Vector2<T> sol_lua_get(sol::types<Nz::Vector2<T>>, lua_State* L, int index, sol::stack::record& tracking)
+	{
+		int absoluteIndex = lua_absindex(L, index);
+
+		sol::table rect = sol::stack::get<sol::table>(L, absoluteIndex);
+		T x = rect["x"];
+		T y = rect["y"];
+
+		tracking.use(1);
+
+		return Nz::Vector2<T>(x, y);
+	}
+
+	template<typename T>
+	Nz::Vector3<T> sol_lua_get(sol::types<Nz::Vector3<T>>, lua_State* L, int index, sol::stack::record& tracking)
+	{
+		int absoluteIndex = lua_absindex(L, index);
+
+		sol::table rect = sol::stack::get<sol::table>(L, absoluteIndex);
+		T x = rect["x"];
+		T y = rect["y"];
+		T z = rect["z"];
+
+		tracking.use(1);
+
+		return Nz::Vector3<T>(x, y, z);
+	}
+
+
+	template<typename T>
+	int sol_lua_push(sol::types<Nz::Rect<T>>, lua_State* L, const Nz::Rect<T>& rect)
+	{
+		lua_createtable(L, 0, 4);
+		luaL_setmetatable(L, "rect");
+		sol::stack_table vec(L);
+		vec["x"] = rect.x;
+		vec["y"] = rect.y;
+		vec["width"] = rect.width;
+		vec["height"] = rect.height;
+
+		return 1;
+	}
+
+	template<typename T>
+	int sol_lua_push(sol::types<Nz::Vector2<T>>, lua_State* L, const Nz::Vector2<T>& v)
+	{
+		lua_createtable(L, 0, 2);
+		luaL_setmetatable(L, "vec2");
+		sol::stack_table vec(L);
+		vec["x"] = v.x;
+		vec["y"] = v.y;
+
+		return 1;
+	}
+
+	template<typename T>
+	int sol_lua_push(sol::types<Nz::Vector3<T>>, lua_State* L, const Nz::Vector3<T>& v)
+	{
+		lua_createtable(L, 0, 3);
+		luaL_setmetatable(L, "vec3");
+		sol::stack_table vec(L);
+		vec["x"] = v.x;
+		vec["y"] = v.y;
+		vec["z"] = v.z;
+
+		return 1;
 	}
 }

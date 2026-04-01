@@ -7,9 +7,9 @@
 #ifndef TSOM_GAME_STATES_PLANETEDITORSTATE_HPP
 #define TSOM_GAME_STATES_PLANETEDITORSTATE_HPP
 
-#include <ClientLib/ClientChunkEntities.hpp>
 #include <CommonLib/AtmosphereScattering.hpp>
 #include <CommonLib/ConsoleExecutor.hpp>
+#include <CommonLib/InternalConstants.hpp>
 #include <Game/States/WidgetState.hpp>
 #include <Nazara/Core/State.hpp>
 #include <Nazara/Core/Time.hpp>
@@ -64,7 +64,7 @@ namespace tsom
 			struct PlanetSettings
 			{
 				float cornerRadius = 0.f;
-				Nz::Vector3ui chunkCount = Nz::Vector3ui(5);
+				Nz::Vector3ui chunkCount = Nz::Vector3ui(10);
 				std::size_t seed = 42;
 				std::string scriptName = "bob";
 			};

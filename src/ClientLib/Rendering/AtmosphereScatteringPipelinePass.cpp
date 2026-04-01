@@ -224,7 +224,7 @@ namespace tsom
 		frameData.renderResources.Execute([&](Nz::CommandBufferBuilder& builder)
 		{
 			builder.CopyBuffer(allocation, renderBufferView);
-			builder.MemoryBarrier(Nz::PipelineStage::Transfer, Nz::PipelineStage::FragmentShader, Nz::MemoryAccess::TransferWrite, Nz::MemoryAccess::UniformBufferRead);
+			builder.MemoryBarrier({ .srcStageMask = Nz::PipelineStage::Transfer, .dstStageMask = Nz::PipelineStage::FragmentShader, .srcAccessMask = Nz::MemoryAccess::TransferWrite, .dstAccessMask = Nz::MemoryAccess::UniformBufferRead });
 		}, Nz::QueueType::Transfer);
 
 		frameData.renderResources.PushReleaseCallback([pool = m_passDataBufferPool, bufferIndex]

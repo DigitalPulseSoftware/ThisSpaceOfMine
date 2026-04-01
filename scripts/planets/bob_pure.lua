@@ -5,68 +5,16 @@ local chunksize = 32
 local minGrenerationFreeHeight = 0 -- Generation height limit used to make generation faster if we want empty chunks to allow players to build tall things
 local baseFreeHeight = 30 -- Should be greater than minFreeHeight, difference between both will define max generation height from baseFreeHeight
 
-local Vec3mt = CreateMetatable("vec3")
+local Vec3mt = {}
 Vec3mt.__index = Vec3mt
 
-function Vec3mt:__add(vec)
-    return Vec3(self.x + vec.x, self.y + vec.y, self.z + vec.z)
-end
-
-function Vec3mt:__sub(vec)
-    return Vec3(self.x - vec.x, self.y - vec.y, self.z - vec.z)
-end
-
-function Vec3mt:__mul(vec)
-    if type(vec) == "number" then
-        return Vec3(self.x * vec, self.y * vec, self.z * vec)
-    else
-        return Vec3(self.x * vec.x, self.y * vec.y, self.z * vec.z)
-    end
-end
-
-function Vec3mt:__div(vec)
-    if type(vec) == "number" then
-        return Vec3(self.x / vec, self.y / vec, self.z / vec)
-    else
-        return Vec3(self.x / vec.x, self.y / vec.y, self.z / vec.z)
-    end
-end
-
-function Vec3mt:GetAbs()
-    return Vec3(math.abs(self.x), math.abs(self.y), math.abs(self.z))
-end
-
-function Vec3mt:GetLength()
-    return math.sqrt(self.x * self.x + self.y * self.y + self.z * self.z)
+function Vec3(x, y, z)
+    return setmetatable({x = x, y = y, z = z}, Vec3mt)
 end
 
 function Vec3mt:GetNormal()
-    local length = self:GetLength()
+    local length = math.sqrt(self.x * self.x + self.y * self.y + self.z * self.z)
     return Vec3(self.x / length, self.y / length, self.z / length), length
-end
-
-function Vec3mt:Maximize(vec)
-    return Vec3(math.max(self.x, vec.x), math.max(self.y, vec.y), math.max(self.z, vec.z))
-end
-
-function Vec3mt:Minimize(vec)
-    return Vec3(math.min(self.x, vec.x), math.min(self.y, vec.y), math.min(self.z, vec.z))
-end
-
-function Vec3(x, y, z)
-    return setmetatable({x = x, y = y or x, z = z or x}, Vec3mt)
-end
-
-local function GetBlockIndices(chunkIndices, blockIndices)
-    local x = chunkIndices.x * chunksize + blockIndices.x - chunksize * 0.5
-    local y = chunkIndices.y * chunksize + blockIndices.z - chunksize * 0.5
-    local z = chunkIndices.z * chunksize + blockIndices.y - chunksize * 0.5
-    return Vec3(x, y, z)
-end
-
-local function sdRoundBox(pos, dims, cornerRadius)
-	local q = pos:GetAbs() - dims + Vec3(cornerRadius)
-	return q:Maximize(Vec3(0, 0, 0)):GetLength() + math.min(math.max(q.x, math.max(q.y, q.z)), 0.0) - cornerRadius
 end
 
 return function (chunk, seed, chunkDims)
@@ -82,6 +30,7 @@ return function (chunk, seed, chunkDims)
     local dirtBlock = blockLibrary:GetBlockIndex("dirt")
     local grassBlock = blockLibrary:GetBlockIndex("grass")
     local hullBlock = blockLibrary:GetBlockIndex("hull")
+    local hull2Block = blockLibrary:GetBlockIndex("hull2")
     local snowBlock = blockLibrary:GetBlockIndex("snow")
     local stoneBlock = blockLibrary:GetBlockIndex("stone")
     local stoneMossyBlock = blockLibrary:GetBlockIndex("stone_mossy")
@@ -109,11 +58,11 @@ return function (chunk, seed, chunkDims)
     for z = 0, chunksize - 1 do
         for y = 0, chunksize - 1 do
             for x = 0, chunksize - 1 do
-                local blockPos = GetBlockIndices(chunkIndices, Vec3(x, y, z))
+                local blockPos = planet:GetBlockIndices(chunkIndices, Vec3(x, y, z))
                 local blockPosScaled = Vec3(blockPos.x * 0.5, blockPos.y * 0.5, blockPos.z * 0.5)
                 local blockPosNorm, distToCenter = blockPosScaled:GetNormal()
                 --distToCenter = math.max(math.abs(blockPos.x * 0.5 + 0.5), math.abs(blockPos.y * 0.5 + 0.5), math.abs(blockPos.z * 0.5 + 0.5))
-                distToCenter = sdRoundBox(blockPosScaled, Vec3(baseHeight), 16.0)
+                distToCenter = SignedDistance.RoundBox(blockPosScaled, Vec3(baseHeight), 16.0)
 
                 if distToCenter > baseFreeHeight then
                     table.insert(content, emptyBlock)

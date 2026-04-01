@@ -45,77 +45,10 @@ namespace tsom
 					vertexAttributes.normal[i] = faceDirection;
 			}
 
-			if (vertexAttributes.tangent)
+			if (vertexAttributes.blockIndex)
 			{
-				Nz::Vector3f edgeCenter = (pos[0] + pos[1]) * 0.5f;
-				Nz::Vector3f tangent = Nz::Vector3f::Normalize(edgeCenter - faceCenter);
-
 				for (std::size_t i = 0; i < pos.size(); ++i)
-					vertexAttributes.tangent[i] = tangent;
-			}
-
-			if (vertexAttributes.uv)
-			{
-				Nz::Vector3f faceUp = s_dirNormals[DirectionFromNormal(Nz::Vector3f::Normalize(faceCenter - gravityCenter))];
-
-				// Make up the rotation from the face up to the regular up
-				Nz::Quaternionf upRotation = Nz::Quaternionf::RotationBetween(faceUp, Nz::Vector3f::Up());
-
-				// Compute texture direction based on face direction in regular orientation
-				Direction texDirection = DirectionFromNormal(upRotation * faceDirection);
-
-				const auto& blockData = m_blockLibrary.GetBlockData(blockContent);
-				std::size_t textureIndex = blockData.texIndices[texDirection];
-
-				// Compute UV
-				float sliceIndex = textureIndex;
-				for (std::size_t i = 0; i < pos.size(); ++i)
-				{
-					// Get vector from center to corner (no need to normalize) and use it to compute UV
-					// This is similar to the way a GPU compute UV when sampling a cubemap: https://www.gamedev.net/forums/topic/687535-implementing-a-cube-map-lookup-function/5337472/
-					Nz::Vector3f dir = upRotation * (pos[i] - blockCenter);
-					Nz::Vector3f dirAbs = dir.GetAbs();
-
-					float mag = 0.f;
-					Nz::Vector2f uv;
-					switch (texDirection) //< TODO: texture direction should be defined by dir to handle corners
-					{
-						case Direction::Back:
-						case Direction::Front:
-						{
-							mag = 0.5f / dirAbs.x;
-							uv = { dir.x < 0.f ? -dir.z : dir.z, -dir.y };
-							break;
-						}
-
-						case Direction::Down:
-						case Direction::Up:
-						{
-							mag = 0.5f / dirAbs.y;
-							uv = { dir.x, dir.y < 0.f ? -dir.z : dir.z };
-							break;
-						}
-
-						case Direction::Left:
-						case Direction::Right:
-						{
-							mag = 0.5f / dirAbs.z;
-							uv = { dir.z < 0.f ? dir.x : -dir.x, -dir.y };
-							break;
-						}
-					}
-
-					vertexAttributes.uv[i] = Nz::Vector3f(uv * mag + Nz::Vector2f(0.5f), sliceIndex);
-				}
-			}
-
-			// deform positions after generating UV
-			if (DeformPositions(vertexAttributes.position, pos.size()))
-			{
-				if (vertexAttributes.normal && vertexAttributes.tangent)
-					DeformNormalsAndTangents(vertexAttributes.normal, vertexAttributes.tangent, faceDirection, vertexAttributes.position, pos.size());
-				else if (vertexAttributes.normal)
-					DeformNormals(vertexAttributes.normal, faceDirection, vertexAttributes.position, pos.size());
+					vertexAttributes.blockIndex[i] = blockContent;
 			}
 		};
 
@@ -268,22 +201,6 @@ namespace tsom
 		Nz::Vector3f blockPos = (Nz::Vector3f(indices) - Nz::Vector3f(m_size) * 0.5f) * m_blockSize;
 		Nz::Boxf box(blockPos.x, blockPos.z, blockPos.y, m_blockSize, m_blockSize, m_blockSize);
 		return box.GetCorners();
-	}
-
-	void Chunk::DeformNormals(Nz::SparsePtr<Nz::Vector3f> normals, const Nz::Vector3f& referenceNormal, Nz::SparsePtr<const Nz::Vector3f> positions, std::size_t vertexCount) const
-	{
-		/* nothing to do */
-	}
-
-	void Chunk::DeformNormalsAndTangents(Nz::SparsePtr<Nz::Vector3f> normals, Nz::SparsePtr<Nz::Vector3f> tangents, const Nz::Vector3f& referenceNormal, Nz::SparsePtr<const Nz::Vector3f> positions, std::size_t vertexCount) const
-	{
-		/* nothing to do */
-	}
-
-	bool Chunk::DeformPositions(Nz::SparsePtr<Nz::Vector3f> /*positions*/, std::size_t /*positionCount*/) const
-	{
-		/* nothing to do */
-		return false;
 	}
 
 	void Chunk::Deserialize(Nz::ByteStream& byteStream)

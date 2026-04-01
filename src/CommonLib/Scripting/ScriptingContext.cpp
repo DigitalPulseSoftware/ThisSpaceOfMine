@@ -9,6 +9,14 @@
 #include <spdlog/spdlog.h>
 #include <sstream>
 
+#ifndef LUAI_UACINT
+#define LUAI_UACINT LUA_INTFRM_T
+#endif
+
+#ifndef LUA_INTEGER_FMT
+#define LUA_INTEGER_FMT LUA_INTFRMLEN
+#endif
+
 namespace tsom
 {
 	namespace
@@ -34,9 +42,9 @@ namespace tsom
 
 					case LUA_TNUMBER:
 						if (lua_isinteger(L, idx))
-							lua_pushfstring(L, "%I", (LUAI_UACINT)lua_tointeger(L, idx));
+							lua_pushfstring(L, LUA_INTEGER_FMT, (LUAI_UACINT)lua_tointeger(L, idx));
 						else
-							lua_pushfstring(L, "%f", (LUAI_UACNUMBER)lua_tonumber(L, idx));
+							lua_pushfstring(L, LUA_NUMBER_FMT, (LUAI_UACNUMBER)lua_tonumber(L, idx));
 						break;
 
 					case LUA_TBOOLEAN:

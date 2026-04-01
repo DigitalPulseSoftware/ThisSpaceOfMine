@@ -3,6 +3,7 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ClientLib/ClientChunkEntities.hpp>
+#include <ClientLib/ClientAssetLibraryAppComponent.hpp>
 #include <ClientLib/ClientConfigs.hpp>
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Components/VisualEntityComponent.hpp>
@@ -11,8 +12,8 @@
 #include <CommonLib/Components/EntityOwnerComponent.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/EnttWorld.hpp>
-#include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <Nazara/Core/IndexBuffer.hpp>
+#include <Nazara/Core/SpatialSort.hpp>
 #include <Nazara/Core/TaskSchedulerAppComponent.hpp>
 #include <Nazara/Core/VertexBuffer.hpp>
 #include <Nazara/Core/VertexMapper.hpp>
@@ -21,7 +22,9 @@
 #include <Nazara/Graphics/Graphics.hpp>
 #include <Nazara/Graphics/MaterialInstance.hpp>
 #include <Nazara/Graphics/Model.hpp>
+#include <Nazara/Graphics/TextureAsset.hpp>
 #include <Nazara/Graphics/Components/GraphicsComponent.hpp>
+#include <Nazara/Graphics/PropertyHandler/BufferPropertyHandler.hpp>
 #include <Nazara/Graphics/PropertyHandler/OptionValuePropertyHandler.hpp>
 #include <Nazara/Graphics/PropertyHandler/TexturePropertyHandler.hpp>
 #include <Nazara/Graphics/PropertyHandler/UniformValuePropertyHandler.hpp>
@@ -34,7 +37,65 @@ namespace tsom
 	m_configFile(config),
 	m_isCollisionGenerationEnabled(true)
 	{
-		auto& filesystem = app.GetComponent<Nz::FilesystemAppComponent>();
+		auto& clientAssets = app.GetComponent<ClientAssetLibraryAppComponent>();
+
+		std::shared_ptr<Nz::Material> blockMaterial = clientAssets.QueryMaterial("Chunk");
+		if (!blockMaterial)
+		{
+			auto& materialPassRegistry = Nz::Graphics::Instance()->GetMaterialPassRegistry();
+			std::size_t depthPassIndex = materialPassRegistry.GetPassIndex("DepthPass");
+			std::size_t shadowPassIndex = materialPassRegistry.GetPassIndex("ShadowPass");
+			std::size_t distanceShadowPassIndex = materialPassRegistry.GetPassIndex("DistanceShadowPass");
+			std::size_t forwardPassIndex = materialPassRegistry.GetPassIndex("ForwardPass");
+
+			Nz::MaterialSettings settings;
+			settings.AddValueProperty<Nz::Color>("BaseColor", Nz::Color::White());
+			settings.AddValueProperty<bool>("AlphaTest", false);
+			settings.AddValueProperty<float>("AlphaTestThreshold", 0.5f);
+			settings.AddValueProperty<float>("ShadowMapNormalOffset", 0.f);
+			settings.AddValueProperty<float>("ShadowPosScale", 1.f - 0.0025f);
+			settings.AddValueProperty<Nz::Vector3f>("TriplanarOffset", Nz::Vector3f::Zero());
+			settings.AddBufferProperty("GlobalBlockData");
+			settings.AddTextureProperty("BlockTexture1", Nz::ImageType::E2D_Array);
+			settings.AddTextureProperty("BlockTexture2", Nz::ImageType::E2D_Array);
+			settings.AddTextureProperty("BlockTexture3", Nz::ImageType::E2D_Array);
+			settings.AddTextureProperty("BlockTexture4", Nz::ImageType::E2D_Array);
+
+			settings.AddPropertyHandler<Nz::BufferPropertyHandler>("GlobalBlockData");
+			settings.AddPropertyHandler<Nz::OptionValuePropertyHandler>("AlphaTest");
+			settings.AddPropertyHandler<Nz::TexturePropertyHandler>("BlockTexture1");
+			settings.AddPropertyHandler<Nz::TexturePropertyHandler>("BlockTexture2");
+			settings.AddPropertyHandler<Nz::TexturePropertyHandler>("BlockTexture3");
+			settings.AddPropertyHandler<Nz::TexturePropertyHandler>("BlockTexture4");
+			settings.AddPropertyHandler<Nz::UniformValuePropertyHandler>("BaseColor");
+			settings.AddPropertyHandler<Nz::UniformValuePropertyHandler>("AlphaTestThreshold");
+			settings.AddPropertyHandler<Nz::UniformValuePropertyHandler>("ShadowMapNormalOffset");
+			settings.AddPropertyHandler<Nz::UniformValuePropertyHandler>("ShadowPosScale");
+
+			Nz::MaterialPass forwardPass;
+			forwardPass.states.depthBuffer = true;
+			forwardPass.states.depthCompare = Nz::RendererComparison::GreaterOrEqual;
+			forwardPass.shaders.push_back(std::make_shared<Nz::UberShader>(nzsl::ShaderStageType::Fragment | nzsl::ShaderStageType::Vertex, "TSOM.BlockPBR"));
+			settings.AddPass(forwardPassIndex, forwardPass);
+
+			Nz::MaterialPass depthPass = forwardPass;
+			depthPass.options[nzsl::Ast::HashOption("DepthPass")] = true;
+			settings.AddPass(depthPassIndex, depthPass);
+
+			Nz::MaterialPass shadowPass = depthPass;
+			shadowPass.options[nzsl::Ast::HashOption("ShadowPass")] = true;
+			shadowPass.states.depthCompare = Nz::RendererComparison::LessOrEqual; //< TODO: Reverse depth for shadow pass?
+			shadowPass.states.frontFace = Nz::FrontFace::Clockwise;
+			shadowPass.states.depthClamp = Nz::Graphics::Instance()->GetRenderDevice()->GetEnabledFeatures().depthClamping;
+			settings.AddPass(shadowPassIndex, shadowPass);
+
+			Nz::MaterialPass distanceShadowPass = shadowPass;
+			distanceShadowPass.options[nzsl::Ast::HashOption("DistanceDepth")] = true;
+			settings.AddPass(distanceShadowPassIndex, distanceShadowPass);
+
+			blockMaterial = std::make_shared<Nz::Material>(std::move(settings), "TSOM.BlockPBR");
+			clientAssets.RegisterMaterial("Chunk", blockMaterial);
+		}
 
 		Nz::TextureSamplerInfo blockSampler;
 		blockSampler.anisotropyLevel = 16;
@@ -43,69 +104,12 @@ namespace tsom
 		blockSampler.wrapModeU = Nz::SamplerWrap::Repeat;
 		blockSampler.wrapModeV = Nz::SamplerWrap::Repeat;
 
-		auto& materialPassRegistry = Nz::Graphics::Instance()->GetMaterialPassRegistry();
-		std::size_t depthPassIndex = materialPassRegistry.GetPassIndex("DepthPass");
-		std::size_t shadowPassIndex = materialPassRegistry.GetPassIndex("ShadowPass");
-		std::size_t distanceShadowPassIndex = materialPassRegistry.GetPassIndex("DistanceShadowPass");
-		std::size_t forwardPassIndex = materialPassRegistry.GetPassIndex("ForwardPass");
-
-		Nz::MaterialSettings settings;
-		settings.AddValueProperty<Nz::Color>("BaseColor", Nz::Color::White());
-		settings.AddValueProperty<bool>("AlphaTest", false);
-		settings.AddValueProperty<float>("AlphaTestThreshold", 0.5f);
-		settings.AddValueProperty<float>("ShadowMapNormalOffset", 0.f);
-		settings.AddValueProperty<float>("ShadowPosScale", 1.f - 0.0025f);
-		settings.AddTextureProperty("BaseColorMap", Nz::ImageType::E2D_Array);
-		settings.AddTextureProperty("AlphaMap", Nz::ImageType::E2D_Array);
-		settings.AddTextureProperty("DetailMap", Nz::ImageType::E2D_Array);
-		settings.AddPropertyHandler(std::make_unique<Nz::OptionValuePropertyHandler>("AlphaTest", "AlphaTest"));
-		settings.AddPropertyHandler(std::make_unique<Nz::TexturePropertyHandler>("BaseColorMap", "HasBaseColorTexture"));
-		settings.AddPropertyHandler(std::make_unique<Nz::TexturePropertyHandler>("AlphaMap", "HasAlphaTexture"));
-		settings.AddPropertyHandler(std::make_unique<Nz::UniformValuePropertyHandler>("BaseColor"));
-		settings.AddPropertyHandler(std::make_unique<Nz::UniformValuePropertyHandler>("AlphaTestThreshold"));
-		settings.AddPropertyHandler(std::make_unique<Nz::UniformValuePropertyHandler>("ShadowMapNormalOffset"));
-		settings.AddPropertyHandler(std::make_unique<Nz::UniformValuePropertyHandler>("ShadowPosScale"));
-		settings.AddTextureProperty("EmissiveMap", Nz::ImageType::E2D_Array);
-		settings.AddTextureProperty("HeightMap", Nz::ImageType::E2D_Array);
-		settings.AddTextureProperty("MetallicMap", Nz::ImageType::E2D_Array);
-		settings.AddTextureProperty("NormalMap", Nz::ImageType::E2D_Array);
-		settings.AddTextureProperty("RoughnessMap", Nz::ImageType::E2D_Array);
-		settings.AddTextureProperty("SpecularMap", Nz::ImageType::E2D_Array);
-		settings.AddPropertyHandler(std::make_unique<Nz::TexturePropertyHandler>("DetailMap", "HasDetailTexture"));
-		settings.AddPropertyHandler(std::make_unique<Nz::TexturePropertyHandler>("EmissiveMap", "HasEmissiveTexture"));
-		settings.AddPropertyHandler(std::make_unique<Nz::TexturePropertyHandler>("HeightMap", "HasHeightTexture"));
-		settings.AddPropertyHandler(std::make_unique<Nz::TexturePropertyHandler>("MetallicMap", "HasMetallicTexture"));
-		settings.AddPropertyHandler(std::make_unique<Nz::TexturePropertyHandler>("NormalMap", "HasNormalTexture"));
-		settings.AddPropertyHandler(std::make_unique<Nz::TexturePropertyHandler>("RoughnessMap", "HasRoughnessTexture"));
-		settings.AddPropertyHandler(std::make_unique<Nz::TexturePropertyHandler>("SpecularMap", "HasSpecularTexture"));
-
-		Nz::MaterialPass forwardPass;
-		forwardPass.states.depthBuffer = true;
-		forwardPass.states.depthCompare = Nz::RendererComparison::GreaterOrEqual;
-		forwardPass.shaders.push_back(std::make_shared<Nz::UberShader>(nzsl::ShaderStageType::Fragment | nzsl::ShaderStageType::Vertex, "TSOM.BlockPBR"));
-		settings.AddPass(forwardPassIndex, forwardPass);
-
-		Nz::MaterialPass depthPass = forwardPass;
-		depthPass.options[nzsl::Ast::HashOption("DepthPass")] = true;
-		settings.AddPass(depthPassIndex, depthPass);
-
-		Nz::MaterialPass shadowPass = depthPass;
-		shadowPass.options[nzsl::Ast::HashOption("ShadowPass")] = true;
-		shadowPass.states.depthCompare = Nz::RendererComparison::LessOrEqual; //< TODO: Reverse depth for shadow pass?
-		shadowPass.states.frontFace = Nz::FrontFace::Clockwise;
-		shadowPass.states.depthClamp = Nz::Graphics::Instance()->GetRenderDevice()->GetEnabledFeatures().depthClamping;
-		settings.AddPass(shadowPassIndex, shadowPass);
-
-		Nz::MaterialPass distanceShadowPass = shadowPass;
-		distanceShadowPass.options[nzsl::Ast::HashOption("DistanceDepth")] = true;
-		settings.AddPass(distanceShadowPassIndex, distanceShadowPass);
-
-		auto chunkMaterial = std::make_shared<Nz::Material>(std::move(settings), "TSOM.BlockPBR");
-
-		m_chunkMaterial = chunkMaterial->Instantiate();
-		m_chunkMaterial->SetTextureProperty("BaseColorMap", blockLibrary.GetBaseColorTexture(), blockSampler);
-		m_chunkMaterial->SetTextureProperty("NormalMap", blockLibrary.GetNormalTexture(), blockSampler);
-		m_chunkMaterial->SetTextureProperty("DetailMap", blockLibrary.GetDetailTexture(), blockSampler);
+		m_chunkMaterial = blockMaterial->Instantiate();
+		m_chunkMaterial->SetBufferProperty("GlobalBlockData", blockLibrary.GetGlobalBlockBuffer());
+		m_chunkMaterial->SetTextureProperty("BlockTexture1", Nz::TextureAsset::CreateFromTexture(blockLibrary.GetBlockTexture(ClientAssetCookRegistry::TextureType::BC1)), blockSampler);
+		//m_chunkMaterial->SetTextureProperty("BlockTexture2", Nz::TextureAsset::CreateFromTexture(blockLibrary.GetBlockTexture(ClientAssetCookRegistry::TextureType::BC3)), blockSampler);
+		m_chunkMaterial->SetTextureProperty("BlockTexture3", Nz::TextureAsset::CreateFromTexture(blockLibrary.GetBlockTexture(ClientAssetCookRegistry::TextureType::BC4)), blockSampler);
+		m_chunkMaterial->SetTextureProperty("BlockTexture4", Nz::TextureAsset::CreateFromTexture(blockLibrary.GetBlockTexture(ClientAssetCookRegistry::TextureType::BC5)), blockSampler);
 		m_chunkMaterial->SetValueProperty("ShadowPosScale", 1.f);
 		m_chunkMaterial->SetValueProperty("AlphaTest", true);
 		m_chunkMaterial->UpdatePassesStates({ "ShadowPass", "DistanceShadowPass" }, [](Nz::RenderStates& states)
@@ -123,7 +127,7 @@ namespace tsom
 		// VertexDeclaration
 		auto NewDeclaration = [](Nz::VertexInputRate inputRate, std::initializer_list<Nz::VertexDeclaration::ComponentEntry> components)
 		{
-			return std::make_shared<Nz::VertexDeclaration>(inputRate, std::move(components));
+			return std::make_shared<Nz::VertexDeclaration>(inputRate, components);
 		};
 
 		m_chunkVertexDeclaration = NewDeclaration(Nz::VertexInputRate::Vertex, {
@@ -138,13 +142,8 @@ namespace tsom
 				0
 			},
 			{
-				Nz::VertexComponent::TexCoord,
-				Nz::ComponentType::Float3,
-				0
-			},
-			{
-				Nz::VertexComponent::Tangent,
-				Nz::ComponentType::Float3,
+				Nz::VertexComponent::Userdata,
+				Nz::ComponentType::UInt1,
 				0
 			}
 		});
@@ -170,8 +169,7 @@ namespace tsom
 			vertices.resize(vertices.size() + 4);
 			vertexAttributes.position = Nz::SparsePtr<Nz::Vector3f>(&vertices[vertexAttributes.firstIndex].position, sizeof(vertices.front()));
 			vertexAttributes.normal = Nz::SparsePtr<Nz::Vector3f>(&vertices[vertexAttributes.firstIndex].normal, sizeof(vertices.front()));
-			vertexAttributes.tangent = Nz::SparsePtr<Nz::Vector3f>(&vertices[vertexAttributes.firstIndex].tangent, sizeof(vertices.front()));
-			vertexAttributes.uv = Nz::SparsePtr<Nz::Vector3f>(&vertices[vertexAttributes.firstIndex].uvw, sizeof(vertices.front()));
+			vertexAttributes.blockIndex = Nz::SparsePtr<Nz::UInt32>(&vertices[vertexAttributes.firstIndex].blockIndex, sizeof(vertices.front()));
 
 			return vertexAttributes;
 		};
@@ -195,36 +193,37 @@ namespace tsom
 			Nz::SparsePtr<Nz::Vector3f> normals = mapper.GetComponentPtr<Nz::Vector3f>(Nz::VertexComponent::Normal);
 			Nz::SparsePtr<Nz::Vector3f> positions = mapper.GetComponentPtr<Nz::Vector3f>(Nz::VertexComponent::Position);
 
-			// TODO: Replace by a vertex finder-like
-			std::map<Nz::Vector3i, Nz::HybridVector<Nz::UInt32, 6>> posToVerts;
-			for (Nz::UInt32 i = 0; i < vertexCount; ++i)
-			{
-				Nz::Vector3i p = Nz::Vector3i(Nz::Vector3f::Apply(positions[i] * 100.f, std::roundf));
-				posToVerts[p].push_back(i);
-			}
+			std::vector<Nz::Vector3f> newNormals(vertexCount);
+
+			Nz::SpatialSort spatialSort;
+			spatialSort.Append(positions, vertexCount);
+
+			std::vector<Nz::UInt32> sortResult;
 
 			float fLimit = smoothLimitAngle.GetCos();
-			for (Nz::UInt32 i = 0; i < vertexCount; ++i)
+			for (Nz::UInt32 vertexIndex = 0; vertexIndex < vertexCount; ++vertexIndex)
 			{
-				Nz::Vector3i p = Nz::Vector3i(Nz::Vector3f::Apply(positions[i] * 100.f, std::roundf));
+				sortResult.clear();
+				spatialSort.FindPositions(positions[vertexIndex], 0.01f, sortResult);
 
-				Nz::Vector3f vr = normals[i];
+				Nz::Vector3f vertexNormal = normals[vertexIndex];
 
-				auto& verticesFound = posToVerts[p];
-				Nz::Vector3f pcNor;
-				for (Nz::UInt32 j : verticesFound)
+				Nz::Vector3f normalSum = vertexNormal;
+				for (Nz::UInt32 resultIndex : sortResult)
 				{
-					Nz::Vector3f v = normals[j];
+					if (vertexIndex == resultIndex)
+						continue;
 
-					// Check whether the angle between the two normals is not too large.
-					// Skip the angle check on our own normal to avoid false negatives
-					// (v*v is not guaranteed to be 1.0 for all unit vectors v)
-					if ((j == i || (Nz::Vector3f::DotProduct(v, vr) >= fLimit)))
-						pcNor += v;
+					Nz::Vector3f normal = normals[resultIndex];
+					if (Nz::Vector3f::DotProduct(normal, vertexNormal) >= fLimit)
+						normalSum += normal;
 				}
 
-				normals[i] = pcNor.Normalize();
+				newNormals[vertexIndex] = normalSum.Normalize();
 			}
+
+			for (Nz::UInt32 vertexIndex = 0; vertexIndex < vertexCount; ++vertexIndex)
+				normals[vertexIndex] = newNormals[vertexIndex];
 		}
 
 		std::shared_ptr<Nz::Mesh> chunkMesh = std::make_shared<Nz::Mesh>();
@@ -321,6 +320,7 @@ namespace tsom
 			if (updateJob->cancelled)
 				return;
 
+			// FIXME: If ClientChunkEntities is deleted before job finished, it can result in a crash
 			ChunkReadLock lock(chunkPtr.get());
 			updateJob->mesh = BuildMesh(*chunkPtr);
 			updateJob->jobDone++;

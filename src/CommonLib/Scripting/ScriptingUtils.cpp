@@ -30,18 +30,18 @@ namespace tsom
 	[[noreturn]] void TriggerLuaError(lua_State* L, const std::string& errMessage)
 	{
 		luaL_error(L, errMessage.c_str());
-		std::abort();
+		std::abort(); //< shouldn't be called since luaL_error will trigger a Lua error
 	}
 
 	[[noreturn]] void TriggerLuaArgError(lua_State* L, int argIndex, const char* errMessage)
 	{
 		luaL_argerror(L, argIndex, errMessage);
-		std::abort();
+		std::abort(); //< shouldn't be called since luaL_error will trigger a Lua error
 	}
 
 	[[noreturn]] void TriggerLuaArgError(lua_State* L, int argIndex, const std::string& errMessage)
 	{
 		luaL_argerror(L, argIndex, errMessage.c_str());
-		std::abort();
+		std::abort(); //< shouldn't be called since luaL_error will trigger a Lua error
 	}
 }

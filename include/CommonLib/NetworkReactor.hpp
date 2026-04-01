@@ -36,7 +36,7 @@ namespace tsom
 			NetworkReactor(NetworkReactor&&) = delete;
 			~NetworkReactor();
 
-			std::size_t ConnectTo(Nz::IpAddress address, Nz::UInt32 data = 0);
+			std::size_t ConnectTo(const Nz::IpAddress& address, Nz::UInt32 data = 0);
 			void DisconnectPeer(std::size_t peerId, Nz::UInt32 data = 0, DisconnectionType type = DisconnectionType::Normal);
 
 			inline std::size_t GetIdOffset() const;

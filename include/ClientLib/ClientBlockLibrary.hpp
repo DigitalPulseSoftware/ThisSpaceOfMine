@@ -9,11 +9,14 @@
 
 #include <ClientLib/Export.hpp>
 #include <CommonLib/BlockLibrary.hpp>
+#include <ClientLib/ClientAssetCookRegistry.hpp>
 
 namespace Nz
 {
 	class ApplicationBase;
+	class RenderBuffer;
 	class RenderDevice;
+	class Texture;
 	class TextureAsset;
 }
 
@@ -25,19 +28,18 @@ namespace tsom
 			inline ClientBlockLibrary(Nz::ApplicationBase& applicationBase);
 			~ClientBlockLibrary() = default;
 
-			void BuildTexture();
+			void BuildTexture(Nz::RenderDevice& renderDevice);
 
-			inline const std::shared_ptr<Nz::TextureAsset>& GetBaseColorTexture() const;
-			inline const std::shared_ptr<Nz::TextureAsset>& GetDetailTexture() const;
-			inline const std::shared_ptr<Nz::TextureAsset>& GetNormalTexture() const;
+			inline const std::shared_ptr<Nz::Texture>& GetBlockTexture(ClientAssetCookRegistry::TextureType textureType) const;
+			inline const std::shared_ptr<Nz::RenderBuffer>& GetGlobalBlockBuffer() const;
 			inline const std::shared_ptr<Nz::TextureAsset>& GetPreviewTexture(BlockIndex blockIndex) const;
 
 		private:
-			std::shared_ptr<Nz::TextureAsset> m_baseColorTexture;
-			std::shared_ptr<Nz::TextureAsset> m_detailTexture;
-			std::shared_ptr<Nz::TextureAsset> m_normalTexture;
+			std::shared_ptr<Nz::RenderBuffer> m_globalBlockBuffer;
 			std::vector<std::shared_ptr<Nz::TextureAsset>> m_previewTextures;
+			Nz::EnumArray<ClientAssetCookRegistry::TextureType, std::shared_ptr<Nz::Texture>> m_blockTextures;
 			Nz::ApplicationBase& m_applicationBase;
+			void* m_globalBlockBufferPtr;
 	};
 }
 

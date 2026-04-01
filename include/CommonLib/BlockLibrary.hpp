@@ -32,6 +32,7 @@ namespace tsom
 			~BlockLibrary() = default;
 
 			inline const BlockData& GetBlockData(BlockIndex blockIndex) const;
+			inline const std::vector<BlockData>& GetBlocks() const;
 			inline const LayerData& GetLayerData(std::size_t layerIndex) const;
 			inline BlockIndex GetBlockIndex(std::string_view blockName) const;
 			inline bool IsValidBlock(BlockIndex blockIndex) const;
@@ -44,32 +45,29 @@ namespace tsom
 			{
 				std::string_view layerName = "default";
 				std::string basePath;
-				std::string baseBackPath;
-				std::string baseDownPath;
-				std::string baseFrontPath;
-				std::string baseLeftPath;
-				std::string baseRightPath;
-				std::string baseSidePath;
-				std::string baseUpPath;
 				bool hasCollisions = true;
 				bool isDoubleSided = false;
 				bool isSmooth = false;
 				bool isTransparent = false;
 				float density = 1.0f;
+				float metalness = 0.0f; //< Used if texture is not available
 				float permeability = 0.f;
+				float roughness = 1.0f; //< Used if texture is not available
 			};
 
 			struct BlockData
 			{
 				std::size_t layerIndex;
 				std::string name;
-				Nz::EnumArray<Direction, unsigned int> texIndices;
+				std::string basePath;
 				bool hasCollisions;
 				bool isDoubleSided;
 				bool isTransparent;
 				bool isSmooth;
 				float density;
+				float metalness = 0.0f; //< Used if texture is not available
 				float permeability;
+				float roughness = 1.0f; //< Used if texture is not available
 			};
 
 			struct LayerInfo
@@ -95,13 +93,9 @@ namespace tsom
 			BlockLibrary& operator=(const BlockLibrary&) = delete;
 			BlockLibrary& operator=(BlockLibrary&&) = delete;
 
-		private:
-			unsigned int RegisterTexture(std::string&& texturePath);
-
 		protected:
 			tsl::hopscotch_map<std::string /*name*/, BlockIndex /*blockIndex*/, std::hash<std::string_view>, std::equal_to<>> m_blockIndices;
 			tsl::hopscotch_map<std::string /*name*/, std::size_t /*layerIndex*/, std::hash<std::string_view>, std::equal_to<>> m_layerIndices;
-			tsl::hopscotch_map<std::string /*texturePath*/, unsigned int /*textureIndex*/, std::hash<std::string_view>, std::equal_to<>> m_textureIndices;
 			std::vector<BlockData> m_blocks;
 			std::vector<LayerData> m_layers;
 	};

@@ -31,12 +31,7 @@ namespace tsom
 		});
 
 		RegisterBlock("debug", {
-			.baseBackPath = "blocks/debug_back",
-			.baseDownPath = "blocks/debug_down",
-			.baseFrontPath = "blocks/debug_front",
-			.baseLeftPath = "blocks/debug_left",
-			.baseRightPath = "blocks/debug_right",
-			.baseUpPath = "blocks/debug_up",
+			.basePath = "blocks/debug_up",
 		});
 
 		RegisterBlock("dirt", {
@@ -47,9 +42,7 @@ namespace tsom
 		});
 
 		RegisterBlock("grass", {
-			.basePath = "blocks/grass_top",
-			.baseDownPath = "blocks/dirt",
-			.baseSidePath = "blocks/grass_side",
+			.basePath = "blocks/grass",
 			.isSmooth = true,
 			.density = 2.0f,
 			.permeability = 0.1f
@@ -57,10 +50,6 @@ namespace tsom
 
 		RegisterBlock("hull", {
 			.basePath = "blocks/smooth_stone"
-		});
-
-		RegisterBlock("hull2", {
-			.basePath = "blocks/smooth_stone_slab_side"
 		});
 
 		RegisterBlock("snow", {
@@ -112,6 +101,49 @@ namespace tsom
 			.isSmooth = true,
 			.isTransparent = true,
 		});
+
+		RegisterBlock("bark", {
+			.basePath = "blocks/bark",
+			.isSmooth = true
+		});
+
+		RegisterBlock("cliff_rocks", {
+			.basePath = "blocks/cliff_rocks",
+			.isSmooth = true
+		});
+
+		RegisterBlock("rock", {
+			.basePath = "blocks/rock",
+			.isSmooth = true
+		});
+
+		RegisterBlock("wood_floor", {
+			.basePath = "blocks/wood_floor",
+		});
+
+		RegisterBlock("white_bricks", {
+			.basePath = "blocks/white_bricks",
+		});
+
+		RegisterBlock("gold", {
+			.basePath = "blocks/gold",
+		});
+
+		RegisterBlock("metal", {
+			.basePath = "blocks/metal",
+		});
+
+		RegisterBlock("metal_plates", {
+			.basePath = "blocks/metal_plates",
+		});
+
+		RegisterBlock("brickswall", {
+			.basePath = "blocks/brickswall",
+		});
+
+		RegisterBlock("floor_tiles", {
+			.basePath = "blocks/floor_tiles",
+		});
 	}
 
 	BlockIndex BlockLibrary::RegisterBlock(std::string name, BlockInfo blockInfo)
@@ -124,43 +156,15 @@ namespace tsom
 		blockData.isTransparent = blockInfo.isTransparent;
 		blockData.isSmooth = blockInfo.isSmooth;
 		blockData.density = blockInfo.density;
+		blockData.metalness = blockInfo.metalness;
 		blockData.permeability = blockInfo.permeability;
+		blockData.roughness = blockInfo.roughness;
 		blockData.name = name;
+		blockData.basePath = std::move(blockInfo.basePath);
 
 		auto it = m_layerIndices.find(blockInfo.layerName);
 		NazaraAssertMsg(it != m_layerIndices.end(), "Invalid layer %s", blockInfo.layerName.data());
 		blockData.layerIndex = Nz::SafeCaster(it->second);
-
-		unsigned int baseTexIndex;
-		if (!blockInfo.basePath.empty())
-			baseTexIndex = RegisterTexture(std::move(blockInfo.basePath));
-		else
-			baseTexIndex = 0;
-
-		unsigned int baseSideTexIndex;
-		if (!blockInfo.baseSidePath.empty())
-			baseSideTexIndex = RegisterTexture(std::move(blockInfo.baseSidePath));
-		else
-			baseSideTexIndex = baseTexIndex;
-
-		Nz::EnumArray<Direction, std::string*> dirToStr = {
-			&blockInfo.baseBackPath,  //< Back
-			&blockInfo.baseDownPath,  //< Down
-			&blockInfo.baseFrontPath, //< Front
-			&blockInfo.baseLeftPath,  //< Left
-			&blockInfo.baseRightPath, //< Right
-			&blockInfo.baseUpPath,    //< Up
-		};
-
-		for (auto&& [dir, str] : dirToStr.iter_kv())
-		{
-			if (!str->empty())
-				blockData.texIndices[dir] = RegisterTexture(std::move(*str));
-			else if (dir != Direction::Up && dir != Direction::Down)
-				blockData.texIndices[dir] = baseSideTexIndex;
-			else
-				blockData.texIndices[dir] = baseTexIndex;
-		}
 
 		assert(!m_blockIndices.contains(name));
 		m_blockIndices.emplace(std::move(name), blockIndex);
@@ -184,17 +188,5 @@ namespace tsom
 		m_layerIndices.emplace(std::move(name), layerIndex);
 
 		return layerIndex;
-	}
-
-	unsigned int BlockLibrary::RegisterTexture(std::string&& texturePath)
-	{
-		auto it = m_textureIndices.find(texturePath);
-		if (it != m_textureIndices.end())
-			return it->second;
-
-		unsigned int texIndex = Nz::SafeCast<unsigned int>(m_textureIndices.size() + 1); // Keep slice #0 for empty
-		m_textureIndices.emplace(std::move(texturePath), texIndex);
-
-		return texIndex;
 	}
 }
