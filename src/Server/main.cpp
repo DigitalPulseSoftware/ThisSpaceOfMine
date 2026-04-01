@@ -111,7 +111,7 @@ int ServerMain(int argc, char* argv[])
 				.id = 1,
 				.generatorName = "bob",
 				.seed = 42,
-				.chunkCount = Nz::Vector3ui(5),
+				.chunkCount = Nz::Vector3ui(15),
 				.blockSize = 0.5f,
 				.cornerRadius = 16.f,
 				.gravity = 9.81f

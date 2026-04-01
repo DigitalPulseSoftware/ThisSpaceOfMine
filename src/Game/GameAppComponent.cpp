@@ -3,6 +3,8 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <Game/GameAppComponent.hpp>
+#include <ClientLib/ClientAssetCooker.hpp>
+#include <ClientLib/ClientFramePipeline.hpp>
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Rendering/AtmosphereScatteringPipelinePass.hpp>
 #include <ClientLib/Systems/AnimationSystem.hpp>
@@ -25,6 +27,7 @@
 #include <Game/States/MenuState.hpp>
 #include <Game/States/PlanetEditorState.hpp>
 #include <Game/States/VersionCheckState.hpp>
+#include <NazaraUtils/EnumArray.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/Clock.hpp>
 #include <Nazara/Core/EntitySystemAppComponent.hpp>
@@ -39,6 +42,7 @@
 #include <Nazara/Platform/MessageBox.hpp>
 #include <Nazara/Platform/WindowingAppComponent.hpp>
 #include <spdlog/spdlog.h>
+#include <algorithm>
 #include <charconv>
 
 #ifdef TSOM_DEV_TOOLS
@@ -47,6 +51,24 @@
 
 namespace tsom
 {
+	namespace
+	{
+		enum class MandatoryFeature
+		{
+			Depth32F,
+			PersistentMapping,
+			StorageBuffers,
+
+			Max = StorageBuffers
+		};
+
+		constexpr Nz::EnumArray<MandatoryFeature, std::string_view> s_featureNames = {
+			"Depth32F depth-buffers",
+			"persistent mapping",
+			"storage buffers"
+		};
+	}
+
 	GameAppComponent::GameAppComponent(Nz::ApplicationBase& app) :
 	ApplicationComponent(app)
 	{
@@ -56,14 +78,36 @@ namespace tsom
 	{
 		// Check if GPU has minimum required specs
 		const Nz::RenderDevice& renderDevice = *Nz::Graphics::Instance()->GetRenderDevice();
-		if (!renderDevice.IsTextureFormatSupported(Nz::PixelFormat::Depth32F, Nz::TextureUsage::DepthStencilAttachment))
+		const Nz::RenderDeviceFeatures& renderDeviceFeatures = renderDevice.GetEnabledFeatures();
+
+		Nz::EnumArray<MandatoryFeature, bool> featureTests = {
+			renderDevice.IsTextureFormatSupported(Nz::PixelFormat::Depth32F, Nz::TextureUsage::DepthStencilAttachment),
+			renderDeviceFeatures.persistentMapping,
+			renderDeviceFeatures.storageBuffers
+		};
+
+		// Test if all mandatory features are supported
+		if (std::find(featureTests.begin(), featureTests.end(), false) != featureTests.end())
 		{
+			std::string missingFeatures;
+			for (auto&& [feature, supported] : featureTests.iter_kv())
+			{
+				if (!supported)
+				{
+					if (!missingFeatures.empty())
+						missingFeatures += ", ";
+
+					missingFeatures += s_featureNames[feature];
+				}
+			}
+
 			const Nz::RenderDeviceInfo& deviceInfo = renderDevice.GetDeviceInfo();
-			Nz::MessageBox requestBox(Nz::MessageBoxType::Error, "Missing GPU feature",
+			Nz::MessageBox requestBox(Nz::MessageBoxType::Error, "Missing GPU features",
 				Nz::Format(
-					"Your GPU ({}) doesn't seem to support floating-point depth buffer (missing Depth32F support).\n"
+					"Your GPU ({}) doesn't seem to support mandatory features for the game (missing {} support).\n"
 					"This is required for the game, try to update your drivers.{}",
 					deviceInfo.name,
+					missingFeatures,
 					(deviceInfo.type == Nz::RenderDeviceType::Integrated) ? "\nThe detected GPU seems to be integrated, try to use a dedicated GPU if possible.": ""
 				)
 			);
@@ -245,13 +289,23 @@ namespace tsom
 
 		auto& filesystem = app.GetComponent<Nz::FilesystemAppComponent>();
 		filesystem.Mount("assets", assetPath);
+		filesystem.Mount("CookedAssets", Nz::Utf8Path("cache/CookedAssets"));
 		filesystem.Mount("scripts", scriptPath);
 
 		Nz::Graphics* graphics = Nz::Graphics::Instance();
 		graphics->GetShaderModuleResolver()->RegisterDirectory(Nz::Utf8Path("assets/shaders"), true);
 
 		m_blockLibrary.emplace(app);
-		m_blockLibrary->BuildTexture();
+
+		ClientAssetCooker assetCooker(app);
+		if (auto result = assetCooker.Cook(*m_blockLibrary); !result)
+		{
+			spdlog::critical("failed to cook assets: {}!", result.GetError());
+			app.Quit();
+			return false;
+		}
+
+		m_blockLibrary->BuildTexture(*Nz::Graphics::Instance()->GetRenderDevice());
 
 		return true;
 	}
@@ -339,7 +393,7 @@ namespace tsom
 		world.AddSystem<ShipSystem>();
 		world.AddSystem<TransformCopySystem>();
 		world.AddSystem<Nz::LifetimeSystem>();
-		world.AddSystem<Nz::RenderSystem>();
+		world.AddSystem<Nz::RenderSystem>([this](Nz::ElementRendererRegistry& elementRegistry) { return std::make_unique<ClientFramePipeline>(elementRegistry, *m_blockLibrary); });
 
 		Nz::Physics3DSystem::Settings physSettings = Physics::BuildSettings();
 		physSettings.stepSize = Constants::TickDuration;

@@ -77,11 +77,22 @@ namespace tsom
 				NazaraSlot(Chunk, OnReset, onReset);
 			};
 
+			struct ChunkGenerator
+			{
+				ChunkGenerator(Nz::ApplicationBase& app) :
+				scriptingContext(app)
+				{
+				}
+
+				ScriptingContext scriptingContext;
+				sol::protected_function generationFunction;
+			};
+
 			std::mutex m_chunkLayerAddedSignalMutex;
 			std::mutex m_chunkLayerRemovedSignalMutex;
 			std::mutex m_chunkUpdatedSignalMutex;
 			tsl::hopscotch_map<ChunkIndices, ChunkData> m_chunks;
-			Nz::ThreadLocalData<ScriptingContext> m_scriptingContexts;
+			Nz::ThreadLocalData<ChunkGenerator> m_chunkGenerators;
 			Nz::ApplicationBase& m_app;
 			float m_cornerRadius;
 			float m_gravity;

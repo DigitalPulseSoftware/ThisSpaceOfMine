@@ -141,9 +141,9 @@ namespace tsom
 	{
 		constexpr float PlanetGravityCenterStartDecrease = 16.f;
 		constexpr float PlanetGravityCenterNoGravity = 4.f;
-		constexpr float PlanetGravitySpaceStart = 100.f;
-		constexpr float PlanetGravitySpaceFinish = 150.f;
-		constexpr float PlanetGravitySpaceNone = 350.f;
+		constexpr float PlanetGravitySpaceStart = 200.f;
+		constexpr float PlanetGravitySpaceFinish = 300.f;
+		constexpr float PlanetGravitySpaceNone = 500.f;
 
 		// Decrease gravity near the center
 		float distSq = position.SquaredDistance(GetCenter());
@@ -244,19 +244,26 @@ namespace tsom
 		ChunkIndices chunkIndices = chunk.GetIndices();
 
 		bool created;
-		ScriptingContext& scriptingContext = m_scriptingContexts.GetOrCreate(created, m_app);
+		ChunkGenerator& chunkGenerator = m_chunkGenerators.GetOrCreate(created, m_app);
 		if (created)
 		{
-			scriptingContext.RegisterLibrary<MathScriptingLibrary>();
-			scriptingContext.RegisterLibrary<ChunkScriptingLibrary>();
+			chunkGenerator.scriptingContext.RegisterLibrary<MathScriptingLibrary>();
+			chunkGenerator.scriptingContext.RegisterLibrary<ChunkScriptingLibrary>();
+
+			Nz::Result execResult = chunkGenerator.scriptingContext.LoadFile(fmt::format("scripts/planets/{}.lua", scriptName));
+			if (!execResult)
+				return;
+
+			chunkGenerator.generationFunction = execResult.GetValue();
 		}
 
-		Nz::Result execResult = scriptingContext.LoadFile(fmt::format("scripts/planets/{}.lua", scriptName));
-		if (!execResult)
-			return;
+		Nz::Time t1 = Nz::GetElapsedNanoseconds();
+		Nz::Time t2 = Nz::GetElapsedNanoseconds();
 
-		sol::protected_function generationFunction = execResult.GetValue();
-		auto result = generationFunction(chunk, seed, chunkCount);
+		Nz::Time t3 = Nz::GetElapsedNanoseconds();
+		auto result = chunkGenerator.generationFunction(chunk, seed, chunkCount);
+		Nz::Time t4 = Nz::GetElapsedNanoseconds();
+
 		if (!result.valid())
 		{
 			sol::error err = result;
@@ -273,6 +280,8 @@ namespace tsom
 
 		auto& blockLibrary = chunk.GetBlockLibrary();
 
+		Nz::Time t5 = Nz::GetElapsedNanoseconds();
+
 		std::vector<BlockIndex> blocks(blockCount, EmptyBlockIndex);
 		std::size_t maxEntries = std::min<std::size_t>(blockCount, contentSize);
 		for (std::size_t i = 0; i < maxEntries; ++i)
@@ -287,11 +296,153 @@ namespace tsom
 			blocks[i] = blockIndex;
 		}
 
+		Nz::Time t6 = Nz::GetElapsedNanoseconds();
+
 		ChunkWriteLock lock(&chunk);
 		chunk.Reset([&](BlockIndex* blockIndices)
 		{
 			std::memcpy(blockIndices, blocks.data(), blockCount * sizeof(BlockIndex));
 		});
+
+		Nz::Time t7 = Nz::GetElapsedNanoseconds();
+
+		static std::atomic_int64_t counter = 0;
+		std::atomic_int64_t iterCount = ++counter;
+
+		static std::atomic_int64_t accFile = 0;
+		std::atomic_int64_t a1 = accFile.fetch_add((t2 - t1).AsMicroseconds());
+
+		static std::atomic_int64_t accLua = 0;
+		std::atomic_int64_t a2 = accLua.fetch_add((t4 - t3).AsMicroseconds());
+
+		static std::atomic_int64_t accConvert = 0;
+		std::atomic_int64_t a3 = accConvert.fetch_add((t6 - t5).AsMicroseconds());
+
+		static std::atomic_int64_t accChunk = 0;
+		std::atomic_int64_t a4 = accChunk.fetch_add((t7 - t6).AsMicroseconds());
+
+		static std::atomic_int64_t accTotal = 0;
+		std::atomic_int64_t a5 = accTotal.fetch_add((t7 - t1).AsMicroseconds());
+
+		fmt::print("Total: {}us (load file: {}us, lua: {}us ({}), convert: {}us, chunk: {}us)\n", a5 / iterCount, a1 / iterCount, a2 / iterCount, (t4 - t3).AsMicroseconds(), a3 / iterCount, a4 / iterCount);
+	}
+
+	void Planet::GenerateChunkNative(Chunk& chunk, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, std::string_view scriptName)
+	{
+#if 0
+		siv::PerlinNoise perlinNoise(seed);
+		auto& blockLibrary = chunk.GetBlockLibrary();
+
+		float minGrenerationFreeHeight = 0; 
+		float baseFreeHeight = 30;
+
+		float blockSize = chunk.GetBlockSize();
+		float maxHeight = (chunk.GetSize() * chunkCount.x)/2 * blockSize;
+		float maxGenerationHeight = maxHeight - minGrenerationFreeHeight;
+		float baseHeight = maxHeight - baseFreeHeight;
+
+		float terrainVariation1Scale = 0.06 * baseHeight;
+		float terrainVariation2Scale = 0.16 * baseHeight;
+		float moutainScale = 0.035 * baseHeight;
+		float spikeScale = 0.2 * baseHeight;
+		float caveScale = 0.06;
+
+		std::size_t blockCount = chunk.GetBlockCount();
+		std::vector<BlockIndex> blocks(blockCount, EmptyBlockIndex);
+
+		std::size_t i = 0;
+		for (std::size_t z = 0; z < ChunkSize; ++z)
+		{
+			for (std::size_t y = 0; y < ChunkSize; ++y)
+			{
+				for (std::size_t x = 0; x < ChunkSize; ++x)
+				{
+					BlockIndices blockPos = GetBlockIndices(chunk.GetIndices(), { x, y, z });
+					Nz::Vector3f blockPosScaled(blockPos);
+					blockPosScaled *= 0.5f;
+
+					Nz::Vector3f blockPosNorm = blockPosScaled.GetNormal();
+					float distToCenter = sdRoundBox(blockPosScaled, Nz::Vector3f(baseHeight), 16.0);
+
+					//blocks[i];
+				}
+			}
+		}
+    for z = 0, chunksize - 1 do
+        for y = 0, chunksize - 1 do
+            for x = 0, chunksize - 1 do
+                local blockPos = planet:GetBlockIndices(chunkIndices, Vec3ui(x, y, z))
+                local blockPosScaled = Vec3f(blockPos.x * 0.5, blockPos.y * 0.5, blockPos.z * 0.5)
+                local blockPosNorm, distToCenter = blockPosScaled:GetNormal()
+                --distToCenter = math.max(math.abs(blockPos.x * 0.5 + 0.5), math.abs(blockPos.y * 0.5 + 0.5), math.abs(blockPos.z * 0.5 + 0.5))
+                distToCenter = SignedDistance.RoundBox(blockPosScaled, Vec3f(baseHeight), 16.0)
+
+                if distToCenter > baseFreeHeight then
+                    table.insert(content, emptyBlock)
+                    goto continue
+                end
+
+                local blockPresence = perlin:normalizedOctave3D_01(blockPosScaled.x * caveScale, blockPosScaled.y * caveScale, blockPosScaled.z * caveScale, 4, 0.1)
+                
+                if distToCenter <= -32.0 then
+                    if blockPresence >= 0.3 and blockPresence <= 0.7 then
+                        if distToCenter <= -5 then
+                            table.insert(content, stoneBlock)
+                        else
+                            table.insert(content, dirtBlock)
+                        end
+                    else
+                        table.insert(content, stoneBlock)
+                    end
+                else
+                    local baseMountainous = perlin:normalizedOctave3D_01((blockPosNorm.x * moutainScale)+10, blockPosNorm.y * moutainScale, blockPosNorm.z * moutainScale, 4, 0.1)
+                    local mountainous
+                    if baseMountainous < 0.6 then 
+                        mountainous = 0
+                    elseif baseMountainous < 0.8 then 
+                        mountainous = 5*baseMountainous-3
+                    else
+                        mountainous = 1
+                    end
+                    
+                    local heightVariation1 = 10 * perlin:normalizedOctave3D_01(blockPosNorm.x * terrainVariation1Scale, blockPosNorm.y * terrainVariation1Scale, blockPosNorm.z * terrainVariation1Scale, 4, 0.1)
+                    local heightVariation2 = 40 * mountainous * perlin:normalizedOctave3D_01((blockPosNorm.x * terrainVariation2Scale)+20, blockPosNorm.y * terrainVariation2Scale, blockPosNorm.z * terrainVariation2Scale, 4, 0.1)
+                    
+                    local baseSpikeHeight = perlin:normalizedOctave3D_01((blockPosNorm.x * spikeScale)+30, blockPosNorm.y * spikeScale, blockPosNorm.z * spikeScale, 4, 0.1)
+                    local spikeHeight
+                    if baseSpikeHeight < 0.7 then 
+                        spikeHeight = 0
+                    elseif baseSpikeHeight < 0.9 then 
+                        spikeHeight = 5*baseSpikeHeight-3.5
+                    else
+                        spikeHeight = 1
+                    end
+                    spikeHeight = (1-mountainous) * spikeHeight * 20
+                    
+                    local height = heightVariation1 + heightVariation2 + spikeHeight
+                    
+                    if distToCenter <= height then
+                        if distToCenter >= height - spikeHeight then
+                            table.insert(content, stoneMossyBlock)
+                        elseif mountainous > 0.5 and heightVariation2 > 0.5 then
+                            table.insert(content, snowBlock)
+                        elseif mountainous > 0.1 then
+                            table.insert(content, stoneBlock)
+                        elseif baseMountainous < 0.4 then
+                            table.insert(content, grassBlock)
+                        else
+                            table.insert(content, dirtBlock)
+                        end
+                    else
+                        table.insert(content, emptyBlock)
+                    end
+                end
+                
+                ::continue::
+            end
+        end
+    end
+#endif
 	}
 
 	void Planet::GenerateChunks(Nz::TaskScheduler& taskScheduler, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, std::string_view scriptName)

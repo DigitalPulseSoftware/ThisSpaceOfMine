@@ -225,7 +225,7 @@ namespace tsom
 	{
 		for (auto entityId : entitiesDelete.entities)
 		{
-			assert(m_entities[entityId]);
+			NazaraAssert(entityId < m_entities.size() && m_entities[entityId]);
 			EntityData& entityData = *m_entities[entityId];
 			Packets::Helper::EnvironmentId environmentIndex = entityData.environmentIndex;
 			assert(m_environments[environmentIndex]);
@@ -245,7 +245,7 @@ namespace tsom
 	{
 		for (auto& entityStates : stateUpdate.entities)
 		{
-			assert(m_entities[entityStates.entityId]);
+			NazaraAssert(entityStates.entityId < m_entities.size() && m_entities[entityStates.entityId]);
 			EntityData& entityData = *m_entities[entityStates.entityId];
 
 			if (NetworkInterpolationComponent* movementInterpolation = entityData.entity.try_get<NetworkInterpolationComponent>())
@@ -273,15 +273,15 @@ namespace tsom
 
 	void ClientSessionHandler::HandlePacket(Packets::S_EntityEnvironmentUpdate&& environmentUpdate)
 	{
-		assert(m_entities[environmentUpdate.entity]);
+		NazaraAssert(environmentUpdate.entity < m_entities.size() && m_entities[environmentUpdate.entity]);
 		EntityData& entityData = *m_entities[environmentUpdate.entity];
 		spdlog::info("Entity {} moved to environment #{} to environment #{}", environmentUpdate.entity, entityData.environmentIndex, environmentUpdate.newEnvironmentId);
 
-		assert(m_environments[entityData.environmentIndex]);
+		NazaraAssert(entityData.environmentIndex < m_environments.size() && m_environments[entityData.environmentIndex]);
 		auto& oldEnvironment = *m_environments[entityData.environmentIndex];
 		oldEnvironment.entities.Reset(environmentUpdate.entity);
 
-		assert(m_environments[environmentUpdate.newEnvironmentId]);
+		NazaraAssert(environmentUpdate.newEnvironmentId < m_environments.size() && m_environments[environmentUpdate.newEnvironmentId]);
 		auto& newEnvironment = *m_environments[environmentUpdate.newEnvironmentId];
 		newEnvironment.entities.UnboundedSet(environmentUpdate.entity);
 
@@ -302,7 +302,7 @@ namespace tsom
 
 	void ClientSessionHandler::HandlePacket(Packets::S_EntityProcedureCall&& procedureCall)
 	{
-		assert(m_entities[procedureCall.entity]);
+		NazaraAssert(procedureCall.entity < m_entities.size() && m_entities[procedureCall.entity]);
 		EntityData& entityData = *m_entities[procedureCall.entity];
 
 		auto& classInstance = entityData.entity.get<ClassInstanceComponent>();
@@ -544,7 +544,7 @@ namespace tsom
 		else if (ShipComponent* shipComponent = entity.try_get<ShipComponent>())
 			environment.gravityController = shipComponent->ship.get();
 
-		spdlog::info("Created entity {} in environment {} ({})", entityData.entityId, entityData.environmentId, entityClassName);
+		spdlog::info("Created entity {} in environment {} ({}), visual id: {}", entityData.entityId, entityData.environmentId, entityClassName, (std::uint32_t) visualEntity.entity());
 
 		// Since we make use of parenting for environments, we need to make replication happen in global space
 		if (Nz::RigidBody3DComponent* rigidBody = entity.try_get<Nz::RigidBody3DComponent>())

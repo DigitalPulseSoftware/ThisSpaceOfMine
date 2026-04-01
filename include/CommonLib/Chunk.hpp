@@ -72,10 +72,6 @@ namespace tsom
 			virtual Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> ComputeBlockCorners(const Nz::Vector3ui& indices) const;
 			virtual std::optional<HitBlock> ComputeHitCoordinates(const Nz::Vector3f& hitPos, const Nz::Vector3f& hitNormal, const Nz::Collider3D& collider, std::uint32_t hitSubshapeId) const = 0;
 
-			virtual void DeformNormals(Nz::SparsePtr<Nz::Vector3f> normals, const Nz::Vector3f& referenceNormal, Nz::SparsePtr<const Nz::Vector3f> positions, std::size_t vertexCount) const;
-			virtual void DeformNormalsAndTangents(Nz::SparsePtr<Nz::Vector3f> normals, Nz::SparsePtr<Nz::Vector3f> tangents, const Nz::Vector3f& referenceNormal, Nz::SparsePtr<const Nz::Vector3f> positions, std::size_t vertexCount) const;
-			virtual bool DeformPositions(Nz::SparsePtr<Nz::Vector3f> positions, std::size_t positionCount) const;
-
 			virtual void Deserialize(Nz::ByteStream& byteStream);
 
 			inline std::span<const std::size_t> GetActiveLayers() const;
@@ -144,11 +140,9 @@ namespace tsom
 			struct VertexAttributes
 			{
 				Nz::UInt32 firstIndex;
-				Nz::SparsePtr<Nz::Color> color;
 				Nz::SparsePtr<Nz::Vector3f> position;
 				Nz::SparsePtr<Nz::Vector3f> normal;
-				Nz::SparsePtr<Nz::Vector3f> tangent;
-				Nz::SparsePtr<Nz::Vector3f> uv;
+				Nz::SparsePtr<Nz::UInt32> blockIndex;
 			};
 
 		protected:

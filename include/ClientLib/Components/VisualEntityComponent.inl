@@ -4,7 +4,7 @@
 
 namespace tsom
 {
-	EntityOwnerComponent::~EntityOwnerComponent()
+	inline EntityOwnerComponent::~EntityOwnerComponent()
 	{
 		for (entt::handle& handle : m_entities)
 		{

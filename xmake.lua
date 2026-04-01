@@ -29,12 +29,13 @@ add_requires(
 	"fast_float",
 	"frozen",
 	"libsodium 1.0.20",
+	"luajit",
 	"lz4",
 	"hopscotch-map",
 	"nazarautils",
 	"nlohmann_json",
 	"perlinnoise",
-	"sol2",
+	"sol2[includes_lua=n]",
 	"spdlog[fmt_external=y,header_only=n]",
 	"sqlitecpp[sqlite3_external]"
 )
@@ -117,7 +118,7 @@ target("CommonLib", function ()
 	add_options("dev_tools", { public = true })
 
 	add_packages("nazaraengine", { components = { "physics3d", "network" }, public = true })
-	add_packages("concurrentqueue", "cppcodec", "cpp-semver", "fast_float", "fmt", "hopscotch-map", "nlohmann_json", "sol2", "spdlog", { public = true })
+	add_packages("concurrentqueue", "cppcodec", "cpp-semver", "fast_float", "fmt", "luajit", "hopscotch-map", "nlohmann_json", "sol2", "spdlog", { public = true })
 	add_packages("cpptrace", "frozen", "libsodium", "lz4", "perlinnoise")
 
 	on_config(function (target, opt)

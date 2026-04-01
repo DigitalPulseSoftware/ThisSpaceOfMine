@@ -11,4 +11,10 @@ namespace tsom
 		float insideDistance = std::min(std::max({ edgeDistance.x, edgeDistance.y, edgeDistance.z }), 0.f);
 		return outsideDistance + insideDistance - cornerRadius;
 	}
+
+	inline float sdTorus(const Nz::Vector3f& pos, const Nz::Vector2f& dims)
+	{
+		Nz::Vector2f q(Nz::Vector2f(pos.x, pos.z).GetLength() - dims.x, pos.y);
+		return q.GetLength() - dims.y;
+	}
 }

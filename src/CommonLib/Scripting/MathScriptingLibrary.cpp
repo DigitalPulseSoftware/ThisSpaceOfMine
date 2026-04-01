@@ -5,6 +5,7 @@
 #include <CommonLib/Scripting/MathScriptingLibrary.hpp>
 #include <CommonLib/Direction.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
+#include <CommonLib/Utility/SignedDistanceFunctions.hpp>
 #include <Nazara/Core/Time.hpp>
 #include <Nazara/Math/Box.hpp>
 #include <Nazara/Math/EulerAngles.hpp>
@@ -13,6 +14,7 @@
 #include <Nazara/Math/Vector3.hpp>
 #include <NazaraUtils/FunctionTraits.hpp>
 #include <PerlinNoise.hpp>
+#include <fmt/format.h>
 #include <sol/state.hpp>
 
 namespace tsom
@@ -20,6 +22,22 @@ namespace tsom
 	void MathScriptingLibrary::Register(sol::state& state)
 	{
 		state["DirectionFromNormal"] = &DirectionFromNormal;
+		state["CreateMetatable"] = [](sol::this_state L, const char* metaname)
+		{
+			if (luaL_newmetatable(L, metaname) == 0)
+			{
+				lua_pop(L, 1);
+				TriggerLuaArgError(L, 1, fmt::format("Metatable %s already exists", metaname));
+			}
+
+			return sol::stack_table(L);
+		};
+
+		state["GetMetatable"]= [](sol::this_state L, const char* metaname)
+		{
+			luaL_getmetatable(L, metaname);
+			return sol::stack_table(L);
+		};
 
 		RegisterBox<float>(state, "Boxf");
 		RegisterBox<int>(state, "Boxi");
@@ -28,13 +46,14 @@ namespace tsom
 		RegisterEulerAngles<float>(state, "EulerAnglesf");
 		RegisterPerlinNoise(state);
 		RegisterQuaternion<float>(state, "Quaternionf");
+		RegisterSignedDistance(state);
 		RegisterTime(state);
-		RegisterVector2<float>(state, "Vec2f");
+		/*RegisterVector2<float>(state, "Vec2f");
 		RegisterVector2<int>(state, "Vec2i");
 		RegisterVector2<unsigned int>(state, "Vec2ui");
 		RegisterVector3<float>(state, "Vec3f");
 		RegisterVector3<int>(state, "Vec3i");
-		RegisterVector3<unsigned int>(state, "Vec3ui");
+		RegisterVector3<unsigned int>(state, "Vec3ui");*/
 	}
 
 	template<typename T>
@@ -129,6 +148,14 @@ namespace tsom
 			"w", &Nz::Quaternion<T>::w,
 			sol::meta_function::multiplication, sol::overload(Nz::Overload<const Nz::Quaternion<T>&>(&Nz::Quaternion<T>::operator*), Nz::Overload<const Nz::Vector3<T>&>(&Nz::Quaternion<T>::operator*)),
 			sol::meta_function::to_string, &Nz::Quaternion<T>::ToString
+		);
+	}
+
+	void MathScriptingLibrary::RegisterSignedDistance(sol::state& state)
+	{
+		state.create_named_table("SignedDistance",
+			"RoundBox", &sdRoundBox,
+			"Torus", &sdTorus
 		);
 	}
 

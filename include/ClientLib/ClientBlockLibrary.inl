@@ -5,7 +5,8 @@
 namespace tsom
 {
 	inline ClientBlockLibrary::ClientBlockLibrary(Nz::ApplicationBase& applicationBase) :
-	m_applicationBase(applicationBase)
+	m_applicationBase(applicationBase),
+	m_globalBlockBufferPtr(nullptr)
 	{
 		// HAAAAAAAAAAAAAAAAAAAAX
 		// Re-enable collisions for forcefield to allow clients to remove them (player collisions are only handled on the server for now)
@@ -13,19 +14,14 @@ namespace tsom
 			m_blocks[idx].hasCollisions = true;
 	}
 
-	inline const std::shared_ptr<Nz::TextureAsset>& ClientBlockLibrary::GetBaseColorTexture() const
+	inline const std::shared_ptr<Nz::Texture>& ClientBlockLibrary::GetBlockTexture(ClientAssetCookRegistry::TextureType textureType) const
 	{
-		return m_baseColorTexture;
+		return m_blockTextures[textureType];
 	}
 
-	inline const std::shared_ptr<Nz::TextureAsset>& ClientBlockLibrary::GetDetailTexture() const
+	inline const std::shared_ptr<Nz::RenderBuffer>& ClientBlockLibrary::GetGlobalBlockBuffer() const
 	{
-		return m_detailTexture;
-	}
-
-	inline const std::shared_ptr<Nz::TextureAsset>& ClientBlockLibrary::GetNormalTexture() const
-	{
-		return m_normalTexture;
+		return m_globalBlockBuffer;
 	}
 
 	inline const std::shared_ptr<Nz::TextureAsset>& ClientBlockLibrary::GetPreviewTexture(BlockIndex blockIndex) const

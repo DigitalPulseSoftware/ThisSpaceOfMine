@@ -4,29 +4,29 @@
 
 #include <ClientLib/BlockSelectionBar.hpp>
 #include <ClientLib/ClientBlockLibrary.hpp>
+#include <NazaraUtils/Assert.hpp>
 #include <Nazara/Graphics/MaterialInstance.hpp>
 #include <Nazara/Graphics/RenderTarget.hpp>
 #include <Nazara/Widgets/ImageWidget.hpp>
 
 namespace tsom
 {
-	constexpr std::array<std::string_view, 11> s_selectableBlocks = { "dirt", "grass", "stone", "snow", "stone_bricks", "planks", "debug", "hull", "forcefield", "copper_block", "glass" };
+	constexpr std::array<std::string_view, 20> s_selectableBlocks = { "dirt", "grass", "stone", "snow", "stone_bricks", "planks", "debug", "forcefield", "copper_block", "glass", "bark", "cliff_rocks", "rock", "wood_floor", "white_bricks", "gold", "metal", "metal_plates", "brickswall", "floor_tiles"};
 
 	BlockSelectionBar::BlockSelectionBar(Nz::BaseWidget* parent, const ClientBlockLibrary& blockLibrary) :
 	BaseWidget(parent),
 	m_selectedIndex(0),
 	m_blockLibrary(blockLibrary)
 	{
-		const auto& blockColorMap = m_blockLibrary.GetBaseColorTexture();
-
 		for (std::string_view blockName : s_selectableBlocks)
 		{
 			bool active = m_selectedIndex == m_inventorySprites.size();
 
 			BlockIndex blockIndex = m_blockLibrary.GetBlockIndex(blockName);
+			NazaraAssertMsg(blockIndex != InvalidBlockIndex, "%s is not a valid block name", blockName.data());
 
 			std::shared_ptr<Nz::MaterialInstance> slotMat = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic);
-			slotMat->SetTextureProperty("BaseColorMap", m_blockLibrary.GetPreviewTexture(blockIndex));
+			//slotMat->SetTextureProperty("BaseColorMap", m_blockLibrary.GetPreviewTexture(blockIndex));
 
 			Nz::ImageWidget* imageWidget = Add<Nz::ImageWidget>(slotMat);
 			imageWidget->SetColor((active) ? Nz::Color::White() : Nz::Color::sRGBToLinear(Nz::Color::Gray()));

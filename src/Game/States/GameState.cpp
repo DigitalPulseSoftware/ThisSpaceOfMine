@@ -15,9 +15,9 @@
 #include <ClientLib/Components/VisualEntityComponent.hpp>
 #include <ClientLib/Systems/AnimationSystem.hpp>
 #include <ClientLib/Systems/CameraFollowerSystem.hpp>
-#include <CommonLib/DeformedChunk.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/InternalConstants.hpp>
+#include <CommonLib/PhysicsConstants.hpp>
 #include <CommonLib/NetworkSession.hpp>
 #include <CommonLib/PlayerInputs.hpp>
 #include <CommonLib/Utils.hpp>

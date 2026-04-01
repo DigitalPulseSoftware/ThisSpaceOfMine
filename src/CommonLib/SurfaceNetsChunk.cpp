@@ -302,7 +302,12 @@ namespace tsom
 						Nz::Vector3i edgeNeighborPos = s_voxelQuads[axis][vertIndex] + s_edgeOffsets[z][1];
 
 						BlockIndex edge1 = GetNeighborBlock(neighborChunks, indices, edgePos);
+						if (edge1 == InvalidBlockIndex)
+							edge1 = EmptyBlockIndex;
+
 						BlockIndex edge2 = GetNeighborBlock(neighborChunks, indices, edgeNeighborPos);
+						if (edge2 == InvalidBlockIndex)
+							edge2 = EmptyBlockIndex;
 
 						const auto& edge1BlockData = m_blockLibrary.GetBlockData(edge1);
 						const auto& edge2BlockData = m_blockLibrary.GetBlockData(edge2);
@@ -420,30 +425,23 @@ namespace tsom
 							Nz::Vector3f n1 = Nz::Vector3f::CrossProduct(vertexAttributes.position[faceIndices[4]] - vertexAttributes.position[faceIndices[3]], vertexAttributes.position[faceIndices[5]] - vertexAttributes.position[faceIndices[3]]);
 
 							Nz::Vector3f faceNormal = Nz::Vector3f::Normalize(n0 + n1);
-
 							for (unsigned int i = 0; i < 4; ++i)
 								vertexAttributes.normal[i] = faceNormal;
 						}
 
-						if (vertexAttributes.tangent)
+						if (vertexAttributes.blockIndex)
 						{
-							Nz::Vector3f faceTangent = Nz::Vector3f::Normalize(vertexAttributes.position[1] - vertexAttributes.position[0]);
-
 							for (std::size_t i = 0; i < 4; ++i)
-								vertexAttributes.tangent[i] = faceTangent;
-						}
-
-						if (vertexAttributes.uv)
-						{
-							std::size_t textureIndex = blockData.texIndices[Direction::Up];
-							float sliceIndex = textureIndex;
-							for (std::size_t i = 0; i < 4; ++i)
-								vertexAttributes.uv[i] = { 0.f, 0.f, sliceIndex };
+								vertexAttributes.blockIndex[i] = blockContent;
 						}
 					};
 
 					auto IsTransparent = [&](BlockIndex neighborBlockIndex)
 					{
+						// don't render face for invalid chunks (chunks not loaded yet)
+						if (blockContent == InvalidBlockIndex || neighborBlockIndex == InvalidBlockIndex)
+							return false;
+
 						// don't render faces between blocks of the same type even if transparent
 						if (blockContent == neighborBlockIndex)
 							return false;
@@ -554,7 +552,7 @@ namespace tsom
 		{
 			const Chunk* chunk = neighborChunks[ToNeighborChunk(chunkIndices - m_indices)];
 			if (!chunk)
-				return EmptyBlockIndex;
+				return InvalidBlockIndex;
 
 			if (!chunk->HasContent())
 				return EmptyBlockIndex;

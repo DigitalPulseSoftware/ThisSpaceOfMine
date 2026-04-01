@@ -34,11 +34,11 @@ namespace tsom
 		m_thread.join();
 	}
 
-	std::size_t NetworkReactor::ConnectTo(Nz::IpAddress address, Nz::UInt32 data)
+	std::size_t NetworkReactor::ConnectTo(const Nz::IpAddress& address, Nz::UInt32 data)
 	{
 		ConnectionRequest request;
 		request.data = data;
-		request.remoteAddress = std::move(address);
+		request.remoteAddress = address;
 
 		// We will need a few synchronization primitives to block the calling thread until the reactor has treated our request
 		std::size_t newClientId = InvalidPeerId;

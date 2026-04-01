@@ -6,8 +6,8 @@
 #include <CommonLib/BlockLibrary.hpp>
 #include <CommonLib/Chunk.hpp>
 #include <CommonLib/ChunkContainer.hpp>
-#include <CommonLib/DeformedChunk.hpp>
 #include <CommonLib/FlatChunk.hpp>
+#include <CommonLib/SurfaceNetsChunk.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
 #include <Nazara/Physics3D/Collider3D.hpp>
 #include <NazaraUtils/FunctionTraits.hpp>
@@ -16,9 +16,9 @@
 #include <spdlog/spdlog.h>
 #include <numeric>
 
-SOL_BASE_CLASSES(tsom::DeformedChunk, tsom::Chunk);
+SOL_BASE_CLASSES(tsom::SurfaceNetsChunk, tsom::Chunk);
 SOL_BASE_CLASSES(tsom::FlatChunk, tsom::Chunk);
-SOL_DERIVED_CLASSES(tsom::Chunk, tsom::DeformedChunk, tsom::FlatChunk);
+SOL_DERIVED_CLASSES(tsom::Chunk, tsom::SurfaceNetsChunk, tsom::FlatChunk);
 
 namespace tsom
 {
@@ -79,6 +79,7 @@ namespace tsom
 			),
 			"GetBlockLocalIndex", LuaFunction(&Chunk::GetBlockLocalIndex),
 			"GetBlockLocalIndices", LuaFunction(&Chunk::GetBlockLocalIndices),
+			"GetBlockSize", LuaFunction(&Chunk::GetBlockSize),
 			"GetContainer", LuaFunction([](Chunk& chunk)
 			{
 				return &chunk.GetContainer();

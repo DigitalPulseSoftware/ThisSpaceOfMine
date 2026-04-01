@@ -9,6 +9,11 @@ namespace tsom
 		return m_blocks[blockIndex];
 	}
 
+	inline auto BlockLibrary::GetBlocks() const -> const std::vector<BlockData>&
+	{
+		return m_blocks;
+	}
+
 	inline auto BlockLibrary::GetLayerData(std::size_t layerIndex) const -> const LayerData&
 	{
 		return m_layers[layerIndex];

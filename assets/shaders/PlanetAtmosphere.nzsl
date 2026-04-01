@@ -77,9 +77,6 @@ fn main(input: VertOut) -> FragOut
 
 	let cameraPos = passData.viewerPosition;
 
-	let planetDims = (80.0).xxx;
-	let planetCornerRadius = 16.0;
-
 	let color = colorTexture.Sample(input.uv).rgb;
 	let depth = depthTexture.Sample(input.uv).x;
 
@@ -153,9 +150,11 @@ fn calculate_scattering(
 	absorption_falloff: f32,	// how fast the absorption falls off from the absorption height
 	steps_i: i32, 				// the amount of steps along the 'primary' ray, more looks better but slower
 	steps_l: i32 				// the amount of steps along the light ray, more looks better but slower
-) -> vec3[f32] {
+) -> vec3[f32]
+{
     // add an offset to the camera position, so that the atmosphere is in the correct position
     start -= planet_position;
+
     // calculate the start and end position of the ray, as a distance along the ray
     // we do this with an AABB intersect
 	let ray_length = aabbIntersect(start, dir, planet_dims + atmosphereMaxHeight.xxx);

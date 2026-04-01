@@ -28,8 +28,7 @@ namespace tsom
 	{
 		Nz::Vector3f position;
 		Nz::Vector3f normal;
-		Nz::Vector3f uvw;
-		Nz::Vector3f tangent;
+		Nz::UInt32 blockIndex;
 	};
 
 	class ConfigFile;
