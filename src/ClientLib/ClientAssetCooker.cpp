@@ -143,7 +143,6 @@ namespace tsom
 						cookedPixels += 2;
 					}
 				}
-
 				cookedNormalMap.GenerateMipmaps();
 
 				cookedNormalMap = Nz::ImageCompressor::RG8ToBC5(cookedNormalMap);
@@ -165,10 +164,6 @@ namespace tsom
 
 				if (roughnessMap->GetSize() != Nz::Vector3ui32(imageSize, imageSize, 1))
 					return Nz::Err(fmt::format("{} roughness map has an unexpected size", blockData.name));
-
-				std::filesystem::path roughnessMetalnessFilename = Nz::Utf8Path(fmt::format("{}_roughness_metalness.dds", blockData.name));
-
-				std::filesystem::path targetPath = cookedBlockPath / roughnessMetalnessFilename;
 
 				if (streams[TextureType::Metalness])
 				{
@@ -195,10 +190,13 @@ namespace tsom
 							cookedPixels += 2;
 						}
 					}
-
 					cookedRoughnessMetalnessMap.GenerateMipmaps();
 
 					cookedRoughnessMetalnessMap = Nz::ImageCompressor::RG8ToBC5(cookedRoughnessMetalnessMap);
+
+					std::filesystem::path roughnessMetalnessFilename = Nz::Utf8Path(fmt::format("{}_roughness_metalness.dds", blockData.name));
+					std::filesystem::path targetPath = cookedBlockPath / roughnessMetalnessFilename;
+
 					blockEntry.roughnessMetalnessTexture = { ClientAssetCookRegistry::TextureType::BC5, Nz::PathToString(blockDir / roughnessMetalnessFilename) };
 
 					if (!cookedRoughnessMetalnessMap.SaveToFile(targetPath))
@@ -216,10 +214,13 @@ namespace tsom
 						for (std::size_t x = 0; x < imageSize; ++x)
 							*cookedPixels++ = *sourcePixels++;
 					}
-
 					cookedRoughnessMap.GenerateMipmaps();
 
 					cookedRoughnessMap = Nz::ImageCompressor::R8ToBC4(cookedRoughnessMap);
+
+					std::filesystem::path roughnessMetalnessFilename = Nz::Utf8Path(fmt::format("{}_roughness.dds", blockData.name));
+					std::filesystem::path targetPath = cookedBlockPath / roughnessMetalnessFilename;
+
 					blockEntry.roughnessMetalnessTexture = { ClientAssetCookRegistry::TextureType::BC4, Nz::PathToString(blockDir / roughnessMetalnessFilename) };
 
 					if (!cookedRoughnessMap.SaveToFile(targetPath))
@@ -252,11 +253,12 @@ namespace tsom
 						*cookedPixels++ = *aoPixels++;
 				}
 
+				cookedAOMap.GenerateMipmaps();
+
 				cookedAOMap = Nz::ImageCompressor::R8ToBC4(cookedAOMap);
 
-
-				std::filesystem::path aoHeightFilename = Nz::Utf8Path(fmt::format("{}_ao_height.dds", blockData.name));
-				blockEntry.ambientOcclusionHeightTexture = { ClientAssetCookRegistry::TextureType::BC5, Nz::PathToString(blockDir / aoHeightFilename) };
+				std::filesystem::path aoHeightFilename = Nz::Utf8Path(fmt::format("{}_ao.dds", blockData.name));
+				blockEntry.ambientOcclusionHeightTexture = { ClientAssetCookRegistry::TextureType::BC4, Nz::PathToString(blockDir / aoHeightFilename) };
 
 				std::filesystem::path targetPath = cookedBlockPath / aoHeightFilename;
 				if (!cookedAOMap.SaveToFile(targetPath))
