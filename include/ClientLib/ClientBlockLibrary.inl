@@ -14,9 +14,9 @@ namespace tsom
 			m_blocks[idx].hasCollisions = true;
 	}
 
-	inline const std::shared_ptr<Nz::TextureAsset>& ClientBlockLibrary::GetBaseColorTexture() const
+	inline const std::shared_ptr<Nz::Texture>& ClientBlockLibrary::GetBlockTexture(ClientAssetCookRegistry::TextureType textureType) const
 	{
-		return m_baseColorTexture;
+		return m_blockTextures[textureType];
 	}
 
 	inline const std::shared_ptr<Nz::RenderBuffer>& ClientBlockLibrary::GetGlobalBlockBuffer() const
