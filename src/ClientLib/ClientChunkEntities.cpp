@@ -22,7 +22,6 @@
 #include <Nazara/Graphics/Graphics.hpp>
 #include <Nazara/Graphics/MaterialInstance.hpp>
 #include <Nazara/Graphics/Model.hpp>
-#include <Nazara/Graphics/TextureAsset.hpp>
 #include <Nazara/Graphics/Components/GraphicsComponent.hpp>
 #include <Nazara/Graphics/PropertyHandler/BufferPropertyHandler.hpp>
 #include <Nazara/Graphics/PropertyHandler/OptionValuePropertyHandler.hpp>
@@ -56,17 +55,11 @@ namespace tsom
 			settings.AddValueProperty<float>("ShadowPosScale", 1.f - 0.0025f);
 			settings.AddValueProperty<Nz::Vector3f>("TriplanarOffset", Nz::Vector3f::Zero());
 			settings.AddBufferProperty("GlobalBlockData");
-			settings.AddTextureProperty("BlockTexture1", Nz::ImageType::E2D_Array);
-			settings.AddTextureProperty("BlockTexture2", Nz::ImageType::E2D_Array);
-			settings.AddTextureProperty("BlockTexture3", Nz::ImageType::E2D_Array);
-			settings.AddTextureProperty("BlockTexture4", Nz::ImageType::E2D_Array);
+			settings.AddTextureProperty("BlockTexture", Nz::ImageType::E2D_Array);
 
 			settings.AddPropertyHandler<Nz::BufferPropertyHandler>("GlobalBlockData");
 			settings.AddPropertyHandler<Nz::OptionValuePropertyHandler>("AlphaTest");
-			settings.AddPropertyHandler<Nz::TexturePropertyHandler>("BlockTexture1");
-			settings.AddPropertyHandler<Nz::TexturePropertyHandler>("BlockTexture2");
-			settings.AddPropertyHandler<Nz::TexturePropertyHandler>("BlockTexture3");
-			settings.AddPropertyHandler<Nz::TexturePropertyHandler>("BlockTexture4");
+			settings.AddPropertyHandler<Nz::TexturePropertyHandler>("BlockTexture");
 			settings.AddPropertyHandler<Nz::UniformValuePropertyHandler>("BaseColor");
 			settings.AddPropertyHandler<Nz::UniformValuePropertyHandler>("AlphaTestThreshold");
 			settings.AddPropertyHandler<Nz::UniformValuePropertyHandler>("ShadowMapNormalOffset");
@@ -106,10 +99,7 @@ namespace tsom
 
 		m_chunkMaterial = blockMaterial->Instantiate();
 		m_chunkMaterial->SetBufferProperty("GlobalBlockData", blockLibrary.GetGlobalBlockBuffer());
-		m_chunkMaterial->SetTextureProperty("BlockTexture1", Nz::TextureAsset::CreateFromTexture(blockLibrary.GetBlockTexture(ClientAssetCookRegistry::TextureType::BC1)), blockSampler);
-		//m_chunkMaterial->SetTextureProperty("BlockTexture2", Nz::TextureAsset::CreateFromTexture(blockLibrary.GetBlockTexture(ClientAssetCookRegistry::TextureType::BC3)), blockSampler);
-		m_chunkMaterial->SetTextureProperty("BlockTexture3", Nz::TextureAsset::CreateFromTexture(blockLibrary.GetBlockTexture(ClientAssetCookRegistry::TextureType::BC4)), blockSampler);
-		m_chunkMaterial->SetTextureProperty("BlockTexture4", Nz::TextureAsset::CreateFromTexture(blockLibrary.GetBlockTexture(ClientAssetCookRegistry::TextureType::BC5)), blockSampler);
+		m_chunkMaterial->SetTextureProperty("BlockTexture", blockLibrary.GetBaseColorTexture(), blockSampler);
 		m_chunkMaterial->SetValueProperty("ShadowPosScale", 1.f);
 		m_chunkMaterial->SetValueProperty("AlphaTest", true);
 		m_chunkMaterial->UpdatePassesStates({ "ShadowPass", "DistanceShadowPass" }, [](Nz::RenderStates& states)
@@ -320,7 +310,6 @@ namespace tsom
 			if (updateJob->cancelled)
 				return;
 
-			// FIXME: If ClientChunkEntities is deleted before job finished, it can result in a crash
 			ChunkReadLock lock(chunkPtr.get());
 			updateJob->mesh = BuildMesh(*chunkPtr);
 			updateJob->jobDone++;
