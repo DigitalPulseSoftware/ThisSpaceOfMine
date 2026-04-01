@@ -23,13 +23,14 @@ option MaxLightCount: u32 = 3;
 [layout(std430)]
 struct BlockData
 {
-	baseColorFallback: vec4[f32],
-	baseColorMapIndices: vec2[i32],
-	normalMapIndices: vec2[i32],
-	ambientOcclusionHeightMapIndices: vec2[i32],
-	roughnessMetalnessMapIndices: vec2[i32],
+	ambientOcclusionMapIndex: f32,
+	baseColorMapIndex: f32,
+	heightMapIndex: f32,
 	metalness: f32,
-	roughness: f32
+	metalnessMapIndex: f32,
+	normalMapIndex: f32,
+	roughness: f32,
+	roughnessMapIndex: f32
 }
 
 [layout(std430)]
@@ -69,12 +70,7 @@ external MaterialData
 {
 	[tag("Settings")] settings: uniform[MaterialSettings],
 	[tag("GlobalBlockData")] globalBlockData: storage[GlobalBlockData],
-
-	// TODO: Turn them into an array of texture
-	[tag("BlockTexture1")] blockTexture1: sampler2D_array[f32],
-	[tag("BlockTexture2")] blockTexture2: sampler2D_array[f32],
-	[tag("BlockTexture3")] blockTexture3: sampler2D_array[f32],
-	[tag("BlockTexture4")] blockTexture4: sampler2D_array[f32]
+	[tag("BlockTexture")] blockTexture: sampler2D_array[f32]
 }
 
 [tag("Engine")]
@@ -111,33 +107,20 @@ struct FragOut
 	[builtin(frag_depth), cond(DistanceDepth)] fragdepth: f32,
 }
 
-fn SampleBlock(uv: vec2[f32], texIndices: vec2[i32]) -> vec4[f32]
+fn TriplanarSample(normal: vec3[f32], uvX: vec2[f32], uvY: vec2[f32], uvZ: vec2[f32], slice: f32) -> vec4[f32]
 {
-	// FIXME: Replace int to float conversion by bitcast for performance reasons
-	if (texIndices.x == 0)
-		return MaterialData.blockTexture1.Sample(vec3[f32](uv, f32(texIndices.y)));
-	else if (texIndices.x == 1)
-		return MaterialData.blockTexture2.Sample(vec3[f32](uv, f32(texIndices.y)));
-	else if (texIndices.x == 2)
-		return MaterialData.blockTexture3.Sample(vec3[f32](uv, f32(texIndices.y)));
-	else
-		return MaterialData.blockTexture4.Sample(vec3[f32](uv, f32(texIndices.y)));
-}
-
-fn TriplanarSample(normal: vec3[f32], uvX: vec2[f32], uvY: vec2[f32], uvZ: vec2[f32], texIndices: vec2[i32]) -> vec4[f32]
-{
-	let x = SampleBlock(uvX, texIndices);
-	let y = SampleBlock(uvY, texIndices);
-	let z = SampleBlock(uvZ, texIndices);
+	let x = MaterialData.blockTexture.Sample(vec3[f32](uvX, slice));
+	let y = MaterialData.blockTexture.Sample(vec3[f32](uvY, slice));
+	let z = MaterialData.blockTexture.Sample(vec3[f32](uvZ, slice));
 
 	let m = pow(abs(normal), (8.0).xxx);
 	let textureColor = (x*m.x + y*m.y + z*m.z) / (m.x + m.y + m.z);
 	return textureColor;
 }
 
-fn ParallaxMapping(texCoords: vec2[f32], heightMapIndices: vec2[i32], viewDir: vec3[f32]) -> vec2[f32]
+fn ParallaxMapping(texCoords: vec2[f32], heightMapIndex: f32, viewDir: vec3[f32]) -> vec2[f32]
 {
-	let height = SampleBlock(texCoords, heightMapIndices).y;
+	let height = MaterialData.blockTexture.Sample(vec3[f32](texCoords, heightMapIndex)).x;
 	return texCoords - viewDir.xy / viewDir.z * (height * 2.0);
 
 	// number of depth layers
@@ -189,13 +172,13 @@ fn ComputeColor(input: VertOut) -> vec4[f32]
 
 	let blockData = MaterialData.globalBlockData.blocks[input.blockIndex];
 
-	if (blockData.baseColorMapIndices.x >= 0)
+	if (blockData.baseColorMapIndex >= 0.0)
 	{
 		let uvX = input.triplanarPos.zy;
 		let uvY = input.triplanarPos.xz;
 		let uvZ = input.triplanarPos.xy;
 
-		color *= TriplanarSample(input.normal, uvX, uvY, uvZ, blockData.baseColorMapIndices);
+		color *= TriplanarSample(input.normal, uvX, uvY, uvZ, blockData.baseColorMapIndex);
 	}
 
 	const if (AlphaTest)
@@ -207,12 +190,9 @@ fn ComputeColor(input: VertOut) -> vec4[f32]
 	return color;
 }
 
-fn UnpackNormal(texData: vec2[f32]) -> vec3[f32]
+fn UnpackNormal(tex: sampler2D_array[f32], uv: vec3[f32]) -> vec3[f32]
 {
-	let normal = vec3[f32](texData.x * 2.0 - 1.0, texData.y * 2.0 - 1.0, 0.0);
-	normal.z = sqrt(1.0 - normal.x - normal.y);
-	return normal;
-	//return tex.Sample(uv).xyz * 2.0 - (1.0).rrr;
+	return tex.Sample(uv).xyz * 2.0 - (1.0).rrr;
 }
 
 [export]
@@ -228,9 +208,9 @@ fn ComputeLighting(input: VertOut) -> vec4[f32]
 	let uvY = input.triplanarPos.xz;
 	let uvZ = input.triplanarPos.xy;
 
-	let tnormalX = UnpackNormal(SampleBlock(uvX, blockData.normalMapIndices).xy);
-	let tnormalY = UnpackNormal(SampleBlock(uvY, blockData.normalMapIndices).xy);
-	let tnormalZ = UnpackNormal(SampleBlock(uvZ, blockData.normalMapIndices).xy);
+	let tnormalX = UnpackNormal(MaterialData.blockTexture, vec3[f32](uvX, blockData.normalMapIndex));
+	let tnormalY = UnpackNormal(MaterialData.blockTexture, vec3[f32](uvY, blockData.normalMapIndex));
+	let tnormalZ = UnpackNormal(MaterialData.blockTexture, vec3[f32](uvZ, blockData.normalMapIndex));
 
 	let axisSign = sign(input.normal);
 
@@ -256,9 +236,9 @@ fn ComputeLighting(input: VertOut) -> vec4[f32]
 		uvZ = ParallaxMapping(uvZ, blockData.heightMapIndex, tbnZ * viewDirWS);
 	}*/
 
-	let color = blockData.baseColorFallback;
-	if (blockData.baseColorMapIndices.x >= 0)
-		color *= TriplanarSample(input.normal, uvX, uvY, uvZ, blockData.baseColorMapIndices);
+	let color = MaterialData.settings.BaseColor;
+	if (blockData.baseColorMapIndex >= 0.0)
+		color *= TriplanarSample(input.normal, uvX, uvY, uvZ, blockData.baseColorMapIndex);
 
 	const if (AlphaTest)
 	{
@@ -267,7 +247,7 @@ fn ComputeLighting(input: VertOut) -> vec4[f32]
 	}
 
 	let normal: vec3[f32];
-	if (blockData.normalMapIndices.x >= 0)
+	if (blockData.normalMapIndex >= 0.0)
 	{
 		// https://bgolus.medium.com/normal-mapping-for-a-triplanar-shader-10bf39dca05a
 		let blend = pow(abs(input.normal), (16.0).rrr);
@@ -287,21 +267,21 @@ fn ComputeLighting(input: VertOut) -> vec4[f32]
 	let albedo = color.xyz;
 
 	let metallic: f32;
-	/*if (blockData.metalnessMapIndex >= 0.0)
+	if (blockData.metalnessMapIndex >= 0.0)
 		metallic = TriplanarSample(input.normal, uvX, uvY, uvZ, blockData.metalnessMapIndex).x;
-	else*/
+	else
 		metallic = blockData.metalness;
 
 	let roughness: f32;
-	/*if (blockData.roughnessMapIndex >= 0.0)
+	if (blockData.roughnessMapIndex >= 0.0)
 		roughness = TriplanarSample(input.normal, uvX, uvY, uvZ, blockData.roughnessMapIndex).x;
-	else*/
+	else
 		roughness = blockData.roughness;
 
 	let ao: f32;
-	/*if (blockData.ambientOcclusionMapIndex >= 0.0)
+	if (blockData.ambientOcclusionMapIndex >= 0.0)
 		ao = TriplanarSample(input.normal, uvX, uvY, uvZ, blockData.ambientOcclusionMapIndex).x;
-	else*/
+	else
 		ao = 1.0;
 
 	let F0 = vec3[f32](0.04, 0.04, 0.04);
