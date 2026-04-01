@@ -10,7 +10,7 @@
 #include <Nazara/Graphics/TextureAsset.hpp>
 #include <Nazara/Renderer/Texture.hpp>
 #include <NZSL/Math/FieldOffsets.hpp>
-#include <fmt/format.h>
+#include <spdlog/spdlog.h>
 
 namespace tsom
 {
@@ -79,7 +79,7 @@ namespace tsom
 
 	void ClientBlockLibrary::BuildTexture(Nz::RenderDevice& renderDevice)
 	{
-		std::size_t bufferSize = s_blockBufferOffsets.fieldOffsets.GetSize() * m_blocks.size();
+		std::size_t bufferSize = s_blockBufferOffsets.fieldOffsets.GetAlignedSize() * m_blocks.size();
 
 		m_globalBlockBuffer = renderDevice.InstantiateBuffer(bufferSize, Nz::BufferUsage::DeviceLocal | Nz::BufferUsage::StorageBuffer | Nz::BufferUsage::PersistentMapping);
 		m_globalBlockBufferPtr = m_globalBlockBuffer->Map(0, bufferSize);
@@ -171,20 +171,6 @@ namespace tsom
 
 		auto UploadImage = [&](ClientAssetCookRegistry::TextureType textureType, Nz::UInt32 textureSlice, std::string_view filePath)
 		{
-			std::string assetPath = fmt::format("CookedAssets/{}", filePath);
-
-			std::shared_ptr<Nz::Image> image = Nz::Image::LoadFromStream(*fs.GetFile(assetPath));
-			if (!image)
-				return false;
-
-			for (Nz::UInt8 level = 0; level < image->GetLevelCount(); ++level)
-			{
-				m_blockTextures[textureType]->Update([&](void* pixelBuffer, Nz::UInt32 rowPitch, Nz::UInt32 depthPitch)
-				{
-					std::memcpy(pixelBuffer, image->GetConstPixels(level), Nz::PixelFormatInfo::ComputeSize(image->GetFormat(), image->GetWidth(level), image->GetHeight(level), 1));
-					return true;
-				}, Nz::Boxui(0, 0, textureSlice, image->GetWidth(level), image->GetHeight(level), 1), level);
-			}
 
 			return true;
 		};
@@ -198,14 +184,40 @@ namespace tsom
 
 			for (const auto& [textureType, textureData] : blockTexture.textureData.iter_kv())
 			{
-				if (textureData->type != ClientAssetCookRegistry::TextureType::None &&
-				    UploadImage(textureData->type, textureSlice[textureData->type], textureData->path))
+				if (textureData->type == ClientAssetCookRegistry::TextureType::None)
+					continue;
+
+				std::string texturePath = fmt::format("CookedAssets/{}", textureData->path);
+				std::shared_ptr<Nz::Stream> stream = fs.GetFile(texturePath);
+				if (!stream)
 				{
+					spdlog::error("asset {} not found", texturePath);
+					continue;
+				}
+
+				std::shared_ptr<Nz::Image> image = Nz::Image::LoadFromStream(*stream);
+				if (!image)
+				{
+					spdlog::error("failed to load {}", texturePath);
+					continue;
+				}
+
+				//if (textureSlice[textureData->type] == 0)
+				{
+					for (Nz::UInt8 level = 0; level < image->GetLevelCount(); ++level)
+					{
+						m_blockTextures[textureData->type]->Update([&](void* pixelBuffer, Nz::UInt32 rowPitch, Nz::UInt32 depthPitch)
+						{
+							std::memcpy(pixelBuffer, image->GetConstPixels(level), Nz::PixelFormatInfo::ComputeSize(image->GetFormat(), image->GetWidth(level), image->GetHeight(level), 1));
+							return true;
+						}, Nz::Boxui(0, 0, textureSlice[textureData->type], image->GetWidth(level), image->GetHeight(level), 1), level);
+					}
+
 					Nz::Vector2i32& blockTextureSlice = Nz::AccessByOffset<Nz::Vector2i32&>(blockBufferPtr, blockIndex * s_blockBufferEntryOffsets.fieldOffsets.GetAlignedSize() + textureSliceOffsets[textureType]);
 					blockTextureSlice = { static_cast<Nz::Int32>(textureData->type), static_cast<Nz::Int32>(textureSlice[textureData->type]) };
-
-					textureSlice[textureData->type]++;
 				}
+
+				textureSlice[textureData->type]++;
 			}
 
 			blockTextures.erase(blockTextures.begin()); //< Destroy entry to free streams

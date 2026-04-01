@@ -9,6 +9,8 @@ import ViewerData from Engine.ViewerData;
 import Lighting.Shadow;
 import SkinLinearPosition, SkinLinearPositionNormal from Engine.SkinningLinear;
 
+import Math.Color;
+
 // Pass-specific options
 option DepthPass: bool = false;
 option DistanceDepth: bool = false;
@@ -258,7 +260,11 @@ fn ComputeLighting(input: VertOut) -> vec4[f32]
 
 	let color = blockData.baseColorFallback;
 	if (blockData.baseColorMapIndices.x >= 0)
-		color *= TriplanarSample(input.normal, uvX, uvY, uvZ, blockData.baseColorMapIndices);
+	{
+		let texData = TriplanarSample(input.normal, uvX, uvY, uvZ, blockData.baseColorMapIndices);
+		//texData.rgb = Color.sRGBToLinear(texData.rgb);
+		color *= texData;
+	}
 
 	const if (AlphaTest)
 	{
@@ -286,23 +292,23 @@ fn ComputeLighting(input: VertOut) -> vec4[f32]
 
 	let albedo = color.xyz;
 
-	let metallic: f32;
-	/*if (blockData.metalnessMapIndex >= 0.0)
-		metallic = TriplanarSample(input.normal, uvX, uvY, uvZ, blockData.metalnessMapIndex).x;
-	else*/
-		metallic = blockData.metalness;
+	let metallic = blockData.metalness;
+	let roughness = blockData.roughness;
+	let ao = 1.0;
 
-	let roughness: f32;
-	/*if (blockData.roughnessMapIndex >= 0.0)
-		roughness = TriplanarSample(input.normal, uvX, uvY, uvZ, blockData.roughnessMapIndex).x;
-	else*/
-		roughness = blockData.roughness;
+	if (blockData.roughnessMetalnessMapIndices.x >= 0)
+	{
+		let texData = TriplanarSample(input.normal, uvX, uvY, uvZ, blockData.roughnessMetalnessMapIndices).xy;
+		roughness = texData.x;
+		if (blockData.roughnessMetalnessMapIndices.y > 2)
+			metallic = texData.y;
+	}
 
-	let ao: f32;
-	/*if (blockData.ambientOcclusionMapIndex >= 0.0)
-		ao = TriplanarSample(input.normal, uvX, uvY, uvZ, blockData.ambientOcclusionMapIndex).x;
-	else*/
-		ao = 1.0;
+	if (blockData.ambientOcclusionHeightMapIndices.x >= 0)
+	{
+		let texData = TriplanarSample(input.normal, uvX, uvY, uvZ, blockData.ambientOcclusionHeightMapIndices).xy;
+		ao = texData.x;
+	}
 
 	let F0 = vec3[f32](0.04, 0.04, 0.04);
 	F0 = albedo * metallic + F0 * (1.0 - metallic);
