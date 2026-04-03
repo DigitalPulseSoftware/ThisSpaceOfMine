@@ -14,7 +14,7 @@ namespace tsom
 			m_blocks[idx].hasCollisions = true;
 	}
 
-	inline const std::shared_ptr<Nz::Texture>& ClientBlockLibrary::GetBlockTexture(ClientAssetCookRegistry::TextureType textureType) const
+	inline const std::shared_ptr<Nz::TextureAsset>& ClientBlockLibrary::GetBlockTexture(ClientAssetCookRegistry::TextureType textureType) const
 	{
 		return m_blockTextures[textureType];
 	}

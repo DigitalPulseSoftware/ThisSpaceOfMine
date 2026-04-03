@@ -63,6 +63,9 @@ namespace tsom
 				Texture baseColorTexture;
 				Texture normalMapTexture;
 				Texture roughnessMetalnessTexture;
+				float ambientOcclusionFallback;
+				float roughnessFallback;
+				float metalnessFallback;
 			};
 
 		private:

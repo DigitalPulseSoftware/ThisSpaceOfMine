@@ -55,6 +55,10 @@ namespace tsom
 	{
 		enum class MandatoryFeature
 		{
+			BC1_sRGB,
+			BC3_sRGB,
+			BC4,
+			BC5,
 			Depth32F,
 			PersistentMapping,
 			StorageBuffers,
@@ -63,6 +67,10 @@ namespace tsom
 		};
 
 		constexpr Nz::EnumArray<MandatoryFeature, std::string_view> s_featureNames = {
+			"BC1_sRGB pixel format",
+			"BC3_sRGB pixel format",
+			"BC4 pixel format",
+			"BC5 pixel format",
 			"Depth32F depth-buffers",
 			"persistent mapping",
 			"storage buffers"
@@ -81,6 +89,10 @@ namespace tsom
 		const Nz::RenderDeviceFeatures& renderDeviceFeatures = renderDevice.GetEnabledFeatures();
 
 		Nz::EnumArray<MandatoryFeature, bool> featureTests = {
+			renderDevice.IsTextureFormatSupported(Nz::PixelFormat::BC1_RGBA_Unorm, Nz::TextureUsage::ShaderSampling),
+			renderDevice.IsTextureFormatSupported(Nz::PixelFormat::BC3_Unorm, Nz::TextureUsage::ShaderSampling),
+			renderDevice.IsTextureFormatSupported(Nz::PixelFormat::BC4_Unorm, Nz::TextureUsage::ShaderSampling),
+			renderDevice.IsTextureFormatSupported(Nz::PixelFormat::BC5_Unorm, Nz::TextureUsage::ShaderSampling),
 			renderDevice.IsTextureFormatSupported(Nz::PixelFormat::Depth32F, Nz::TextureUsage::DepthStencilAttachment),
 			renderDeviceFeatures.persistentMapping,
 			renderDeviceFeatures.storageBuffers
@@ -297,13 +309,13 @@ namespace tsom
 
 		m_blockLibrary.emplace(app);
 
-		/*ClientAssetCooker assetCooker(app);
+		ClientAssetCooker assetCooker(app);
 		if (auto result = assetCooker.Cook(*m_blockLibrary); !result)
 		{
 			spdlog::critical("failed to cook assets: {}!", result.GetError());
 			app.Quit();
 			return false;
-		}*/
+		}
 
 		m_blockLibrary->BuildTexture(*Nz::Graphics::Instance()->GetRenderDevice());
 

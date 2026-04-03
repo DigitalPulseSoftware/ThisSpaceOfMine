@@ -26,7 +26,7 @@ namespace tsom
 			NazaraAssertMsg(blockIndex != InvalidBlockIndex, "%s is not a valid block name", blockName.data());
 
 			std::shared_ptr<Nz::MaterialInstance> slotMat = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic);
-			//slotMat->SetTextureProperty("BaseColorMap", m_blockLibrary.GetPreviewTexture(blockIndex));
+			slotMat->SetTextureProperty("BaseColorMap", m_blockLibrary.GetPreviewTexture(blockIndex));
 
 			Nz::ImageWidget* imageWidget = Add<Nz::ImageWidget>(slotMat);
 			imageWidget->SetColor((active) ? Nz::Color::White() : Nz::Color::sRGBToLinear(Nz::Color::Gray()));
