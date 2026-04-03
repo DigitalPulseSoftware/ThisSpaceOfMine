@@ -50,7 +50,7 @@ namespace tsom
 			BlockSelectionBar& operator=(const BlockSelectionBar&) = delete;
 			BlockSelectionBar& operator=(BlockSelectionBar&&) = delete;
 
-			static constexpr float InventoryTileSize = 96.f;
+			static constexpr float InventoryTileSize = 64.f;
 			static constexpr float Padding = 5.f;
 
 		private:

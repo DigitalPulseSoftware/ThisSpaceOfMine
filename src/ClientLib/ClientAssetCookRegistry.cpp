@@ -26,13 +26,6 @@ namespace nlohmann
 	})
 
 	template<typename BasicJsonType>
-	void from_json(const BasicJsonType& j, tsom::ClientAssetCookRegistry::Texture& texture)
-	{
-		j.at("path").get_to(texture.path);
-		j.at("type").get_to(texture.type);
-	}
-
-	template<typename BasicJsonType>
 	void to_json(BasicJsonType& j, const Nz::Color& color)
 	{
 		j = BasicJsonType{
@@ -41,18 +34,18 @@ namespace nlohmann
 			{"b", color.b}
 		};
 
-		if (Nz::NumberEquals(color.a, 1.0f))
+		if (!Nz::NumberEquals(color.a, 1.0f))
 			j["a"] = color.a;
 	}
 
-	template<typename BasicJsonType>
-	void to_json(BasicJsonType& j, const tsom::ClientAssetCookRegistry::Texture& texture)
-	{
-		j = BasicJsonType{
-			{"path", texture.path},
-			{"type", texture.type}
-		};
-	}
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(tsom::ClientAssetCookRegistry::Texture, path, type)
+
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(tsom::ClientAssetCookRegistry::BlockEntry,
+		ambientOcclusionFallback, ambientOcclusionHeightTexture,
+		baseColorFallback, baseColorTexture,
+		metalnessFallback, normalMapTexture,
+		roughnessFallback, roughnessMetalnessTexture
+	)
 }
 
 namespace tsom
@@ -72,16 +65,7 @@ namespace tsom
 	{
 		nlohmann::ordered_json blockEntries;
 		for (const auto& [blockName, blockEntry] : m_blockEntries)
-		{
-			nlohmann::ordered_json blockEntryDoc;
-			blockEntryDoc["ambientOcclusionHeightTexture"] = blockEntry.ambientOcclusionHeightTexture;
-			blockEntryDoc["baseColorFallback"] = blockEntry.baseColorFallback;
-			blockEntryDoc["baseColorTexture"] = blockEntry.baseColorTexture;
-			blockEntryDoc["normalMapTexture"] = blockEntry.normalMapTexture;
-			blockEntryDoc["roughnessMetalnessTexture"] = blockEntry.roughnessMetalnessTexture;
-
-			blockEntries[blockName] = std::move(blockEntryDoc);
-		}
+			blockEntries[blockName] = blockEntry;
 
 		nlohmann::ordered_json doc;
 		doc["blocks"] = std::move(blockEntries);
@@ -97,15 +81,7 @@ namespace tsom
 
 		ClientAssetCookRegistry cookRegistry;
 		for (const auto& [blockName, blockEntryDoc] : doc["blocks"].items())
-		{
-			cookRegistry.AddBlock(blockName, BlockEntry {
-				.baseColorFallback = blockEntryDoc["baseColorFallback"],
-				.ambientOcclusionHeightTexture = blockEntryDoc["ambientOcclusionHeightTexture"],
-				.baseColorTexture = blockEntryDoc["baseColorTexture"],
-				.normalMapTexture = blockEntryDoc["normalMapTexture"],
-				.roughnessMetalnessTexture = blockEntryDoc["roughnessMetalnessTexture"],
-			});
-		}
+			cookRegistry.AddBlock(blockName, blockEntryDoc);
 
 		return std::move(cookRegistry);
 	}

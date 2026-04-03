@@ -51,7 +51,7 @@ namespace tsom
 			Nz::MaterialSettings settings;
 			settings.AddValueProperty<Nz::Color>("BaseColor", Nz::Color::White());
 			settings.AddValueProperty<bool>("AlphaTest", false);
-			settings.AddValueProperty<float>("AlphaTestThreshold", 0.5f);
+			settings.AddValueProperty<float>("AlphaTestThreshold", 0.6f);
 			settings.AddValueProperty<float>("ShadowMapNormalOffset", 0.f);
 			settings.AddValueProperty<float>("ShadowPosScale", 1.f - 0.0025f);
 			settings.AddValueProperty<Nz::Vector3f>("TriplanarOffset", Nz::Vector3f::Zero());
@@ -106,10 +106,10 @@ namespace tsom
 
 		m_chunkMaterial = blockMaterial->Instantiate();
 		m_chunkMaterial->SetBufferProperty("GlobalBlockData", blockLibrary.GetGlobalBlockBuffer());
-		m_chunkMaterial->SetTextureProperty("BlockTexture1", Nz::TextureAsset::CreateFromTexture(blockLibrary.GetBlockTexture(ClientAssetCookRegistry::TextureType::BC1)), blockSampler);
-		//m_chunkMaterial->SetTextureProperty("BlockTexture2", Nz::TextureAsset::CreateFromTexture(blockLibrary.GetBlockTexture(ClientAssetCookRegistry::TextureType::BC3)), blockSampler);
-		m_chunkMaterial->SetTextureProperty("BlockTexture3", Nz::TextureAsset::CreateFromTexture(blockLibrary.GetBlockTexture(ClientAssetCookRegistry::TextureType::BC4)), blockSampler);
-		m_chunkMaterial->SetTextureProperty("BlockTexture4", Nz::TextureAsset::CreateFromTexture(blockLibrary.GetBlockTexture(ClientAssetCookRegistry::TextureType::BC5)), blockSampler);
+		m_chunkMaterial->SetTextureProperty("BlockTexture1", blockLibrary.GetBlockTexture(ClientAssetCookRegistry::TextureType::BC1), blockSampler);
+		m_chunkMaterial->SetTextureProperty("BlockTexture2", blockLibrary.GetBlockTexture(ClientAssetCookRegistry::TextureType::BC3), blockSampler);
+		m_chunkMaterial->SetTextureProperty("BlockTexture3", blockLibrary.GetBlockTexture(ClientAssetCookRegistry::TextureType::BC4), blockSampler);
+		m_chunkMaterial->SetTextureProperty("BlockTexture4", blockLibrary.GetBlockTexture(ClientAssetCookRegistry::TextureType::BC5), blockSampler);
 		m_chunkMaterial->SetValueProperty("ShadowPosScale", 1.f);
 		m_chunkMaterial->SetValueProperty("AlphaTest", true);
 		m_chunkMaterial->UpdatePassesStates({ "ShadowPass", "DistanceShadowPass" }, [](Nz::RenderStates& states)
@@ -349,7 +349,7 @@ namespace tsom
 
 	void ClientChunkEntities::UpdateChunkDebugCollider(const ChunkIndices& chunkIndices)
 	{
-#if 0
+#if 1
 		std::shared_ptr<Nz::Model> colliderModel;
 		{
 			entt::handle chunkEntity = Nz::Retrieve(m_chunkEntities, chunkIndices);

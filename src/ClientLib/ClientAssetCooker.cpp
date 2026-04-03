@@ -74,12 +74,17 @@ namespace tsom
 				if (!streams[TextureType::BaseColor])
 					return Nz::Err(fmt::format("failed to open {} base color", blockData.name));
 
-				std::shared_ptr<Nz::Image> baseColor = Nz::Image::LoadFromStream(*streams[TextureType::BaseColor], Nz::ImageParams{ .loadFormat = Nz::PixelFormat::RGBA8 });
+				std::shared_ptr<Nz::Image> baseColor = Nz::Image::LoadFromStream(*streams[TextureType::BaseColor]);
 				if (!baseColor)
 					return Nz::Err(fmt::format("failed to load {} base color", blockData.name));
 
-				blockEntry.baseColorFallback = baseColor->ComputeAverageColor();
+				if (baseColor->GetFormat() != Nz::PixelFormat::RGB8 && baseColor->GetFormat() != Nz::PixelFormat::RGBA8)
+					return Nz::Err(fmt::format("{} color map is not RGB8 nor RGBA8 (got {})", blockData.name, Nz::PixelFormatInfo::GetName(baseColor->GetFormat())));
+
+				blockEntry.baseColorFallback = Nz::Color::sRGBToLinear(baseColor->ComputeAverageColor());
 				spdlog::debug("{} base color map average color: {};{};{};{}", blockData.name, blockEntry.baseColorFallback.r, blockEntry.baseColorFallback.g, blockEntry.baseColorFallback.b, blockEntry.baseColorFallback.a);
+
+				bool hasAlpha = baseColor->HasAlpha(); // test before potential resize (faster)
 
 				if (baseColor->GetSize() != Nz::Vector3ui32(imageSize, imageSize, 1))
 				{
@@ -92,7 +97,7 @@ namespace tsom
 				std::filesystem::path colorFilename = Nz::Utf8Path(fmt::format("{}_color.dds", blockData.name));
 
 				Nz::Image compressedBaseColor;
-				if (baseColor->HasAlpha())
+				if (hasAlpha)
 				{
 					// Compress using BC3
 					// TODO: Detect 1bit alpha
@@ -106,7 +111,11 @@ namespace tsom
 					// Compress using BC1
 					spdlog::debug("{} base color map has no alpha", blockData.name);
 
-					compressedBaseColor = Nz::ImageCompressor::RGBA8ToBC1(*baseColor);
+					if (baseColor->GetFormat() == Nz::PixelFormat::RGBA8)
+						compressedBaseColor = Nz::ImageCompressor::RGBA8ToBC1(*baseColor);
+					else
+						compressedBaseColor = Nz::ImageCompressor::RGB8ToBC1(*baseColor);
+
 					blockEntry.baseColorTexture = { ClientAssetCookRegistry::TextureType::BC1, Nz::PathToString(blockDir / colorFilename) };
 				}
 
@@ -118,9 +127,12 @@ namespace tsom
 			// Handle normal maps
 			if (streams[TextureType::Normal])
 			{
-				std::shared_ptr<Nz::Image> normalMap = Nz::Image::LoadFromStream(*streams[TextureType::Normal], Nz::ImageParams{ .loadFormat = Nz::PixelFormat::RGBA8 });
+				std::shared_ptr<Nz::Image> normalMap = Nz::Image::LoadFromStream(*streams[TextureType::Normal]);
 				if (!normalMap)
 					return Nz::Err(fmt::format("failed to load {} normal map", blockData.name));
+
+				if (normalMap->GetFormat() != Nz::PixelFormat::RGB8 && normalMap->GetFormat() != Nz::PixelFormat::RGBA8)
+					return Nz::Err(fmt::format("{} normal map is not RGB8 nor RGBA8 (got {})", blockData.name, Nz::PixelFormatInfo::GetName(normalMap->GetFormat())));
 
 				if (normalMap->GetSize() != Nz::Vector3ui32(imageSize, imageSize, 1))
 					return Nz::Err(fmt::format("{} normal map has an unexpected size", blockData.name));
@@ -129,6 +141,8 @@ namespace tsom
 
 				const Nz::UInt8* sourcePixels = normalMap->GetConstPixels();
 				Nz::UInt8* cookedPixels = cookedNormalMap.GetPixels();
+				Nz::UInt8 bpp = Nz::PixelFormatInfo::GetBytesPerPixel(normalMap->GetFormat());
+
 				for (std::size_t y = 0; y < imageSize; ++y)
 				{
 					for (std::size_t x = 0; x < imageSize; ++x)
@@ -139,7 +153,7 @@ namespace tsom
 						cookedPixels[0] = sourcePixels[0];
 						cookedPixels[1] = sourcePixels[1];
 
-						sourcePixels += 4;
+						sourcePixels += bpp;
 						cookedPixels += 2;
 					}
 				}
@@ -156,6 +170,9 @@ namespace tsom
 			}
 
 			// Roughness/metalness
+			blockEntry.metalnessFallback = blockData.metalness;
+			blockEntry.roughnessFallback = blockData.roughness;
+
 			if (streams[TextureType::Roughness])
 			{
 				std::shared_ptr<Nz::Image> roughnessMap = Nz::Image::LoadFromStream(*streams[TextureType::Roughness], Nz::ImageParams{ .loadFormat = Nz::PixelFormat::L8 });
@@ -164,6 +181,8 @@ namespace tsom
 
 				if (roughnessMap->GetSize() != Nz::Vector3ui32(imageSize, imageSize, 1))
 					return Nz::Err(fmt::format("{} roughness map has an unexpected size", blockData.name));
+
+				blockEntry.roughnessFallback = roughnessMap->ComputeAverageColor().r;
 
 				if (streams[TextureType::Metalness])
 				{
@@ -174,6 +193,8 @@ namespace tsom
 
 					if (metalnessMap->GetSize() != Nz::Vector3ui32(imageSize, imageSize, 1))
 						return Nz::Err(fmt::format("{} metalness map has an unexpected size", blockData.name));
+
+					blockEntry.metalnessFallback = metalnessMap->ComputeAverageColor().r;
 
 					Nz::Image cookedRoughnessMetalnessMap(Nz::ImageType::E2D, Nz::PixelFormat::RG8, imageSize, imageSize);
 
@@ -233,6 +254,8 @@ namespace tsom
 			}
 
 			// Ambient Occlusion (+ Heightmap once used)
+			blockEntry.ambientOcclusionFallback = 1.0f;
+
 			if (streams[TextureType::AmbientOcclusion])
 			{
 				// BC4
@@ -242,6 +265,8 @@ namespace tsom
 
 				if (aoMap->GetSize() != Nz::Vector3ui32(imageSize, imageSize, 1))
 					return Nz::Err(fmt::format("{} ambient occlusion map has an unexpected size", blockData.name));
+
+				blockEntry.ambientOcclusionFallback = aoMap->ComputeAverageColor().r;
 
 				Nz::Image cookedAOMap(Nz::ImageType::E2D, Nz::PixelFormat::R8, imageSize, imageSize);
 
