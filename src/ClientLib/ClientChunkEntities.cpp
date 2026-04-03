@@ -349,7 +349,7 @@ namespace tsom
 
 	void ClientChunkEntities::UpdateChunkDebugCollider(const ChunkIndices& chunkIndices)
 	{
-#if 1
+#if 0
 		std::shared_ptr<Nz::Model> colliderModel;
 		{
 			entt::handle chunkEntity = Nz::Retrieve(m_chunkEntities, chunkIndices);
