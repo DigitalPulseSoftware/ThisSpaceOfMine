@@ -56,6 +56,8 @@
 #include <Nazara/Widgets/LabelWidget.hpp>
 #include <Nazara/Widgets/SimpleLabelWidget.hpp>
 #include <fmt/ostream.h>
+#include <Nazara/Renderer/Plugins/ImGuiPlugin.hpp>
+#include <imgui.h>
 #include <spdlog/spdlog.h>
 
 #define DEBUG_ROTATION 0
@@ -127,9 +129,9 @@ namespace tsom
 			dirLight.EnableShadowCasting(true);
 			dirLight.UpdateShadowMapSize(2048);
 			dirLight.UpdateEnergy(5.f);
-			dirLight.EnableFixedShadowCascadSplit(true);
+			dirLight.EnableFixedShadowCascadeSplit(true);
 
-			float splitFactors[] = { 0.002f, 0.006f, 0.02f };
+			float splitFactors[] = { 0.0001f, 0.003f, 0.02f };
 			dirLight.UpdateShadowCascadeFixedSplitFactors(splitFactors);
 		}
 
@@ -1117,6 +1119,45 @@ namespace tsom
 		}
 
 		GetStateData().world->GetSystem<CameraFollowerSystem>().SetCameraPosition(m_cameraEntity.get<Nz::NodeComponent>().GetGlobalPosition());
+		
+#if defined(TSOM_DEV_TOOLS) && 0
+		if (stateData.imgui)
+		{
+			ImGui::SetNextWindowPos({ 60, 60 }, ImGuiCond_FirstUseEver);
+
+			if (ImGui::Begin("Directional light settings", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+			{
+				ImGui::Text("Press F1 to lock/unlock mouse");
+				ImGui::Separator();
+
+				auto& lightComponent = m_sunLightEntity.get<Nz::LightComponent>();
+				Nz::DirectionalLight& dirLight = static_cast<Nz::DirectionalLight&>(*lightComponent.GetLightEntry(0).light);
+
+				bool fixedCascadeSplit = dirLight.IsUsingFixedShadowCascadeSplit();
+				if (ImGui::Checkbox("Use fixed cascade split", &fixedCascadeSplit))
+					dirLight.EnableFixedShadowCascadeSplit(fixedCascadeSplit);
+
+				if (fixedCascadeSplit)
+				{
+					std::span<const float> currentSplitFactors = dirLight.GetShadowCascadeFixedSplitFactors();
+					assert(currentSplitFactors.size() == 3);
+
+					std::array<float, 3> splitFactors;
+					std::copy(currentSplitFactors.begin(), currentSplitFactors.end(), splitFactors.begin());
+
+					ImGui::SliderFloat3("Split factors", splitFactors.data(), 0.0f, 1.0f, "%.6f");
+					dirLight.UpdateShadowCascadeFixedSplitFactors(splitFactors);
+				}
+				else
+				{
+					float splitLambda = dirLight.GetShadowCascadeSplitLambda();
+					if (ImGui::SliderFloat("Split lambda", &splitLambda, 0.0f, 1.0f, "%.6f"))
+						dirLight.UpdateShadowCascadeSplitLambda(splitLambda);
+				}
+			}
+			ImGui::End();
+		}
+#endif
 
 		return true;
 	}
