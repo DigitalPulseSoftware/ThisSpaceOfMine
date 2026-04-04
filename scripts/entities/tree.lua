@@ -12,7 +12,7 @@ classData:On("init", function (self)
 		gfx:AttachRenderable(model, Constants.RenderMask3D)
 
 		local node = self:GetComponent("node")
-		node:Scale(Vec3f(self:GetProperty("scale")))
+		node:Scale(Vec3(self:GetProperty("scale")))
 	end
 
 	if SERVER then

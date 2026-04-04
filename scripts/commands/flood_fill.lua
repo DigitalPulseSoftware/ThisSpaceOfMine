@@ -24,7 +24,7 @@ return function ()
 	local eyePos = controller:GetEyePosition()
 	local cameraRot = controller:GetCameraRotation()
 
-	local result = physWorld:RaycastQueryFirst(eyePos, eyePos + cameraRot * Vec3f(0, 0, -10), { IgnorePlayers = true })
+	local result = physWorld:RaycastQueryFirst(eyePos, eyePos + cameraRot * Vec3(0, 0, -10), { IgnorePlayers = true })
 
 	if not result.hitEntity or not result.hitChunk then
 		print("no chunk hit")
@@ -102,7 +102,7 @@ return function ()
 
 		local updatedChunks = {}
 
-		local toProcess = math.max(remaining // 50, 1)
+		local toProcess = math.max(math.floor(remaining / 50), 1)
 		for i = 1, toProcess do
 			local firstBlock = table.remove(pendingList, 1)
 

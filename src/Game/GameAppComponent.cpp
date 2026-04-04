@@ -27,7 +27,6 @@
 #include <Game/States/MenuState.hpp>
 #include <Game/States/PlanetEditorState.hpp>
 #include <Game/States/VersionCheckState.hpp>
-#include <NazaraUtils/EnumArray.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/Clock.hpp>
 #include <Nazara/Core/EntitySystemAppComponent.hpp>
@@ -41,6 +40,7 @@
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <Nazara/Platform/MessageBox.hpp>
 #include <Nazara/Platform/WindowingAppComponent.hpp>
+#include <NazaraUtils/EnumArray.hpp>
 #include <spdlog/spdlog.h>
 #include <algorithm>
 #include <charconv>

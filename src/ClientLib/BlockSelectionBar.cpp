@@ -4,10 +4,10 @@
 
 #include <ClientLib/BlockSelectionBar.hpp>
 #include <ClientLib/ClientBlockLibrary.hpp>
-#include <NazaraUtils/Assert.hpp>
 #include <Nazara/Graphics/MaterialInstance.hpp>
 #include <Nazara/Graphics/RenderTarget.hpp>
 #include <Nazara/Widgets/ImageWidget.hpp>
+#include <NazaraUtils/Assert.hpp>
 
 namespace tsom
 {

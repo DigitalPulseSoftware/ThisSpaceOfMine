@@ -3,12 +3,12 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ClientLib/ClientBlockLibrary.hpp>
-#include <NazaraUtils/EnumArray.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <Nazara/Core/Image.hpp>
 #include <Nazara/Graphics/TextureAsset.hpp>
 #include <Nazara/Renderer/Texture.hpp>
+#include <NazaraUtils/EnumArray.hpp>
 #include <NZSL/Math/FieldOffsets.hpp>
 #include <spdlog/spdlog.h>
 
@@ -145,7 +145,7 @@ namespace tsom
 		// BC1/BC3 sRGB formats are not well supported with OpenGL, sRGB to linear conversion is done in shader
 		// TODO: Add a shader option to use sRGB formats if supported to avoid conversion cost
 		constexpr Nz::EnumArray<ClientAssetCookRegistry::TextureType, Nz::PixelFormat> textureFormat = {
-			Nz::PixelFormat::BC1_RGBA_Unorm, 
+			Nz::PixelFormat::BC1_RGBA_Unorm,
 			Nz::PixelFormat::BC3_Unorm,
 			Nz::PixelFormat::BC4_Unorm,
 			Nz::PixelFormat::BC5_Unorm  // since BC5 is used for normal maps and roughness/metalness maps we can't use Snorm

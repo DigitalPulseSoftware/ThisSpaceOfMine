@@ -30,6 +30,7 @@
 #include <CommonLib/Components/EntityOwnerComponent.hpp>
 #include <CommonLib/Components/PlanetComponent.hpp>
 #include <CommonLib/Components/ShipComponent.hpp>
+#include <CommonLib/Scripting/BaseScriptingLibrary.hpp>
 #include <CommonLib/Scripting/MathScriptingLibrary.hpp>
 #include <CommonLib/Scripting/SharedEntityScriptingLibrary.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
@@ -78,8 +79,10 @@ namespace tsom
 		SetupHandlerTable(this);
 		SetupAttributeTable(s_packetAttributes);
 
+		m_scriptingContext.RegisterLibrary<BaseScriptingLibrary>();
 		m_scriptingContext.RegisterLibrary<MathScriptingLibrary>();
 		m_scriptingContext.RegisterLibrary<ClientAssetScriptingLibrary>(m_app);
+		m_scriptingContext.LoadDirectory("scripts/libraries");
 		m_scriptingContext.LoadDirectory("scripts/assets");
 
 		m_entityRegistry.RegisterClassLibrary<ClientChunkClassLibrary>(m_app, config, m_blockLibrary);

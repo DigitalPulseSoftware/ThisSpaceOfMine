@@ -12,8 +12,8 @@
 #include <CommonLib/Direction.hpp>
 #include <CommonLib/GravityController.hpp>
 #include <CommonLib/Scripting/ScriptingContext.hpp>
-#include <NazaraUtils/FunctionRef.hpp>
 #include <Nazara/Core/ThreadLocalData.hpp>
+#include <NazaraUtils/FunctionRef.hpp>
 #include <tsl/hopscotch_map.h>
 #include <memory>
 #include <mutex>

@@ -5,12 +5,12 @@ local freespace = 30
 
 -- https://iquilezles.org/articles/distfunctions/
 local function sdTorus(p, t)
-    local q = Vec2f(Vec2f(p.x, p.z):GetLength() - t.x, p.y)
+    local q = Vec2(Vec2(p.x, p.z):GetLength() - t.x, p.y)
     return q:GetLength() - t.y
 end
 
 local function sdOctahedron(p, s)
-    p = Vec3f(math.abs(p.x), math.abs(p.y), math.abs(p.z))
+    p = Vec3(math.abs(p.x), math.abs(p.y), math.abs(p.z))
     return (p.x+p.y+p.z-s)*0.57735027;
 end
 
@@ -23,7 +23,7 @@ float sdCappedCylinder( vec3 p, float r, float h )
 ]]
 
 local function sdCappedCylinder(p, r, h)
-  local d = Vec2f(Vec2f(p.x, p.z):GetLength(), math.abs(p.y)) - Vec2f(r, h)
+  local d = Vec2(Vec2(p.x, p.z):GetLength(), math.abs(p.y)) - Vec2(r, h)
   d.x = math.max(d.x, 0.0)
   d.y = math.max(d.y, 0.0)
   return math.min(math.max(d.x, d.y),0.0) + d:GetLength()
@@ -61,7 +61,7 @@ return function (chunk, seed, chunkcount)
                     maxHeight.y - math.abs(blockPos.y),
                     maxHeight.z - math.abs(blockPos.z)
                 )]]
-               --[[local depth = maxHeight.x - math.max(0, sdTorus(blockPos, Vec2f(20, 50)))
+               --[[local depth = maxHeight.x - math.max(0, sdTorus(blockPos, Vec2(20, 50)))
 
                 if (depth < freespace) then
                     table.insert(content, empty)
@@ -93,7 +93,7 @@ return function (chunk, seed, chunkcount)
 
                 table.insert(content, blockIndex)]]
 
-                local dist = sdTorus(blockPos, Vec2f(50, 20))
+                local dist = sdTorus(blockPos, Vec2(50, 20))
                 if dist < 0 then
                     table.insert(content, dirt)
                 else

@@ -27,7 +27,7 @@ for treeName, treeData in pairs(trees) do
     end
 
     local aabb = treeMesh:GetAABB()
-    treeMesh:Translate(-aabb:GetCenter() + Vec3f(0, aabb.width * 0.5, 0))
+    treeMesh:Translate(-aabb:GetCenter() + Vec3(0, aabb.width * 0.5, 0))
 
     local treeModel = Model.BuildFromMesh(treeMesh)
     AssetLibrary.RegisterModel(treeName, treeModel)

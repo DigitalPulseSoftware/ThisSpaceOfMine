@@ -23,7 +23,7 @@ namespace tsom
 	{
 		return m_textureLibrary.Get(name);
 	}
-	
+
 	inline std::shared_ptr<Nz::Font> ClientAssetLibraryAppComponent::QueryFont(std::string_view name) const
 	{
 		return m_fontLibrary.Query(name);

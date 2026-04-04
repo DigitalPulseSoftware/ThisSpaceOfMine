@@ -8,8 +8,8 @@
 #define TSOM_CLIENTLIB_CLIENTBLOCKLIBRARY_HPP
 
 #include <ClientLib/Export.hpp>
-#include <CommonLib/BlockLibrary.hpp>
 #include <ClientLib/ClientAssetCookRegistry.hpp>
+#include <CommonLib/BlockLibrary.hpp>
 
 namespace Nz
 {

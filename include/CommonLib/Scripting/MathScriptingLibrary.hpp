@@ -26,15 +26,7 @@ namespace tsom
 			MathScriptingLibrary& operator=(MathScriptingLibrary&&) = delete;
 
 		private:
-			template<typename T> void RegisterBox(sol::state& state, const char* name);
-			void RegisterColor(sol::state& state);
-			template<typename T> void RegisterEulerAngles(sol::state& state, const char* name);
 			void RegisterPerlinNoise(sol::state& state);
-			template<typename T> void RegisterQuaternion(sol::state& state, const char* name);
-			void RegisterSignedDistance(sol::state& state);
-			void RegisterTime(sol::state& state);
-			template<typename T> void RegisterVector2(sol::state& state, const char* name);
-			template<typename T> void RegisterVector3(sol::state& state, const char* name);
 	};
 }
 

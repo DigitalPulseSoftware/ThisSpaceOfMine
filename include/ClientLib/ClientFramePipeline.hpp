@@ -7,8 +7,8 @@
 #ifndef TSOM_CLIENTLIB_CLIENTFRAMEPIPELINE_HPP
 #define TSOM_CLIENTLIB_CLIENTFRAMEPIPELINE_HPP
 
-#include <Nazara/Graphics/DefaultFramePipeline.hpp>
 #include <ClientLib/Export.hpp>
+#include <Nazara/Graphics/DefaultFramePipeline.hpp>
 
 namespace tsom
 {
