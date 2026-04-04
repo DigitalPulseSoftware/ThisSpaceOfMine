@@ -9,7 +9,7 @@ classData:On("init", function (self)
 	local physSettings = {
 		kind = "dynamic",
 		mass = 10.0,
-		collider = BoxCollider3D.new(Vec3f(0.75)),
+		collider = BoxCollider3D.new(Vec3(0.75)),
 		objectLayer = Constants.ObjectLayerDynamic
 	}
 
@@ -48,9 +48,9 @@ else
 		local n2 = self:GetProperty("sensor_n2")
 		
 		local sum = math.max(o2 + co2 + n2, 1) -- avoid division by zero
-		local o2_pct = o2 * 100 // sum
-		local co2_pct = co2 * 100 // sum
-		local n2_pct = n2 * 100 // sum
+		local o2_pct = math.floor(o2 * 100 / sum)
+		local co2_pct = math.floor(co2 * 100 / sum)
+		local n2_pct = math.floor(n2 * 100 / sum)
 
 		self:SetInteractibleText(string.format("Oxygen: %.2fL (%d%%)\nCarbon dioxyde: %.2fL (%d%%)\nNitrogen: %.2fL (%d%%)\n", o2 / 1000, o2_pct, co2 / 1000, co2_pct, n2 / 1000, n2_pct))
 	end

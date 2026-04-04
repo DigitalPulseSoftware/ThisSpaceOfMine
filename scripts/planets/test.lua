@@ -49,9 +49,9 @@ return function (chunk, seed, chunkDims)
         for y = 0, chunksize - 1 do
             for x = 0, chunksize - 1 do
                 local blockPos = planet:GetBlockIndices(chunkIndices, Vec3ui(x, y, z))
-                local blockPosNorm, distToCenter = Vec3f(blockPos.x * 0.5, blockPos.y * 0.5, blockPos.z * 0.5):GetNormal()
+                local blockPosNorm, distToCenter = Vec3(blockPos.x * 0.5, blockPos.y * 0.5, blockPos.z * 0.5):GetNormal()
                 --distToCenter = math.max(math.abs(blockPos.x * 0.25 + 0.5), math.abs(blockPos.y * 0.25 + 0.5), math.abs(blockPos.z * 0.25 + 0.5))
-                --distToCenter = roundBox(Vec3f(blockPos.x * 0.25, blockPos.z * 0.25, blockPos.y * 0.25), Vec3f(baseHeight, baseHeight, baseHeight), 16.0)
+                --distToCenter = roundBox(Vec3(blockPos.x * 0.25, blockPos.z * 0.25, blockPos.y * 0.25), Vec3(baseHeight, baseHeight, baseHeight), 16.0)
 
                 if distToCenter > 60 then
                     table.insert(content, emptyBlock)

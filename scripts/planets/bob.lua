@@ -5,58 +5,6 @@ local chunksize = 32
 local minGrenerationFreeHeight = 0 -- Generation height limit used to make generation faster if we want empty chunks to allow players to build tall things
 local baseFreeHeight = 30 -- Should be greater than minFreeHeight, difference between both will define max generation height from baseFreeHeight
 
-local Vec3mt = CreateMetatable("vec3")
-Vec3mt.__index = Vec3mt
-
-function Vec3mt:__add(vec)
-    return Vec3(self.x + vec.x, self.y + vec.y, self.z + vec.z)
-end
-
-function Vec3mt:__sub(vec)
-    return Vec3(self.x - vec.x, self.y - vec.y, self.z - vec.z)
-end
-
-function Vec3mt:__mul(vec)
-    if type(vec) == "number" then
-        return Vec3(self.x * vec, self.y * vec, self.z * vec)
-    else
-        return Vec3(self.x * vec.x, self.y * vec.y, self.z * vec.z)
-    end
-end
-
-function Vec3mt:__div(vec)
-    if type(vec) == "number" then
-        return Vec3(self.x / vec, self.y / vec, self.z / vec)
-    else
-        return Vec3(self.x / vec.x, self.y / vec.y, self.z / vec.z)
-    end
-end
-
-function Vec3mt:GetAbs()
-    return Vec3(math.abs(self.x), math.abs(self.y), math.abs(self.z))
-end
-
-function Vec3mt:GetLength()
-    return math.sqrt(self.x * self.x + self.y * self.y + self.z * self.z)
-end
-
-function Vec3mt:GetNormal()
-    local length = self:GetLength()
-    return Vec3(self.x / length, self.y / length, self.z / length), length
-end
-
-function Vec3mt:Maximize(vec)
-    return Vec3(math.max(self.x, vec.x), math.max(self.y, vec.y), math.max(self.z, vec.z))
-end
-
-function Vec3mt:Minimize(vec)
-    return Vec3(math.min(self.x, vec.x), math.min(self.y, vec.y), math.min(self.z, vec.z))
-end
-
-function Vec3(x, y, z)
-    return setmetatable({x = x, y = y or x, z = z or x}, Vec3mt)
-end
-
 local function GetBlockIndices(chunkIndices, blockIndices)
     local x = chunkIndices.x * chunksize + blockIndices.x - chunksize * 0.5
     local y = chunkIndices.y * chunksize + blockIndices.z - chunksize * 0.5

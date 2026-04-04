@@ -16,7 +16,7 @@ namespace nlohmann
 		j.at("b").get_to(color.b);
 		color.a = j.value("a", 1.0f);
 	}
-	
+
 	NLOHMANN_JSON_SERIALIZE_ENUM(tsom::ClientAssetCookRegistry::TextureType, {
 		{tsom::ClientAssetCookRegistry::TextureType::None, "none"},
 		{tsom::ClientAssetCookRegistry::TextureType::BC1, "bc1"},

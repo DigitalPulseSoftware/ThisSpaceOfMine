@@ -4,13 +4,13 @@
 
 #pragma once
 
-#ifndef TSOM_CLIENTLIB_CLIENTCHUNKCOOKREGISTRY_HPP
-#define TSOM_CLIENTLIB_CLIENTCHUNKCOOKREGISTRY_HPP
+#ifndef TSOM_CLIENTLIB_CLIENTASSETCOOKREGISTRY_HPP
+#define TSOM_CLIENTLIB_CLIENTASSETCOOKREGISTRY_HPP
 
 #include <ClientLib/Export.hpp>
+#include <Nazara/Core/Color.hpp>
 #include <NazaraUtils/Result.hpp>
 #include <NazaraUtils/StringHash.hpp>
-#include <Nazara/Core/Color.hpp>
 #include <filesystem>
 #include <string>
 #include <unordered_map>
@@ -75,4 +75,4 @@ namespace tsom
 
 #include <ClientLib/ClientAssetCookRegistry.inl>
 
-#endif // TSOM_CLIENTLIB_CLIENTCHUNKCOOKREGISTRY_HPP
+#endif // TSOM_CLIENTLIB_CLIENTASSETCOOKREGISTRY_HPP

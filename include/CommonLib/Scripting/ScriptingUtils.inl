@@ -227,9 +227,9 @@ namespace sol
 	{
 		int absoluteIndex = lua_absindex(L, index);
 
-		sol::table rect = sol::stack::get<sol::table>(L, absoluteIndex);
-		T x = rect["x"];
-		T y = rect["y"];
+		sol::table vec2 = sol::stack::get<sol::table>(L, absoluteIndex);
+		T x = vec2["x"];
+		T y = vec2["y"];
 
 		tracking.use(1);
 
@@ -241,10 +241,10 @@ namespace sol
 	{
 		int absoluteIndex = lua_absindex(L, index);
 
-		sol::table rect = sol::stack::get<sol::table>(L, absoluteIndex);
-		T x = rect["x"];
-		T y = rect["y"];
-		T z = rect["z"];
+		sol::table vec3 = sol::stack::get<sol::table>(L, absoluteIndex);
+		T x = vec3["x"];
+		T y = vec3["y"];
+		T z = vec3["z"];
 
 		tracking.use(1);
 

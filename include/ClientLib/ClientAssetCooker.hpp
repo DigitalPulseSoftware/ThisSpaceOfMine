@@ -4,8 +4,8 @@
 
 #pragma once
 
-#ifndef TSOM_CLIENTLIB_CLIENTCHUNKCOOKER_HPP
-#define TSOM_CLIENTLIB_CLIENTCHUNKCOOKER_HPP
+#ifndef TSOM_CLIENTLIB_CLIENTASSETCOOKER_HPP
+#define TSOM_CLIENTLIB_CLIENTASSETCOOKER_HPP
 
 #include <ClientLib/Export.hpp>
 #include <NazaraUtils/Result.hpp>
@@ -39,4 +39,4 @@ namespace tsom
 
 #include <ClientLib/ClientAssetCooker.inl>
 
-#endif // TSOM_CLIENTLIB_CLIENTCHUNKCOOKER_HPP
+#endif // TSOM_CLIENTLIB_CLIENTASSETCOOKER_HPP

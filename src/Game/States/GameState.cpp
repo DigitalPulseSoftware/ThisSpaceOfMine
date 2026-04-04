@@ -17,8 +17,8 @@
 #include <ClientLib/Systems/CameraFollowerSystem.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/InternalConstants.hpp>
-#include <CommonLib/PhysicsConstants.hpp>
 #include <CommonLib/NetworkSession.hpp>
+#include <CommonLib/PhysicsConstants.hpp>
 #include <CommonLib/PlayerInputs.hpp>
 #include <CommonLib/Utils.hpp>
 #include <CommonLib/Components/ChunkComponent.hpp>
@@ -52,12 +52,12 @@
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <Nazara/Platform/Window.hpp>
 #include <Nazara/Platform/WindowEventHandler.hpp>
+#include <Nazara/Renderer/Plugins/ImGuiPlugin.hpp>
 #include <Nazara/TextRenderer/RichTextBuilder.hpp>
 #include <Nazara/Widgets/LabelWidget.hpp>
 #include <Nazara/Widgets/SimpleLabelWidget.hpp>
-#include <fmt/ostream.h>
-#include <Nazara/Renderer/Plugins/ImGuiPlugin.hpp>
 #include <imgui.h>
+#include <fmt/ostream.h>
 #include <spdlog/spdlog.h>
 
 #define DEBUG_ROTATION 0
@@ -1119,7 +1119,7 @@ namespace tsom
 		}
 
 		GetStateData().world->GetSystem<CameraFollowerSystem>().SetCameraPosition(m_cameraEntity.get<Nz::NodeComponent>().GetGlobalPosition());
-		
+
 #if defined(TSOM_DEV_TOOLS) && 0
 		if (stateData.imgui)
 		{
