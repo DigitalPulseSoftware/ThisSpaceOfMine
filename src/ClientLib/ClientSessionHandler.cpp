@@ -166,6 +166,8 @@ namespace tsom
 
 		chunkNetworkMap.chunkNetworkIndices.erase(chunk);
 		chunkNetworkMap.chunkByNetworkIndex.erase(it);
+
+		m_pendingChunkReset.erase(chunkDestroy.chunkId);
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::S_ChunkReset&& chunkReset)
@@ -181,18 +183,23 @@ namespace tsom
 			return;
 		}
 
-		ChunkWriteLock lock(chunk);
+		ChunkWriteLock lock(chunk, std::defer_lock);
 
-		if (!chunkReset.content.empty())
+		if (lock.TryLock())
 		{
-			chunk->Reset([&](BlockIndex* blocks)
+			if (!chunkReset.content.empty())
 			{
-				for (BlockIndex blockContent : chunkReset.content)
-					*blocks++ = blockContent;
-			});
+				chunk->Reset([&](BlockIndex* blocks)
+				{
+					for (BlockIndex blockContent : chunkReset.content)
+						*blocks++ = blockContent;
+				});
+			}
+			else
+				chunk->Reset();
 		}
 		else
-			chunk->Reset();
+			m_pendingChunkReset[chunkReset.chunkId] = std::move(chunkReset);
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::S_ChunkUpdate&& chunkUpdate)
@@ -202,10 +209,24 @@ namespace tsom
 		auto& chunkNetworkMap = entity.get<ChunkNetworkMapComponent>();
 
 		Chunk* chunk = Nz::Retrieve(chunkNetworkMap.chunkByNetworkIndex, chunkUpdate.chunkId);
-		ChunkWriteLock lock(chunk);
 
-		for (auto&& [blockPos, blockIndex] : chunkUpdate.updates)
-			chunk->UpdateBlock({ blockPos.x, blockPos.y, blockPos.z }, Nz::SafeCast<BlockIndex>(blockIndex));
+		if (auto it = m_pendingChunkReset.find(chunkUpdate.chunkId); it != m_pendingChunkReset.end())
+		{
+			// Apply update to pending chunk reset
+			Packets::S_ChunkReset& pendingChunkReset = it.value();
+			if (pendingChunkReset.content.empty())
+				pendingChunkReset.content.resize(chunk->GetBlockCount(), EmptyBlockIndex);
+
+			for (auto&& [blockPos, blockIndex] : chunkUpdate.updates)
+				pendingChunkReset.content[chunk->GetBlockLocalIndex({ blockPos.x, blockPos.y, blockPos.z })] = Nz::SafeCast<BlockIndex>(blockIndex);
+		}
+		else
+		{
+			ChunkWriteLock lock(chunk);
+
+			for (auto&& [blockPos, blockIndex] : chunkUpdate.updates)
+				chunk->UpdateBlock({ blockPos.x, blockPos.y, blockPos.z }, Nz::SafeCast<BlockIndex>(blockIndex));
+		}
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::S_ConsoleOutput&& consoleOutput)
@@ -478,6 +499,48 @@ namespace tsom
 		{
 			LoadScripts(false);
 		});
+	}
+
+	void ClientSessionHandler::Update()
+	{
+		for (auto it = m_pendingChunkReset.begin(); it != m_pendingChunkReset.end();)
+		{
+			Packets::Helper::ChunkId chunkId = it.key();
+			const Packets::S_ChunkReset& chunkReset = it.value();
+
+			assert(m_entities[chunkReset.entityId]);
+			entt::handle& entity = m_entities[chunkReset.entityId]->entity;
+			auto& chunkNetworkMap = entity.get<ChunkNetworkMapComponent>();
+
+			Chunk* chunk = Nz::Retrieve(chunkNetworkMap.chunkByNetworkIndex, chunkReset.chunkId);
+			if (!chunk)
+			{
+				spdlog::error("ChunkReset handler (pending): unknown chunk {}", chunkReset.chunkId);
+				it = m_pendingChunkReset.erase(it);
+				continue;
+			}
+
+			ChunkWriteLock lock(chunk, std::defer_lock);
+
+			if (!lock.TryLock())
+			{
+				++it;
+				continue;
+			}
+
+			if (!chunkReset.content.empty())
+			{
+				chunk->Reset([&](BlockIndex* blocks)
+				{
+					for (BlockIndex blockContent : chunkReset.content)
+						*blocks++ = blockContent;
+				});
+			}
+			else
+				chunk->Reset();
+
+			it = m_pendingChunkReset.erase(it);
+		}
 	}
 
 	void ClientSessionHandler::HandleEntityCreation(Packets::Helper::EntityData&& entityData)

@@ -309,13 +309,13 @@ namespace tsom
 
 		m_blockLibrary.emplace(app);
 
-		ClientAssetCooker assetCooker(app);
+		/*ClientAssetCooker assetCooker(app);
 		if (auto result = assetCooker.Cook(*m_blockLibrary); !result)
 		{
 			spdlog::critical("failed to cook assets: {}!", result.GetError());
 			app.Quit();
 			return false;
-		}
+		}*/
 
 		m_blockLibrary->BuildTexture(*Nz::Graphics::Instance()->GetRenderDevice());
 

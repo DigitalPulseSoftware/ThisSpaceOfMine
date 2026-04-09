@@ -13,7 +13,7 @@ passlist "Skybox"
     pass "Skybox rendering"
     {
         impl "Forward"
-        output "Output" "ForwardOutput"
+        output "Output0" "ForwardOutput"
         cleardepth "Viewer"
         depthstenciloutput "DepthBuffer"
     }

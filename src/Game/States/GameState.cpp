@@ -788,6 +788,8 @@ namespace tsom
 		if (!stateData.networkSession)
 			return true;
 
+		stateData.sessionHandler->Update();
+
 		m_timerManager.Update(elapsedTime);
 		m_chatBox->Update();
 

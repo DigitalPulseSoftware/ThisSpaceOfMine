@@ -24,7 +24,7 @@ passlist "Forward Passlist"
     pass "ForwardPass"
     {
         impl "Forward"
-        output "Output" "ForwardOutput"
+        output "Output0" "ForwardOutput"
         {
             clearcolor "Viewer"
         }
@@ -60,8 +60,8 @@ passlist "Forward Passlist"
             Shader "PostProcess.GammaCorrection"
         }
 
-        input "Input" "AtmosphereOutput"
-        output "Output" "Gamma corrected"
+        input "Input0" "AtmosphereOutput"
+        output "Output0" "Gamma corrected"
     }
 
     attachmentproxy "Debug draw output" "Gamma corrected"

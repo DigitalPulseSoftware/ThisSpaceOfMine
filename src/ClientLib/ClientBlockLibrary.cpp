@@ -204,9 +204,8 @@ namespace tsom
 
 				for (Nz::UInt8 level = 0; level < image->GetLevelCount(); ++level)
 				{
-					blockTextures[textureData->type]->Update([&](void* pixelBuffer, Nz::UInt32 rowPitch, Nz::UInt32 depthPitch)
+					blockTextures[textureData->type]->Update([&](void* pixelBuffer)
 					{
-						NazaraAssert(rowPitch == 0 && depthPitch == 0);
 						std::memcpy(pixelBuffer, image->GetConstPixels(level), Nz::PixelFormatInfo::ComputeSize(image->GetFormat(), image->GetWidth(level), image->GetHeight(level), 1));
 						return true;
 					}, Nz::Boxui(0, 0, textureSlice[textureData->type], image->GetWidth(level), image->GetHeight(level), 1), level);
