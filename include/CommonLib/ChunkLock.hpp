@@ -28,6 +28,7 @@ namespace tsom
 			~ChunkLock();
 
 			void Lock();
+			bool TryLock();
 			void Unlock();
 
 			ChunkLock& operator=(const ChunkLock&) = delete;

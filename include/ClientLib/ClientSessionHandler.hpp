@@ -75,6 +75,8 @@ namespace tsom
 
 			void LoadScripts(bool isReloading = false);
 
+			void Update();
+
 			NazaraSignal(OnAuthResponse, const Packets::S_AuthResponse& /*authResponse*/);
 			NazaraSignal(OnChatMessage, const std::string& /*message*/);
 			NazaraSignal(OnConsoleOutput, const Nz::Color& /*color*/, std::string_view /*message*/);
@@ -140,6 +142,7 @@ namespace tsom
 			std::vector<std::optional<EntityData>> m_entities; //< FIXME: Nz::SparseVector
 			std::vector<std::optional<EnvironmentData>> m_environments; //< FIXME: Nz::SparseVector
 			std::vector<std::optional<PlayerInfo>> m_players; //< FIXME: Nz::SparseVector
+			tsl::hopscotch_map<Packets::Helper::ChunkId, Packets::S_ChunkReset> m_pendingChunkReset;
 			Nz::ApplicationBase& m_app;
 			Nz::EnttWorld& m_world;
 			ClientBlockLibrary& m_blockLibrary;

@@ -11,6 +11,7 @@
 #include <CommonLib/ConfigFile.hpp>
 #include <CommonLib/Components/EntityOwnerComponent.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
+#include <Nazara/Core/Clock.hpp>
 #include <Nazara/Core/EnttWorld.hpp>
 #include <Nazara/Core/IndexBuffer.hpp>
 #include <Nazara/Core/SpatialSort.hpp>
@@ -29,6 +30,7 @@
 #include <Nazara/Graphics/PropertyHandler/TexturePropertyHandler.hpp>
 #include <Nazara/Graphics/PropertyHandler/UniformValuePropertyHandler.hpp>
 #include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
+#include <spdlog/spdlog.h>
 
 namespace tsom
 {
@@ -283,19 +285,25 @@ namespace tsom
 				entityOwnerComp.Register(visualEntity);
 			}
 
-			auto& gfxComponent = visualEntity.get_or_emplace<Nz::GraphicsComponent>();
-			gfxComponent.Clear();
-
 			if (colliderUpdateJob.mesh)
 			{
-				// TODO: Move GPU upload to async task (should almost already work on Vulkan, problem is OpenGL)
-				std::shared_ptr<Nz::GraphicalMesh> gfxMesh = Nz::GraphicalMesh::BuildFromMesh(*colliderUpdateJob.mesh);
+				Nz::RenderDevice& renderDevice = *Nz::Graphics::Instance()->GetRenderDevice();
+				std::unique_ptr<Nz::AsyncRenderCommands> asyncTransfer = renderDevice.InstantiateAsyncCommands(Nz::QueueType::Transfer);
+				std::shared_ptr<Nz::GraphicalMesh> gfxMesh = Nz::GraphicalMesh::BuildFromMesh(*asyncTransfer, *colliderUpdateJob.mesh);
 
-				std::shared_ptr<Nz::Model> model = std::make_shared<Nz::Model>(std::move(gfxMesh));
-				model->SetMaterial(0, m_chunkMaterial);
-				model->UpdateRenderLayer(m_blockLibrary.GetLayerData(m_layerIndex).renderLayer);
+				asyncTransfer->AddCompletionCallback([this, gfxMesh, visualEntity, c = Nz::HighPrecisionClock()]
+				{
+					auto& gfxComponent = visualEntity.get_or_emplace<Nz::GraphicsComponent>();
+					gfxComponent.Clear();
 
-				gfxComponent.AttachRenderable(std::move(model), tsom::Constants::RenderMask3D);
+					std::shared_ptr<Nz::Model> model = std::make_shared<Nz::Model>(std::move(gfxMesh));
+					model->SetMaterial(0, m_chunkMaterial);
+					model->UpdateRenderLayer(m_blockLibrary.GetLayerData(m_layerIndex).renderLayer);
+
+					gfxComponent.AttachRenderable(std::move(model), tsom::Constants::RenderMask3D);
+				});
+
+				renderDevice.SubmitAsyncCommands(std::move(asyncTransfer));
 			}
 
 			UpdateChunkDebugCollider(chunkIndices);

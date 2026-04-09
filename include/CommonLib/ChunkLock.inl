@@ -82,6 +82,20 @@ namespace tsom
 	}
 
 	template<bool Write>
+	bool ChunkLock<Write>::TryLock()
+	{
+		NazaraAssertMsg(!m_isLocked, "ChunkLock is already locked");
+
+		if (Detail::TryLockChunk<Write>(m_chunk))
+		{
+			m_isLocked = true;
+			return true;
+		}
+
+		return false;
+	}
+
+	template<bool Write>
 	void ChunkLock<Write>::Unlock()
 	{
 		NazaraAssertMsg(m_isLocked, "ChunkLock isn't locked");
