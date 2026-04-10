@@ -451,6 +451,7 @@ namespace tsom
 
 	void Planet::GenerateChunks(Nz::TaskScheduler& taskScheduler, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, std::string_view scriptName)
 	{
+		m_chunkGenerators.Clear();
 		ForEachChunk([=, this, &taskScheduler](const ChunkIndices& chunkIndices, Chunk& chunk)
 		{
 			if (chunk.HasContent())
