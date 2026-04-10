@@ -95,7 +95,7 @@ namespace tsom
 			cameraComponent.UpdateClearDepth(0.f);
 			cameraComponent.UpdateRenderMask(tsom::Constants::RenderMask3D & ~tsom::Constants::RenderMaskLocalPlayer);
 			cameraComponent.UpdateZNear(0.1f);
-			cameraComponent.UpdateZFar(10000.f); //< when infinite zfar is enabled, zfar is used as a limit for directional lights
+			cameraComponent.UpdateZFar(5000.f); //< when infinite zfar is enabled, zfar is used as a limit for directional lights
 
 			m_targetCameraFOV = cameraComponent.GetFOV();
 		}
@@ -131,7 +131,7 @@ namespace tsom
 			dirLight.UpdateEnergy(5.f);
 			dirLight.EnableFixedShadowCascadeSplit(true);
 
-			float splitFactors[] = { 0.0001f, 0.003f, 0.02f };
+			float splitFactors[] = { 0.00075f, 0.003f, 0.03f };
 			dirLight.UpdateShadowCascadeFixedSplitFactors(splitFactors);
 		}
 
