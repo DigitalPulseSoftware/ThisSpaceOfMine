@@ -22,7 +22,7 @@ namespace tsom
 			~FlatChunk() = default;
 
 			std::pair<std::shared_ptr<Nz::Collider3D>, Nz::Vector3f> BuildBlockCollider(const Nz::Vector3ui& blockIndices, float scale = 1.f) const override;
-			std::shared_ptr<Nz::Collider3D> BuildCollider(std::size_t layerIndex) const override;
+			ColliderData BuildCollider(std::size_t layerIndex) const override;
 
 			std::optional<Nz::Vector3ui> ComputeCoordinates(const Nz::Vector3f& position) const;
 			std::optional<HitBlock> ComputeHitCoordinates(const Nz::Vector3f& hitPos, const Nz::Vector3f& hitNormal, const Nz::Collider3D& collider, std::uint32_t hitSubshapeId) const override;

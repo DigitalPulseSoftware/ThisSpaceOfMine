@@ -23,7 +23,7 @@ namespace tsom
 			~SurfaceNetsChunk() = default;
 
 			std::pair<std::shared_ptr<Nz::Collider3D>, Nz::Vector3f> BuildBlockCollider(const Nz::Vector3ui& blockIndices, float scale = 1.f) const override;
-			std::shared_ptr<Nz::Collider3D> BuildCollider(std::size_t layerIndex) const override;
+			ColliderData BuildCollider(std::size_t layerIndex) const override;
 			void BuildMesh(std::size_t layerIndex, std::vector<Nz::UInt32>& indices, const Nz::Vector3f& center, const Nz::FunctionRef<VertexAttributes(const Nz::Vector3ui& blockIndices, Direction direction)>& addFace) const override;
 
 			Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> ComputeBlockCorners(const Nz::Vector3ui& indices) const override;
@@ -41,7 +41,7 @@ namespace tsom
 			using NeighborChunkArray = Nz::EnumArray<NeighborChunk, const Chunk*>;
 
 			Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> BuildCorners(const Nz::Vector3ui& indices, const NeighborChunkArray& neighborChunks) const;
-			void BuildMesh(std::size_t layerIndex, std::vector<Nz::UInt32>& indices, const Nz::FunctionRef<VertexAttributes(const Nz::Vector3ui& blockIndices, Direction direction)>& addFace, bool generateVisualMesh) const;
+			void BuildMesh(std::size_t layerIndex, std::vector<Nz::UInt32>& indices, const Nz::FunctionRef<VertexAttributes(const Nz::Vector3ui& blockIndices, Direction direction)>& addFace, bool generateVisualMesh, const NeighborChunkArray& neighborChunks) const;
 
 			BlockIndex GetNeighborBlock(const NeighborChunkArray& neighborChunks, Nz::Vector3ui indices, const Nz::Vector3i& offset) const;
 	};

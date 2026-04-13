@@ -318,7 +318,7 @@ namespace tsom
 					return;
 
 				ChunkReadLock lock(chunkPtr.get());
-				updateJob->collider = chunkPtr->BuildCollider(m_layerIndex);
+				updateJob->collider = chunkPtr->BuildCollider(m_layerIndex).simplifiedCollisions;
 				updateJob->jobDone++;
 			});
 		}

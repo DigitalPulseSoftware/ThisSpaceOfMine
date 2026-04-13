@@ -14,7 +14,7 @@ namespace tsom
 		return { std::make_shared<Nz::BoxCollider3D>(Nz::Vector3f(m_blockSize * scale)), offset };
 	}
 
-	std::shared_ptr<Nz::Collider3D> FlatChunk::BuildCollider(std::size_t layerIndex) const
+	auto FlatChunk::BuildCollider(std::size_t layerIndex) const -> ColliderData
 	{
 		std::vector<Nz::CompoundCollider3D::ChildCollider> childColliders;
 
@@ -28,9 +28,10 @@ namespace tsom
 		BuildCollider(m_size, GetCollisionCellMask(layerIndex), AddBox);
 
 		if (childColliders.empty())
-			return nullptr;
+			return { nullptr, nullptr };
 
-		return std::make_shared<Nz::CompoundCollider3D>(std::move(childColliders));
+		auto collider = std::make_shared<Nz::CompoundCollider3D>(std::move(childColliders));
+		return { collider, collider };
 	}
 
 	std::optional<Nz::Vector3ui> FlatChunk::ComputeCoordinates(const Nz::Vector3f& position) const
