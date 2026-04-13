@@ -99,8 +99,9 @@ struct VertOut
 {
 	[location(0)] worldPos: vec3[f32],
 	[location(1)] triplanarPos: vec3[f32],
-	[location(2), interp(flat)] blockIndex: u32,
-	[location(3)] normal: vec3[f32],
+	[location(2)] triplanarNormal: vec3[f32],
+	[location(3), interp(flat)] blockIndex: u32,
+	[location(4)] normal: vec3[f32],
 	[builtin(position)] position: vec4[f32],
 }
 
@@ -197,7 +198,7 @@ fn ComputeColor(input: VertOut) -> vec4[f32]
 		let uvY = input.triplanarPos.xz;
 		let uvZ = input.triplanarPos.xy;
 
-		color = TriplanarSample(input.normal, uvX, uvY, uvZ, blockData.baseColorMapIndices);
+		color = TriplanarSample(input.triplanarNormal, uvX, uvY, uvZ, blockData.baseColorMapIndices);
 	}
 
 	const if (AlphaTest)
@@ -261,7 +262,7 @@ fn ComputeLighting(input: VertOut) -> vec4[f32]
 	let color = blockData.baseColorFallback;
 	if (blockData.baseColorMapIndices.x >= 0)
 	{
-		color = TriplanarSample(input.normal, uvX, uvY, uvZ, blockData.baseColorMapIndices);
+		color = TriplanarSample(input.triplanarNormal, uvX, uvY, uvZ, blockData.baseColorMapIndices);
 		color.rgb = Color.sRGBToLinear(color.rgb);
 	}
 
@@ -297,7 +298,7 @@ fn ComputeLighting(input: VertOut) -> vec4[f32]
 
 	if (blockData.roughnessMetalnessMapIndices.x >= 0)
 	{
-		let texData = TriplanarSample(input.normal, uvX, uvY, uvZ, blockData.roughnessMetalnessMapIndices).xy;
+		let texData = TriplanarSample(input.triplanarNormal, uvX, uvY, uvZ, blockData.roughnessMetalnessMapIndices).xy;
 		roughness = texData.x;
 		if (blockData.roughnessMetalnessMapIndices.y > 2)
 			metallic = texData.y;
@@ -305,7 +306,7 @@ fn ComputeLighting(input: VertOut) -> vec4[f32]
 
 	if (blockData.ambientOcclusionHeightMapIndices.x >= 0)
 	{
-		let texData = TriplanarSample(input.normal, uvX, uvY, uvZ, blockData.ambientOcclusionHeightMapIndices).xy;
+		let texData = TriplanarSample(input.triplanarNormal, uvX, uvY, uvZ, blockData.ambientOcclusionHeightMapIndices).xy;
 		ao = texData.x;
 	}
 
@@ -439,6 +440,7 @@ fn VertMain(input: VertIn) -> VertOut
 	let output: VertOut;
 	output.worldPos = worldPosition.xyz;
 	output.position = viewerData.viewProjMatrix * worldPosition;
+	output.triplanarNormal = input.normal;
 	output.triplanarPos = MaterialData.settings.TriplanarOffset + input.pos;
 	output.normal = rotationMatrix * input.normal;
 	output.blockIndex = input.blockIndex;
