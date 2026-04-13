@@ -1,0 +1,114 @@
+{
+    "layers": {
+        "default": {
+            "isBlended": false
+        },
+        "water": {
+            "physicsLayer": "StaticWater",
+            "isBlended": true,
+            "isFluid": true,
+            "isPhysicsTrigger": true,
+            "renderLayer": 100
+        }
+    },
+    "blocks": {
+        "empty": {
+            "hasCollisions": false,
+            "isSmooth": true,
+            "isTransparent": true,
+            "permeability": 1.0
+        },
+        "debug": {
+            "basePath": "blocks/debug_up"
+        },
+        "dirt": {
+            "basePath": "blocks/dirt",
+            "isSmooth": true,
+            "density": 2.0,
+            "permeability": 0.1
+        },
+        "hull": {
+            "basePath": "blocks/smooth_stone"
+        },
+        "snow": {
+            "basePath": "blocks/snow",
+            "isSmooth": true,
+            "permeability": 0.5
+        },
+        "stone": {
+            "basePath": "blocks/cobblestone",
+            "isSmooth": true,
+            "density": 4.0
+        },
+        "stone_mossy": {
+            "basePath": "blocks/mossy_cobblestone",
+            "isSmooth": true
+        },
+        "forcefield": {
+            "basePath": "blocks/forcefield",
+            "hasCollisions": false,
+            "isTransparent": true
+        },
+        "planks": {
+            "basePath": "blocks/planks"
+        },
+        "stone_bricks": {
+            "basePath": "blocks/stone_bricks"
+        },
+        "copper_block": {
+            "basePath": "blocks/copper_block"
+        },
+        "grass": {
+            "basePath": "blocks/grass",
+            "isSmooth": true,
+            "density": 2.0,
+			"permeability": 0.1
+        },
+        "glass": {
+            "basePath": "blocks/glass",
+            "isDoubleSided": true,
+            "isSmooth": true,
+            "isTransparent": true
+        },
+        "water": {
+            "layerName": "water",
+            "basePath": "blocks/water",
+            "isDoubleSided": true,
+            "isSmooth": true,
+            "isTransparent": true
+        },
+        "bark": {
+            "basePath": "blocks/bark",
+            "isSmooth": true
+        },
+        "cliff_rocks": {
+            "basePath": "blocks/cliff_rocks",
+            "isSmooth": true
+        },
+        "rock": {
+            "basePath": "blocks/rock",
+            "isSmooth": true
+        },
+        "wood_floor": {
+            "basePath": "blocks/wood_floor"
+        },
+        "white_bricks": {
+            "basePath": "blocks/white_bricks"
+        },
+        "gold": {
+            "basePath": "blocks/gold"
+        },
+        "metal": {
+            "basePath": "blocks/metal"
+        },
+        "metal_plates": {
+            "basePath": "blocks/metal_plates"
+        },
+        "brickswall": {
+            "basePath": "blocks/brickswall"
+        },
+        "floor_tiles": {
+            "basePath": "blocks/floor_tiles"
+        }
+    }
+}

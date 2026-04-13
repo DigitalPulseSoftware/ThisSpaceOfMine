@@ -3,147 +3,72 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/BlockLibrary.hpp>
+#include <CommonLib/PhysicsConstants.hpp>
 #include <NazaraUtils/Algorithm.hpp>
+#include <fmt/format.h>
+#include <frozen/string.h>
+#include <frozen/unordered_map.h>
+#include <nlohmann/json.hpp>
 
 namespace tsom
 {
-	BlockLibrary::BlockLibrary()
+	namespace
 	{
-		/************************************************************************/
-		RegisterLayer("default", {
-			.isBlended = false
+		static constexpr auto s_objectLayers = frozen::make_unordered_map<frozen::string, Nz::UInt16>({
+			{ "Dynamic", tsom::Constants::ObjectLayerDynamic },
+			{ "DynamicNoCollision", tsom::Constants::ObjectLayerDynamicNoCollision },
+			{ "DynamicNoPlayer", tsom::Constants::ObjectLayerDynamicNoPlayer },
+			{ "DynamicTrigger", tsom::Constants::ObjectLayerDynamicTrigger },
+			{ "Player", tsom::Constants::ObjectLayerPlayer },
+			{ "PlayerOnlyTrigger", tsom::Constants::ObjectLayerPlayerOnlyTrigger },
+			{ "Static", tsom::Constants::ObjectLayerStatic },
+			{ "StaticNoplayer", tsom::Constants::ObjectLayerStaticNoPlayer },
+			{ "StaticTrigger", tsom::Constants::ObjectLayerStaticTrigger },
+			{ "StaticWater", tsom::Constants::ObjectLayerStaticWater }
 		});
+	}
+}
 
-		RegisterLayer("water", {
-			.physicsLayer = Constants::ObjectLayerStaticWater,
-			.isBlended = true,
-			.isFluid = true,
-			.isPhysicsTrigger = true,
-			.renderLayer = 100
-		});
+namespace nlohmann
+{
+	template<typename BasicJsonType>
+	void from_json(const BasicJsonType& j, tsom::BlockLibrary::PhysicsLayer& layerContainer)
+	{
+		std::string_view layerName = j;
 
-		/************************************************************************/
-		RegisterBlock("empty", {
-			.hasCollisions = false,
-			.isSmooth = true,
-			.isTransparent = true,
-			.permeability = 1.f
-		});
+		if (auto it = tsom::s_objectLayers.find(layerName); it != tsom::s_objectLayers.end())
+			layerContainer.layer = it->second;
+		else
+			throw std::runtime_error(fmt::format("invalid physics layer \"{}\"", layerName));
+	}
 
-		RegisterBlock("debug", {
-			.basePath = "blocks/debug_up",
-		});
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(tsom::BlockLibrary::BlockInfo, \
+		layerName, basePath, hasCollisions, isDoubleSided, \
+		isSmooth, isTransparent, density, \
+		metalness, permeability, roughness \
+	);
+	
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(tsom::BlockLibrary::LayerInfo, \
+		physicsLayer, isBlended, isFluid, isPhysicsTrigger, renderLayer
+	);
+}
 
-		RegisterBlock("dirt", {
-			.basePath = "blocks/dirt",
-			.isSmooth = true,
-			.density = 1.0f,
-			.permeability = 0.1f
-		});
+namespace tsom
+{
+	bool BlockLibrary::LoadFromString(std::string_view content, bool merge)
+	{
+		nlohmann::ordered_json doc = nlohmann::ordered_json::parse(content);
 
-		RegisterBlock("grass", {
-			.basePath = "blocks/grass",
-			.isSmooth = true,
-			.density = 2.0f,
-			.permeability = 0.1f
-		});
+		if (!merge)
+			Clear();
 
-		RegisterBlock("hull", {
-			.basePath = "blocks/smooth_stone"
-		});
+		for (const auto& [layerName, layerEntryDoc] : doc["layers"].items())
+			RegisterLayer(layerName, layerEntryDoc);
 
-		RegisterBlock("snow", {
-			.basePath = "blocks/snow",
-			.isSmooth = true,
-			.permeability = 0.5f
-		});
+		for (const auto& [blockName, blockEntryDoc] : doc["blocks"].items())
+			RegisterBlock(blockName, blockEntryDoc);
 
-		RegisterBlock("stone", {
-			.basePath = "blocks/cobblestone",
-			.isSmooth = true,
-			.density = 4.0f
-		});
-
-		RegisterBlock("stone_mossy", {
-			.basePath = "blocks/mossy_cobblestone",
-			.isSmooth = true,
-		});
-
-		RegisterBlock("forcefield", {
-			.basePath = "blocks/forcefield",
-			.hasCollisions = false,
-			.isTransparent = true
-		});
-
-		RegisterBlock("planks", {
-			.basePath = "blocks/planks",
-		});
-
-		RegisterBlock("stone_bricks", {
-			.basePath = "blocks/stone_bricks",
-		});
-
-		RegisterBlock("copper_block", {
-			.basePath = "blocks/copper_block",
-		});
-
-		RegisterBlock("glass", {
-			.basePath = "blocks/glass",
-			.isDoubleSided = true,
-			.isSmooth = true,
-			.isTransparent = true
-		});
-
-		RegisterBlock("water", {
-			.layerName = "water",
-			.basePath = "blocks/water",
-			.isDoubleSided = true,
-			.isSmooth = true,
-			.isTransparent = true,
-		});
-
-		RegisterBlock("bark", {
-			.basePath = "blocks/bark",
-			.isSmooth = true
-		});
-
-		RegisterBlock("cliff_rocks", {
-			.basePath = "blocks/cliff_rocks",
-			.isSmooth = true
-		});
-
-		RegisterBlock("rock", {
-			.basePath = "blocks/rock",
-			.isSmooth = true
-		});
-
-		RegisterBlock("wood_floor", {
-			.basePath = "blocks/wood_floor",
-		});
-
-		RegisterBlock("white_bricks", {
-			.basePath = "blocks/white_bricks",
-		});
-
-		RegisterBlock("gold", {
-			.basePath = "blocks/gold",
-		});
-
-		RegisterBlock("metal", {
-			.basePath = "blocks/metal",
-		});
-
-		RegisterBlock("metal_plates", {
-			.basePath = "blocks/metal_plates",
-		});
-
-		RegisterBlock("brickswall", {
-			.basePath = "blocks/brickswall",
-		});
-
-		RegisterBlock("floor_tiles", {
-			.basePath = "blocks/floor_tiles",
-		});
+		return true;
 	}
 
 	BlockIndex BlockLibrary::RegisterBlock(std::string name, BlockInfo blockInfo)
@@ -181,7 +106,7 @@ namespace tsom
 		layerData.isFluid = layerInfo.isFluid;
 		layerData.isPhysicsTrigger = layerInfo.isPhysicsTrigger;
 		layerData.name = name;
-		layerData.physicsLayer = layerInfo.physicsLayer;
+		layerData.physicsLayer = layerInfo.physicsLayer.layer;
 		layerData.renderLayer = layerInfo.renderLayer;
 
 		assert(!m_layerIndices.contains(name));

@@ -1,5 +1,6 @@
 assets/*
 !assets/*.passlist
+!assets/*.json
 !assets/shaders
 cache/
 saves/

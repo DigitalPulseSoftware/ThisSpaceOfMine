@@ -75,7 +75,7 @@ namespace tsom
 		return Nz::File::WriteWhole(path, content.data(), content.size());
 	}
 
-	std::optional<ClientAssetCookRegistry> ClientAssetCookRegistry::LoadFromContent(std::string_view content)
+	std::optional<ClientAssetCookRegistry> ClientAssetCookRegistry::LoadFromString(std::string_view content)
 	{
 		nlohmann::ordered_json doc = nlohmann::ordered_json::parse(content);
 
@@ -92,6 +92,6 @@ namespace tsom
 		if (!contentOpt)
 			return std::nullopt;
 
-		return LoadFromContent(std::string_view(reinterpret_cast<const char*>(contentOpt->data()), contentOpt->size()));
+		return LoadFromString(std::string_view(reinterpret_cast<const char*>(contentOpt->data()), contentOpt->size()));
 	}
 }

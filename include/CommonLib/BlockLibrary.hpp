@@ -26,10 +26,12 @@ namespace tsom
 			struct LayerData;
 			struct LayerInfo;
 
-			BlockLibrary();
+			BlockLibrary() = default;
 			BlockLibrary(const BlockLibrary&) = delete;
 			BlockLibrary(BlockLibrary&&) = delete;
 			~BlockLibrary() = default;
+
+			void Clear();
 
 			inline const BlockData& GetBlockData(BlockIndex blockIndex) const;
 			inline const std::vector<BlockData>& GetBlocks() const;
@@ -37,6 +39,8 @@ namespace tsom
 			inline BlockIndex GetBlockIndex(std::string_view blockName) const;
 			inline bool IsValidBlock(BlockIndex blockIndex) const;
 			inline bool IsValidLayer(std::size_t layerIndex) const;
+
+			bool LoadFromString(std::string_view content, bool merge = false);
 
 			BlockIndex RegisterBlock(std::string name, BlockInfo blockInfo);
 			std::size_t RegisterLayer(std::string name, LayerInfo layerInfo);
@@ -70,10 +74,14 @@ namespace tsom
 				float roughness = 1.0f; //< Used if texture is not available
 			};
 
+			struct PhysicsLayer
+			{
+				Nz::PhysObjectLayer3D layer;
+			};
+
 			struct LayerInfo
 			{
-				std::string name;
-				Nz::PhysObjectLayer3D physicsLayer = Constants::ObjectLayerStatic;
+				PhysicsLayer physicsLayer = PhysicsLayer { Constants::ObjectLayerStatic };
 				bool isBlended;
 				bool isFluid = false;
 				bool isPhysicsTrigger = false;

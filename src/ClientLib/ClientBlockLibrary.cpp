@@ -91,7 +91,7 @@ namespace tsom
 		std::optional<ClientAssetCookRegistry> cookRegistry;
 		fs.GetFileContent("CookedAssets/registry.json", [&](const void* ptr, Nz::UInt64 size)
 		{
-			cookRegistry = ClientAssetCookRegistry::LoadFromContent(std::string_view(reinterpret_cast<const char*>(ptr), Nz::SafeCast<std::size_t>(size)));
+			cookRegistry = ClientAssetCookRegistry::LoadFromString(std::string_view(reinterpret_cast<const char*>(ptr), Nz::SafeCast<std::size_t>(size)));
 			return true;
 		});
 

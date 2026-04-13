@@ -38,7 +38,7 @@ int ServerMain(int argc, char* argv[])
 	auto& serverInstanceAppComponent = app.AddComponent<tsom::ServerInstanceAppComponent>();
 
 	auto& filesystem = app.AddComponent<Nz::FilesystemAppComponent>();
-	for (const char* directory : { "database", "scripts" })
+	for (const char* directory : { "assets", "database", "scripts" })
 	{
 		std::filesystem::path dirPath = Nz::Utf8Path(directory);
 		if (!std::filesystem::is_directory(dirPath))

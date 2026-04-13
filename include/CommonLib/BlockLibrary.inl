@@ -4,6 +4,14 @@
 
 namespace tsom
 {
+	inline void BlockLibrary::Clear()
+	{
+		m_blockIndices.clear();
+		m_layerIndices.clear();
+		m_blocks.clear();
+		m_layers.clear();
+	}
+
 	inline auto BlockLibrary::GetBlockData(BlockIndex blockIndex) const -> const BlockData&
 	{
 		return m_blocks[blockIndex];

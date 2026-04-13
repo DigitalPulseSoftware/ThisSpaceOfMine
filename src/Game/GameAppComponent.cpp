@@ -308,6 +308,12 @@ namespace tsom
 		graphics->GetShaderModuleResolver()->RegisterDirectory(Nz::Utf8Path("assets/shaders"), true);
 
 		m_blockLibrary.emplace(app);
+		
+		filesystem.GetFileContent("assets/blocks.json", [&](const void* ptr, Nz::UInt64 size)
+		{
+			m_blockLibrary->LoadFromString(std::string_view(reinterpret_cast<const char*>(ptr), Nz::SafeCast<std::size_t>(size)));
+			return true;
+		});
 
 		/*ClientAssetCooker assetCooker(app);
 		if (auto result = assetCooker.Cook(*m_blockLibrary); !result)
