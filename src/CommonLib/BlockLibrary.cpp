@@ -34,9 +34,9 @@ namespace nlohmann
 	template<typename BasicJsonType>
 	void from_json(const BasicJsonType& j, tsom::BlockLibrary::PhysicsLayer& layerContainer)
 	{
-		std::string_view layerName = j;
+		const std::string& layerName = j;
 
-		if (auto it = tsom::s_objectLayers.find(layerName); it != tsom::s_objectLayers.end())
+		if (auto it = tsom::s_objectLayers.find(frozen::string(layerName)); it != tsom::s_objectLayers.end())
 			layerContainer.layer = it->second;
 		else
 			throw std::runtime_error(fmt::format("invalid physics layer \"{}\"", layerName));
