@@ -7,7 +7,6 @@ function QuaternionMt:GetConjugate()
 end
 
 function QuaternionMt:__mul(quat)
-    assert(type(quat) == "userdata")
     local mt = getmetatable(quat)
     if mt == QuaternionMt then
         return Quaternion(
@@ -18,8 +17,8 @@ function QuaternionMt:__mul(quat)
         )
     else
         local quatVec = Vec3(self.x, self.y, self.z)
-        local uv = quatVec.CrossProduct(quat)
-        local uuv = quatVec.CrossProduct(uv)
+        local uv = quatVec:CrossProduct(quat)
+        local uuv = quatVec:CrossProduct(uv)
 
         uv = uv * 2.0 * self.w
         uuv = uuv * 2.0

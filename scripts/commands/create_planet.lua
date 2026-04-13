@@ -32,10 +32,10 @@ return function (opt)
         currentPos = playerNode:GetPosition()
     end
 
-    local id = serverDatabase.CreatePlanet(planetData)
+    local id = ServerDatabase.CreatePlanet(planetData)
 
     local planetEnv = PlanetEnvironment.new(id, planetData.generatorName, planetData.seed, planetData.chunkCount, 1.0, planetData.cornerRadius)
-    server.RegisterDatabaseEnvironment(id, planetEnv)
+    Server.RegisterDatabaseEnvironment(id, planetEnv)
 
     print("new planet id: " .. id)
 
@@ -47,14 +47,14 @@ return function (opt)
         }
 
         print("Store link 1")
-        serverDatabase.StorePlanetLink(linkData)
+        ServerDatabase.StorePlanetLink(linkData)
         
         -- reverse link
         print("Store link 2")
-        serverDatabase.StorePlanetLink({ sourcePlanet = linkData.destinationPlanet, destinationPlanet = linkData.sourcePlanet, position = -linkData.position })
+        ServerDatabase.StorePlanetLink({ sourcePlanet = linkData.destinationPlanet, destinationPlanet = linkData.sourcePlanet, position = -linkData.position })
 
         print("Server link database environments")
-        server.LinkDatabaseEnvironments(linkData.sourcePlanet, linkData.destinationPlanet, linkData.position)
-        server.LinkDatabaseEnvironments(linkData.destinationPlanet, linkData.sourcePlanet, -linkData.position)
+        Server.LinkDatabaseEnvironments(linkData.sourcePlanet, linkData.destinationPlanet, linkData.position)
+        Server.LinkDatabaseEnvironments(linkData.destinationPlanet, linkData.sourcePlanet, -linkData.position)
     end
 end

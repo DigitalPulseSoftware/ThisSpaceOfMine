@@ -19,10 +19,10 @@ return function (opt)
     }
 
     if not opt.ephemeral then
-        serverDatabase.StorePlanetLink(linkData)
+        ServerDatabase.StorePlanetLink(linkData)
     end
 
-    server.LinkDatabaseEnvironments(linkData.sourcePlanet, linkData.destinationPlanet, linkData.position)
+    Server.LinkDatabaseEnvironments(linkData.sourcePlanet, linkData.destinationPlanet, linkData.position)
 
     if opt.dual then
         linkData.position = -linkData.position
@@ -32,10 +32,10 @@ return function (opt)
         linkData.destinationPlanet = temp
 
         if not opt.ephemeral then
-            serverDatabase.StorePlanetLink(linkData)
+            ServerDatabase.StorePlanetLink(linkData)
         end
 
-        server.LinkDatabaseEnvironments(linkData.sourcePlanet, linkData.destinationPlanet, linkData.position)
+        Server.LinkDatabaseEnvironments(linkData.sourcePlanet, linkData.destinationPlanet, linkData.position)
     end
 
     print("link created")
