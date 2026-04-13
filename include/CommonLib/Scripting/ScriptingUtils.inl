@@ -5,6 +5,8 @@
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
 #include <Nazara/Core/HandledObject.hpp>
 #include <Nazara/Core/ObjectHandle.hpp>
+#include <Nazara/Math/Box.hpp>
+#include <Nazara/Math/Quaternion.hpp>
 #include <Nazara/Math/Rect.hpp>
 #include <Nazara/Math/Vector2.hpp>
 #include <Nazara/Math/Vector3.hpp>
@@ -189,6 +191,12 @@ namespace tsom
 namespace sol
 {
 	template<typename T>
+	struct lua_size<Nz::Box<T>> : std::integral_constant<int, 1> {};
+
+	template<typename T>
+	struct lua_size<Nz::Quaternion<T>> : std::integral_constant<int, 1> {};
+
+	template<typename T>
 	struct lua_size<Nz::Rect<T>> : std::integral_constant<int, 1> {};
 
 	template<typename T>
@@ -198,6 +206,12 @@ namespace sol
 	struct lua_size<Nz::Vector3<T>> : std::integral_constant<int, 1> {};
 
 	template<typename T>
+	struct lua_type_of<Nz::Box<T>> : std::integral_constant<sol::type, sol::type::table> {};
+
+	template<typename T>
+	struct lua_type_of<Nz::Quaternion<T>> : std::integral_constant<sol::type, sol::type::table> {};
+
+	template<typename T>
 	struct lua_type_of<Nz::Rect<T>> : std::integral_constant<sol::type, sol::type::table> {};
 
 	template<typename T>
@@ -205,6 +219,40 @@ namespace sol
 
 	template<typename T>
 	struct lua_type_of<Nz::Vector3<T>> : std::integral_constant<sol::type, sol::type::table> {};
+
+	template<typename T>
+	inline Nz::Box<T> sol_lua_get(sol::types<Nz::Box<T>>, lua_State* L, int index, sol::stack::record& tracking)
+	{
+		int absoluteIndex = lua_absindex(L, index);
+
+		sol::table box = sol::stack::get<sol::table>(L, absoluteIndex);
+		T x = box["x"];
+		T y = box["y"];
+		T z = box["z"];
+		T width = box["width"];
+		T height = box["height"];
+		T depth = box["depth"];
+
+		tracking.use(1);
+
+		return Nz::Box<T>(x, y, z, width, height, depth);
+	}
+
+	template<typename T>
+	inline Nz::Quaternion<T> sol_lua_get(sol::types<Nz::Quaternion<T>>, lua_State* L, int index, sol::stack::record& tracking)
+	{
+		int absoluteIndex = lua_absindex(L, index);
+
+		sol::table quat = sol::stack::get<sol::table>(L, absoluteIndex);
+		T x = quat["x"];
+		T y = quat["y"];
+		T z = quat["z"];
+		T w = quat["w"];
+
+		tracking.use(1);
+
+		return Nz::Quaternion<T>(w, x, y, z);
+	}
 
 	template<typename T>
 	inline Nz::Rect<T> sol_lua_get(sol::types<Nz::Rect<T>>, lua_State* L, int index, sol::stack::record& tracking)
@@ -253,40 +301,70 @@ namespace sol
 
 
 	template<typename T>
+	int sol_lua_push(sol::types<Nz::Box<T>>, lua_State* L, const Nz::Box<T>& box)
+	{
+		lua_createtable(L, 0, 6);
+		luaL_setmetatable(L, "box");
+		sol::stack_table boxTable(L);
+		boxTable["x"] = box.x;
+		boxTable["y"] = box.y;
+		boxTable["z"] = box.z;
+		boxTable["width"] = box.width;
+		boxTable["height"] = box.height;
+		boxTable["depth"] = box.height;
+
+		return 1;
+	}
+
+	template<typename T>
+	int sol_lua_push(sol::types<Nz::Quaternion<T>>, lua_State* L, const Nz::Quaternion<T>& quat)
+	{
+		lua_createtable(L, 0, 4);
+		luaL_setmetatable(L, "quaternion");
+		sol::stack_table quatTable(L);
+		quatTable["x"] = quat.x;
+		quatTable["y"] = quat.y;
+		quatTable["z"] = quat.z;
+		quatTable["w"] = quat.w;
+
+		return 1;
+	}
+
+	template<typename T>
 	int sol_lua_push(sol::types<Nz::Rect<T>>, lua_State* L, const Nz::Rect<T>& rect)
 	{
 		lua_createtable(L, 0, 4);
 		luaL_setmetatable(L, "rect");
-		sol::stack_table vec(L);
-		vec["x"] = rect.x;
-		vec["y"] = rect.y;
-		vec["width"] = rect.width;
-		vec["height"] = rect.height;
+		sol::stack_table rectTable(L);
+		rectTable["x"] = rect.x;
+		rectTable["y"] = rect.y;
+		rectTable["width"] = rect.width;
+		rectTable["height"] = rect.height;
 
 		return 1;
 	}
 
 	template<typename T>
-	int sol_lua_push(sol::types<Nz::Vector2<T>>, lua_State* L, const Nz::Vector2<T>& v)
+	int sol_lua_push(sol::types<Nz::Vector2<T>>, lua_State* L, const Nz::Vector2<T>& vec)
 	{
 		lua_createtable(L, 0, 2);
 		luaL_setmetatable(L, "vec2");
-		sol::stack_table vec(L);
-		vec["x"] = v.x;
-		vec["y"] = v.y;
+		sol::stack_table vecTable(L);
+		vecTable["x"] = vec.x;
+		vecTable["y"] = vec.y;
 
 		return 1;
 	}
 
 	template<typename T>
-	int sol_lua_push(sol::types<Nz::Vector3<T>>, lua_State* L, const Nz::Vector3<T>& v)
+	int sol_lua_push(sol::types<Nz::Vector3<T>>, lua_State* L, const Nz::Vector3<T>& vec)
 	{
 		lua_createtable(L, 0, 3);
 		luaL_setmetatable(L, "vec3");
-		sol::stack_table vec(L);
-		vec["x"] = v.x;
-		vec["y"] = v.y;
-		vec["z"] = v.z;
+		sol::stack_table vecTable(L);
+		vecTable["x"] = vec.x;
+		vecTable["y"] = vec.y;
+		vecTable["z"] = vec.z;
 
 		return 1;
 	}

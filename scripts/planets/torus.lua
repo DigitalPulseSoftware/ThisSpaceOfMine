@@ -47,7 +47,7 @@ return function (chunk, seed, chunkcount)
     local planet = chunk:GetContainer()
     local chunkIndices = chunk:GetIndices()
 
-    local maxHeight = (Vec3i(chunkcount.x, chunkcount.y, chunkcount.z) + Vec3i(1)) / 2
+    local maxHeight = (Vec3(chunkcount.x, chunkcount.y, chunkcount.z) + Vec3(1)) / 2
     maxHeight = maxHeight * chunksize
 
     local content = {}

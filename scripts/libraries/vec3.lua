@@ -55,6 +55,14 @@ function Vec3Mt:__div(vec)
     end
 end
 
+function Vec3Mt:__unm()
+    return Vec3(-self.x, -self.y, -self.z)
+end
+
+function Vec3Mt:__tostring()
+    return string.format("Vec3(%f, %f, %f)", self.x, self.y, self.z)
+end
+
 local Vec3ClassMt = {}
 
 function Vec3ClassMt.__call(t, x, y, z)

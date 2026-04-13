@@ -72,7 +72,7 @@ return function ()
 	local pendingList = { blockIndices }
 
 	local function AddNeighbor(chunkContainer, blockIndices, axis, dir, factor, checkAxis)
-		local nextBlockIndices = Vec3i(blockIndices.x, blockIndices.y, blockIndices.z)
+		local nextBlockIndices = Vec3(blockIndices.x, blockIndices.y, blockIndices.z)
 		nextBlockIndices[axis[dir]] = nextBlockIndices[axis[dir]] + axis[dir .. "Dir"] * factor
 
 		local nextChunkIndices, nextInnerCoordinates = chunkContainer:GetChunkIndicesByBlockIndices(nextBlockIndices)
@@ -84,7 +84,7 @@ return function ()
 
 		local nextAxis = GetUpAxis(nextChunk, nextInnerCoordinates)
 		if checkAxis and axis ~= nextAxis then
-			nextBlockIndices = Vec3i(blockIndices.x, blockIndices.y, blockIndices.z)
+			nextBlockIndices = Vec3(blockIndices.x, blockIndices.y, blockIndices.z)
 			nextBlockIndices[nextAxis[dir]] = nextBlockIndices[nextAxis[dir]] + nextAxis[dir .. "Dir"] * factor
 		end
 
@@ -98,12 +98,11 @@ return function ()
 			return
 		end
 
-		server.ScheduleForNextTick(updateCallback)
+		Server.ScheduleForNextTick(updateCallback)
 
 		local updatedChunks = {}
 
-		local toProcess = math.max(math.floor(remaining / 50), 1)
-		for i = 1, toProcess do
+		for i = 1, remaining do
 			local firstBlock = table.remove(pendingList, 1)
 
 			local chunkIndices, innerCoordinates = chunkContainer:GetChunkIndicesByBlockIndices(firstBlock)
@@ -125,14 +124,14 @@ return function ()
 				AddNeighbor(chunkContainer, firstBlock, axis, "right", -1, true)
 				AddNeighbor(chunkContainer, firstBlock, axis, "up", -1)
 			end
-			
+
 			updatedChunks[tostring(chunkIndices)] = true
-			if table.count(updatedChunks) > 3 then
+			if table.count(updatedChunks) > 10 then
 				-- limit concurrent chunk updates per tick
 				return
 			end
 		end
 	end
 
-	server.ScheduleForNextTick(updateCallback)
+	Server.ScheduleForNextTick(updateCallback)
 end
