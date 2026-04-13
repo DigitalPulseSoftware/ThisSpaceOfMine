@@ -36,7 +36,7 @@ namespace tsom
 			ClientAssetCookRegistry& operator=(const ClientAssetCookRegistry&) = delete;
 			ClientAssetCookRegistry& operator=(ClientAssetCookRegistry&&) = default;
 
-			static std::optional<ClientAssetCookRegistry> LoadFromContent(std::string_view content);
+			static std::optional<ClientAssetCookRegistry> LoadFromString(std::string_view content);
 			static std::optional<ClientAssetCookRegistry> LoadFromFile(const std::filesystem::path& path);
 
 			enum class TextureType

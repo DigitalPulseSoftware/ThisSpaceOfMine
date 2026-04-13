@@ -17,6 +17,7 @@
 #include <ServerLib/Scripting/ServerEntityScriptingLibrary.hpp>
 #include <ServerLib/Scripting/ServerScriptingLibrary.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
+#include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <spdlog/spdlog.h>
@@ -33,6 +34,14 @@ namespace tsom
 	m_config(std::move(config)),
 	m_scriptingContext(application)
 	{
+		auto& fs = m_application.GetComponent<Nz::FilesystemAppComponent>();
+
+		fs.GetFileContent("assets/blocks.json", [&](const void* ptr, Nz::UInt64 size)
+		{
+			m_blockLibrary.LoadFromString(std::string_view(reinterpret_cast<const char*>(ptr), Nz::SafeCast<std::size_t>(size)));
+			return true;
+		});
+
 		m_entityRegistry.RegisterClassLibrary<ChunkClassLibrary>(m_application, m_blockLibrary);
 		m_entityRegistry.RegisterClassLibrary<ServerEntityClassLibrary>(m_application);
 
