@@ -108,10 +108,10 @@ namespace tsom
 
 		m_chunkMaterial = blockMaterial->Instantiate();
 		m_chunkMaterial->SetBufferProperty("GlobalBlockData", blockLibrary.GetGlobalBlockBuffer());
-		m_chunkMaterial->SetTextureProperty("BlockTexture1", blockLibrary.GetBlockTexture(ClientAssetCookRegistry::TextureType::BC1), blockSampler);
-		m_chunkMaterial->SetTextureProperty("BlockTexture2", blockLibrary.GetBlockTexture(ClientAssetCookRegistry::TextureType::BC3), blockSampler);
-		m_chunkMaterial->SetTextureProperty("BlockTexture3", blockLibrary.GetBlockTexture(ClientAssetCookRegistry::TextureType::BC4), blockSampler);
-		m_chunkMaterial->SetTextureProperty("BlockTexture4", blockLibrary.GetBlockTexture(ClientAssetCookRegistry::TextureType::BC5), blockSampler);
+		m_chunkMaterial->SetTextureProperty("BlockTexture1", blockLibrary.GetBlockTexture(CookedBlockRegistry::TextureType::BC1), blockSampler);
+		m_chunkMaterial->SetTextureProperty("BlockTexture2", blockLibrary.GetBlockTexture(CookedBlockRegistry::TextureType::BC3), blockSampler);
+		m_chunkMaterial->SetTextureProperty("BlockTexture3", blockLibrary.GetBlockTexture(CookedBlockRegistry::TextureType::BC4), blockSampler);
+		m_chunkMaterial->SetTextureProperty("BlockTexture4", blockLibrary.GetBlockTexture(CookedBlockRegistry::TextureType::BC5), blockSampler);
 		m_chunkMaterial->SetValueProperty("ShadowPosScale", 1.f);
 		m_chunkMaterial->SetValueProperty("AlphaTest", true);
 		m_chunkMaterial->UpdatePassesStates({ "ShadowPass", "DistanceShadowPass" }, [](Nz::RenderStates& states)
@@ -305,6 +305,8 @@ namespace tsom
 
 				renderDevice.SubmitAsyncCommands(std::move(asyncTransfer));
 			}
+			else if (auto* gfxComponent = visualEntity.try_get<Nz::GraphicsComponent>())
+				gfxComponent->Clear();
 
 			UpdateChunkDebugCollider(chunkIndices);
 		};

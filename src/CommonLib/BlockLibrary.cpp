@@ -47,7 +47,7 @@ namespace nlohmann
 		isSmooth, isTransparent, density, \
 		metalness, permeability, roughness \
 	);
-	
+
 	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(tsom::BlockLibrary::LayerInfo, \
 		physicsLayer, isBlended, isFluid, isPhysicsTrigger, renderLayer
 	);

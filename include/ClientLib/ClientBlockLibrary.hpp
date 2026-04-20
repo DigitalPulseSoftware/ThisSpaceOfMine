@@ -8,8 +8,8 @@
 #define TSOM_CLIENTLIB_CLIENTBLOCKLIBRARY_HPP
 
 #include <ClientLib/Export.hpp>
-#include <ClientLib/ClientAssetCookRegistry.hpp>
 #include <CommonLib/BlockLibrary.hpp>
+#include <CommonLib/CookedBlockRegistry.hpp>
 
 namespace Nz
 {
@@ -30,14 +30,14 @@ namespace tsom
 
 			void BuildTexture(Nz::RenderDevice& renderDevice);
 
-			inline const std::shared_ptr<Nz::TextureAsset>& GetBlockTexture(ClientAssetCookRegistry::TextureType textureType) const;
+			inline const std::shared_ptr<Nz::TextureAsset>& GetBlockTexture(CookedBlockRegistry::TextureType textureType) const;
 			inline const std::shared_ptr<Nz::RenderBuffer>& GetGlobalBlockBuffer() const;
 			inline const std::shared_ptr<Nz::TextureAsset>& GetPreviewTexture(BlockIndex blockIndex) const;
 
 		private:
 			std::shared_ptr<Nz::RenderBuffer> m_globalBlockBuffer;
 			std::vector<std::shared_ptr<Nz::TextureAsset>> m_previewTextures;
-			Nz::EnumArray<ClientAssetCookRegistry::TextureType, std::shared_ptr<Nz::TextureAsset>> m_blockTextures;
+			Nz::EnumArray<CookedBlockRegistry::TextureType, std::shared_ptr<Nz::TextureAsset>> m_blockTextures;
 			Nz::ApplicationBase& m_applicationBase;
 			void* m_globalBlockBufferPtr;
 	};

@@ -83,9 +83,9 @@ namespace tsom
 			auto& cameraNode = m_cameraEntity.emplace<Nz::NodeComponent>();
 
 #ifdef TSOM_DEV_TOOLS
-			auto passList = filesystem.Load<Nz::PipelinePassList>(stateData.imgui ? "assets/3d_dev.passlist" : "assets/3d.passlist");
+			auto passList = filesystem.Load<Nz::PipelinePassList>(stateData.imgui ? "CookedAssets/Passes/3d_dev.passlist" : "CookedAssets/Passes/3d.passlist");
 #else
-			auto passList = filesystem.Load<Nz::PipelinePassList>("assets/3d.passlist");
+			auto passList = filesystem.Load<Nz::PipelinePassList>("CookedAssets/Passes/3d.passlist");
 #endif
 
 			auto& cameraComponent = m_cameraEntity.emplace<Nz::CameraComponent>(stateData.renderTarget, std::move(passList));
@@ -156,7 +156,7 @@ namespace tsom
 
 			// Instantiate the material to use it, and configure it (texture + cull front faces as the render is from the inside)
 			std::shared_ptr<Nz::MaterialInstance> skyboxMat = skyboxMaterial->Instantiate();
-			skyboxMat->SetTextureProperty("BaseColorMap", filesystem.Open<Nz::TextureAsset>("assets/skybox-space.png", { .sRGB = true }, Nz::CubemapParams{}));
+			skyboxMat->SetTextureProperty("BaseColorMap", filesystem.Open<Nz::TextureAsset>("CookedAssets/Textures/Skybox/GameSkybox.dds", { .sRGB = true }));
 			skyboxMat->UpdatePassesStates([](Nz::RenderStates& states)
 			{
 				states.faceCulling = Nz::FaceCulling::Front;

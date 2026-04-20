@@ -37,7 +37,8 @@ add_requires(
 	"perlinnoise",
 	"sol2[includes_lua=n]",
 	"spdlog[fmt_external=y,header_only=n]",
-	"sqlitecpp[sqlite3_external]"
+	"sqlitecpp[sqlite3_external]",
+	"tiny-process-library"
 )
 
 if has_config("serveronly") then
@@ -56,6 +57,7 @@ if has_config("serveronly") then
 			plugin_imgui = false
 		}
 	})
+	add_requires("nzsl")
 end
 
 if is_plat("macosx") then
@@ -274,6 +276,16 @@ target("TSOMServer", function ()
 	add_installfiles("(scripts/**.lua)", { prefixdir = "bin" })
 
 	add_rpathdirs("@executable_path")
+end)
+
+target("TSOMAssetCooker", function ()
+	set_group("Executable")
+	set_basename("ThisCookerOfMine")
+	add_deps("CommonLib", "Main")
+	add_packages("frozen", "nzsl", "tiny-process-library")
+
+	add_headerfiles("src/AssetCooker/**.hpp", "src/AssetCooker/**.inl")
+	add_files("src/AssetCooker/**.cpp")
 end)
 
 if not has_config("serveronly") then

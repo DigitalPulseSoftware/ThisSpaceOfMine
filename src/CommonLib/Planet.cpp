@@ -387,7 +387,7 @@ namespace tsom
                 end
 
                 local blockPresence = perlin:normalizedOctave3D_01(blockPosScaled.x * caveScale, blockPosScaled.y * caveScale, blockPosScaled.z * caveScale, 4, 0.1)
-              
+
                 if distToCenter <= -32.0 then
                     if blockPresence >= 0.3 and blockPresence <= 0.7 then
                         if distToCenter <= -5 then
@@ -408,10 +408,10 @@ namespace tsom
                     else
                         mountainous = 1
                     end
-                  
+
                     local heightVariation1 = 10 * perlin:normalizedOctave3D_01(blockPosNorm.x * terrainVariation1Scale, blockPosNorm.y * terrainVariation1Scale, blockPosNorm.z * terrainVariation1Scale, 4, 0.1)
                     local heightVariation2 = 40 * mountainous * perlin:normalizedOctave3D_01((blockPosNorm.x * terrainVariation2Scale)+20, blockPosNorm.y * terrainVariation2Scale, blockPosNorm.z * terrainVariation2Scale, 4, 0.1)
-                  
+
                     local baseSpikeHeight = perlin:normalizedOctave3D_01((blockPosNorm.x * spikeScale)+30, blockPosNorm.y * spikeScale, blockPosNorm.z * spikeScale, 4, 0.1)
                     local spikeHeight
                     if baseSpikeHeight < 0.7 then 
@@ -422,9 +422,9 @@ namespace tsom
                         spikeHeight = 1
                     end
                     spikeHeight = (1-mountainous) * spikeHeight * 20
-                  
+
                     local height = heightVariation1 + heightVariation2 + spikeHeight
-                  
+
                     if distToCenter <= height then
                         if distToCenter >= height - spikeHeight then
                             table.insert(content, stoneMossyBlock)
@@ -441,7 +441,7 @@ namespace tsom
                         table.insert(content, emptyBlock)
                     end
                 end
-              
+
                 ::continue::
             end
         end
