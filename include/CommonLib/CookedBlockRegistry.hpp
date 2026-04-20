@@ -4,10 +4,10 @@
 
 #pragma once
 
-#ifndef TSOM_CLIENTLIB_CLIENTASSETCOOKREGISTRY_HPP
-#define TSOM_CLIENTLIB_CLIENTASSETCOOKREGISTRY_HPP
+#ifndef TSOM_COMMONLIB_COOKEDBLOCKREGISTRY_HPP
+#define TSOM_COMMONLIB_COOKEDBLOCKREGISTRY_HPP
 
-#include <ClientLib/Export.hpp>
+#include <CommonLib/Export.hpp>
 #include <Nazara/Core/Color.hpp>
 #include <NazaraUtils/Result.hpp>
 #include <NazaraUtils/StringHash.hpp>
@@ -17,15 +17,15 @@
 
 namespace tsom
 {
-	class TSOM_CLIENTLIB_API ClientAssetCookRegistry
+	class TSOM_COMMONLIB_API CookedBlockRegistry
 	{
 		public:
 			struct BlockEntry;
 
-			ClientAssetCookRegistry() = default;
-			ClientAssetCookRegistry(const ClientAssetCookRegistry&) = delete;
-			ClientAssetCookRegistry(ClientAssetCookRegistry&&) = default;
-			~ClientAssetCookRegistry() = default;
+			CookedBlockRegistry() = default;
+			CookedBlockRegistry(const CookedBlockRegistry&) = delete;
+			CookedBlockRegistry(CookedBlockRegistry&&) = default;
+			~CookedBlockRegistry() = default;
 
 			void AddBlock(std::string blockName, BlockEntry blockEntry);
 
@@ -33,11 +33,11 @@ namespace tsom
 
 			bool SaveToFile(const std::filesystem::path& path) const;
 
-			ClientAssetCookRegistry& operator=(const ClientAssetCookRegistry&) = delete;
-			ClientAssetCookRegistry& operator=(ClientAssetCookRegistry&&) = default;
+			CookedBlockRegistry& operator=(const CookedBlockRegistry&) = delete;
+			CookedBlockRegistry& operator=(CookedBlockRegistry&&) = default;
 
-			static std::optional<ClientAssetCookRegistry> LoadFromString(std::string_view content);
-			static std::optional<ClientAssetCookRegistry> LoadFromFile(const std::filesystem::path& path);
+			static std::optional<CookedBlockRegistry> LoadFromString(std::string_view content);
+			static std::optional<CookedBlockRegistry> LoadFromFile(const std::filesystem::path& path);
 
 			enum class TextureType
 			{
@@ -73,6 +73,4 @@ namespace tsom
 	};
 }
 
-#include <ClientLib/ClientAssetCookRegistry.inl>
-
-#endif // TSOM_CLIENTLIB_CLIENTASSETCOOKREGISTRY_HPP
+#endif // TSOM_COMMONLIB_COOKEDBLOCKREGISTRY_HPP

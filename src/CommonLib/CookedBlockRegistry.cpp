@@ -2,7 +2,7 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
-#include <ClientLib/ClientAssetCookRegistry.hpp>
+#include <CommonLib/CookedBlockRegistry.hpp>
 #include <Nazara/Core/File.hpp>
 #include <nlohmann/json.hpp>
 
@@ -17,12 +17,12 @@ namespace nlohmann
 		color.a = j.value("a", 1.0f);
 	}
 
-	NLOHMANN_JSON_SERIALIZE_ENUM(tsom::ClientAssetCookRegistry::TextureType, {
-		{tsom::ClientAssetCookRegistry::TextureType::None, "none"},
-		{tsom::ClientAssetCookRegistry::TextureType::BC1, "bc1"},
-		{tsom::ClientAssetCookRegistry::TextureType::BC3, "bc3"},
-		{tsom::ClientAssetCookRegistry::TextureType::BC4, "bc4"},
-		{tsom::ClientAssetCookRegistry::TextureType::BC5, "bc5"},
+	NLOHMANN_JSON_SERIALIZE_ENUM(tsom::CookedBlockRegistry::TextureType, {
+		{tsom::CookedBlockRegistry::TextureType::None, "none"},
+		{tsom::CookedBlockRegistry::TextureType::BC1, "bc1"},
+		{tsom::CookedBlockRegistry::TextureType::BC3, "bc3"},
+		{tsom::CookedBlockRegistry::TextureType::BC4, "bc4"},
+		{tsom::CookedBlockRegistry::TextureType::BC5, "bc5"},
 	})
 
 	template<typename BasicJsonType>
@@ -38,9 +38,9 @@ namespace nlohmann
 			j["a"] = color.a;
 	}
 
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(tsom::ClientAssetCookRegistry::Texture, path, type)
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(tsom::CookedBlockRegistry::Texture, path, type)
 
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(tsom::ClientAssetCookRegistry::BlockEntry,
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(tsom::CookedBlockRegistry::BlockEntry,
 		ambientOcclusionFallback, ambientOcclusionHeightTexture,
 		baseColorFallback, baseColorTexture,
 		metalnessFallback, normalMapTexture,
@@ -50,18 +50,18 @@ namespace nlohmann
 
 namespace tsom
 {
-	void ClientAssetCookRegistry::AddBlock(std::string blockName, BlockEntry blockEntry)
+	void CookedBlockRegistry::AddBlock(std::string blockName, BlockEntry blockEntry)
 	{
 		NazaraAssertMsg(!m_blockEntries.contains(blockName), "block %s is already present", blockName.c_str());
 		m_blockEntries.emplace(std::move(blockName), std::move(blockEntry));
 	}
 
-	auto ClientAssetCookRegistry::GetBlock(std::string_view blockName) const -> const BlockEntry&
+	auto CookedBlockRegistry::GetBlock(std::string_view blockName) const -> const BlockEntry&
 	{
 		return Nz::Retrieve(m_blockEntries, blockName);
 	}
 
-	bool ClientAssetCookRegistry::SaveToFile(const std::filesystem::path& path) const
+	bool CookedBlockRegistry::SaveToFile(const std::filesystem::path& path) const
 	{
 		nlohmann::ordered_json blockEntries;
 		for (const auto& [blockName, blockEntry] : m_blockEntries)
@@ -75,18 +75,18 @@ namespace tsom
 		return Nz::File::WriteWhole(path, content.data(), content.size());
 	}
 
-	std::optional<ClientAssetCookRegistry> ClientAssetCookRegistry::LoadFromString(std::string_view content)
+	std::optional<CookedBlockRegistry> CookedBlockRegistry::LoadFromString(std::string_view content)
 	{
 		nlohmann::ordered_json doc = nlohmann::ordered_json::parse(content);
 
-		ClientAssetCookRegistry cookRegistry;
+		CookedBlockRegistry cookRegistry;
 		for (const auto& [blockName, blockEntryDoc] : doc["blocks"].items())
 			cookRegistry.AddBlock(blockName, blockEntryDoc);
 
 		return std::move(cookRegistry);
 	}
 
-	std::optional<ClientAssetCookRegistry> ClientAssetCookRegistry::LoadFromFile(const std::filesystem::path& path)
+	std::optional<CookedBlockRegistry> CookedBlockRegistry::LoadFromFile(const std::filesystem::path& path)
 	{
 		std::optional<std::vector<Nz::UInt8>> contentOpt = Nz::File::ReadWhole(path);
 		if (!contentOpt)

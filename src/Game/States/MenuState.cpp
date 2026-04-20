@@ -23,7 +23,7 @@ namespace tsom
 		auto& fs = GetStateData().app->GetComponent<Nz::FilesystemAppComponent>();
 
 		std::shared_ptr<Nz::MaterialInstance> logoMat = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic);
-		logoMat->SetTextureProperty("BaseColorMap", fs.Open<Nz::TextureAsset>("assets/logo.png", { .sRGB = true }));
+		logoMat->SetTextureProperty("BaseColorMap", fs.Open<Nz::TextureAsset>("CookedAssets/Textures/Logo.dds", { .sRGB = true }));
 
 		m_logo = CreateWidget<Nz::ImageWidget>(logoMat);
 		m_logo->Resize({ 512, 512 });
@@ -32,7 +32,7 @@ namespace tsom
 		m_title = CreateWidget<Nz::SimpleLabelWidget>();
 
 		auto& filesystem = GetStateData().app->GetComponent<Nz::FilesystemAppComponent>();
-		std::shared_ptr<Nz::Font> titleFont = filesystem.Open<Nz::Font>("assets/fonts/axaxax bd.otf");
+		std::shared_ptr<Nz::Font> titleFont = filesystem.Open<Nz::Font>("CookedAssets/Fonts/axaxax bd.otf");
 
 		m_title->UpdateDrawer([&](Nz::SimpleTextDrawer& textDrawer)
 		{

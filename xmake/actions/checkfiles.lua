@@ -2,6 +2,7 @@ local modules = {
 	ClientLib = "library",
 	CommonLib = "library",
 	ServerLib = "library",
+	AssetCooker = "standalone",
 	Game = "standalone",
 	Server = "standalone"
 }

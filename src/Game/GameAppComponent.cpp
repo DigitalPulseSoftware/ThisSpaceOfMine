@@ -3,7 +3,6 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <Game/GameAppComponent.hpp>
-#include <ClientLib/ClientAssetCooker.hpp>
 #include <ClientLib/ClientFramePipeline.hpp>
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Rendering/AtmosphereScatteringPipelinePass.hpp>
@@ -308,20 +307,12 @@ namespace tsom
 		graphics->GetShaderModuleResolver()->RegisterDirectory(Nz::Utf8Path("assets/shaders"), true);
 
 		m_blockLibrary.emplace(app);
-		
+
 		filesystem.GetFileContent("assets/blocks.json", [&](const void* ptr, Nz::UInt64 size)
 		{
 			m_blockLibrary->LoadFromString(std::string_view(reinterpret_cast<const char*>(ptr), Nz::SafeCast<std::size_t>(size)));
 			return true;
 		});
-
-		/*ClientAssetCooker assetCooker(app);
-		if (auto result = assetCooker.Cook(*m_blockLibrary); !result)
-		{
-			spdlog::critical("failed to cook assets: {}!", result.GetError());
-			app.Quit();
-			return false;
-		}*/
 
 		m_blockLibrary->BuildTexture(*Nz::Graphics::Instance()->GetRenderDevice());
 

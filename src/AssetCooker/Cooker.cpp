@@ -2,10 +2,9 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
+#include <AssetCooker/Cooker.hpp>
+
 namespace tsom
 {
-	inline ClientAssetCooker::ClientAssetCooker(Nz::ApplicationBase& app) :
-	m_app(app)
-	{
-	}
+    Cooker::~Cooker() = default;
 }

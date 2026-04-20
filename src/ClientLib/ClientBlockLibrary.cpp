@@ -88,10 +88,10 @@ namespace tsom
 
 		auto& fs = m_applicationBase.GetComponent<Nz::FilesystemAppComponent>();
 
-		std::optional<ClientAssetCookRegistry> cookRegistry;
-		fs.GetFileContent("CookedAssets/registry.json", [&](const void* ptr, Nz::UInt64 size)
+		std::optional<CookedBlockRegistry> cookRegistry;
+		fs.GetFileContent("CookedAssets/Blocks/registry.json", [&](const void* ptr, Nz::UInt64 size)
 		{
-			cookRegistry = ClientAssetCookRegistry::LoadFromString(std::string_view(reinterpret_cast<const char*>(ptr), Nz::SafeCast<std::size_t>(size)));
+			cookRegistry = CookedBlockRegistry::LoadFromString(std::string_view(reinterpret_cast<const char*>(ptr), Nz::SafeCast<std::size_t>(size)));
 			return true;
 		});
 
@@ -100,12 +100,12 @@ namespace tsom
 
 		struct BlockTexture
 		{
-			Nz::EnumArray<TextureType, const ClientAssetCookRegistry::Texture*> textureData;
+			Nz::EnumArray<TextureType, const CookedBlockRegistry::Texture*> textureData;
 		};
 
 		Nz::UInt8* blockBufferPtr = static_cast<Nz::UInt8*>(m_globalBlockBufferPtr) + s_blockBufferOffsets.entries;
 
-		Nz::EnumArray<ClientAssetCookRegistry::TextureType, Nz::UInt32> textureCount;
+		Nz::EnumArray<CookedBlockRegistry::TextureType, Nz::UInt32> textureCount;
 		textureCount.fill(0);
 
 		Nz::UInt32 sliceCount = 0;
@@ -135,7 +135,7 @@ namespace tsom
 
 			for (const auto& [stream, textureData] : blockTexture.textureData.iter_kv())
 			{
-				if (textureData->type != ClientAssetCookRegistry::TextureType::None)
+				if (textureData->type != CookedBlockRegistry::TextureType::None)
 					textureCount[textureData->type]++;
 			}
 		}
@@ -144,14 +144,14 @@ namespace tsom
 
 		// BC1/BC3 sRGB formats are not well supported with OpenGL, sRGB to linear conversion is done in shader
 		// TODO: Add a shader option to use sRGB formats if supported to avoid conversion cost
-		constexpr Nz::EnumArray<ClientAssetCookRegistry::TextureType, Nz::PixelFormat> textureFormat = {
+		constexpr Nz::EnumArray<CookedBlockRegistry::TextureType, Nz::PixelFormat> textureFormat = {
 			Nz::PixelFormat::BC1_RGBA_Unorm,
 			Nz::PixelFormat::BC3_Unorm,
 			Nz::PixelFormat::BC4_Unorm,
 			Nz::PixelFormat::BC5_Unorm  // since BC5 is used for normal maps and roughness/metalness maps we can't use Snorm
 		};
 
-		Nz::EnumArray<ClientAssetCookRegistry::TextureType, std::shared_ptr<Nz::Texture>> blockTextures;
+		Nz::EnumArray<CookedBlockRegistry::TextureType, std::shared_ptr<Nz::Texture>> blockTextures;
 		for (auto&& [type, sliceCount] : textureCount.iter_kv())
 		{
 			if (sliceCount > 0)
@@ -173,10 +173,10 @@ namespace tsom
 			s_blockBufferEntryOffsets.roughnessMetalnessMapIndices
 		};
 
-		Nz::EnumArray<ClientAssetCookRegistry::TextureType, Nz::UInt32> textureSlice;
+		Nz::EnumArray<CookedBlockRegistry::TextureType, Nz::UInt32> textureSlice;
 		textureSlice.fill(0);
 
-		std::vector<std::pair<ClientAssetCookRegistry::TextureType, std::uint32_t>> previewTextures(m_blocks.size());
+		std::vector<std::pair<CookedBlockRegistry::TextureType, std::uint32_t>> previewTextures(m_blocks.size());
 
 		for (std::size_t blockIndex = 0; blockIndex < remainingBlockTextures.size(); ++blockIndex)
 		{
@@ -184,10 +184,10 @@ namespace tsom
 
 			for (const auto& [textureType, textureData] : blockTexture.textureData.iter_kv())
 			{
-				if (textureData->type == ClientAssetCookRegistry::TextureType::None)
+				if (textureData->type == CookedBlockRegistry::TextureType::None)
 					continue;
 
-				std::string texturePath = fmt::format("CookedAssets/{}", textureData->path);
+				std::string texturePath = fmt::format("CookedAssets/Blocks/{}", textureData->path);
 				std::shared_ptr<Nz::Stream> stream = fs.GetFile(texturePath);
 				if (!stream)
 				{

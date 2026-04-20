@@ -675,7 +675,7 @@ namespace tsom
 			params.mesh.vertexRotation = Nz::Quaternionf(Nz::TurnAnglef(0.5f), Nz::Vector3f::Up());
 			params.mesh.vertexScale = Nz::Vector3f(1.f / 10.f);
 
-			m_playerModel->model = fs.Load<Nz::Model>("assets/Player/Idle.fbx", params);
+			m_playerModel->model = fs.Load<Nz::Model>("CookedAssets/Models/Player/Idle.fbx", params);
 			if (m_playerModel->model)
 			{
 				assert(m_playerAnimAssets->referenceSkeleton.IsValid());
@@ -719,16 +719,16 @@ namespace tsom
 				auto playerMaterial = std::make_shared<Nz::Material>(std::move(settings), "TSOM.PlayerPBR");
 
 				std::shared_ptr<Nz::MaterialInstance> playerMat = playerMaterial->Instantiate();
-				playerMat->SetTextureProperty("BaseColorMap", fs.Open<Nz::TextureAsset>("assets/Player/Textures/Soldier_AlbedoTransparency.png", { .sRGB = true }));
-				playerMat->SetTextureProperty("AmbientOcclusionMap", fs.Open<Nz::TextureAsset>("assets/Player/Textures/Soldier_AO.png"));
-				playerMat->SetTextureProperty("MetalnessSmoothnessMap", fs.Open<Nz::TextureAsset>("assets/Player/Textures/Soldier_Normal.png"));
-				playerMat->SetTextureProperty("NormalMap", fs.Open<Nz::TextureAsset>("assets/Player/Textures/Soldier_Normal.png"));
+				playerMat->SetTextureProperty("BaseColorMap", fs.Open<Nz::TextureAsset>("CookedAssets/Models/Player/Textures/Soldier_AlbedoTransparency.dds", { .sRGB = true }));
+				playerMat->SetTextureProperty("AmbientOcclusionMap", fs.Open<Nz::TextureAsset>("CookedAssets/Models/Player/Textures/Soldier_AO.dds"));
+				playerMat->SetTextureProperty("MetalnessSmoothnessMap", fs.Open<Nz::TextureAsset>("CookedAssets/Models/Player/Textures/Soldier_MetallicSmoothness.dds"));
+				playerMat->SetTextureProperty("NormalMap", fs.Open<Nz::TextureAsset>("CookedAssets/Models/Player/Textures/Soldier_Normal.dds"));
 
 				m_playerModel->model->SetMaterial(0, std::move(playerMat));
 
-				m_playerAnimAssets->idleAnimation = fs.Load<Nz::Animation>("assets/Player/Idle.fbx", animParams);
-				m_playerAnimAssets->runningAnimation = fs.Load<Nz::Animation>("assets/Player/Running.fbx", animParams);
-				m_playerAnimAssets->walkingAnimation = fs.Load<Nz::Animation>("assets/Player/Walking.fbx", animParams);
+				m_playerAnimAssets->idleAnimation = fs.Load<Nz::Animation>("CookedAssets/Models/Player/Idle.fbx", animParams);
+				m_playerAnimAssets->runningAnimation = fs.Load<Nz::Animation>("CookedAssets/Models/Player/Running.fbx", animParams);
+				m_playerAnimAssets->walkingAnimation = fs.Load<Nz::Animation>("CookedAssets/Models/Player/Walking.fbx", animParams);
 			}
 			else
 			{
