@@ -6,6 +6,7 @@
 #include <Nazara/Core/HandledObject.hpp>
 #include <Nazara/Core/ObjectHandle.hpp>
 #include <Nazara/Math/Box.hpp>
+#include <Nazara/Math/EulerAngles.hpp>
 #include <Nazara/Math/Quaternion.hpp>
 #include <Nazara/Math/Rect.hpp>
 #include <Nazara/Math/Vector2.hpp>
@@ -194,6 +195,9 @@ namespace sol
 	struct lua_size<Nz::Box<T>> : std::integral_constant<int, 1> {};
 
 	template<typename T>
+	struct lua_size<Nz::EulerAngles<T>> : std::integral_constant<int, 1> {};
+
+	template<typename T>
 	struct lua_size<Nz::Quaternion<T>> : std::integral_constant<int, 1> {};
 
 	template<typename T>
@@ -209,6 +213,9 @@ namespace sol
 	struct lua_type_of<Nz::Box<T>> : std::integral_constant<sol::type, sol::type::table> {};
 
 	template<typename T>
+	struct lua_type_of<Nz::EulerAngles<T>> : std::integral_constant<sol::type, sol::type::table> {};
+
+	template<typename T>
 	struct lua_type_of<Nz::Quaternion<T>> : std::integral_constant<sol::type, sol::type::table> {};
 
 	template<typename T>
@@ -221,7 +228,7 @@ namespace sol
 	struct lua_type_of<Nz::Vector3<T>> : std::integral_constant<sol::type, sol::type::table> {};
 
 	template<typename T>
-	inline Nz::Box<T> sol_lua_get(sol::types<Nz::Box<T>>, lua_State* L, int index, sol::stack::record& tracking)
+	Nz::Box<T> sol_lua_get(sol::types<Nz::Box<T>>, lua_State* L, int index, sol::stack::record& tracking)
 	{
 		int absoluteIndex = lua_absindex(L, index);
 
@@ -239,7 +246,22 @@ namespace sol
 	}
 
 	template<typename T>
-	inline Nz::Quaternion<T> sol_lua_get(sol::types<Nz::Quaternion<T>>, lua_State* L, int index, sol::stack::record& tracking)
+	Nz::EulerAngles<T> sol_lua_get(sol::types<Nz::EulerAngles<T>>, lua_State* L, int index, sol::stack::record& tracking)
+	{
+		int absoluteIndex = lua_absindex(L, index);
+
+		sol::table angles = sol::stack::get<sol::table>(L, absoluteIndex);
+		T pitch = angles["pitch"];
+		T yaw = angles["yaw"];
+		T roll = angles["roll"];
+
+		tracking.use(1);
+
+		return Nz::EulerAngles<T>(Nz::DegreeAngle<T>(pitch), Nz::DegreeAngle<T>(yaw), Nz::DegreeAngle<T>(roll));
+	}
+
+	template<typename T>
+	Nz::Quaternion<T> sol_lua_get(sol::types<Nz::Quaternion<T>>, lua_State* L, int index, sol::stack::record& tracking)
 	{
 		int absoluteIndex = lua_absindex(L, index);
 
@@ -255,7 +277,7 @@ namespace sol
 	}
 
 	template<typename T>
-	inline Nz::Rect<T> sol_lua_get(sol::types<Nz::Rect<T>>, lua_State* L, int index, sol::stack::record& tracking)
+	Nz::Rect<T> sol_lua_get(sol::types<Nz::Rect<T>>, lua_State* L, int index, sol::stack::record& tracking)
 	{
 		int absoluteIndex = lua_absindex(L, index);
 
@@ -312,6 +334,19 @@ namespace sol
 		boxTable["width"] = box.width;
 		boxTable["height"] = box.height;
 		boxTable["depth"] = box.height;
+
+		return 1;
+	}
+
+	template<typename T>
+	int sol_lua_push(sol::types<Nz::EulerAngles<T>>, lua_State* L, const Nz::EulerAngles<T>& angles)
+	{
+		lua_createtable(L, 0, 3);
+		luaL_setmetatable(L, "eulerangles");
+		sol::stack_table anglesTable(L);
+		anglesTable["pitch"] = angles.pitch.ToDegrees();
+		anglesTable["yaw"] = angles.yaw.ToDegrees();
+		anglesTable["roll"] = angles.roll.ToDegrees();
 
 		return 1;
 	}
