@@ -83,7 +83,7 @@ namespace tsom
 		for (const auto& [blockName, blockEntryDoc] : doc["blocks"].items())
 			cookRegistry.AddBlock(blockName, blockEntryDoc);
 
-		return std::move(cookRegistry);
+		return cookRegistry;
 	}
 
 	std::optional<CookedBlockRegistry> CookedBlockRegistry::LoadFromFile(const std::filesystem::path& path)
