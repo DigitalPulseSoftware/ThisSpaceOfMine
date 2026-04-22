@@ -1,4 +1,4 @@
-local allTreeMesh = Mesh.Load("assets/tree/shapespark-low-poly-plants-kit.gltf")
+local allTreeMesh = Mesh.Load("CookedAssets/Models/Tree/shapespark-low-poly-plants-kit.gltf")
 
 local trees = {
     ["tree-01-1"] = {

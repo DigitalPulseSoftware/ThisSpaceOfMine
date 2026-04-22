@@ -36,7 +36,7 @@ namespace tsom
 	{
 		auto& fs = m_application.GetComponent<Nz::FilesystemAppComponent>();
 
-		fs.GetFileContent("assets/blocks.json", [&](const void* ptr, Nz::UInt64 size)
+		fs.GetFileContent("CookedAssets/BlockData.json", [&](const void* ptr, Nz::UInt64 size)
 		{
 			m_blockLibrary.LoadFromString(std::string_view(reinterpret_cast<const char*>(ptr), Nz::SafeCast<std::size_t>(size)));
 			return true;

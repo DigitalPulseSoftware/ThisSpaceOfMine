@@ -34,7 +34,7 @@ namespace tsom
 			auto& cameraNode = m_camera.emplace<Nz::NodeComponent>();
 			cameraNode.SetRotation(Nz::EulerAnglesf(dis(rd), dis(rd), dis(rd)));
 
-			auto skyboxPasses = filesystem.Load<Nz::PipelinePassList>("assets/skybox.passlist");
+			auto skyboxPasses = filesystem.Load<Nz::PipelinePassList>("CookedAssets/Passes/skybox.passlist");
 
 			auto& cameraComponent = m_camera.emplace<Nz::CameraComponent>(GetStateData().renderTarget, std::move(skyboxPasses), Nz::ProjectionType::Perspective);
 			cameraComponent.UpdateClearDepth(0.f);

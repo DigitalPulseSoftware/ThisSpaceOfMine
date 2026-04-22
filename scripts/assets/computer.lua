@@ -8,10 +8,10 @@ local params = {
 	loadMaterials = false
 }
 
-local computer = Model.Load("assets/ship/computer/scifi_computer_1_3.obj", params)
+local computer = Model.Load("CookedAssets/Models/ShipComputer/scifi_computer_1_3.obj", params)
 
 local screenMat = MaterialInstance.Instantiate(MaterialType.Basic, MaterialInstancePresetFlags.AlphaBlended)
-screenMat:SetTextureProperty("BaseColorMap", Texture.Load("assets/ship/computer/digital_displays.png"))
+screenMat:SetTextureProperty("BaseColorMap", Texture.Load("CookedAssets/Models/ShipComputer/digital_displays.dds"))
 
 screenMat:UpdatePassesStates(function (renderStates)
 	renderStates.faceCulling = FaceCulling.None
