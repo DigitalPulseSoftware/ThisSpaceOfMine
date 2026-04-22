@@ -299,16 +299,15 @@ namespace tsom
 		}
 
 		auto& filesystem = app.GetComponent<Nz::FilesystemAppComponent>();
-		filesystem.Mount("assets", assetPath);
-		filesystem.Mount("CookedAssets", Nz::Utf8Path("cache/CookedAssets"));
+		filesystem.Mount("CookedAssets", Nz::Utf8Path("CookedAssets"));
 		filesystem.Mount("scripts", scriptPath);
 
 		Nz::Graphics* graphics = Nz::Graphics::Instance();
-		graphics->GetShaderModuleResolver()->RegisterDirectory(Nz::Utf8Path("assets/shaders"), true);
+		graphics->GetShaderModuleResolver()->RegisterDirectory(Nz::Utf8Path("CookedAssets/Shaders"), true);
 
 		m_blockLibrary.emplace(app);
 
-		filesystem.GetFileContent("assets/blocks.json", [&](const void* ptr, Nz::UInt64 size)
+		filesystem.GetFileContent("CookedAssets/BlockData.json", [&](const void* ptr, Nz::UInt64 size)
 		{
 			m_blockLibrary->LoadFromString(std::string_view(reinterpret_cast<const char*>(ptr), Nz::SafeCast<std::size_t>(size)));
 			return true;
@@ -325,7 +324,7 @@ namespace tsom
 		camera2D.emplace<Nz::NodeComponent>();
 
 		auto& filesystem = GetApp().GetComponent<Nz::FilesystemAppComponent>();
-		auto passList = filesystem.Load<Nz::PipelinePassList>("assets/2d.passlist");
+		auto passList = filesystem.Load<Nz::PipelinePassList>("CookedAssets/Passes/2d.passlist");
 
 		auto& cameraComponent = camera2D.emplace<Nz::CameraComponent>(std::move(renderTarget), std::move(passList), Nz::ProjectionType::Orthographic);
 		cameraComponent.UpdateClearColor(Nz::Color(0.f, 0.f, 0.f, 0.f));

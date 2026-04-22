@@ -54,7 +54,7 @@ int CookerMain(int argc, char* argv[])
 	auto& taskScheduler = app.AddComponent<Nz::TaskSchedulerAppComponent>(4);
 
 	std::filesystem::path sourcePath = Nz::Utf8Path("assets");
-	std::filesystem::path destinationPath = Nz::Utf8Path("cache/CookedAssets");
+	std::filesystem::path destinationPath = Nz::Utf8Path("CookedAssets");
 
 	std::ifstream assetFile(sourcePath / Nz::Utf8Path("assets.json"));
 	nlohmann::json assetListDoc = nlohmann::json::parse(assetFile);

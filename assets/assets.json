@@ -30,6 +30,11 @@
             "method": "Texture"
         },
         {
+            "input": "crosshair.png",
+            "output": "Textures/crosshair.dds",
+            "method": "Texture"
+        },
+        {
             "input": "fonts/axaxax bd.otf",
             "output": "Fonts/axaxax bd.otf",
             "method": "Copy"
@@ -73,6 +78,21 @@
             "output": "Models/Player/Textures/Soldier_Normal.dds",
             "method": "Texture",
             "type": "Normal"
+        },
+        {
+            "input": "ship/computer/scifi_computer_1_3.obj",
+            "output": "Models/ShipComputer/scifi_computer_1_3.obj",
+            "method": "Copy"
+        },
+        {
+            "input": "ship/computer/digital_displays.png",
+            "output": "Models/ShipComputer/digital_displays.dds",
+            "method": "Texture"
+        },
+        {
+            "input": "tree/shapespark-low-poly-plants-kit.gltf",
+            "output": "Models/Tree/shapespark-low-poly-plants-kit.gltf",
+            "method": "Copy"
         },
         {
             "input": "Shaders/BlockPBR.nzsl",
@@ -123,6 +143,11 @@
         {
             "input": "skybox.passlist",
             "output": "Passes/skybox.passlist",
+            "method": "Copy"
+        },
+        {
+            "input": "blocks.json",
+            "output": "BlockData.json",
             "method": "Copy"
         }
     ]

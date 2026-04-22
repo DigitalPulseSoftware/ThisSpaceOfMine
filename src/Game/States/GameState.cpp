@@ -102,7 +102,7 @@ namespace tsom
 
 		m_crosshairEntity = CreateEntity();
 		{
-			auto sprite = std::make_shared<Nz::Sprite>(filesystem.Load<Nz::MaterialInstance>("assets/crosshair.png"));
+			auto sprite = std::make_shared<Nz::Sprite>(filesystem.Load<Nz::MaterialInstance>("CookedAssets/Textures/crosshair.dds"));
 			sprite->SetOrigin({ 0.5f, 0.5f });
 			sprite->SetSize(sprite->GetSize() * 0.15f);
 

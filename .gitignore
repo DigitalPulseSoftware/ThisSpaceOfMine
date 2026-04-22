@@ -3,6 +3,7 @@ assets/*
 !assets/*.json
 !assets/shaders
 cache/
+CookedAssets/
 saves/
 gameconfig.lua
 serverconfig.lua
