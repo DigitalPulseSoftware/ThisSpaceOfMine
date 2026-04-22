@@ -5,6 +5,7 @@
 #include <AssetCooker/ShaderCooker.hpp>
 #include <Nazara/Core/TaskScheduler.hpp>
 #include <NazaraUtils/PathUtils.hpp>
+#include <process.hpp>
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
@@ -18,6 +19,18 @@ namespace tsom
 
 	void ShaderCooker::Cook(Nz::TaskScheduler& taskScheduler)
 	{
+		if (m_inputFile.stem() != m_outputFile.stem())
+		{
+			spdlog::error("currently the input file and the output file must have the same name");
+			return;
+		}
+
+		if (m_outputFile.extension() != Nz::Utf8Path(".nzslb"))
+		{
+			spdlog::error("only .nzslb output extension is supported");
+			return;
+		}
+
 		taskScheduler.AddTask([this]
 		{
 			std::filesystem::path outputDir = m_outputFile.parent_path();
@@ -31,12 +44,23 @@ namespace tsom
 				return;
 			}
 
-			ec = {};
-			std::filesystem::copy_file(m_inputFile, m_outputFile, std::filesystem::copy_options::overwrite_existing, ec);
-
-			if (ec)
+			std::string output;
+			auto ReadStdout = [&](const char* str, std::size_t size)
 			{
-				spdlog::error("failed to copy file from {} to {}: {}", Nz::PathToString(m_inputFile), Nz::PathToString(m_outputFile), ec.message());
+				output.append(str, size);
+			};
+
+			std::string errOutput;
+			auto ReadStderr = [&](const char* str, std::size_t size)
+			{
+				errOutput.append(str, size);
+			};
+
+			TinyProcessLib::Process process({ "nzslc", "--compile", "--partial", "--output", Nz::PathToString(outputDir), Nz::PathToString(m_inputFile) }, {}, ReadStdout, ReadStderr);
+			int exitCode = process.get_exit_status();
+			if (exitCode != 0)
+			{
+				spdlog::error("failed to compile {}: {}", Nz::PathToString(m_inputFile), errOutput);
 				return;
 			}
 		});
