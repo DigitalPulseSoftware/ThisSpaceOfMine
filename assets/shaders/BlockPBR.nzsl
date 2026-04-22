@@ -218,6 +218,24 @@ fn UnpackNormal(texData: vec2[f32]) -> vec3[f32]
 	return normal;
 }
 
+fn RoundBoxUp(pos: vec3[f32], cornerRadius: f32) -> vec3[f32]
+{
+	let distToCenter = max(max(abs(pos.x), abs(pos.y)), abs(pos.z));
+
+	let innerReductionSize = max(distToCenter - max(cornerRadius, 1.0), 0.0);
+	let innerBoxMin = -innerReductionSize.xxx;
+	let innerBoxMax = innerReductionSize.xxx;
+
+	let innerPos = clamp(pos, innerBoxMin, innerBoxMax);
+	return normalize(pos - innerPos);
+}
+
+fn sdRoundBox(pos: vec3[f32], dims: vec3[f32], cornerRadius: f32) -> f32
+{
+	let q = abs(pos) - dims + cornerRadius.xxx;
+	return length(max(q, (0.0).xxx)) + min(max(q.x, max(q.y, q.z)), 0.0) - cornerRadius;
+}
+
 [export]
 fn ComputeLighting(input: VertOut) -> vec4[f32]
 {
@@ -314,6 +332,7 @@ fn ComputeLighting(input: VertOut) -> vec4[f32]
 	F0 = albedo * metallic + F0 * (1.0 - metallic);
 
 	let albedoFactor = albedo / Pi;
+	let lightAmbient = 0.01;
 
 	for lightIndex in u32(0) -> lightData.directionalLightCount
 	{
@@ -324,6 +343,11 @@ fn ComputeLighting(input: VertOut) -> vec4[f32]
 		let shadowFactor = Shadow.ComputeDirectionalLightShadow(light, shadowMapsDirectional[lightIndex], input.worldPos, lambert, viewerData.viewMatrix);
 		let radiance = CookTorrancePBR.ComputeLightRadiance(light.color.rgb, -light.direction, albedoFactor, eyeVec, F0, normal, metallic, roughness);
 
+		let ambient = 0.1 * clamp(0.6 + dot(normalize(input.worldPos), -light.direction), 0.0, 1.0);
+
+		ambient *= clamp(sdRoundBox(input.worldPos, (32.0).xxx, 16.0) / 64.0, 0.0, 1.0);
+
+		lightAmbient = max(lightAmbient, ambient);
 		lightRadiance += shadowFactor * radiance;
 	}
 
@@ -365,7 +389,7 @@ fn ComputeLighting(input: VertOut) -> vec4[f32]
 		lightRadiance += shadowFactor * radiance;
 	}
 
-	let ambient = (0.05).rrr * albedo * ao;
+	let ambient = lightAmbient * albedo * ao;
 	return vec4[f32](ambient + lightRadiance, color.a);
 }
 
