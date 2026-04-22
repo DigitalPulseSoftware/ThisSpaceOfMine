@@ -27,9 +27,9 @@ namespace tsom
 		float mieScattering = 0.9f;
 
 		float rayleighHeight = 32.f;
-		float mieHeight = 60.f;
+		float mieHeight = 5.f;
 		float heightAbsorption = 30.f;
-		float absorptionFalloff = 3.5f;
+		float absorptionFalloff = 20.f;
 
 		Nz::Int32 primarySteps = 8;
 		Nz::Int32 lightSteps = 8;
