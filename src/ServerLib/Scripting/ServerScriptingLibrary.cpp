@@ -289,7 +289,7 @@ namespace tsom
 	void ServerScriptingLibrary::RegisterServerDatabase(sol::state& state)
 	{
 		state.create_named_table("ServerDatabase",
-			"CreatePlanet", [this](sol::stack_table table)
+			"CreatePlanet", LuaFunction([this](sol::stack_table table)
 			{
 				std::string generatorName = table["generatorName"];
 
@@ -302,8 +302,8 @@ namespace tsom
 				planet.seed = table["seed"];
 
 				return m_serverInstance.GetServerDatabase().CreatePlanet(planet);
-			},
-			"StorePlanetLink", [this](sol::stack_table table)
+			}),
+			"StorePlanetLink", LuaFunction([this](sol::stack_table table)
 			{
 				Database::PlanetLink planetLink;
 				planetLink.sourcePlanet = table["sourcePlanet"];
@@ -311,7 +311,7 @@ namespace tsom
 				planetLink.position = table["position"];
 
 				return m_serverInstance.GetServerDatabase().StorePlanetLink(planetLink);
-			}
+			})
 		);
 	}
 }

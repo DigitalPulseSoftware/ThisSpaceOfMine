@@ -48,6 +48,7 @@ namespace tsom
 		auto& entityInstance = m_planetEntity.emplace<ClassInstanceComponent>(planetClass);
 		entityInstance.UpdateProperty<EntityPropertyType::Float>("CellSize", cellSize);
 		entityInstance.UpdateProperty<EntityPropertyType::Float>("CornerRadius", cornerRadius);
+
 		entityInstance.UpdateProperty<EntityPropertyType::Float>("Gravity", 9.81f);
 
 		planetClass->InitAndActivateEntity(m_planetEntity);
@@ -123,20 +124,8 @@ namespace tsom
 
 	Nz::Boxf ServerPlanetEnvironment::ComputeBoundingBox() const
 	{
-		Nz::Boxf boundingBox = Nz::Boxf::Invalid();
-		auto& planet = *m_planetEntity.get<PlanetComponent>().planet;
-		planet.ForEachChunk([&](const ChunkIndices& chunkIndices, Chunk& chunk)
-		{
-			Nz::Boxf chunkBox(Nz::Vector3f(chunk.GetBlockSize() * Planet::ChunkSize));
-			chunkBox.Translate(planet.GetChunkOffset(chunkIndices));
-
-			if (boundingBox.IsValid())
-				boundingBox.ExtendTo(chunkBox);
-			else
-				boundingBox = chunkBox;
-		});
-
-		return boundingBox;
+		float halfChunkSize = Planet::ChunkSize * 0.5f * GetPlanet().GetTileSize();
+		return Nz::Boxf::FromExtents(Nz::Vector3f(m_chunkCount) * -halfChunkSize, Nz::Vector3f(m_chunkCount) * halfChunkSize);
 	}
 
 	entt::handle ServerPlanetEnvironment::CreateEntity()

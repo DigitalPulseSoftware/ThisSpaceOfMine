@@ -4,6 +4,7 @@
 
 #include <ServerLib/Systems/EnvironmentSwitchSystem.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
+#include <CommonLib/Debug/DebugDrawInterface.hpp>
 #include <ServerLib/ServerEnvironment.hpp>
 #include <ServerLib/Components/EnvironmentEnterTriggerComponent.hpp>
 #include <ServerLib/Components/ServerEnvironmentSwitchComponent.hpp>
@@ -16,7 +17,7 @@ namespace tsom
 	EnvironmentSwitchSystem::EnvironmentSwitchSystem(entt::registry& registry) :
 	m_registry(registry)
 	{
-		m_ownerEnvironment = m_registry.ctx().get<ServerEnvironment*>();
+		m_ownerEnvironment = ServerEnvironment::GetEnvironment(m_registry);
 	}
 
 	void EnvironmentSwitchSystem::Update(Nz::Time elapsedTime)
@@ -24,12 +25,13 @@ namespace tsom
 		auto triggerView = m_registry.view<Nz::NodeComponent, EnvironmentEnterTriggerComponent>(entt::exclude<Nz::DisabledComponent>);
 		auto entityView = m_registry.view<Nz::NodeComponent, ClassInstanceComponent, ServerEnvironmentSwitchComponent>(entt::exclude<Nz::DisabledComponent>);
 
-		ServerEnvironment* previousEnvironment = ServerEnvironment::GetEnvironment(m_registry);
-
 		for (auto&& [triggerEntity, triggerNode, enterTrigger] : triggerView.each())
 		{
 			if (!enterTrigger.enabled)
 				continue;
+
+			//if (DebugDrawInterface* debugDraw = m_ownerEnvironment->GetDebugDrawInterface())
+			//	debugDraw->DrawBox(static_cast<Nz::UInt64>(triggerEntity), 0.1f, enterTrigger.aabb, Nz::Color::Yellow());
 
 			for (auto&& [entity, entityNode, entityInstance, envSwitch] : entityView.each())
 			{
@@ -54,7 +56,7 @@ namespace tsom
 				EnvironmentTransform transform(triggerNode.GetPosition(), triggerNode.GetRotation());
 				transform = -transform;
 
-				envSwitch.Switch(oldEntity, previousEnvironment, newEnvironment, transform);
+				envSwitch.Switch(oldEntity, m_ownerEnvironment, newEnvironment, transform);
 				break;
 			}
 		}

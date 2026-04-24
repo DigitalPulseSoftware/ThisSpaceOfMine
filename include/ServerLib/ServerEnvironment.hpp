@@ -42,6 +42,8 @@ namespace tsom
 
 			virtual entt::handle CreateEntity() = 0;
 
+			inline DebugDrawInterface* GetDebugDrawInterface();
+
 			virtual void ForEachAtmosphere(Nz::FunctionRef<void(ServerAtmosphere*)> callback);
 			virtual void ForEachAtmosphere(Nz::FunctionRef<void(const ServerAtmosphere*)> callback) const;
 

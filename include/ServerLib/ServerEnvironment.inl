@@ -4,6 +4,11 @@
 
 namespace tsom
 {
+	inline DebugDrawInterface* ServerEnvironment::GetDebugDrawInterface()
+	{
+		return m_debugDrawer.get();
+	}
+
 	template<typename F>
 	void ServerEnvironment::ForEachPlayer(F&& callback)
 	{
