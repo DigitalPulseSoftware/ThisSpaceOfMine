@@ -291,7 +291,7 @@ namespace tsom
 				std::unique_ptr<Nz::AsyncRenderCommands> asyncTransfer = renderDevice.InstantiateAsyncCommands(Nz::QueueType::Transfer);
 				std::shared_ptr<Nz::GraphicalMesh> gfxMesh = Nz::GraphicalMesh::BuildFromMesh(*asyncTransfer, *colliderUpdateJob.mesh);
 
-				asyncTransfer->AddCompletionCallback([this, gfxMesh, visualEntity, c = Nz::HighPrecisionClock()]
+				asyncTransfer->AddCompletionCallback([this, gfxMesh, visualEntity]
 				{
 					auto& gfxComponent = visualEntity.get_or_emplace<Nz::GraphicsComponent>();
 					gfxComponent.Clear();

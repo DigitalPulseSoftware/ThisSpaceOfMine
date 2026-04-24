@@ -63,6 +63,8 @@ return function (chunk, seed, chunkDims)
 
     local content = table.new(chunksize * chunksize * chunksize, 0)
 
+    local cornerRadius = 4.0
+
     for z = 0, chunksize - 1 do
         for y = 0, chunksize - 1 do
             for x = 0, chunksize - 1 do
@@ -77,7 +79,7 @@ return function (chunk, seed, chunkDims)
                 end
 
                 --distToCenter = math.max(math.abs(blockPos.x * 0.5 + 0.5), math.abs(blockPos.y * 0.5 + 0.5), math.abs(blockPos.z * 0.5 + 0.5))
-                distToCenter = sdRoundBox(blockPosScaled, Vec3(baseHeight), 32.0)
+                distToCenter = sdRoundBox(blockPosScaled, Vec3(baseHeight), cornerRadius)
 
                 local baseMountainous = perlin:normalizedOctave3D_01((blockPosNorm.x * moutainScale)+10, blockPosNorm.y * moutainScale, blockPosNorm.z * moutainScale, 4, 0.1)
                 local mountainous
@@ -91,7 +93,7 @@ return function (chunk, seed, chunkDims)
                 
                 local heightVariation1 = 10 * perlin:normalizedOctave3D_01(blockPosNorm.x * terrainVariation1Scale, blockPosNorm.y * terrainVariation1Scale, blockPosNorm.z * terrainVariation1Scale, 4, 0.1)
                 local heightVariation2 = 50 * mountainous * perlin:normalizedOctave3D_01((blockPosNorm.x * terrainVariation2Scale)+20, blockPosNorm.y * terrainVariation2Scale, blockPosNorm.z * terrainVariation2Scale, 4, 0.1)
-                
+
                 local baseSpikeHeight = perlin:normalizedOctave3D_01((blockPosNorm.x * spikeScale)+30, blockPosNorm.y * spikeScale, blockPosNorm.z * spikeScale, 4, 0.1)
                 local spikeHeight
                 if baseSpikeHeight < 0.7 then 
@@ -149,7 +151,7 @@ return function (chunk, seed, chunkDims)
             for x = 0, chunksize - 1 do
                 local blockPos = GetBlockIndices(chunkIndices, Vec3(x, y, z))
                 local blockPosScaled = blockPos * blockSize
-                local distToCenter = sdRoundBox(blockPosScaled, Vec3(caveBaseHeight), 32.0)
+                local distToCenter = sdRoundBox(blockPosScaled, Vec3(caveBaseHeight), cornerRadius)
 
                 local smallCavePresence = cavePerlin:normalizedOctave3D(blockPosScaled.x * smallCaveScale, blockPosScaled.y * smallCaveScale, blockPosScaled.z * smallCaveScale, 4, 0.1)
                 local bigCavePresence = cavePerlin:normalizedOctave3D(blockPosScaled.x * bigCaveScale, blockPosScaled.y * bigCaveScale, blockPosScaled.z * bigCaveScale, 4, 0.1)

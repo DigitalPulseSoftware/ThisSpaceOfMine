@@ -85,7 +85,7 @@ namespace tsom
 				{
 					bool ShouldCollide(Nz::PhysObjectLayer3D layer) const override
 					{
-						return layer != Constants::ObjectLayerPlayer;
+						return layer != Constants::ObjectLayerPlayer && layer != Constants::ObjectLayerPlayerOnlyTrigger;
 					}
 				};
 

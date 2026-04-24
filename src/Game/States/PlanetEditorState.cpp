@@ -454,6 +454,8 @@ namespace tsom
 		m_planet->ClearChunks();
 		m_planet->AddChunks(*stateData.blockLibrary, m_planetSettings.chunkCount);
 		m_planet->GenerateChunks(taskScheduler, m_planetSettings.seed, m_planetSettings.chunkCount, m_planetSettings.scriptName);
+
+		taskScheduler.WaitForTasks();
 	}
 
 	void PlanetEditorState::LayoutWidgets(const Nz::Vector2f& /*newSize*/)

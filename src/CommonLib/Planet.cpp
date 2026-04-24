@@ -140,10 +140,10 @@ namespace tsom
 
 	auto Planet::ComputeGravity(const Nz::Vector3f& position) const -> GravityForce
 	{
-		constexpr float PlanetGravityCenterStartDecrease = 16.f;
-		constexpr float PlanetGravityCenterNoGravity = 4.f;
-		constexpr float PlanetGravitySpaceStart = 200.f;
-		constexpr float PlanetGravitySpaceFinish = 300.f;
+		constexpr float PlanetGravityCenterStartDecrease = 24.f;
+		constexpr float PlanetGravityCenterNoGravity = 8.f;
+		constexpr float PlanetGravitySpaceStart = 150.f;
+		constexpr float PlanetGravitySpaceFinish = 250.f;
 		constexpr float PlanetGravitySpaceNone = 500.f;
 
 		// Decrease gravity near the center
@@ -272,6 +272,15 @@ namespace tsom
 		{
 			sol::error err = result;
 			spdlog::error("chunk {};{};{} failed to generate: {}", chunkIndices.x, chunkIndices.y, chunkIndices.z, err.what());
+			return;
+		}
+
+		sol::object resultObject = result;
+
+		if (!resultObject.is<sol::table>())
+		{
+			spdlog::error("chunk {};{};{} failed to generate: is not a table (got {})", chunkIndices.x, chunkIndices.y, chunkIndices.z, sol::type_name(chunkGenerator.scriptingContext.GetState(), resultObject.get_type()));
+			return;
 		}
 
 		std::size_t blockCount = chunk.GetBlockCount();

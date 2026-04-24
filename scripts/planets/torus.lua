@@ -50,12 +50,12 @@ return function (chunk, seed, chunkcount)
     local maxHeight = (Vec3(chunkcount.x, chunkcount.y, chunkcount.z) + Vec3(1)) / 2
     maxHeight = maxHeight * chunksize
 
-    local content = {}
+    local content = table.new(chunksize * chunksize * chunksize, 0)
     
     for z = 0, chunksize - 1 do
         for y = 0, chunksize - 1 do
             for x = 0, chunksize - 1 do
-                local blockPos = planet:GetBlockIndices(chunkIndices, Vec3ui(x, y, z))
+                local blockPos = planet:GetBlockIndices(chunkIndices, Vec3(x, y, z))
                 --[[local depth = math.min(
                     maxHeight.x - math.abs(blockPos.x),
                     maxHeight.y - math.abs(blockPos.y),
@@ -93,7 +93,7 @@ return function (chunk, seed, chunkcount)
 
                 table.insert(content, blockIndex)]]
 
-                local dist = sdTorus(blockPos, Vec2(50, 20))
+                local dist = sdTorus(blockPos, Vec2(80, 20))
                 if dist < 0 then
                     table.insert(content, dirt)
                 else
@@ -104,5 +104,6 @@ return function (chunk, seed, chunkcount)
             end
         end
     end
-    chunk:Reset(content)
+
+    return content
 end
