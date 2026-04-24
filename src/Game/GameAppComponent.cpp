@@ -215,7 +215,7 @@ namespace tsom
 	{
 		auto& app = GetApp();
 
-		std::filesystem::path assetPath = Nz::Utf8Path("assets");
+		std::filesystem::path assetPath = Nz::Utf8Path("CookedAssets");
 		if (!std::filesystem::is_directory(assetPath))
 		{
 			spdlog::error("assets are missing!");
