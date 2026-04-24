@@ -8,6 +8,7 @@
 #define TSOM_COMMONLIB_DEBUG_DEBUGDRAWINTERFACE_HPP
 
 #include <CommonLib/Export.hpp>
+#include <Nazara/Math/Box.hpp>
 #include <Nazara/Math/Vector3.hpp>
 #include <span>
 
@@ -26,6 +27,7 @@ namespace tsom
 			DebugDrawInterface(DebugDrawInterface&&) = delete;
 			virtual ~DebugDrawInterface();
 
+			inline void DrawBox(Nz::UInt64 hash, float duration, const Nz::Boxf& box, const Nz::Color& color);
 			inline void DrawLines(Nz::UInt64 hash, float duration, std::span<const Nz::Vector3f> positions, const Nz::Color& color);
 			virtual void DrawLines(Nz::UInt64 hash, float duration, std::span<const Nz::UInt16> indices, std::span<const Nz::Vector3f> positions, const Nz::Color& color) = 0;
 

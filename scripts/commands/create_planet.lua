@@ -1,7 +1,8 @@
 return function (opt)
     opt = opt or {}
     local planetData = {
-        chunkCount = opt.chunkCount or Vec3ui(3, 3, 3),
+        blockSize = opt.blockSize or 0.5,
+        chunkCount = opt.chunkCount or Vec3(6, 6, 6),
         cornerRadius = opt.cornerRadius or 0.0,
         generatorName = opt.generatorName or "bob",
         gravity = opt.gravity or 9.81,

@@ -14,7 +14,7 @@ namespace tsom
 {
 	ServerDatabase::PreparedStatements::PreparedStatements(SQLite::Database& database) :
 	getAllConfigQuery(database, "SELECT name, value FROM configs"),
-	createPlanetQuery(database, "INSERT INTO planets(generator, seed, chunk_count_x, chunk_count_y, chunk_count_z, block_size, corner_radius, gravity) VALUES(?, ?, ?, ?, ?, ?, ?, ?) RETURNING id"),
+	createPlanetQuery(database, "INSERT INTO planets(generator, seed, chunk_count_x, chunk_count_y, chunk_count_z, block_size, corner_radius, gravity, block_size) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id"),
 	createPlanetEntityQuery(database, "INSERT INTO planet_entities(unique_id, planet_id, class_name, class_version, position_x, position_y, position_z, rotation_x, rotation_y, rotation_z, rotation_w, properties, last_update) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime()) RETURNING id"),
 	deletePlanetEntityQuery(database, "DELETE FROM planet_entities WHERE id = ?"),
 	getAllPlanetEntitiesQuery(database, "SELECT id, unique_id, class_name, class_version, position_x, position_y, position_z, rotation_x, rotation_y, rotation_z, rotation_w, properties FROM planet_entities WHERE planet_id = ?"),
@@ -49,8 +49,16 @@ namespace tsom
 		m_preparedStatements->createPlanetQuery.bind(6, planet.blockSize);
 		m_preparedStatements->createPlanetQuery.bind(7, planet.cornerRadius);
 		m_preparedStatements->createPlanetQuery.bind(8, planet.gravity);
+		m_preparedStatements->createPlanetQuery.bind(9, planet.blockSize);
 
-		m_preparedStatements->createPlanetQuery.executeStep();
+		try
+		{
+			m_preparedStatements->createPlanetQuery.executeStep();
+		}
+		catch (const std::exception& e)
+		{
+			spdlog::error("create database query failed: {}", e.what());
+		}
 
 		return m_preparedStatements->createPlanetQuery.getColumn(0);
 	}
@@ -305,7 +313,14 @@ namespace tsom
 		m_preparedStatements->storePlanetQuery.bind(8, planet.cornerRadius);
 		m_preparedStatements->storePlanetQuery.bind(9, planet.gravity);
 
-		m_preparedStatements->storePlanetQuery.exec();
+		try
+		{
+			m_preparedStatements->storePlanetChunkQuery.exec();
+		}
+		catch (const std::exception& e)
+		{
+			spdlog::error("store planet query failed: {}", e.what());
+		}
 	}
 
 	void ServerDatabase::StorePlanetChunk(const Database::PlanetChunk& planetChunk)
@@ -319,7 +334,14 @@ namespace tsom
 		m_preparedStatements->storePlanetChunkQuery.bind(5, planetChunk.version);
 		m_preparedStatements->storePlanetChunkQuery.bindNoCopy(6, planetChunk.chunkData.data(), Nz::SafeCaster(planetChunk.chunkData.size()));
 
-		m_preparedStatements->storePlanetChunkQuery.exec();
+		try
+		{
+			m_preparedStatements->storePlanetChunkQuery.exec();
+		}
+		catch (const std::exception& e)
+		{
+			spdlog::error("store planet chunk query failed: {}", e.what());
+		}
 	}
 
 	void ServerDatabase::StorePlanetLink(const Database::PlanetLink& planetLink)
@@ -332,7 +354,14 @@ namespace tsom
 		m_preparedStatements->storePlanetLinkQuery.bind(4, planetLink.position.y);
 		m_preparedStatements->storePlanetLinkQuery.bind(5, planetLink.position.z);
 
-		m_preparedStatements->storePlanetLinkQuery.exec();
+		try
+		{
+			m_preparedStatements->storePlanetLinkQuery.exec();
+		}
+		catch (const std::exception& e)
+		{
+			spdlog::error("store planet link failed: {}", e.what());
+		}
 	}
 
 	void ServerDatabase::Transaction(Nz::FunctionRef<bool(ServerDatabase& database)> callback)
