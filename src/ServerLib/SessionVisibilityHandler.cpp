@@ -380,6 +380,7 @@ namespace tsom
 			visibleChunk.onResetSlot.Connect(visibleChunk.chunk->OnReset, [this, chunkIndex](Chunk*)
 			{
 				m_resetChunk.UnboundedSet(chunkIndex);
+				m_updatedChunk.UnboundedReset(chunkIndex); //< in case chunk was modified and then reset before being sent
 			});
 
 			// Register chunk to environment
