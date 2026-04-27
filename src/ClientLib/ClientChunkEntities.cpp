@@ -150,7 +150,7 @@ namespace tsom
 			}
 		});
 
-		m_onVisualChunkNormalSmoothAngleUpdatedSlot.Connect(m_configFile.GetFloatUpdateSignal(Config::Visual_ChunkNormalSmoothAngle), [this](double /*newValue*/)
+		m_onChunkNormalSmoothAngleUpdatedSlot.Connect(m_configFile.GetFloatUpdateSignal(Config::Chunk_NormalSmoothAngle), [this](double /*newValue*/)
 		{
 			RebuildAllChunks();
 		});
@@ -186,7 +186,7 @@ namespace tsom
 		std::shared_ptr<Nz::StaticMesh> staticMesh = std::make_shared<Nz::StaticMesh>(std::move(vertexBuffer), std::move(indexBuffer));
 		staticMesh->GenerateAABB();
 
-		Nz::DegreeAnglef smoothLimitAngle = m_configFile.GetFloatValue<float>(Config::Visual_ChunkNormalSmoothAngle);
+		Nz::DegreeAnglef smoothLimitAngle = m_configFile.GetFloatValue<float>(Config::Chunk_NormalSmoothAngle);
 		if (smoothLimitAngle > 0.0f)
 		{
 			Nz::VertexMapper mapper(*staticMesh);

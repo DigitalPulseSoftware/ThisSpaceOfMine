@@ -59,7 +59,7 @@ namespace tsom
 
 			std::shared_ptr<Nz::MaterialInstance> m_chunkMaterial;
 			std::shared_ptr<Nz::VertexDeclaration> m_chunkVertexDeclaration;
-			Nz::Signal<double>::ConnectionGuard m_onVisualChunkNormalSmoothAngleUpdatedSlot;
+			Nz::Signal<double>::ConnectionGuard m_onChunkNormalSmoothAngleUpdatedSlot;
 			ConfigFile& m_configFile;
 			bool m_isCollisionGenerationEnabled;
 	};
