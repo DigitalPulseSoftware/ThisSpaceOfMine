@@ -5,6 +5,7 @@
 #include <Game/States/GameState.hpp>
 #include <ClientLib/BlockSelectionBar.hpp>
 #include <ClientLib/Chatbox.hpp>
+#include <ClientLib/ClientConfigs.hpp>
 #include <ClientLib/Console.hpp>
 #include <ClientLib/EscapeMenu.hpp>
 #include <ClientLib/RenderConstants.hpp>
@@ -124,13 +125,22 @@ namespace tsom
 		{
 			m_sunLightEntity.emplace<Nz::NodeComponent>(Nz::Vector3f::Zero(), Nz::EulerAnglesf(-30.f, 80.f, 0.f));
 
+			Nz::UInt32 shadowMapSize = stateData.config->GetIntegerValue<Nz::UInt32>(Config::Graphics_SunShadowMapSize);
+
 			auto& lightComponent = m_sunLightEntity.emplace<Nz::LightComponent>();
 			auto& dirLight = lightComponent.AddLight<Nz::DirectionalLight>(tsom::Constants::RenderMask3D);
 			dirLight.UpdateAmbientFactor(0.05f);
 			dirLight.EnableShadowCasting(true);
-			dirLight.UpdateShadowMapSize(2048);
+			dirLight.UpdateShadowMapSettings(shadowMapSize, Nz::PixelFormat::Depth16);
 			dirLight.UpdateEnergy(5.f);
 			dirLight.EnableFixedShadowCascadeSplit(true);
+
+			m_onGraphicsSunShadowMapSizeUpdatedSlot.Connect(stateData.config->GetIntegerUpdateSignal(Config::Graphics_SunShadowMapSize), [this](long long shadowMapSize)
+			{
+				auto& lightComponent = m_sunLightEntity.get<Nz::LightComponent>();
+				Nz::DirectionalLight& dirLight = Nz::SafeCast<Nz::DirectionalLight&>(*lightComponent.GetLightEntry(0).light);
+				dirLight.UpdateShadowMapSize(Nz::SafeCaster(shadowMapSize));
+			});
 
 			float splitFactors[] = { 0.00075f, 0.003f, 0.03f };
 			dirLight.UpdateShadowCascadeFixedSplitFactors(splitFactors);

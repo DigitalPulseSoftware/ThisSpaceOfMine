@@ -12,6 +12,7 @@
 namespace tsom::Config
 {
 	static constexpr auto Visual_ChunkNormalSmoothAngle = ConfigFile::FloatOptionName{ "Visual.ChunkNormalSmoothAngle" };
+	static constexpr auto Graphics_SunShadowMapSize = ConfigFile::IntegerOptionName{ "Graphics.SunShadowMapSize" };
 }
 
 #endif // TSOM_CLIENTLIB_CLIENTCONFIGS_HPP

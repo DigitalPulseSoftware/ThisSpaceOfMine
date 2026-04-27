@@ -43,7 +43,14 @@ namespace tsom
 
 		RegisterIntegerOption(Config::Server_Port, 1, 0xFFFF, 29536);
 
-		RegisterFloatOption(Config::Visual_ChunkNormalSmoothAngle, 0.0, 180.0, 60.0);
+		RegisterFloatOption(Config::Chunk_NormalSmoothAngle, 0.0, 180.0, 60.0);
+		RegisterIntegerOption(Config::Graphics_SunShadowMapSize, 128, 4096, 1024, [](long long shadowMapSize) -> Nz::Result<long long, std::string>
+		{
+			if (!Nz::IsPow2(shadowMapSize))
+				return Nz::Err("Shadow map size must be a power of two");
+
+			return Nz::Ok(shadowMapSize);
+		});
 	}
 
 	std::filesystem::path GameConfigFile::GetPath()

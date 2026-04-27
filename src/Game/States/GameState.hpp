@@ -103,6 +103,8 @@ namespace tsom
 			NazaraSlot(Nz::Canvas, OnUnhandledMouseMoved, m_mouseMovedSlot);
 			NazaraSlot(Nz::Canvas, OnUnhandledMouseWheelMoved, m_mouseWheelMovedSlot);
 
+			Nz::Signal<long long>::ConnectionGuard m_onGraphicsSunShadowMapSizeUpdatedSlot;
+
 			struct DebugDrawLines
 			{
 				std::size_t environmentId;
