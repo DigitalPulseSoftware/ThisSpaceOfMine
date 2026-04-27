@@ -315,7 +315,7 @@ namespace tsom
 
 		try
 		{
-			m_preparedStatements->storePlanetChunkQuery.exec();
+			m_preparedStatements->storePlanetQuery.exec();
 		}
 		catch (const std::exception& e)
 		{
