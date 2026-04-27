@@ -166,6 +166,8 @@ namespace tsom
 		m_blockTypeCount.resize(EmptyBlockIndex + 1);
 		m_blockTypeCount[EmptyBlockIndex] = m_blocks.size();
 		m_layers[0]->blockCount = m_blocks.size();
+
+		OnChunkReset();
 	}
 
 	template<typename F>

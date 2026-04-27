@@ -236,29 +236,30 @@ namespace tsom
 			deserializationIndices.push_back(blockIndex);
 		}
 
-		Reset();
-		if (blockTypeCount > 8)
+		Reset([&](BlockIndex* blockIndices)
 		{
-			for (BlockIndex& blockIndex : m_blocks)
+			std::size_t blockCount = GetBlockCount();
+			if (blockTypeCount > 8)
 			{
-				Nz::UInt16 value;
-				byteStream >> value;
+				for (std::size_t i = 0; i < blockCount; ++i)
+				{
+					Nz::UInt16 value;
+					byteStream >> value;
 
-				blockIndex = deserializationIndices[value];
+					*blockIndices++ = deserializationIndices[value];
+				}
 			}
-		}
-		else
-		{
-			for (BlockIndex& blockIndex : m_blocks)
+			else
 			{
-				Nz::UInt8 value;
-				byteStream >> value;
+				for (std::size_t i = 0; i < blockCount; ++i)
+				{
+					Nz::UInt8 value;
+					byteStream >> value;
 
-				blockIndex = deserializationIndices[value];
+					*blockIndices++ = deserializationIndices[value];
+				}
 			}
-		}
-
-		OnChunkReset();
+		});
 	}
 
 	void Chunk::Serialize(Nz::ByteStream& byteStream) const

@@ -11,7 +11,6 @@
 #include <CommonLib/BlockIndex.hpp>
 #include <CommonLib/Direction.hpp>
 #include <CommonLib/InternalConstants.hpp>
-#include <Nazara/Core/Color.hpp>
 #include <NazaraUtils/Bitset.hpp>
 #include <NazaraUtils/EnumArray.hpp>
 #include <NazaraUtils/FixedVector.hpp>
