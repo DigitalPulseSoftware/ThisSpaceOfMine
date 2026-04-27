@@ -1,7 +1,7 @@
 assets/*
-!assets/*.passlist
+!assets/Passes/
+!assets/Shaders/
 !assets/*.json
-!assets/shaders
 cache/
 CookedAssets/
 saves/

@@ -124,8 +124,8 @@ fn SampleBlock(uv: vec2[f32], texIndices: vec2[i32]) -> vec4[f32]
 		return MaterialData.blockTexture2.Sample(vec3[f32](uv, f32(texIndices.y)));
 	else if (texIndices.x == 2)
 		return MaterialData.blockTexture3.Sample(vec3[f32](uv, f32(texIndices.y)));
-	else
-		return MaterialData.blockTexture4.Sample(vec3[f32](uv, f32(texIndices.y)));
+
+	return MaterialData.blockTexture4.Sample(vec3[f32](uv, f32(texIndices.y)));
 }
 
 fn TriplanarSample(normal: vec3[f32], uvX: vec2[f32], uvY: vec2[f32], uvZ: vec2[f32], texIndices: vec2[i32]) -> vec4[f32]

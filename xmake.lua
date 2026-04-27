@@ -322,6 +322,7 @@ if not has_config("serveronly") then
 		add_files("src/Game/**.cpp")
 		add_installfiles("gameconfig.lua.default", { prefixdir = "bin" })
 		add_installfiles("(scripts/**.lua)", { prefixdir = "bin" })
+		set_runargs("--dev-assets")
 
 		if is_plat("windows", "mingw") then
 			add_files("src/Game/resources.rc")

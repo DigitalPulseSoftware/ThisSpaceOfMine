@@ -1,0 +1,22 @@
+passlist "Skybox"
+{
+    attachment "DepthBuffer"
+    {
+        format "PreferredDepthStencil"
+    }
+
+    attachment "ForwardOutput"
+    {
+        format "RGBA8"
+    }
+
+    pass "Skybox rendering"
+    {
+        impl "Forward"
+        output "Output0" "ForwardOutput"
+        cleardepth "Viewer"
+        depthstenciloutput "DepthBuffer"
+    }
+
+    output "ForwardOutput"
+}
