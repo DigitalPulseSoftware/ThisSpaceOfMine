@@ -12,6 +12,7 @@
 #include <ServerLib/ServerAtmosphere.hpp>
 #include <ServerLib/ServerEnvironment.hpp>
 #include <tsl/hopscotch_map.h>
+#include <tsl/ordered_map.h>
 #include <atomic>
 #include <filesystem>
 #include <mutex>
@@ -62,8 +63,8 @@ namespace tsom
 				std::atomic_uint chunkLoadingCount;
 				std::mutex mutex;
 				std::shared_ptr<Planet> planet;
-				std::vector<ChunkIndices> remainingChunks;
 				tsl::hopscotch_map<ChunkIndices, bool> visitedChunks;
+				tsl::ordered_map<ChunkIndices, DirectionMask> remainingChunks;
 
 				void HandleChunkLoaded(const ChunkIndices& chunkIndices, DirectionMask visibilityMask);
 			};

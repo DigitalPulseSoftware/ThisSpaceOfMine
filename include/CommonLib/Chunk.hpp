@@ -56,6 +56,7 @@ namespace tsom
 			struct Layer;
 			struct HitBlock;
 			struct VertexAttributes;
+			using FaceVisibilityMasks = Nz::EnumArray<Direction, DirectionMask>;
 
 			inline Chunk(const BlockLibrary& blockLibrary, ChunkContainer& owner, const ChunkIndices& indices, const Nz::Vector3ui& size, float blockSize);
 			Chunk(const Chunk&) = delete;
@@ -89,10 +90,10 @@ namespace tsom
 			inline ChunkContainer& GetContainer();
 			inline const ChunkContainer& GetContainer() const;
 			inline const BlockIndex* GetContent() const;
+			inline FaceVisibilityMasks GetFaceVisibilityMasks() const;
 			inline ChunkFlags GetFlags() const;
 			inline const ChunkIndices& GetIndices() const;
 			inline const Nz::Vector3ui& GetSize() const;
-			inline DirectionMask GetVisibilityMask() const;
 
 			inline bool HasContent() const;
 			inline bool HasFlags(ChunkFlags flags) const;
@@ -152,17 +153,18 @@ namespace tsom
 			inline void RegisterLayer(std::size_t layerIndex);
 			inline void SetPerFaceCollision();
 			inline void UnregisterLayer(std::size_t layerIndex);
+			void UpdateFaceVisibilityMask(Direction direction);
+			void UpdateFaceVisibilityMasks();
 
 			mutable std::shared_mutex m_mutex;
 			std::array<std::optional<Layer>, Constants::MaxChunkLayerCount> m_layers;
 			std::vector<BlockIndex> m_blocks;
 			std::vector<Nz::UInt16> m_blockTypeCount;
-			Nz::EnumArray<Direction, Nz::UInt16> m_directionHoleCount;
 			Nz::FixedVector<std::size_t, Constants::MaxChunkLayerCount> m_activeLayers;
 			Nz::Vector3ui m_size;
 			ChunkFlags m_flags;
 			ChunkIndices m_indices;
-			DirectionMask m_visibilityMask;
+			FaceVisibilityMasks m_faceVisibilityMasks;
 			const BlockLibrary& m_blockLibrary;
 			ChunkContainer& m_owner;
 			bool m_hasPerFaceCollision;

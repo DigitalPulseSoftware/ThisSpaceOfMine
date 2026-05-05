@@ -128,6 +128,11 @@ namespace tsom
 		return m_blocks.data();
 	}
 
+	inline auto Chunk::GetFaceVisibilityMasks() const -> FaceVisibilityMasks
+	{
+		return m_faceVisibilityMasks;
+	}
+
 	inline ChunkFlags Chunk::GetFlags() const
 	{
 		return m_flags;
@@ -141,11 +146,6 @@ namespace tsom
 	inline const Nz::Vector3ui& Chunk::GetSize() const
 	{
 		return m_size;
-	}
-
-	inline DirectionMask Chunk::GetVisibilityMask() const
-	{
-		return m_visibilityMask;
 	}
 
 	inline bool Chunk::HasContent() const

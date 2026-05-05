@@ -34,6 +34,7 @@ add_requires(
 	"hopscotch-map",
 	"nazarautils",
 	"nlohmann_json",
+	"ordered_map",
 	"perlinnoise",
 	"sol2[includes_lua=n]",
 	"spdlog[fmt_external=y,header_only=n]",
@@ -120,7 +121,7 @@ target("CommonLib", function ()
 	add_options("dev_tools", { public = true })
 
 	add_packages("nazaraengine", { components = { "physics3d", "network" }, public = true })
-	add_packages("concurrentqueue", "cppcodec", "cpp-semver", "fast_float", "fmt", "luajit", "hopscotch-map", "nlohmann_json", "sol2", "spdlog", { public = true })
+	add_packages("concurrentqueue", "cppcodec", "cpp-semver", "fast_float", "fmt", "luajit", "hopscotch-map", "nlohmann_json", "ordered_map", "sol2", "spdlog", { public = true })
 	add_packages("cpptrace", "frozen", "libsodium", "lz4", "perlinnoise")
 
 	on_config(function (target, opt)

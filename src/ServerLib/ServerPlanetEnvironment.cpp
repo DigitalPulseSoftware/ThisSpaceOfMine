@@ -23,6 +23,46 @@
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 
+template<>
+struct fmt::formatter<tsom::Direction> : formatter<string_view>
+{
+	// parse is inherited from formatter<string_view>.
+
+	auto format(tsom::Direction dir, format_context& ctx) const -> format_context::iterator
+	{
+		string_view name = "unknown";
+		switch (dir) {
+			case tsom::Direction::Back: name = "Back"; break;
+			case tsom::Direction::Down: name = "Down"; break;
+			case tsom::Direction::Front: name = "Front"; break;
+			case tsom::Direction::Left: name = "Left"; break;
+			case tsom::Direction::Right: name = "Right"; break;
+			case tsom::Direction::Up: name = "Up"; break;
+		}
+		return formatter<string_view>::format(name, ctx);
+	}
+};
+
+template<typename T>
+struct fmt::formatter<Nz::Flags<T>> : formatter<string_view>
+{
+	// parse is inherited from formatter<string_view>.
+
+	auto format(Nz::Flags<T> flags, format_context& ctx) const -> format_context::iterator
+	{
+		std::string flagStr = "";
+		for (T flag : flags)
+		{
+			if (!flagStr.empty())
+				flagStr += " | ";
+
+			flagStr += fmt::format("{}", flag);
+		}
+
+		return formatter<string_view>::format(flagStr, ctx);
+	}
+};
+
 namespace tsom
 {
 	constexpr unsigned int s_chunkVersion = 1;
@@ -67,9 +107,9 @@ namespace tsom
 				if ((x % 2) == (z % 2))
 					chunkIndices = ChunkIndices(-int(m_chunkCount.x / 2) + x, -int(m_chunkCount.y / 2), -int(m_chunkCount.z / 2) + z);
 				else
-					chunkIndices = ChunkIndices(-int(m_chunkCount.x / 2) + x, -int(m_chunkCount.y / 2) + m_chunkCount.y, -int(m_chunkCount.z / 2) + z);
+					chunkIndices = ChunkIndices(-int(m_chunkCount.x / 2) + x, -int(m_chunkCount.y / 2) + m_chunkCount.y - 1, -int(m_chunkCount.z / 2) + z);
 
-				m_chunkLoadingData->remainingChunks.emplace_back(chunkIndices);
+				m_chunkLoadingData->remainingChunks[chunkIndices] |= (x % 2) == (z % 2) ? Direction::Up : Direction::Down;
 				m_chunkLoadingData->visitedChunks.emplace(chunkIndices, true);
 			}
 		}
@@ -221,9 +261,9 @@ namespace tsom
 	{
 		std::unique_lock lock(m_chunkLoadingData->mutex);
 
-		for (ChunkIndices indices : m_chunkLoadingData->remainingChunks)
+		for (auto&& [indices, originDir] : m_chunkLoadingData->remainingChunks)
 		{
-			spdlog::debug("loading chunk {};{};{} ({} remaining)", indices.x, indices.y, indices.z, m_chunkLoadingData->remainingChunks.size());
+			spdlog::debug("loading chunk {};{};{} from {} ({} remaining)", indices.x, indices.y, indices.z, originDir, m_chunkLoadingData->remainingChunks.size());
 
 			Chunk* chunk = GetPlanet().GetChunk(indices);
 			if (!chunk)
@@ -232,7 +272,7 @@ namespace tsom
 			auto& taskScheduler = m_serverInstance.GetApplication().GetComponent<Nz::TaskSchedulerAppComponent>();
 
 			m_chunkLoadingData->chunkLoadingCount++;
-			taskScheduler.AddTask([chunk, serverInstance = &m_serverInstance, databaseId = m_databaseId, chunkLoadingData = m_chunkLoadingData, seed = m_generationSeed, chunkCount = m_chunkCount, generatorName = m_generatorName]
+			taskScheduler.AddTask([chunk, serverInstance = &m_serverInstance, databaseId = m_databaseId, chunkLoadingData = m_chunkLoadingData, seed = m_generationSeed, chunkCount = m_chunkCount, generatorName = m_generatorName, originDir = originDir]
 			{
 				bool chunkFound = false;
 				if (databaseId)
@@ -269,7 +309,11 @@ namespace tsom
 				if (!chunkFound)
 					chunkLoadingData->planet->GenerateChunk(*chunk, seed, chunkCount, generatorName);
 
-				DirectionMask visibilityMask = chunk->GetVisibilityMask();
+				const auto& faceVisibilityMasks = chunk->GetFaceVisibilityMasks();
+
+				DirectionMask visibilityMask;
+				for (Direction dir : originDir)
+					visibilityMask |= faceVisibilityMasks[s_oppositeDirections[dir]];
 
 				std::unique_lock lock(chunkLoadingData->mutex);
 				chunkLoadingData->HandleChunkLoaded(chunk->GetIndices(), visibilityMask);
@@ -382,7 +426,7 @@ namespace tsom
 			}
 
 			visitedChunks.emplace(neighborIndices, isNeighborPrimaryChunk);
-			remainingChunks.push_back(neighborIndices);
+			remainingChunks[neighborIndices] |= direction;
 		}
 	}
 }

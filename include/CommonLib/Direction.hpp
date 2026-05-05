@@ -171,6 +171,15 @@ namespace tsom
 		Nz::Vector3i32{ 1,  1,  1 },
 	};
 
+	constexpr Nz::EnumArray<Direction, Direction> s_oppositeDirections = {
+		Direction::Front, //< Back
+		Direction::Up,    //< Down
+		Direction::Back,  //< Front
+		Direction::Right, //< Left
+		Direction::Left,  //< Right
+		Direction::Down,  //< Up
+	};
+
 	constexpr Direction DirectionFromNormal(const Nz::Vector3f& outsideNormal);
 	constexpr NeighborChunk ToNeighborChunk(const Nz::Vector3i32& neighborIndices);
 }
