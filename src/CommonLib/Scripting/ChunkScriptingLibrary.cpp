@@ -130,7 +130,7 @@ namespace tsom
 			}),
 			"UpdateBlock", LuaFunction([](Chunk& chunk, const Nz::Vector3ui& chunkIndices, BlockIndex blockIndex)
 			{
-				chunk.UpdateBlock(chunkIndices, blockIndex, true);
+				chunk.UpdateBlock(chunkIndices, blockIndex);
 			})
 		);
 	}

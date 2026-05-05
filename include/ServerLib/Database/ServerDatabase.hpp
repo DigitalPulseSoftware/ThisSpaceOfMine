@@ -31,6 +31,8 @@ namespace tsom
 
 			Nz::UInt32 CreatePlanet(const Database::Planet& planet);
 			Nz::UInt32 CreatePlanetEntity(const Database::PlanetEntity& planetEntity);
+
+			void DeletePlanetChunk(Nz::UInt32 planetId, const Nz::Vector3i32& position);
 			void DeletePlanetEntity(Nz::UInt32 planetEntityId);
 
 			void GetAllConfigs(Nz::FunctionRef<bool(Database::Config&& /*config*/)> callback) const;
@@ -62,19 +64,25 @@ namespace tsom
 				// config
 				SQLite::Statement getAllConfigQuery;
 
-				// planet entities
+				// planet
 				SQLite::Statement createPlanetQuery;
+				SQLite::Statement getAllPlanetQuery;
+				SQLite::Statement storePlanetQuery;
+
+				// planet chunks
+				SQLite::Statement deletePlanetChunkQuery;
+				SQLite::Statement getAllPlanetChunksQuery;
+				SQLite::Statement getPlanetChunkQuery;
+				SQLite::Statement storePlanetChunkQuery;
+
+				// planet entities
 				SQLite::Statement createPlanetEntityQuery;
 				SQLite::Statement deletePlanetEntityQuery;
 				SQLite::Statement getAllPlanetEntitiesQuery;
 				SQLite::Statement partialUpdatePlanetEntityQuery;
 
-				SQLite::Statement getAllPlanetQuery;
+				// planet links
 				SQLite::Statement getAllPlanetLinkQuery;
-				SQLite::Statement getAllPlanetChunksQuery;
-				SQLite::Statement getPlanetChunkQuery;
-				SQLite::Statement storePlanetQuery;
-				SQLite::Statement storePlanetChunkQuery;
 				SQLite::Statement storePlanetLinkQuery;
 			};
 

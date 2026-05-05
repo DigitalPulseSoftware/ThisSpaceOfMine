@@ -766,7 +766,7 @@ namespace tsom
 			return false;
 
 		// Check that target block is not empty
-		if (chunk->GetBlockContent(blockIndices) == EmptyBlockIndex)
+		if (!chunk->HasContent() || chunk->GetBlockContent(blockIndices) == EmptyBlockIndex)
 			return false;
 
 		return true;
@@ -779,7 +779,7 @@ namespace tsom
 			return false;
 
 		// Check that target block is empty
-		if (chunk->GetBlockContent(blockIndices) != EmptyBlockIndex)
+		if (chunk->HasContent() && chunk->GetBlockContent(blockIndices) != EmptyBlockIndex)
 			return false;
 
 		return true; //< FIXME

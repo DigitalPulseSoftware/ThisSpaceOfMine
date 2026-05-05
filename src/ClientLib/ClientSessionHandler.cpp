@@ -196,7 +196,7 @@ namespace tsom
 				});
 			}
 			else
-				chunk->Reset();
+				chunk->ClearContent();
 		}
 		else
 			m_pendingChunkReset[chunkReset.chunkId] = std::move(chunkReset);
@@ -537,7 +537,7 @@ namespace tsom
 				});
 			}
 			else
-				chunk->Reset();
+				chunk->ClearContent();
 
 			it = m_pendingChunkReset.erase(it);
 		}

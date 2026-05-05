@@ -12,6 +12,7 @@
 #include <CommonLib/Components/ShipComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <NazaraUtils/Algorithm.hpp>
+#include <spdlog/spdlog.h>
 
 namespace tsom
 {
@@ -159,6 +160,7 @@ namespace tsom
 			chunkData.chunk = nullptr;
 			chunkData.entityOwner = entt::handle{};
 			chunkData.onBlockUpdatedSlot.Disconnect(); //< shouldn't be connected yet
+			chunkData.onResetSlot.Disconnect(); //< shouldn't be connected yet
 		}
 		else
 			m_newlyHiddenChunk.UnboundedSet(chunkIndex);
@@ -295,6 +297,8 @@ namespace tsom
 
 	void SessionVisibilityHandler::DispatchChunks(Nz::UInt16 tickIndex)
 	{
+		std::unique_lock lock(m_chunkBitsetsMutex);
+
 		for (std::size_t chunkIndex : m_newlyHiddenChunk.IterBits())
 		{
 			ChunkData& visibleChunk = m_visibleChunks[chunkIndex];
@@ -309,6 +313,7 @@ namespace tsom
 			// Handle chunk liberation only when dispatching to prevent chunk index reuse if resurrection happens
 			chunkNetworkIndices.erase(visibleChunk.chunk->GetIndices());
 			m_freeChunkIds.Set(chunkIndex);
+
 			m_resetChunk.UnboundedReset(chunkIndex);
 			m_updatedChunk.UnboundedReset(chunkIndex);
 
@@ -322,6 +327,7 @@ namespace tsom
 			visibleChunk.chunk = nullptr;
 			visibleChunk.entityOwner = entt::handle{};
 			visibleChunk.onBlockUpdatedSlot.Disconnect();
+			visibleChunk.onResetSlot.Disconnect();
 		}
 		m_newlyHiddenChunk.Clear();
 
@@ -377,8 +383,16 @@ namespace tsom
 					it->newContent = Nz::SafeCast<Nz::UInt8>(newBlock);
 			});
 
+			visibleChunk.onClearSlot.Connect(visibleChunk.chunk->OnClear, [this, chunkIndex](Chunk*, Nz::UInt32 /*previousActiveLayerMask*/)
+			{
+				std::unique_lock lock(m_chunkBitsetsMutex);
+				m_resetChunk.UnboundedSet(chunkIndex);
+				m_updatedChunk.UnboundedReset(chunkIndex); //< in case chunk was modified and then reset before being sent
+			});
+
 			visibleChunk.onResetSlot.Connect(visibleChunk.chunk->OnReset, [this, chunkIndex](Chunk*)
 			{
+				std::unique_lock lock(m_chunkBitsetsMutex);
 				m_resetChunk.UnboundedSet(chunkIndex);
 				m_updatedChunk.UnboundedReset(chunkIndex); //< in case chunk was modified and then reset before being sent
 			});
@@ -452,20 +466,25 @@ namespace tsom
 
 				const BlockIndex* chunkContent = visibleChunk.chunk->GetContent();
 				std::memcpy(chunkResetPacket.content.data(), chunkContent, blockCount * sizeof(BlockIndex));
-			}
 
-			(*m_activeChunkUpdates)++;
-			m_networkSession->SendPacket(chunkResetPacket, [chunkLocation, chunkUpdateCount = m_activeChunkUpdates]
+				(*m_activeChunkUpdates)++;
+				m_networkSession->SendPacket(chunkResetPacket, [chunkLocation, chunkUpdateCount = m_activeChunkUpdates]
+				{
+					assert(*chunkUpdateCount > 0);
+					(*chunkUpdateCount)--;
+				});
+			}
+			else
 			{
-				assert(*chunkUpdateCount > 0);
-				(*chunkUpdateCount)--;
-			});
+				// Empty chunks are free in comparison
+				m_networkSession->SendPacket(chunkResetPacket);
+			}
 
 			m_resetChunk.UnboundedReset(chunk.chunkIndex);
 		}
 
 		// If we get there, we didn't hit the concurrent chunk limit, we can clear the chunk bitset
-		assert(m_resetChunk.TestNone());
+		NazaraAssert(m_resetChunk.TestNone());
 		m_resetChunk.Clear();
 	}
 
@@ -847,6 +866,8 @@ namespace tsom
 		// handle chunks owned by this entity if any
 		if (auto it = m_chunkNetworkMaps.find(entity); it != m_chunkNetworkMaps.end())
 		{
+			std::unique_lock lock(m_chunkBitsetsMutex);
+
 			auto& networkIndices = it->second;
 			for (auto&& [chunkIndices, chunkIndex] : networkIndices)
 			{
@@ -854,6 +875,7 @@ namespace tsom
 				visibleChunk.chunk = nullptr;
 				visibleChunk.entityOwner = entt::handle{};
 				visibleChunk.onBlockUpdatedSlot.Disconnect();
+				visibleChunk.onResetSlot.Disconnect();
 
 				m_freeChunkIds.Set(chunkIndex, true);
 				m_newlyHiddenChunk.UnboundedReset(chunkIndex);

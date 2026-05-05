@@ -36,6 +36,13 @@ namespace tsom
 			std::lock_guard lock(m_chunkLayerRemovedSignalMutex);
 			OnChunkLayerRemove(this, chunk, layerIndex);
 		});
+		
+		chunkData.onClear.Connect(chunkData.chunk->OnClear, [this, &blockLibrary](Chunk* chunk, Nz::UInt32 previousActiveLayerMask)
+		{
+			// FIXME: Nz::Signal operator() is not thread-safe!
+			std::lock_guard lock(m_chunkUpdatedSignalMutex);
+			OnChunkUpdated(this, chunk, NeighborChunkMask_All, previousActiveLayerMask);
+		});
 
 		chunkData.onReset.Connect(chunkData.chunk->OnReset, [this](Chunk* chunk)
 		{
@@ -191,7 +198,7 @@ namespace tsom
 		Nz::Vector3ui startPos = chunk.GetSize() / 2 - Nz::Vector3ui(boxSize / 2, boxSize / 2, height / 2);
 
 		ChunkWriteLock lock(&chunk);
-		chunk.Reset();
+		chunk.ClearContent();
 
 		for (unsigned int z = 0; z < height; ++z)
 		{

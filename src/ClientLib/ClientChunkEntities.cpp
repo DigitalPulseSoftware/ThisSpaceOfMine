@@ -237,8 +237,6 @@ namespace tsom
 
 	auto ClientChunkEntities::ProcessChunkUpdate(const Chunk& chunk, NeighborChunkMask neighborMask) -> ColliderModelUpdateJob*
 	{
-		NazaraAssert(chunk.HasContent());
-
 		// Try to cancel current update job to void useless work
 		if (auto it = m_updateJobs.find(chunk.GetIndices()); it != m_updateJobs.end())
 		{
@@ -247,8 +245,6 @@ namespace tsom
 		}
 
 		std::shared_ptr<ColliderModelUpdateJob> updateJob = std::make_shared<ColliderModelUpdateJob>();
-		updateJob->taskCount = (m_isCollisionGenerationEnabled) ? 2 : 1;
-
 		updateJob->applyFunc = [this](const ChunkIndices& chunkIndices, UpdateJob&& job)
 		{
 			ColliderModelUpdateJob&& colliderUpdateJob = static_cast<ColliderModelUpdateJob&&>(job);
@@ -264,7 +260,7 @@ namespace tsom
 			entt::handle visualEntity;
 			if (VisualEntityComponent* visualEntityComponent = chunkEntity.try_get<VisualEntityComponent>())
 				visualEntity = visualEntityComponent->visualEntity;
-			else
+			else if (colliderUpdateJob.mesh)
 			{
 				// First time, create visual entity
 
@@ -305,36 +301,51 @@ namespace tsom
 
 				renderDevice.SubmitAsyncCommands(std::move(asyncTransfer));
 			}
-			else if (auto* gfxComponent = visualEntity.try_get<Nz::GraphicsComponent>())
-				gfxComponent->Clear();
+			else if (visualEntity)
+			{
+				// Remove previous mesh
+				if (auto* gfxComponent = visualEntity.try_get<Nz::GraphicsComponent>())
+					gfxComponent->Clear();
+			}
 
 			UpdateChunkDebugCollider(chunkIndices);
 		};
 
-		auto& taskScheduler = m_application.GetComponent<Nz::TaskSchedulerAppComponent>();
-		if (m_isCollisionGenerationEnabled)
+		updateJob->taskCount = 0;
+		if (chunk.HasContent())
 		{
+			auto& taskScheduler = m_application.GetComponent<Nz::TaskSchedulerAppComponent>();
+			if (m_isCollisionGenerationEnabled)
+			{
+				taskScheduler.AddTask([this, updateJob, chunkPtr = chunk.shared_from_this()]
+				{
+					if (updateJob->cancelled)
+						return;
+
+					ChunkReadLock lock(chunkPtr.get());
+					if (chunkPtr->HasContent()) //< We need to re-check because the chunk may have lost its content (become full empty) since task was scheduled
+						updateJob->collider = chunkPtr->BuildCollider(m_layerIndex);
+
+					updateJob->jobDone++;
+				});
+
+				updateJob->taskCount++;
+			}
+
 			taskScheduler.AddTask([this, updateJob, chunkPtr = chunk.shared_from_this()]
 			{
 				if (updateJob->cancelled)
 					return;
 
+				// FIXME: If ClientChunkEntities is deleted before job finished, it can result in a crash
 				ChunkReadLock lock(chunkPtr.get());
-				updateJob->collider = chunkPtr->BuildCollider(m_layerIndex);
+				if (chunkPtr->HasContent()) //< We need to re-check because the chunk may have lost its content (become full empty) since task was scheduled
+					updateJob->mesh = BuildMesh(*chunkPtr);
+
 				updateJob->jobDone++;
 			});
+			updateJob->taskCount++;
 		}
-
-		taskScheduler.AddTask([this, updateJob, chunkPtr = chunk.shared_from_this()]
-		{
-			if (updateJob->cancelled)
-				return;
-
-			// FIXME: If ClientChunkEntities is deleted before job finished, it can result in a crash
-			ChunkReadLock lock(chunkPtr.get());
-			updateJob->mesh = BuildMesh(*chunkPtr);
-			updateJob->jobDone++;
-		});
 
 		// Add neighbor chunks
 		for (NeighborChunk neighborChunk : neighborMask)

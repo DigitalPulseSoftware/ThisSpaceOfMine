@@ -16,6 +16,23 @@ namespace tsom
 	{
 	}
 
+	inline void Chunk::ClearContent()
+	{
+		Nz::UInt32 activeLayerMask = GetActiveLayerMask();
+
+		m_activeLayers.clear();
+		m_blocks.clear();
+		m_blocks.shrink_to_fit();
+
+		for (auto& layerOpt : m_layers)
+			layerOpt.reset();
+
+		m_blockTypeCount.clear();
+		m_blockTypeCount.shrink_to_fit();
+
+		OnClear(this, activeLayerMask);
+	}
+
 	inline void Chunk::ClearFlags(ChunkFlags flags)
 	{
 		m_flags.Clear(flags);
@@ -151,43 +168,11 @@ namespace tsom
 		return std::find(m_activeLayers.begin(), m_activeLayers.end(), layerIndex) != m_activeLayers.end();
 	}
 
-	inline void Chunk::Reset()
-	{
-		m_activeLayers.clear();
-		m_blocks.clear();
-		m_blocks.resize(m_size.x * m_size.y * m_size.z, EmptyBlockIndex);
-
-		for (auto& layerOpt : m_layers)
-			layerOpt.reset();
-
-		// Create first layer (for empty block)
-		RegisterLayer(0);
-
-		m_blockTypeCount.resize(EmptyBlockIndex + 1);
-		m_blockTypeCount[EmptyBlockIndex] = m_blocks.size();
-		m_layers[0]->blockCount = m_blocks.size();
-
-		OnChunkReset();
-	}
-
 	template<typename F>
 	void Chunk::Reset(F&& func)
 	{
-		// Chunks don't have any block until they are reset
 		if (!HasContent())
-		{
-			m_activeLayers.clear();
-			for (auto& layerOpt : m_layers)
-				layerOpt.reset();
-
-			m_blocks.resize(m_size.x * m_size.y * m_size.z, EmptyBlockIndex);
-			m_blockTypeCount.resize(EmptyBlockIndex + 1);
-			m_blockTypeCount[EmptyBlockIndex] = m_blocks.size();
-
-			// Create first layer (empty block)
-			RegisterLayer(0);
-			m_layers[0]->blockCount = m_blocks.size();
-		}
+			PrepareForContent();
 
 		func(m_blocks.data());
 		OnChunkReset();
@@ -226,6 +211,23 @@ namespace tsom
 	inline void Chunk::UnlockWrite()
 	{
 		m_mutex.unlock();
+	}
+
+	inline void Chunk::PrepareForContent()
+	{
+		m_activeLayers.clear();
+		m_blocks.clear();
+		m_blocks.resize(m_size.x * m_size.y * m_size.z, EmptyBlockIndex);
+
+		for (auto& layerOpt : m_layers)
+			layerOpt.reset();
+
+		// Create first layer (for empty block)
+		RegisterLayer(0);
+
+		m_blockTypeCount.resize(EmptyBlockIndex + 1);
+		m_blockTypeCount[EmptyBlockIndex] = m_blocks.size();
+		m_layers[0]->blockCount = m_blocks.size();
 	}
 
 	inline void Chunk::RegisterLayer(std::size_t layerIndex)

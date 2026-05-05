@@ -19,6 +19,7 @@
 #include <tsl/hopscotch_map.h>
 #include <tsl/hopscotch_set.h>
 #include <memory>
+#include <mutex>
 
 namespace tsom
 {
@@ -108,6 +109,7 @@ namespace tsom
 			struct ChunkData
 			{
 				NazaraSlot(Chunk, OnBlockUpdated, onBlockUpdatedSlot);
+				NazaraSlot(Chunk, OnClear, onClearSlot);
 				NazaraSlot(Chunk, OnReset, onResetSlot);
 
 				entt::handle entityOwner;
@@ -179,6 +181,7 @@ namespace tsom
 			tsl::hopscotch_map<const ServerEnvironment*, EnvironmentId> m_environmentIndices;
 			tsl::hopscotch_set<entt::handle, HandlerHasher> m_deletedEntities;
 			tsl::hopscotch_set<entt::handle, HandlerHasher> m_movingEntities;
+			std::mutex m_chunkBitsetsMutex;
 			std::optional<PilotShipUpdate> m_pilotedShipUpdate;
 			std::shared_ptr<std::size_t> m_activeChunkUpdates;
 			std::vector<ServerEnvironment*> m_destroyedEnvironments;

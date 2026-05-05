@@ -15,16 +15,17 @@ namespace tsom
 	ServerDatabase::PreparedStatements::PreparedStatements(SQLite::Database& database) :
 	getAllConfigQuery(database, "SELECT name, value FROM configs"),
 	createPlanetQuery(database, "INSERT INTO planets(generator, seed, chunk_count_x, chunk_count_y, chunk_count_z, block_size, corner_radius, gravity, block_size) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id"),
+	getAllPlanetQuery(database, "SELECT id, generator, seed, chunk_count_x, chunk_count_y, chunk_count_z, block_size, corner_radius, gravity FROM planets"),
+	storePlanetQuery(database, "REPLACE INTO planets(id, generator, seed, chunk_count_x, chunk_count_y, chunk_count_z, block_size, corner_radius, gravity) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)"),
+	deletePlanetChunkQuery(database, "DELETE FROM planet_chunks WHERE planet_id = ? AND position_x = ? AND position_y = ? AND position_z = ?"),
+	getAllPlanetChunksQuery(database, "SELECT position_x, position_y, position_z, version, chunk_data FROM planet_chunks WHERE planet_id = ?"),
+	getPlanetChunkQuery(database, "SELECT version, chunk_data FROM planet_chunks WHERE planet_id = ? AND position_x = ? AND position_y = ? AND position_z = ?"),
+	storePlanetChunkQuery(database, "REPLACE INTO planet_chunks(planet_id, position_x, position_y, position_z, version, chunk_data, last_update) VALUES(?, ?, ?, ?, ?, ?, datetime())"),
 	createPlanetEntityQuery(database, "INSERT INTO planet_entities(unique_id, planet_id, class_name, class_version, position_x, position_y, position_z, rotation_x, rotation_y, rotation_z, rotation_w, properties, last_update) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime()) RETURNING id"),
 	deletePlanetEntityQuery(database, "DELETE FROM planet_entities WHERE id = ?"),
 	getAllPlanetEntitiesQuery(database, "SELECT id, unique_id, class_name, class_version, position_x, position_y, position_z, rotation_x, rotation_y, rotation_z, rotation_w, properties FROM planet_entities WHERE planet_id = ?"),
 	partialUpdatePlanetEntityQuery(database, "UPDATE planet_entities SET class_version = ?, position_x = ?, position_y = ?, position_z = ?, rotation_x = ?, rotation_y = ?, rotation_z = ?, rotation_w = ?, properties = ?, last_update = datetime() WHERE id = ?"),
-	getAllPlanetQuery(database, "SELECT id, generator, seed, chunk_count_x, chunk_count_y, chunk_count_z, block_size, corner_radius, gravity FROM planets"),
 	getAllPlanetLinkQuery(database, "SELECT source_planet_id, destination_planet_id, position_x, position_y, position_z FROM planet_links"),
-	getAllPlanetChunksQuery(database, "SELECT position_x, position_y, position_z, version, chunk_data FROM planet_chunks WHERE planet_id = ?"),
-	getPlanetChunkQuery(database, "SELECT version, chunk_data FROM planet_chunks WHERE planet_id = ? AND position_x = ? AND position_y = ? AND position_z = ?"),
-	storePlanetQuery(database, "REPLACE INTO planets(id, generator, seed, chunk_count_x, chunk_count_y, chunk_count_z, block_size, corner_radius, gravity) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)"),
-	storePlanetChunkQuery(database, "REPLACE INTO planet_chunks(planet_id, position_x, position_y, position_z, version, chunk_data, last_update) VALUES(?, ?, ?, ?, ?, ?, datetime())"),
 	storePlanetLinkQuery(database, "REPLACE INTO planet_links(source_planet_id, destination_planet_id, position_x, position_y, position_z) VALUES(?, ?, ?, ?, ?)")
 	{
 	}
@@ -83,6 +84,18 @@ namespace tsom
 		m_preparedStatements->createPlanetEntityQuery.executeStep();
 
 		return m_preparedStatements->createPlanetEntityQuery.getColumn(0);
+	}
+
+	void ServerDatabase::DeletePlanetChunk(Nz::UInt32 planetId, const Nz::Vector3i32& position)
+	{
+		NAZARA_DEFER({ m_preparedStatements->deletePlanetChunkQuery.reset(); });
+
+		m_preparedStatements->deletePlanetChunkQuery.bind(1, planetId);
+		m_preparedStatements->deletePlanetChunkQuery.bind(2, position.x);
+		m_preparedStatements->deletePlanetChunkQuery.bind(3, position.y);
+		m_preparedStatements->deletePlanetChunkQuery.bind(4, position.z);
+
+		m_preparedStatements->deletePlanetChunkQuery.exec();
 	}
 
 	void ServerDatabase::DeletePlanetEntity(Nz::UInt32 planetEntityId)

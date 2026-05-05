@@ -1050,7 +1050,7 @@ namespace tsom
 					Nz::Vector3f localNormal = chunkNode.ToLocalDirection(raycastHit->hitNormal);
 
 					auto hitCoordinates = hitChunk.ComputeHitCoordinates(localPos, localNormal, *chunkRigidBody.GetCollider(), raycastHit->subShapeID);
-					if (hitCoordinates)
+					if (hitCoordinates && hitChunk.HasContent()) //< It's possible for a chunk without content to have physics while physics update
 					{
 						if (m_debugOverlay && m_debugOverlay->mode >= 1)
 						{

@@ -72,6 +72,7 @@ namespace tsom
 				std::shared_ptr<Chunk> chunk;
 
 				NazaraSlot(Chunk, OnBlockUpdated, onUpdated);
+				NazaraSlot(Chunk, OnClear, onClear);
 				NazaraSlot(Chunk, OnLayerRegistered, onLayerRegistered);
 				NazaraSlot(Chunk, OnLayerUnregistered, onLayerUnregistered);
 				NazaraSlot(Chunk, OnReset, onReset);

@@ -218,7 +218,7 @@ namespace tsom
 
 	auto ChunkEntities::ProcessChunkUpdate(const Chunk& chunk, NeighborChunkMask neighborMask) -> UpdateJob*
 	{
-		NazaraAssert(chunk.HasContent());
+		NazaraAssert(m_chunkEntities.contains(chunk.GetIndices()));
 
 		// Try to cancel current update job to avoid useless work
 		if (auto it = m_updateJobs.find(chunk.GetIndices()); it != m_updateJobs.end())
@@ -228,7 +228,6 @@ namespace tsom
 		}
 
 		std::shared_ptr<ColliderUpdateJob> updateJob = std::make_shared<ColliderUpdateJob>();
-		updateJob->taskCount = 1;
 
 		updateJob->applyFunc = [this](const ChunkIndices& chunkIndices, UpdateJob&& job)
 		{
@@ -239,16 +238,23 @@ namespace tsom
 			rigidBody.SetCollider(std::move(colliderUpdateJob.collider), false);
 		};
 
-		auto& taskScheduler = m_application.GetComponent<Nz::TaskSchedulerAppComponent>();
-		taskScheduler.AddTask([this, updateJob, chunkPtr = chunk.shared_from_this()]
+		updateJob->taskCount = 0;
+		if (chunk.HasContent())
 		{
-			if (updateJob->cancelled)
-				return;
+			auto& taskScheduler = m_application.GetComponent<Nz::TaskSchedulerAppComponent>();
+			taskScheduler.AddTask([this, updateJob, chunkPtr = chunk.shared_from_this()]
+			{
+				if (updateJob->cancelled)
+					return;
 
-			ChunkReadLock lock(chunkPtr.get());
-			updateJob->collider = chunkPtr->BuildCollider(m_layerIndex);
-			updateJob->jobDone++;
-		});
+				ChunkReadLock lock(chunkPtr.get());
+				if (chunkPtr->HasContent()) //< We need to re-check because the chunk may have lost its content (become full empty) since task was scheduled
+					updateJob->collider = chunkPtr->BuildCollider(m_layerIndex);
+
+				updateJob->jobDone++;
+			});
+			updateJob->taskCount++;
+		}
 
 		// Add neighbor chunks
 		for (NeighborChunk neighborChunk : neighborMask)
@@ -263,7 +269,7 @@ namespace tsom
 			updateJob->chunkDependencies.push_back(neighborIndices);
 
 			// Trigger our neighbor update
-			if (!m_updateJobs.contains(neighborIndices))
+			if (!m_updateJobs.contains(neighborIndices) && m_chunkEntities.contains(neighborIndices))
 				ProcessChunkUpdate(*neighborChunkPtr, 0);
 		}
 

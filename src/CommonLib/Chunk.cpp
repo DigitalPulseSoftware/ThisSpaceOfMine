@@ -249,7 +249,7 @@ namespace tsom
 					*blockIndices++ = deserializationIndices[value];
 				}
 			}
-			else
+			else if (blockTypeCount > 0)
 			{
 				for (std::size_t i = 0; i < blockCount; ++i)
 				{
@@ -300,12 +300,15 @@ namespace tsom
 		}
 	}
 
-	void Chunk::UpdateBlock(const Nz::Vector3ui& indices, BlockIndex newBlock, bool ensureContent)
+	void Chunk::UpdateBlock(const Nz::Vector3ui& indices, BlockIndex newBlock)
 	{
-		if (ensureContent && !HasContent())
-			Reset();
+		if (!HasContent())
+		{
+			if (newBlock == EmptyBlockIndex)
+				return;
 
-		NazaraAssertMsg(HasContent(), "chunk has not been reset");
+			PrepareForContent();
+		}
 
 		const auto& newBlockData = m_blockLibrary.GetBlockData(newBlock);
 
@@ -327,6 +330,13 @@ namespace tsom
 			m_blockTypeCount.resize(newBlock + 1);
 
 		m_blockTypeCount[newBlock]++;
+
+		// Check if the chunk is made of only empty blocks and reclaim its memory
+		if (GetBlockCount(EmptyBlockIndex) == GetBlockCount())
+		{
+			ClearContent();
+			return;
+		}
 
 		OnBlockUpdated(this, indices, oldBlock, newBlock, oldBlockData.layerIndex, newBlockData.layerIndex);
 
@@ -389,6 +399,8 @@ namespace tsom
 
 	void Chunk::OnChunkReset()
 	{
+		assert(HasContent())
+
 		std::fill(m_blockTypeCount.begin(), m_blockTypeCount.end(), 0);
 
 		for (std::size_t blockIndex = 0; blockIndex < m_blocks.size(); ++blockIndex)
@@ -409,6 +421,13 @@ namespace tsom
 				m_blockTypeCount.resize(blockContent + 1);
 
 			m_blockTypeCount[blockContent]++;
+		}
+
+		// Check if the chunk is made of only empty blocks and reclaim its memory
+		if (GetBlockCount(EmptyBlockIndex) == GetBlockCount())
+		{
+			ClearContent();
+			return;
 		}
 
 		// Rebuild visibility mask

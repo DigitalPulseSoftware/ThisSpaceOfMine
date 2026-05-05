@@ -66,6 +66,8 @@ namespace tsom
 			virtual std::shared_ptr<Nz::Collider3D> BuildCollider(std::size_t layerIndex) const = 0;
 			virtual void BuildMesh(std::size_t layerIndex, std::vector<Nz::UInt32>& indices, const Nz::Vector3f& center, const Nz::FunctionRef<VertexAttributes(const Nz::Vector3ui& blockIndices, Direction direction)>& addFace) const;
 
+			inline void ClearContent();
+
 			inline void ClearFlags(ChunkFlags flags);
 
 			virtual Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> ComputeBlockCorners(const Nz::Vector3ui& indices) const;
@@ -101,7 +103,6 @@ namespace tsom
 			inline void LockRead() const;
 			inline void LockWrite();
 
-			inline void Reset();
 			template<typename F> void Reset(F&& func);
 
 			virtual void Serialize(Nz::ByteStream& byteStream) const;
@@ -113,12 +114,13 @@ namespace tsom
 			inline void UnlockRead() const;
 			inline void UnlockWrite();
 
-			void UpdateBlock(const Nz::Vector3ui& indices, BlockIndex cellType, bool ensureContent = false);
+			void UpdateBlock(const Nz::Vector3ui& indices, BlockIndex cellType);
 
 			Chunk& operator=(const Chunk&) = delete;
 			Chunk& operator=(Chunk&&) = delete;
 
 			NazaraSignal(OnBlockUpdated, Chunk* /*emitter*/, const Nz::Vector3ui& /*indices*/, BlockIndex /*oldBlock*/, BlockIndex /*newBlock*/, std::size_t /*prevLayerIndex*/, std::size_t /*newLayerIndex*/);
+			NazaraSignal(OnClear, Chunk* /*emitter*/, Nz::UInt32 /*previousActiveLayerMask*/);
 			NazaraSignal(OnLayerRegistered, Chunk* /*emitter*/, std::size_t /*layerIndex*/);
 			NazaraSignal(OnLayerUnregistered, Chunk* /*emitter*/, std::size_t /*layerIndex*/);
 			NazaraSignal(OnReset, Chunk* /*emitter*/);
@@ -146,6 +148,7 @@ namespace tsom
 
 		protected:
 			void OnChunkReset();
+			inline void PrepareForContent();
 			inline void RegisterLayer(std::size_t layerIndex);
 			inline void SetPerFaceCollision();
 			inline void UnregisterLayer(std::size_t layerIndex);

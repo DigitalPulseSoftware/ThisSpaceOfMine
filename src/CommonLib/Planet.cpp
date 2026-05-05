@@ -48,6 +48,13 @@ namespace tsom
 			std::lock_guard lock(m_chunkLayerRemovedSignalMutex);
 			OnChunkLayerRemove(this, chunk, layerIndex);
 		});
+		
+		chunkData.onClear.Connect(chunkData.chunk->OnClear, [this, &blockLibrary](Chunk* chunk, Nz::UInt32 previousActiveLayerMask)
+		{
+			// FIXME: Nz::Signal operator() is not thread-safe!
+			std::lock_guard lock(m_chunkUpdatedSignalMutex);
+			OnChunkUpdated(this, chunk, NeighborChunkMask_All, previousActiveLayerMask);
+		});
 
 		chunkData.onReset.Connect(chunkData.chunk->OnReset, [this, &blockLibrary](Chunk* chunk)
 		{
@@ -319,6 +326,7 @@ namespace tsom
 
 		Nz::Time t7 = Nz::GetElapsedNanoseconds();
 
+		/*
 		static std::atomic_int64_t counter = 0;
 		std::atomic_int64_t iterCount = ++counter;
 
@@ -338,6 +346,7 @@ namespace tsom
 		std::atomic_int64_t a5 = accTotal.fetch_add((t7 - t1).AsMicroseconds());
 
 		fmt::print("Total: {}us (load file: {}us, lua: {}us ({}), convert: {}us, chunk: {}us)\n", a5 / iterCount, a1 / iterCount, a2 / iterCount, (t4 - t3).AsMicroseconds(), a3 / iterCount, a4 / iterCount);
+		*/
 	}
 
 	void Planet::GenerateChunkNative(Chunk& chunk, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, std::string_view scriptName)
@@ -512,7 +521,7 @@ namespace tsom
 					Nz::Vector3ui innerCoordinates;
 					ChunkIndices chunkIndices = GetChunkIndicesByBlockIndices(coordinates, &innerCoordinates);
 					if (Chunk* chunk = GetChunk(chunkIndices))
-						chunk->UpdateBlock(innerCoordinates, blockIndex, true);
+						chunk->UpdateBlock(innerCoordinates, blockIndex);
 
 					xPos += dirAxis.rightDir;
 				}
@@ -568,7 +577,7 @@ namespace tsom
 					}
 
 					hasEmpty = true;
-					chunk->UpdateBlock(innerCoordinates, planksBlockIndex, true);
+					chunk->UpdateBlock(innerCoordinates, planksBlockIndex);
 				}
 
 				xPos = startingX;
