@@ -24,6 +24,7 @@ namespace tsom
 	Planet::Planet(Nz::ApplicationBase& app, float tileSize, float cornerRadius, float gravity) :
 	ChunkContainer(tileSize),
 	m_app(app),
+	m_aabb(Nz::Boxf::Zero()),
 	m_cornerRadius(cornerRadius),
 	m_gravity(gravity)
 	{
@@ -129,6 +130,12 @@ namespace tsom
 		OnChunkAdded(this, chunk);
 		for (std::size_t layerIndex : chunk->GetActiveLayers())
 			OnChunkLayerAdded(this, chunk, layerIndex);
+
+		float chunkSize = ChunkSize * m_tileSize;
+		Nz::Boxf chunkAABB(chunkSize, chunkSize, chunkSize);
+		chunkAABB.Translate((Nz::Vector3f(indices) - Nz::Vector3f(0.5f)) * chunkSize);
+		m_aabb.ExtendTo(chunkAABB);
+		OnAABBUpdated(this);
 
 		return *it->second.chunk;
 	}
@@ -591,6 +598,11 @@ namespace tsom
 		}
 	}
 
+	Nz::Boxf Planet::GetAABB() const
+	{
+		return m_aabb;
+	}
+
 	void Planet::RemoveChunk(const ChunkIndices& indices)
 	{
 		auto it = m_chunks.find(indices);
@@ -602,5 +614,28 @@ namespace tsom
 			OnChunkLayerRemove(this, chunk, layerIndex);
 
 		m_chunks.erase(it);
+
+		RecomputeAABB();
+	}
+
+	void Planet::RecomputeAABB()
+	{
+		ChunkIndices maxIndices(0, 0, 0);
+		ChunkIndices minIndices(0, 0, 0);
+
+		for (auto it = m_chunks.begin(); it != m_chunks.end(); ++it)
+		{
+			ChunkIndices chunkIndices = it.key();
+			maxIndices.Maximize(chunkIndices);
+			minIndices.Minimize(chunkIndices);
+		}
+
+		float chunkSize = Planet::ChunkSize * m_tileSize;
+
+		Nz::Vector3f maxExtents = Nz::Vector3f(maxIndices) * chunkSize + Nz::Vector3f(chunkSize * 0.5f);
+		Nz::Vector3f minExtents = Nz::Vector3f(minIndices) * chunkSize - Nz::Vector3f(chunkSize * 0.5f);
+
+		m_aabb = Nz::Boxf::FromExtents(maxExtents, minExtents);
+		OnAABBUpdated(this);
 	}
 }

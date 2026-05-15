@@ -9,4 +9,23 @@ namespace tsom
 		m_isCollisionGenerationEnabled = enable;
 		RebuildAllChunks();
 	}
+
+	inline const Nz::GraphicalMesh* ClientChunkEntities::GetChunkMesh(const ChunkIndices& chunkIndices) const
+	{
+		auto it = m_chunkGraphicsMesh.find(chunkIndices);
+		if (it == m_chunkGraphicsMesh.end())
+			return nullptr;
+
+		return it->second.get();
+	}
+
+	inline const std::shared_ptr<Nz::MaterialInstance>& ClientChunkEntities::GetMaterial() const
+	{
+		return m_chunkMaterial;
+	}
+
+	inline const std::shared_ptr<Nz::VertexDeclaration>& ClientChunkEntities::GetVertexDeclaration() const
+	{
+		return m_chunkVertexDeclaration;
+	}
 }

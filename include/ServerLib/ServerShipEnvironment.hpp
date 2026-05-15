@@ -33,12 +33,11 @@ namespace tsom
 			ServerShipEnvironment(ServerShipEnvironment&&) = delete;
 			~ServerShipEnvironment();
 
-			Nz::Boxf ComputeBoundingBox() const override;
-
 			entt::handle CreateEntity() override;
 
 			void GenerateShip(bool small);
 
+			Nz::Boxf GetBounds() const override;
 			ServerAtmosphere* GetFallbackAtmosphereAtPosition(const Nz::Vector3f& position) override;
 			const GravityController* GetGravityController() const override;
 			inline entt::handle GetExteriorShipEntity() const;

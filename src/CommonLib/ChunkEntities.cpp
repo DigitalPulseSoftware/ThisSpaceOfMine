@@ -19,13 +19,13 @@
 
 namespace tsom
 {
-	ChunkEntities::ChunkEntities(Nz::ApplicationBase& application, Nz::EnttWorld& world, ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary, std::size_t layerIndex) :
-	ChunkEntities(application, world, chunkContainer, blockLibrary, layerIndex, NoInit{})
+	ChunkEntities::ChunkEntities(Nz::ApplicationBase& application, Nz::EnttWorld& world, entt::handle parentEntity, ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary, std::size_t layerIndex) :
+	ChunkEntities(application, world, parentEntity, chunkContainer, blockLibrary, layerIndex, NoInit{})
 	{
 		FillChunks();
 	}
 
-	ChunkEntities::ChunkEntities(Nz::ApplicationBase& application, Nz::EnttWorld& world, ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary, std::size_t layerIndex, NoInit) :
+	ChunkEntities::ChunkEntities(Nz::ApplicationBase& application, Nz::EnttWorld& world, entt::handle parentEntity, ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary, std::size_t layerIndex, NoInit) :
 	m_layerIndex(layerIndex),
 	m_application(application),
 	m_world(world),
@@ -61,6 +61,8 @@ namespace tsom
 			std::lock_guard lock(m_invalidatedChunkMutex);
 			m_invalidatedChunks[chunk->GetIndices()] |= neighborMask;
 		});
+
+		SetParentEntity(parentEntity);
 	}
 
 	ChunkEntities::~ChunkEntities()

@@ -1099,7 +1099,7 @@ namespace tsom
 						debugDrawer->DrawLine(cornerPos[corners[3]], cornerPos[corners[0]], Nz::Color::Green());
 					}
 
-					#if 0
+					#if 1
 					Nz::Vector3f chunkSize = Nz::Vector3f(hitChunk.GetSize()) * hitChunk.GetBlockSize();
 					Nz::Boxf chunkBoundingBox(chunkNode.GetGlobalPosition() - chunkSize * 0.5f, chunkSize);
 					debugDrawer->DrawBox(chunkBoundingBox, Nz::Color::Cyan());

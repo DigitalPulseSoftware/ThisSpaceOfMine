@@ -18,7 +18,7 @@ namespace tsom
 	struct PlanetComponent
 	{
 		std::shared_ptr<Planet> planet;
-		std::array<std::unique_ptr<ChunkEntities>, Constants::MaxChunkLayerCount> planetEntities;
+		std::array<std::shared_ptr<ChunkEntities>, Constants::MaxChunkLayerCount> planetEntities;
 	};
 }
 

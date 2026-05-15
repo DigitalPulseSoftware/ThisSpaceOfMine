@@ -6,6 +6,8 @@
 #include <ClientLib/ClientFramePipeline.hpp>
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Rendering/AtmosphereScatteringPipelinePass.hpp>
+#include <ClientLib/Rendering/PlanetRenderer.hpp>
+#include <ClientLib/Rendering/RenderPlanetLayer.hpp>
 #include <ClientLib/Systems/AnimationSystem.hpp>
 #include <ClientLib/Systems/CameraFollowerSystem.hpp>
 #include <ClientLib/Systems/NetworkMovementInterpolationSystem.hpp>
@@ -298,6 +300,8 @@ namespace tsom
 			return false;
 		}
 
+		Nz::Graphics* graphics = Nz::Graphics::Instance();
+
 		auto& filesystem = app.GetComponent<Nz::FilesystemAppComponent>();
 		filesystem.Mount("CookedAssets", Nz::Utf8Path("CookedAssets"));
 		filesystem.Mount("scripts", scriptPath);
@@ -307,10 +311,12 @@ namespace tsom
 		{
 			filesystem.Mount("CookedAssets/Passes", Nz::Utf8Path("assets/Passes"));
 			filesystem.Mount("CookedAssets/Shaders", Nz::Utf8Path("assets/Shaders"));
-		}
 
-		Nz::Graphics* graphics = Nz::Graphics::Instance();
-		graphics->GetShaderModuleResolver()->RegisterDirectory(Nz::Utf8Path("CookedAssets/Shaders"), true);
+			// TODO: Make a shader module resolver using the virtual filesysem
+			graphics->GetShaderModuleResolver()->RegisterDirectory(Nz::Utf8Path("assets/Shaders"), true);
+		}
+		else
+			graphics->GetShaderModuleResolver()->RegisterDirectory(Nz::Utf8Path("CookedAssets/Shaders"), true);
 
 		m_blockLibrary.emplace(app);
 
@@ -408,7 +414,11 @@ namespace tsom
 		world.AddSystem<ShipSystem>();
 		world.AddSystem<TransformCopySystem>();
 		world.AddSystem<Nz::LifetimeSystem>();
-		world.AddSystem<Nz::RenderSystem>([this](Nz::ElementRendererRegistry& elementRegistry) { return std::make_unique<ClientFramePipeline>(elementRegistry, *m_blockLibrary); });
+		world.AddSystem<Nz::RenderSystem>([this](Nz::ElementRendererRegistry& elementRegistry)
+		{
+			elementRegistry.RegisterElementRenderer<RenderPlanetLayer>(std::make_unique<PlanetRenderer>());
+			return std::make_unique<ClientFramePipeline>(elementRegistry, *m_blockLibrary);
+		});
 
 		Nz::Physics3DSystem::Settings physSettings = Physics::BuildSettings();
 		physSettings.stepSize = Constants::TickDuration;

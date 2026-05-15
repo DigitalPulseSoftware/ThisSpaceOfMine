@@ -40,7 +40,7 @@ namespace tsom
 		protected:
 			virtual void InitializePlanetEntity(entt::handle entity);
 			virtual void InitializeShipEntity(entt::handle entity);
-			virtual std::unique_ptr<ChunkEntities> SetupChunkEntities(Nz::EnttWorld& world, ChunkContainer& chunkContainer, std::size_t layerIndex);
+			virtual std::shared_ptr<ChunkEntities> SetupChunkEntities(Nz::EnttWorld& world, entt::handle parentEntity, ChunkContainer& chunkContainer, std::size_t layerIndex);
 
 			Nz::ApplicationBase& m_app;
 			const BlockLibrary& m_blockLibrary;

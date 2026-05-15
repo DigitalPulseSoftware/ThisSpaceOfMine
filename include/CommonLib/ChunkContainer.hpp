@@ -9,6 +9,7 @@
 
 #include <CommonLib/Export.hpp>
 #include <CommonLib/Chunk.hpp>
+#include <Nazara/Math/Box.hpp>
 #include <Nazara/Math/Vector3.hpp>
 #include <NazaraUtils/FunctionRef.hpp>
 #include <NazaraUtils/Signal.hpp>
@@ -28,6 +29,7 @@ namespace tsom
 			virtual void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, Chunk& chunk)> callback) = 0;
 			virtual void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, const Chunk& chunk)> callback) const = 0;
 
+			virtual Nz::Boxf GetAABB() const = 0;
 			inline BlockIndices GetBlockIndices(const ChunkIndices& chunkIndices, const Nz::Vector3ui& indices) const;
 			virtual Nz::Vector3f GetCenter() const = 0;
 			virtual Chunk* GetChunk(const ChunkIndices& chunkIndices) = 0;
@@ -45,6 +47,7 @@ namespace tsom
 
 			static constexpr unsigned int ChunkSize = 32;
 
+			NazaraSignal(OnAABBUpdated, ChunkContainer* /*chunkContainer*/);
 			NazaraSignal(OnChunkLayerAdded, ChunkContainer* /*planet*/, Chunk* /*chunk*/, std::size_t /*layerIndex*/);
 			NazaraSignal(OnChunkLayerRemove, ChunkContainer* /*planet*/, Chunk* /*chunk*/, std::size_t /*layerIndex*/);
 			NazaraSignal(OnChunkAdded, ChunkContainer* /*planet*/, Chunk* /*chunk*/);

@@ -166,6 +166,8 @@ return function (chunk, seed, chunkDims)
                     bigCaveMinValue = bigCaveMinValue + distToCenter * 0.1
                 end
 
+                smallCavePresence = 0.0
+
                 if math.abs(smallCavePresence) > smallCaveMinValue or math.abs(bigCavePresence) > bigCaveMinValue then
                     local blockIndex = z * chunksize * chunksize + y * chunksize + x + 1
                     if content[blockIndex] == waterBlock then

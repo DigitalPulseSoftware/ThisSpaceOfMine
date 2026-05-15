@@ -189,7 +189,7 @@ namespace tsom
 		switchTriggerEntity.emplace<NetworkedComponent>();
 
 		auto& enterTrigger = switchTriggerEntity.emplace<EnvironmentEnterTriggerComponent>();
-		enterTrigger.aabb = destinationEnvironment.ComputeBoundingBox().ScaleAroundCenter(2.f);
+		enterTrigger.aabb = destinationEnvironment.GetBounds().ScaleAroundCenter(2.f);
 		enterTrigger.targetEnvironment = &destinationEnvironment;
 		enterTrigger.updateRoot = true;
 	}

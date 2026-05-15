@@ -50,6 +50,7 @@ namespace tsom
 			void GenerateChunks(Nz::TaskScheduler& taskScheduler, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, std::string_view scriptName);
 			void GeneratePlatform(const BlockLibrary& blockLibrary, Direction upDirection, const BlockIndices& platformCenter);
 
+			Nz::Boxf GetAABB() const override;
 			inline Nz::Vector3f GetCenter() const override;
 			inline Chunk* GetChunk(const ChunkIndices& chunkIndices) override;
 			inline const Chunk* GetChunk(const ChunkIndices& chunkIndices) const override;
@@ -67,6 +68,8 @@ namespace tsom
 			static constexpr unsigned int ChunkSize = 32;
 
 		protected:
+			void RecomputeAABB();
+
 			struct ChunkData
 			{
 				std::shared_ptr<Chunk> chunk;
@@ -95,6 +98,7 @@ namespace tsom
 			tsl::hopscotch_map<ChunkIndices, ChunkData> m_chunks;
 			Nz::ThreadLocalData<ChunkGenerator> m_chunkGenerators;
 			Nz::ApplicationBase& m_app;
+			Nz::Boxf m_aabb;
 			float m_cornerRadius;
 			float m_gravity;
 	};

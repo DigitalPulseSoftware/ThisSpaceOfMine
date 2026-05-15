@@ -42,8 +42,7 @@ namespace tsom
 					if (!m_blockLibrary.IsValidLayer(layerIndex))
 						continue;
 
-					planetComponent.planetEntities[layerIndex] = SetupChunkEntities(*world, *planetComponent.planet, layerIndex);
-					planetComponent.planetEntities[layerIndex]->SetParentEntity(entity);
+					planetComponent.planetEntities[layerIndex] = SetupChunkEntities(*world, entity, *planetComponent.planet, layerIndex);
 				}
 
 				InitializePlanetEntity(entity);
@@ -72,8 +71,7 @@ namespace tsom
 					if (!m_blockLibrary.IsValidLayer(layerIndex))
 						continue;
 
-					shipComponent.shipEntities[layerIndex] = SetupChunkEntities(*world, *shipComponent.ship, layerIndex);
-					shipComponent.shipEntities[layerIndex]->SetParentEntity(entity);
+					shipComponent.shipEntities[layerIndex] = SetupChunkEntities(*world, entity, *shipComponent.ship, layerIndex);
 				}
 
 				InitializeShipEntity(entity);
@@ -90,8 +88,8 @@ namespace tsom
 	{
 	}
 
-	std::unique_ptr<ChunkEntities> ChunkClassLibrary::SetupChunkEntities(Nz::EnttWorld& world, ChunkContainer& chunkContainer, std::size_t layerIndex)
+	std::shared_ptr<ChunkEntities> ChunkClassLibrary::SetupChunkEntities(Nz::EnttWorld& world, entt::handle parentEntity, ChunkContainer& chunkContainer, std::size_t layerIndex)
 	{
-		return std::make_unique<ChunkEntities>(m_app, world, chunkContainer, m_blockLibrary, layerIndex);
+		return std::make_shared<ChunkEntities>(m_app, world, parentEntity, chunkContainer, m_blockLibrary, layerIndex);
 	}
 }

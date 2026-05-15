@@ -31,12 +31,15 @@ namespace tsom
 	class TSOM_COMMONLIB_API ChunkEntities
 	{
 		public:
-			ChunkEntities(Nz::ApplicationBase& app, Nz::EnttWorld& world, ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary, std::size_t layerIndex);
+			ChunkEntities(Nz::ApplicationBase& app, Nz::EnttWorld& world, entt::handle parentEntity, ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary, std::size_t layerIndex);
 			ChunkEntities(const ChunkEntities&) = delete;
 			ChunkEntities(ChunkEntities&&) = delete;
 			~ChunkEntities();
 
 			void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, entt::handle chunkEntity)> callback);
+
+			inline const ChunkContainer& GetChunkContainer() const;
+			inline std::size_t GetLayerIndex() const;
 
 			void SetParentEntity(entt::handle entity);
 
@@ -49,7 +52,7 @@ namespace tsom
 			struct NoInit {};
 			struct UpdateJob;
 
-			ChunkEntities(Nz::ApplicationBase& app, Nz::EnttWorld& world, ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary, std::size_t layerIndex, NoInit);
+			ChunkEntities(Nz::ApplicationBase& app, Nz::EnttWorld& world, entt::handle parentEntity, ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary, std::size_t layerIndex, NoInit);
 
 			void CreateChunkEntity(const ChunkIndices& chunkIndices);
 			void DestroyChunkEntity(const ChunkIndices& chunkIndices);

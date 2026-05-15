@@ -42,6 +42,7 @@ namespace tsom
 
 			void Generate(const BlockLibrary& blockLibrary, bool small);
 
+			inline Nz::Boxf GetAABB() const override;
 			inline Nz::Vector3f GetCenter() const override;
 			inline FlatChunk* GetChunk(const ChunkIndices& chunkIndices) override;
 			inline const FlatChunk* GetChunk(const ChunkIndices& chunkIndices) const override;

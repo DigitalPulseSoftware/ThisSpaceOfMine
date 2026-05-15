@@ -188,8 +188,7 @@ namespace tsom
 			if (!stateData.blockLibrary->IsValidLayer(layerIndex))
 				continue;
 
-			m_planetEntities[layerIndex] = std::make_unique<ClientChunkEntities>(*stateData.app, *stateData.config, *stateData.world, *m_planet, *stateData.blockLibrary, layerIndex);
-			m_planetEntities[layerIndex]->SetParentEntity(m_planetParentEntity);
+			m_planetEntities[layerIndex] = std::make_unique<ClientChunkEntities>(*stateData.app, *stateData.config, *stateData.world, m_planetParentEntity, *m_planet, *stateData.blockLibrary, layerIndex);
 			m_planetEntities[layerIndex]->EnableCollisionGeneration(false);
 		}
 

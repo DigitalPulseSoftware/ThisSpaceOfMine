@@ -32,13 +32,12 @@ namespace tsom
 			ServerPlanetEnvironment(ServerPlanetEnvironment&&) = delete;
 			~ServerPlanetEnvironment();
 
-			Nz::Boxf ComputeBoundingBox() const override;
-
 			entt::handle CreateEntity() override;
 
 			void ForEachAtmosphere(Nz::FunctionRef<void(ServerAtmosphere*)> callback) override;
 			void ForEachAtmosphere(Nz::FunctionRef<void(const ServerAtmosphere*)> callback) const override;
 
+			Nz::Boxf GetBounds() const override;
 			inline std::optional<Nz::UInt32> GetDatabaseId() const;
 			const GravityController* GetGravityController() const override;
 			Planet& GetPlanet();

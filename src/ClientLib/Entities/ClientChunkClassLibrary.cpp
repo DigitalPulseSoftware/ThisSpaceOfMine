@@ -6,10 +6,13 @@
 #include <ClientLib/ClientAssetLibraryAppComponent.hpp>
 #include <ClientLib/ClientBlockLibrary.hpp>
 #include <ClientLib/ClientChunkEntities.hpp>
+#include <ClientLib/RenderConstants.hpp>
+#include <ClientLib/Rendering/PlanetRenderable.hpp>
 #include <ClientLib/Components/ChunkNetworkMapComponent.hpp>
 #include <CommonLib/AtmosphereScattering.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
+#include <Nazara/Graphics/Components/GraphicsComponent.hpp>
 
 namespace tsom
 {
@@ -35,8 +38,21 @@ namespace tsom
 		entity.emplace<ChunkNetworkMapComponent>();
 	}
 
-	std::unique_ptr<ChunkEntities> ClientChunkClassLibrary::SetupChunkEntities(Nz::EnttWorld& world, ChunkContainer& chunkContainer, std::size_t layerIndex)
+	std::shared_ptr<ChunkEntities> ClientChunkClassLibrary::SetupChunkEntities(Nz::EnttWorld& world, entt::handle parentEntity, ChunkContainer& chunkContainer, std::size_t layerIndex)
 	{
-		return std::make_unique<ClientChunkEntities>(m_app, m_config, world, chunkContainer, Nz::SafeCast<const ClientBlockLibrary&>(m_blockLibrary), layerIndex);
+		const ClientBlockLibrary& blockLibrary = Nz::SafeCast<const ClientBlockLibrary&>(m_blockLibrary);
+
+		auto chunkEntities = std::make_shared<ClientChunkEntities>(m_app, m_config, world, parentEntity, chunkContainer, blockLibrary, layerIndex);
+
+		auto& gfxComponent = parentEntity.get_or_emplace<Nz::GraphicsComponent>();
+		if (!gfxComponent.GetRenderables().front().renderable)
+		{
+			gfxComponent.AttachRenderable(std::make_shared<PlanetRenderable>(blockLibrary, chunkContainer), Constants::RenderMask3D);
+		}
+
+		PlanetRenderable& planetRenderable = Nz::SafeCast<PlanetRenderable&>(*gfxComponent.GetRenderableEntry(0).renderable);
+		planetRenderable.RegisterLayer(chunkEntities);
+
+		return chunkEntities;
 	}
 }

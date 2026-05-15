@@ -16,6 +16,7 @@ namespace Nz
 {
 	class ApplicationBase;
 	class EnttWorld;
+	class GraphicalMesh;
 	class MaterialInstance;
 	class Mesh;
 	class TaskScheduler;
@@ -36,12 +37,17 @@ namespace tsom
 	class TSOM_CLIENTLIB_API ClientChunkEntities final : public ChunkEntities
 	{
 		public:
-			ClientChunkEntities(Nz::ApplicationBase& app, ConfigFile& config, Nz::EnttWorld& world, ChunkContainer& chunkContainer, const ClientBlockLibrary& blockLibrary, std::size_t layerIndex);
+			ClientChunkEntities(Nz::ApplicationBase& app, ConfigFile& config, Nz::EnttWorld& world, entt::handle parentEntity, ChunkContainer& chunkContainer, const ClientBlockLibrary& blockLibrary, std::size_t layerIndex);
 			ClientChunkEntities(const ClientChunkEntities&) = delete;
 			ClientChunkEntities(ClientChunkEntities&&) = delete;
 			~ClientChunkEntities() = default;
 
 			inline void EnableCollisionGeneration(bool enable);
+
+			inline const Nz::GraphicalMesh* GetChunkMesh(const ChunkIndices& chunkIndices) const;
+
+			inline const std::shared_ptr<Nz::MaterialInstance>& GetMaterial() const;
+			inline const std::shared_ptr<Nz::VertexDeclaration>& GetVertexDeclaration() const;
 
 			ClientChunkEntities& operator=(const ClientChunkEntities&) = delete;
 			ClientChunkEntities& operator=(ClientChunkEntities&&) = delete;
@@ -59,6 +65,7 @@ namespace tsom
 
 			std::shared_ptr<Nz::MaterialInstance> m_chunkMaterial;
 			std::shared_ptr<Nz::VertexDeclaration> m_chunkVertexDeclaration;
+			tsl::hopscotch_map<ChunkIndices, std::shared_ptr<Nz::GraphicalMesh>> m_chunkGraphicsMesh;
 			Nz::Signal<double>::ConnectionGuard m_onChunkNormalSmoothAngleUpdatedSlot;
 			ConfigFile& m_configFile;
 			bool m_isCollisionGenerationEnabled;

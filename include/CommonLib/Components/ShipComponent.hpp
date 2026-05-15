@@ -18,7 +18,7 @@ namespace tsom
 	struct ShipComponent
 	{
 		std::unique_ptr<Ship> ship;
-		std::array<std::unique_ptr<ChunkEntities>, Constants::MaxChunkLayerCount> shipEntities;
+		std::array<std::shared_ptr<ChunkEntities>, Constants::MaxChunkLayerCount> shipEntities;
 	};
 }
 

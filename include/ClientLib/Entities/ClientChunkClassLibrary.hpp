@@ -23,7 +23,7 @@ namespace tsom
 		private:
 			void InitializePlanetEntity(entt::handle entity) override;
 			void InitializeShipEntity(entt::handle entity) override;
-			std::unique_ptr<ChunkEntities> SetupChunkEntities(Nz::EnttWorld& world, ChunkContainer& chunkContainer, std::size_t layerIndex) override;
+			std::shared_ptr<ChunkEntities> SetupChunkEntities(Nz::EnttWorld& world, entt::handle parentEntity, ChunkContainer& chunkContainer, std::size_t layerIndex) override;
 
 			ConfigFile& m_config;
 	};

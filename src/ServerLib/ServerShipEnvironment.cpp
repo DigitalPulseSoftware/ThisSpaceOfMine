@@ -153,7 +153,19 @@ namespace tsom
 		m_world->GetRegistry().ctx().erase<ServerShipEnvironment*>();
 	}
 
-	Nz::Boxf ServerShipEnvironment::ComputeBoundingBox() const
+	entt::handle ServerShipEnvironment::CreateEntity()
+	{
+		*m_shouldSave = true; //< TODO: Have a system tracking entities changes to know when this is interesting
+		return ServerEnvironment::CreateEntity();
+	}
+
+	void ServerShipEnvironment::GenerateShip(bool small)
+	{
+		auto& blockLibrary = m_serverInstance.GetBlockLibrary();
+		GetShip().Generate(blockLibrary, small);
+	}
+	
+	Nz::Boxf ServerShipEnvironment::GetBounds() const
 	{
 		Nz::Boxf boundingBox = Nz::Boxf::Invalid();
 		auto& ship = *m_shipEntity.get<ShipComponent>().ship;
@@ -169,18 +181,6 @@ namespace tsom
 		});
 
 		return boundingBox;
-	}
-
-	entt::handle ServerShipEnvironment::CreateEntity()
-	{
-		*m_shouldSave = true; //< TODO: Have a system tracking entities changes to know when this is interesting
-		return ServerEnvironment::CreateEntity();
-	}
-
-	void ServerShipEnvironment::GenerateShip(bool small)
-	{
-		auto& blockLibrary = m_serverInstance.GetBlockLibrary();
-		GetShip().Generate(blockLibrary, small);
 	}
 
 	ServerAtmosphere* ServerShipEnvironment::GetFallbackAtmosphereAtPosition(const Nz::Vector3f& position)

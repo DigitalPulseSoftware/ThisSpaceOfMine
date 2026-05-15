@@ -180,7 +180,7 @@ namespace tsom
 				return;
 			}
 
-			Nz::Boxf planetAABB = env->ComputeBoundingBox();
+			Nz::Boxf planetAABB = env->GetBounds();
 
 			Nz::Vector3f planetCenter = planetAABB.GetCenter();
 			Nz::Vector3f spawnPos = planetCenter + (planetAABB.GetRadius() + Constants::PlayerColliderHeight * 2.f) * Nz::Vector3f::Up();

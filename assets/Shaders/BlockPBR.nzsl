@@ -1,7 +1,6 @@
 [nzsl_version("1.1")]
 module TSOM.BlockPBR;
 
-import InstanceData from Engine.InstanceData;
 import LightData from Lighting.LightData;
 import SkeletalData from Engine.SkeletalData;
 import ViewerData from Engine.ViewerData;
@@ -80,12 +79,19 @@ external MaterialData
 	[tag("BlockTexture4")] blockTexture4: sampler2D_array[f32]
 }
 
+[layout(std140)]
+struct InstanceData
+{
+	worldMatrix: mat4[f32]
+}
+
 [tag("Engine")]
 [auto_binding]
 external
 {
+	[tag("InstanceData")] instanceData: push_constant[InstanceData],
+
 	[tag("TextureOverlay")] TextureOverlay: sampler2D[f32],
-	[tag("InstanceData")] instanceData: uniform[InstanceData],
 	[tag("ViewerData")] viewerData: uniform[ViewerData],
 	[tag("SkeletalData")] skeletalData: uniform[SkeletalData],
 	[tag("LightData")] lightData: uniform[LightData],

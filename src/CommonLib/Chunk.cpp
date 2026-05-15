@@ -8,11 +8,13 @@
 #include <CommonLib/ChunkLock.hpp>
 #include <CommonLib/InternalConstants.hpp>
 #include <Nazara/Core/ByteStream.hpp>
+#include <Nazara/Core/Clock.hpp>
 #include <Nazara/Math/Box.hpp>
 #include <NazaraUtils/CallOnExit.hpp>
 #include <NazaraUtils/EnumArray.hpp>
 #include <cassert>
 #include <numeric>
+#include <spdlog/spdlog.h>
 
 namespace tsom
 {

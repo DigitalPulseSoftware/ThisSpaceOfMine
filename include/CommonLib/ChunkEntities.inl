@@ -4,6 +4,16 @@
 
 namespace tsom
 {
+	inline const ChunkContainer& ChunkEntities::GetChunkContainer() const
+	{
+		return m_chunkContainer;
+	}
+
+	inline std::size_t ChunkEntities::GetLayerIndex() const
+	{
+		return m_layerIndex;
+	}
+
 	inline void ChunkEntities::UpdateChunkEntity(const ChunkIndices& chunkIndices, NeighborChunkMask neighborMask)
 	{
 		assert(m_chunkEntities.contains(chunkIndices));

@@ -6,6 +6,13 @@
 
 namespace tsom
 {
+	inline Nz::Boxf Ship::GetAABB() const
+	{
+		//TODO: Handle multiple chunks
+		float chunkSize = ChunkSize * m_tileSize;
+		return Nz::Boxf(Nz::Vector3f(chunkSize * -0.5f), Nz::Vector3f(chunkSize));
+	}
+
 	inline Nz::Vector3f Ship::GetCenter() const
 	{
 		return Nz::Vector3f::Zero();

@@ -162,12 +162,6 @@ namespace tsom
 		m_world->GetRegistry().ctx().erase<ServerPlanetEnvironment*>();
 	}
 
-	Nz::Boxf ServerPlanetEnvironment::ComputeBoundingBox() const
-	{
-		float halfChunkSize = Planet::ChunkSize * 0.5f * GetPlanet().GetTileSize();
-		return Nz::Boxf::FromExtents(Nz::Vector3f(m_chunkCount) * -halfChunkSize, Nz::Vector3f(m_chunkCount) * halfChunkSize);
-	}
-
 	entt::handle ServerPlanetEnvironment::CreateEntity()
 	{
 		return ServerEnvironment::CreateEntity();
@@ -185,6 +179,14 @@ namespace tsom
 		ServerEnvironment::ForEachAtmosphere(callback);
 
 		callback(&m_atmosphere);
+	}
+
+	Nz::Boxf ServerPlanetEnvironment::GetBounds() const
+	{
+		float chunkSize = Planet::ChunkSize * GetPlanet().GetTileSize();
+		Nz::Vector3f extents = Nz::Vector3f(m_chunkCount) * chunkSize;
+
+		return Nz::Boxf(extents * -0.5f, extents);
 	}
 
 	const GravityController* ServerPlanetEnvironment::GetGravityController() const
