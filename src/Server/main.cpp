@@ -5,6 +5,7 @@
 #include <CommonLib/HealthCheckerAppComponent.hpp>
 #include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/UpdaterAppComponent.hpp>
+#include <CommonLib/Utility/JsonSerialization.hpp>
 #include <Server/ServerConfigAppComponent.hpp>
 #include <Server/ServerConfigs.hpp>
 #include <Server/ServerUpdateAppComponent.hpp>
@@ -98,7 +99,17 @@ int ServerMain(int argc, char* argv[])
 				{ "BlockSize", 0.5f },
 				{ "CornerRadius", 16.f },
 				{ "Gravity", 9.81f },
-				{ "Seed", 42 }
+				{ "Seed", 42 },
+				{ "Atmosphere", nlohmann::json {
+					{ "Shape", "RoundCube" },
+					{ "ShapeSettings", Nz::Vector4f(60.f, 60.f, 60.f, 16.f) },
+					{ "MaxHeight", 180.f },
+					{ "ScatteringStrength", 0.5f },
+					{ "WaveLengths", Nz::Vector3f(700.0f, 530.0f, 440.0f) },
+					{ "MieScattering", 0.9f },
+					{ "MieHeight", 5.0f },
+					{ "DensityFalloff", 20.0f }
+				} }
 			}
 		});
 	}

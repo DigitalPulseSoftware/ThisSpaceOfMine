@@ -135,7 +135,7 @@ namespace tsom
 			sol::meta_function::construct, sol::factories([this](std::optional<Nz::UInt32> databaseId, std::string generatorName, const Nz::Vector3ui& chunkCount, const std::string& type)
 			{
 				// TODO: Build properties from Lua table
-				return std::make_unique<ServerPlanetEnvironment>(m_serverInstance, databaseId, std::move(generatorName), chunkCount, type, std::unordered_map<std::string, EntityProperty>{});
+				return std::make_unique<ServerPlanetEnvironment>(m_serverInstance, databaseId, std::move(generatorName), chunkCount, type, std::vector<EntityProperty>{});
 			}),
 			"GetDatabaseId", LuaFunction(&ServerPlanetEnvironment::GetDatabaseId)
 		);

@@ -112,6 +112,7 @@ namespace tsom
 			};
 
 		private:
+			void LoadPlanetFromDatabase(Database::Planet&& planetData);
 			void LoadScripts(bool isReloading = false);
 			void HandleNetworkEvents();
 			void OnNetworkTick();

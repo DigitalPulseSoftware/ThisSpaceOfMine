@@ -11,6 +11,7 @@
 #include <CommonLib/EntityClass.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
+#include <spdlog/spdlog.h>
 
 namespace tsom
 {
@@ -28,27 +29,27 @@ namespace tsom
 
 		auto& entityInstance = entity.get<ClassInstanceComponent>();
 
-		auto& atmosphereScattering = entity.emplace<AtmosphereScattering>();
-
-		if (entityInstance.GetClass()->GetName() == "round_cube_planet")
+		const std::string& atmosphereShape = entityInstance.GetProperty<EntityPropertyType::String>("Atmosphere.Shape");
+		if (!atmosphereShape.empty())
 		{
-			Nz::Vector4f planetSettings;
+			auto& atmosphereScattering = entity.emplace<AtmosphereScattering>();
+			atmosphereScattering.shapeSettings = entityInstance.GetProperty<EntityPropertyType::Float4>("Atmosphere.ShapeSettings");
+			atmosphereScattering.atmosphereMaxHeight = entityInstance.GetProperty<EntityPropertyType::Float>("Atmosphere.MaxHeight");
+			atmosphereScattering.scatteringStrength = entityInstance.GetProperty<EntityPropertyType::Float>("Atmosphere.ScatteringStrength");
+			atmosphereScattering.waveLengths = entityInstance.GetProperty<EntityPropertyType::Float3>("Atmosphere.WaveLengths");
+			atmosphereScattering.mieHeight = entityInstance.GetProperty<EntityPropertyType::Float>("Atmosphere.MieHeight");
+			atmosphereScattering.mieScattering = entityInstance.GetProperty<EntityPropertyType::Float>("Atmosphere.MieScattering");
+			atmosphereScattering.densityFalloff = entityInstance.GetProperty<EntityPropertyType::Float>("Atmosphere.DensityFalloff");
 
-			Nz::Vector3f planetDims = entityInstance.GetProperty<EntityPropertyType::FloatSize3D>("AtmospherePlanetDims");
-			float planetCornerRadius = entityInstance.GetProperty<EntityPropertyType::Float>("CornerRadius");
-
-			atmosphereScattering.type = AtmosphereScatteringType::RoundCube;
-			atmosphereScattering.planetSettings = Nz::Vector4f(planetDims, planetCornerRadius);
-		}
-		else if (entityInstance.GetClass()->GetName() == "torus_planet")
-		{
-			Nz::Vector4f planetSettings;
-
-			float planetRadius = entityInstance.GetProperty<EntityPropertyType::Float>("Radius");
-			float planetThickness = entityInstance.GetProperty<EntityPropertyType::Float>("Thickness");
-
-			atmosphereScattering.type = AtmosphereScatteringType::Torus;
-			atmosphereScattering.planetSettings = Nz::Vector4f(planetRadius, planetThickness, 0.0f, 0.0f);
+			if (atmosphereShape == "RoundCube")
+				atmosphereScattering.shape = AtmosphereScatteringShape::RoundCube;
+			else if (atmosphereShape == "Torus")
+				atmosphereScattering.shape = AtmosphereScatteringShape::Torus;
+			else
+			{
+				spdlog::error("invalid atmosphere shape {}", atmosphereShape);
+				entity.erase<AtmosphereScattering>();
+			}
 		}
 
 		return planetComponent;

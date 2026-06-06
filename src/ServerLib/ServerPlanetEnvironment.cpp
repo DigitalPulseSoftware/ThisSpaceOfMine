@@ -68,11 +68,10 @@ namespace tsom
 {
 	constexpr unsigned int s_chunkVersion = 1;
 
-	ServerPlanetEnvironment::ServerPlanetEnvironment(ServerInstance& serverInstance, std::optional<Nz::UInt32> databaseId, std::string generatorName, const Nz::Vector3ui& chunkCount, std::string_view planetType, std::unordered_map<std::string, EntityProperty> properties) :
+	ServerPlanetEnvironment::ServerPlanetEnvironment(ServerInstance& serverInstance, std::optional<Nz::UInt32> databaseId, std::string generatorName, const Nz::Vector3ui& chunkCount, std::string_view planetType, std::vector<EntityProperty>&& properties) :
 	ServerEnvironment(serverInstance, ServerEnvironmentType::Planet, true),
 	m_databaseId(databaseId),
 	m_generatorName(std::move(generatorName)),
-	m_planetProperties(std::move(properties)),
 	m_chunkCount(chunkCount)
 	{
 		m_world->GetRegistry().ctx().emplace<ServerPlanetEnvironment*>(this);
@@ -87,21 +86,14 @@ namespace tsom
 		std::shared_ptr<const EntityClass> planetClass = serverInstance.GetEntityRegistry().FindClass(planetType);
 		NazaraAssert(planetClass);
 
-		auto& entityInstance = m_planetEntity.emplace<ClassInstanceComponent>(planetClass);
-
-		for (auto&& [key, value] : m_planetProperties)
+		// Build property map for Chunk generation
+		for (Nz::UInt32 propertyIndex = 0; propertyIndex < properties.size(); ++propertyIndex)
 		{
-			Nz::UInt32 propertyIndex = planetClass->FindProperty(key);
-			if (propertyIndex == EntityClass::InvalidIndex)
-			{
-				spdlog::warn("Planet property \"{}\" doesn't exist for planet class \"{}\"", key, planetType);
-				continue;
-			}
-
 			const auto& property = planetClass->GetProperty(propertyIndex);
-			entityInstance.UpdateProperty(propertyIndex, EntityProperty(value));
+			m_planetProperties.emplace(property.name, properties[propertyIndex]);
 		}
 
+		auto& entityInstance = m_planetEntity.emplace<ClassInstanceComponent>(planetClass, std::move(properties));
 		planetClass->InitAndActivateEntity(m_planetEntity);
 
 		auto& planetComponent = m_planetEntity.get<PlanetComponent>();

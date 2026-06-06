@@ -9,6 +9,7 @@
 
 #include <ServerLib/Export.hpp>
 #include <CommonLib/Chunk.hpp>
+#include <CommonLib/EntityProperties.hpp>
 #include <ServerLib/ServerAtmosphere.hpp>
 #include <ServerLib/ServerEnvironment.hpp>
 #include <nlohmann/json_fwd.hpp>
@@ -28,7 +29,7 @@ namespace tsom
 	class TSOM_SERVERLIB_API ServerPlanetEnvironment final : public ServerEnvironment
 	{
 		public:
-			ServerPlanetEnvironment(ServerInstance& serverInstance, std::optional<Nz::UInt32> databaseId, std::string generatorName, const Nz::Vector3ui& chunkCount, std::string_view planetType, std::unordered_map<std::string, EntityProperty> properties);
+			ServerPlanetEnvironment(ServerInstance& serverInstance, std::optional<Nz::UInt32> databaseId, std::string generatorName, const Nz::Vector3ui& chunkCount, std::string_view planetType, std::vector<EntityProperty>&& properties);
 			ServerPlanetEnvironment(const ServerPlanetEnvironment&) = delete;
 			ServerPlanetEnvironment(ServerPlanetEnvironment&&) = delete;
 			~ServerPlanetEnvironment();

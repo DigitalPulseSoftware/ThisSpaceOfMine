@@ -304,26 +304,6 @@ namespace tsom
 		Chunk* chunk = m_planet->GetChunk({0, 0, 0});
 		Nz::Vector3f chunkOffset = m_planet->GetChunkOffset({ 0, 0, 0 });
 
-		/*Nz::DebugDrawer* debugDrawer = m_cameraEntity.get<Nz::CameraComponent>().AccessDebugDrawer();
-
-		for (unsigned int z = 0; z < 7; ++z)
-		{
-			for (unsigned int y = 0; y < 7; ++y)
-			{
-				for (unsigned int x = 0; x < 7; ++x)
-				{
-					BlockIndex blockIndex = chunk->GetBlockContent({ x, y, z });
-					auto corners = chunk->ComputeBlockCorners({ x, y, z });
-					Nz::Vector3f blockCenter = std::accumulate(corners.begin(), corners.end(), Nz::Vector3f::Zero()) / corners.size();
-
-					if (x == 0 && y == 0 && z == 0)
-						debugDrawer->DrawSphere(blockCenter, 0.03f, Nz::Color::Yellow());
-					else
-						debugDrawer->DrawSphere(blockCenter, 0.03f, blockIndex == EmptyBlockIndex ? Nz::Color::Red() : Nz::Color::Blue());
-				}
-			}
-		}*/
-
 #ifdef TSOM_DEV_TOOLS
 		if (stateData.imgui)
 		{
@@ -420,22 +400,41 @@ namespace tsom
 				if (ImGui::DragFloat3("Planet dimensions", planetDimensions, 1.0f, 0.0f, 200.f))
 					atmosphereScattering.planetDimensions = Nz::Vector3f(planetDimensions[0], planetDimensions[1], planetDimensions[2]);*/
 
+				const char* items[] = {"Round cube", "Torus"};
+				int selectedItem = static_cast<int>(atmosphereScattering.shape);
+				if (ImGui::Combo("Atmosphere type", &selectedItem, items, IM_ARRAYSIZE(items)))
+				{
+					atmosphereScattering.shape = static_cast<AtmosphereScatteringShape>(selectedItem);
+				}
+
 				ImGui::DragFloat("Atmosphere max height", &atmosphereScattering.atmosphereMaxHeight, 1.0f, 0.0f, 1000.f);
-				//ImGui::DragFloat("Planet corner radius", &atmosphereScattering.planetCornerRadius, 1.0f, 0.0f, 128.f);
+
+				switch (atmosphereScattering.shape)
+				{
+					case AtmosphereScatteringShape::RoundCube:
+					{
+						ImGui::DragFloat3("Planet size", &atmosphereScattering.shapeSettings.x, 1.0f, 0.0f, 1000.f);
+						ImGui::DragFloat("Planet corner radius", &atmosphereScattering.shapeSettings.w, 1.0f, 0.0f, 128.f);
+						break;
+					}
+
+					case AtmosphereScatteringShape::Torus:
+					{
+						ImGui::DragFloat("Torus radius", &atmosphereScattering.shapeSettings.x, 1.0f, 0.0f, Nz::MaxValue());
+						ImGui::DragFloat("Torus thickness", &atmosphereScattering.shapeSettings.y, 1.0f, 0.0f, Nz::MaxValue());
+						break;
+					}
+				}
 
 				ImGui::Separator();
 
 				ImGui::Text("Scattering coefficients");
 
+				ImGui::DragFloat("Scattering strength", &atmosphereScattering.scatteringStrength, 0.001f, 0.f, 10.f);
+				ImGui::DragFloat3("Wavelengths", &atmosphereScattering.waveLengths.x, 0.1f, 0.0f, Nz::MaxValue());
 				ImGui::DragFloat("Mie scattering", &atmosphereScattering.mieScattering, 0.001f, 0.f, 1.f);
-
-				ImGui::Separator();
-
-				ImGui::Text("Scattering heights");
-
-				ImGui::DragFloat("Rayleigh height", &atmosphereScattering.rayleighHeight, 0.1f, 0.f, Nz::MaxValue());
 				ImGui::DragFloat("Mie height", &atmosphereScattering.mieHeight, 0.1f, 0.f, Nz::MaxValue());
-				ImGui::DragFloat("Absorption falloff", &atmosphereScattering.absorptionFalloff, 0.1f, 0.f, Nz::MaxValue());
+				ImGui::DragFloat("Absorption falloff", &atmosphereScattering.densityFalloff, 0.1f, 0.f, Nz::MaxValue());
 
 				ImGui::Separator();
 

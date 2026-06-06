@@ -24,10 +24,10 @@ namespace tsom
 			std::size_t sunDirOffset;
 			std::size_t planetPositionOffset;
 			std::size_t planetSettingsOffset;
-			std::size_t atmosphereMaxHeightOffset;
 			std::size_t atmosphereTypeOffset;
+			std::size_t atmosphereMaxHeightOffset;
+			std::size_t scatteringCoefficientsOffset;
 			std::size_t mieScatteringDirectionOffset;
-			std::size_t rayleighHeightOffset;
 			std::size_t mieHeightOffset;
 			std::size_t absorptionFalloffOffset;
 			std::size_t primaryStepsOffset;
@@ -41,10 +41,10 @@ namespace tsom
 				atmosphereScatteringData.sunDirOffset = atmosphereScatteringData.fieldOffsets.AddField(nzsl::StructFieldType::Float3);
 				atmosphereScatteringData.planetPositionOffset = atmosphereScatteringData.fieldOffsets.AddField(nzsl::StructFieldType::Float3);
 				atmosphereScatteringData.planetSettingsOffset = atmosphereScatteringData.fieldOffsets.AddField(nzsl::StructFieldType::Float4);
-				atmosphereScatteringData.atmosphereMaxHeightOffset = atmosphereScatteringData.fieldOffsets.AddField(nzsl::StructFieldType::Float1);
 				atmosphereScatteringData.atmosphereTypeOffset = atmosphereScatteringData.fieldOffsets.AddField(nzsl::StructFieldType::UInt1);
+				atmosphereScatteringData.atmosphereMaxHeightOffset = atmosphereScatteringData.fieldOffsets.AddField(nzsl::StructFieldType::Float1);
+				atmosphereScatteringData.scatteringCoefficientsOffset = atmosphereScatteringData.fieldOffsets.AddField(nzsl::StructFieldType::Float3);
 				atmosphereScatteringData.mieScatteringDirectionOffset = atmosphereScatteringData.fieldOffsets.AddField(nzsl::StructFieldType::Float1);
-				atmosphereScatteringData.rayleighHeightOffset = atmosphereScatteringData.fieldOffsets.AddField(nzsl::StructFieldType::Float1);
 				atmosphereScatteringData.mieHeightOffset = atmosphereScatteringData.fieldOffsets.AddField(nzsl::StructFieldType::Float1);
 				atmosphereScatteringData.absorptionFalloffOffset = atmosphereScatteringData.fieldOffsets.AddField(nzsl::StructFieldType::Float1);
 				atmosphereScatteringData.primaryStepsOffset = atmosphereScatteringData.fieldOffsets.AddField(nzsl::StructFieldType::Int1);
@@ -187,15 +187,17 @@ namespace tsom
 			Nz::AccessByOffset<Nz::Vector3f&>(atmosphereBasePtr, AtmosphereScatteringFields.planetPositionOffset) = planetPos;
 
 			Nz::AccessByOffset<Nz::Vector3f&>(atmosphereBasePtr, AtmosphereScatteringFields.sunDirOffset) = atmosphereScattering->sunDir;
-			Nz::AccessByOffset<Nz::Vector4f&>(atmosphereBasePtr, AtmosphereScatteringFields.planetSettingsOffset) = atmosphereScattering->planetSettings;
+			Nz::AccessByOffset<Nz::Vector4f&>(atmosphereBasePtr, AtmosphereScatteringFields.planetSettingsOffset) = atmosphereScattering->shapeSettings;
 			Nz::AccessByOffset<float&>(atmosphereBasePtr, AtmosphereScatteringFields.atmosphereMaxHeightOffset) = atmosphereScattering->atmosphereMaxHeight;
-			Nz::AccessByOffset<Nz::UInt32&>(atmosphereBasePtr, AtmosphereScatteringFields.atmosphereTypeOffset) = static_cast<Nz::UInt32>(atmosphereScattering->type);
+			Nz::AccessByOffset<Nz::UInt32&>(atmosphereBasePtr, AtmosphereScatteringFields.atmosphereTypeOffset) = static_cast<Nz::UInt32>(atmosphereScattering->shape);
 
+			Nz::Vector3f scatteringCoefficients = 400.f / atmosphereScattering->waveLengths;
+
+			Nz::AccessByOffset<Nz::Vector3f&>(atmosphereBasePtr, AtmosphereScatteringFields.scatteringCoefficientsOffset) = atmosphereScattering->scatteringStrength * scatteringCoefficients * scatteringCoefficients * scatteringCoefficients * scatteringCoefficients;
 			Nz::AccessByOffset<float&>(atmosphereBasePtr, AtmosphereScatteringFields.mieScatteringDirectionOffset) = atmosphereScattering->mieScattering;
 
-			Nz::AccessByOffset<float&>(atmosphereBasePtr, AtmosphereScatteringFields.rayleighHeightOffset) = atmosphereScattering->rayleighHeight;
 			Nz::AccessByOffset<float&>(atmosphereBasePtr, AtmosphereScatteringFields.mieHeightOffset) = atmosphereScattering->mieHeight;
-			Nz::AccessByOffset<float&>(atmosphereBasePtr, AtmosphereScatteringFields.absorptionFalloffOffset) = atmosphereScattering->absorptionFalloff;
+			Nz::AccessByOffset<float&>(atmosphereBasePtr, AtmosphereScatteringFields.absorptionFalloffOffset) = atmosphereScattering->densityFalloff;
 
 			Nz::AccessByOffset<Nz::Int32&>(atmosphereBasePtr, AtmosphereScatteringFields.primaryStepsOffset) = atmosphereScattering->primarySteps;
 			Nz::AccessByOffset<Nz::Int32&>(atmosphereBasePtr, AtmosphereScatteringFields.lightStepsOffset) = atmosphereScattering->lightSteps;

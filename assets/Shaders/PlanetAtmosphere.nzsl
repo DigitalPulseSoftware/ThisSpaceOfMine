@@ -5,7 +5,7 @@ import VertexShader from Engine.FullscreenVertex;
 
 option MaxAtmosphereCount: u32;
 
-const AtmosphereType_RoundCube: u32 = 0;
+const AtmosphereShape_RoundCube: u32 = 0;
 const AtmosphereType_Torus: u32 = 1;
 
 [layout(std140)]
@@ -14,15 +14,17 @@ struct AtmosphereScatteringData
 	sunDir: vec3[f32],
 
 	planetPosition: vec3[f32],
-	planetSettings: vec4[f32],
+
+	shapeSettings: vec4[f32],
+	shape: u32,
+
 	atmosphereMaxHeight: f32,
-	atmosphereType: u32,
 
 	// scattering coeffs
+	scatteringCoefficients: vec3[f32], //< = scatteringCofficients * wavelength^4
 	mieScattering: f32,        // mie scattering direction, or how big the blob around the sun is
 
 	// and the heights (how far to go up before the scattering has no effect)
-	rayleighHeight: f32,    // rayleigh height
 	mieHeight: f32,         // and mie
 	absorptionFalloff: f32, // how much the absorption decreases the further away it gets from the maximum height
 
@@ -84,41 +86,24 @@ fn main(input: VertOut) -> FragOut
 	{
 		let atmosphere = passData.atmospheres[atmosphereIndex];
 
-		if (atmosphere.atmosphereType == AtmosphereType_RoundCube)
+		if (atmosphere.shape == AtmosphereShape_RoundCube)
 		{
 			color = ComputeRoundCubeScattering(
+				color,                          // scene color, the color of the current pixel being rendered
 				cameraPos,                      // the position of the camera
 				viewVector,                     // the camera vector (ray direction of this pixel)
 				linearDepth,                    // max dist, essentially the scene depth
-				color,                          // scene color, the color of the current pixel being rendered
-				atmosphere.sunDir,              // light direction
-				atmosphere.planetPosition,      // center of the planet
-				atmosphere.planetSettings.xyz,  // planet box dimensions
-				atmosphere.planetSettings.w,    // planet box corner radius
-				atmosphere.atmosphereMaxHeight, // max height of the atmosphere (for culling)
-				atmosphere.mieScattering,       // Mie preferred scattering direction
-				atmosphere.mieHeight,           // Mie scale height
-				atmosphere.absorptionFalloff,   // how fast the absorption falls off from the absorption height 
-				atmosphere.primarySteps,        // steps in the ray direction 
-				atmosphere.lightSteps           // steps in the light direction
+				atmosphere
 			);
 		}
-		else if (atmosphere.atmosphereType == AtmosphereType_Torus)
+		else if (atmosphere.shape == AtmosphereType_Torus)
 		{
 			color = ComputeTorusScattering(
+				color,                          // scene color, the color of the current pixel being rendered
 				cameraPos,                      // the position of the camera
 				viewVector,                     // the camera vector (ray direction of this pixel)
 				linearDepth,                    // max dist, essentially the scene depth
-				color,                          // scene color, the color of the current pixel being rendered
-				atmosphere.sunDir,              // light direction
-				atmosphere.planetPosition,      // center of the planet
-				atmosphere.planetSettings.xy,   // torus parameters
-				/*atmosphere.atmosphereMaxHeight*/ 140.0, // max height of the atmosphere (for culling)
-				atmosphere.mieScattering,       // Mie preferred scattering direction
-				atmosphere.mieHeight,           // Mie scale height
-				/*atmosphere.absorptionFalloff*/ 10.0,   // how fast the absorption falls off from the absorption height 
-				atmosphere.primarySteps,        // steps in the ray direction 
-				atmosphere.lightSteps           // steps in the light direction
+				atmosphere
 			);
 		}
 	}
@@ -129,44 +114,19 @@ fn main(input: VertOut) -> FragOut
 	return output;
 }
 
-const HEIGHT_SCALE = 64.0;
-const HEIGHT_SCALE_INV = 1.0 / HEIGHT_SCALE;
-
-const waveLengths = vec3[f32](700.0, 530.0, 440.0);
-const scatteringCoefficients_1 = (400.0).xxx / waveLengths;
-const scatteringCoefficients = scatteringCoefficients_1 * scatteringCoefficients_1 * scatteringCoefficients_1 * scatteringCoefficients_1;
-
-fn RoundBoxUp(pos: vec3[f32], cornerRadius: f32) -> vec3[f32]
-{
-	let distToCenter = max(max(abs(pos.x), abs(pos.y)), abs(pos.z));
-
-	let innerReductionSize = max(distToCenter - max(cornerRadius, 1.0), 0.0);
-	let innerBoxMin = -innerReductionSize.xxx;
-	let innerBoxMax = innerReductionSize.xxx;
-
-	let innerPos = clamp(pos, innerBoxMin, innerBoxMax);
-	return normalize(pos - innerPos);
-}
-
 // Based on https://www.youtube.com/watch?v=DxfEbulyFcY and https://www.shadertoy.com/view/wlBXWK
 fn ComputeRoundCubeScattering(
+	sceneColor: vec3[f32],		// the color of the scene
 	viewerPos: vec3[f32], 			// the start of the ray (the camera position)
 	viewerDir: vec3[f32], 			// the direction of the ray (the camera vector)
 	maxDist: f32, 			    // the maximum distance the ray can travel (because something is in the way, like an object)
-	sceneColor: vec3[f32],		// the color of the scene
-	sunDir: vec3[f32], 		// the direction of the light
-	planetOrigin: vec3[f32], // the position of the planet
-	planetDims: vec3[f32],     // the planet dimensions
-	planetCornerRadius: f32,  // the planet corner radius
-	atmosphereMaxHeight: f32,   // the atmosphere max height (starting from planet dimensions)
-	mieScattering: f32, 					// the direction mie scatters the light in (like a cone). closer to -1 means more towards a single direction
-	heightMie: f32, 			// the same, but for mie
-	densityFallOff: f32,	// how fast the absorption falls off from the absorption height
-	primaryRayCount: i32, 				// the amount of steps along the 'primary' ray, more looks better but slower
-	secondaryRayCount: i32 				// the amount of steps along the light ray, more looks better but slower
+	atmosphere: AtmosphereScatteringData
 ) -> vec3[f32]
 {
-	let hitInfo = raySphere(planetOrigin, atmosphereMaxHeight, viewerPos, viewerDir);
+	let planetDims = atmosphere.shapeSettings.xyz;
+	let planetCornerRadius = atmosphere.shapeSettings.w;
+
+	let hitInfo = raySphere(atmosphere.planetPosition, atmosphere.atmosphereMaxHeight, viewerPos, viewerDir);
 	if (hitInfo.x < 0.0)
 		return sceneColor;
 
@@ -178,68 +138,59 @@ fn ComputeRoundCubeScattering(
 
 	let scatterPoint = viewerPos + viewerDir * distanceToAtmosphere;
 
-	let stepSize = distanceThroughAtmosphere / f32(primaryRayCount - 1);
+	let stepSize = distanceThroughAtmosphere / f32(atmosphere.primarySteps - 1);
 
 	let scatteredLight = (0.0).xxx;
 	let viewRayOpticalDepth = 0.0;
 
     let allowMie = maxDist > hitInfo.y;
-    let mu = dot(viewerDir, sunDir);
+    let mu = dot(viewerDir, atmosphere.sunDir);
     let mumu = mu * mu;
-    let gg = mieScattering * mieScattering;
-    let phaseMie = select(allowMie, 3.0 / (25.1327412287 /* (8 * pi) */) * ((1.0 - gg) * (mumu + 1.0)) / (pow(1.0 + gg - 2.0 * mu * mieScattering, 1.5) * (2.0 + gg)), 0.0);
+    let gg = atmosphere.mieScattering * atmosphere.mieScattering;
+    let phaseMie = select(allowMie, 3.0 / (25.1327412287 /* (8 * pi) */) * ((1.0 - gg) * (mumu + 1.0)) / (pow(1.0 + gg - 2.0 * mu * atmosphere.mieScattering, 1.5) * (2.0 + gg)), 0.0);
 
     let totalMie = (0.0).xxx;
 
-	for i in 0 -> primaryRayCount
+	for i in 0 -> atmosphere.primarySteps
 	{
-		let scatterStrength = 1.0;
+		let sunRayLength = raySphere(atmosphere.planetPosition, atmosphere.atmosphereMaxHeight, scatterPoint, atmosphere.sunDir).y;
+		let sunRayOpticalDepth = OpticalDepth_RoundBox(atmosphere.planetPosition, planetDims, planetCornerRadius, atmosphere.atmosphereMaxHeight, atmosphere.absorptionFalloff, scatterPoint, atmosphere.sunDir, sunRayLength, atmosphere.lightSteps);
+		viewRayOpticalDepth = OpticalDepth_RoundBox(atmosphere.planetPosition, planetDims, planetCornerRadius, atmosphere.atmosphereMaxHeight, atmosphere.absorptionFalloff, scatterPoint, -viewerDir, stepSize * f32(i), atmosphere.lightSteps);
+		let transmittance = exp(-(sunRayOpticalDepth + viewRayOpticalDepth) * atmosphere.scatteringCoefficients);
+		let localDensity = DensityEvaluator_RoundBox(atmosphere.planetPosition, planetDims, planetCornerRadius, atmosphere.atmosphereMaxHeight, atmosphere.absorptionFalloff, scatterPoint);
 
-		let sunRayLength = raySphere(planetOrigin, atmosphereMaxHeight, scatterPoint, sunDir).y;
-		let sunRayOpticalDepth = OpticalDepth_RoundBox(planetOrigin, planetDims, planetCornerRadius, atmosphereMaxHeight, densityFallOff, scatterPoint, sunDir, sunRayLength, secondaryRayCount);
-		viewRayOpticalDepth = OpticalDepth_RoundBox(planetOrigin, planetDims, planetCornerRadius, atmosphereMaxHeight, densityFallOff, scatterPoint, -viewerDir, stepSize * f32(i), secondaryRayCount);
-		let transmittance = exp(-(sunRayOpticalDepth + viewRayOpticalDepth) * scatteringCoefficients * scatterStrength);
-		let localDensity = DensityEvaluator_RoundBox(planetOrigin, planetDims, planetCornerRadius, atmosphereMaxHeight, densityFallOff, scatterPoint);
+	    totalMie += localDensity * transmittance * stepSize / atmosphere.mieHeight;
 
-	    totalMie += localDensity * transmittance * stepSize / heightMie;
-
-		scatteredLight += localDensity * transmittance * scatteringCoefficients * scatterStrength * stepSize;
+		scatteredLight += localDensity * transmittance * atmosphere.scatteringCoefficients * stepSize;
 		scatterPoint += viewerDir * stepSize;
 	}
 
-	scatteredLight *= clamp(maxDist / (atmosphereMaxHeight * 2.0), 0.0, 1.0);
+	scatteredLight *= clamp(maxDist / (atmosphere.atmosphereMaxHeight * 2.0), 0.0, 1.0);
 
 	let skyColor = scatteredLight + phaseMie.xxx * totalMie;
-	let skyLuminance = dot(skyColor, vec3[f32](0.2125, 0.7154, 0.0721));
-	let sceneColorLuminance = dot(sceneColor, vec3[f32](0.2125, 0.7154, 0.0721)) + clamp((maxDist - atmosphereMaxHeight * 2.0) / atmosphereMaxHeight, 0.0, 1.0);
+	let skyLuminance = ComputeLuminance(skyColor);
+	let sceneColorLuminance = ComputeLuminance(sceneColor) + clamp((maxDist - atmosphere.atmosphereMaxHeight * 2.0) / atmosphere.atmosphereMaxHeight, 0.0, 1.0);
 
 	let originalColorTransmittance = clamp(exp(-viewRayOpticalDepth) + (1.0 - skyLuminance), 0.0, 1.0);
 	return originalColorTransmittance * sceneColor + skyColor * sceneColorLuminance;
 }
 
 fn ComputeTorusScattering(
+	sceneColor: vec3[f32],		// the color of the scene
 	viewerPos: vec3[f32], 			// the start of the ray (the camera position)
 	viewerDir: vec3[f32], 			// the direction of the ray (the camera vector)
 	maxDist: f32, 			    // the maximum distance the ray can travel (because something is in the way, like an object)
-	sceneColor: vec3[f32],		// the color of the scene
-	sunDir: vec3[f32], 		// the direction of the light
-	planetOrigin: vec3[f32], // the position of the planet
-	torus: vec2[f32],  // the torus parameters (radius / thickness)
-	atmosphereMaxHeight: f32,   // the atmosphere max height (starting from planet dimensions)
-	mieScattering: f32, 					// the direction mie scatters the light in (like a cone). closer to -1 means more towards a single direction
-	heightMie: f32, 			// the same, but for mie
-	densityFallOff: f32,	// how fast the absorption falls off from the absorption height
-	primaryRayCount: i32, 				// the amount of steps along the 'primary' ray, more looks better but slower
-	secondaryRayCount: i32 				// the amount of steps along the light ray, more looks better but slower
+	atmosphere: AtmosphereScatteringData
 ) -> vec3[f32]
 {
-	let dist = rayTorus(viewerPos, viewerDir, torus);
-	if (dist < 0.0)
-		return sceneColor;
+	let torus = atmosphere.shapeSettings.xy; //< radius / thickness
 
-	return sceneColor + vec3[f32](0.0, 0.1, 0.0);
+	//let hitInfo = rayTorus((viewerPos - atmosphere.planetPosition).xzy, viewerDir.xzy, vec2[f32](torus.x * 0.5, atmosphereMaxHeight));	
+	//let hitInfo = raySphere(atmosphere.planetPosition, torus.x * 0.5 + atmosphere.atmosphereMaxHeight, viewerPos, viewerDir);
+	//if (hitInfo.x < 0.0)
+	//	return sceneColor;
 
-	let hitInfo = raySphere(planetOrigin, atmosphereMaxHeight, viewerPos, viewerDir);
+	let hitInfo = raySphere(atmosphere.planetPosition, torus.y + atmosphere.atmosphereMaxHeight, viewerPos, viewerDir);
 	if (hitInfo.x < 0.0)
 		return sceneColor;
 
@@ -251,40 +202,38 @@ fn ComputeTorusScattering(
 
 	let scatterPoint = viewerPos + viewerDir * distanceToAtmosphere;
 
-	let stepSize = distanceThroughAtmosphere / f32(primaryRayCount - 1);
+	let stepSize = distanceThroughAtmosphere / f32(atmosphere.primarySteps - 1);
 
 	let scatteredLight = (0.0).xxx;
 	let viewRayOpticalDepth = 0.0;
 
     let allowMie = maxDist > hitInfo.y;
-    let mu = dot(viewerDir, sunDir);
+    let mu = dot(viewerDir, atmosphere.sunDir);
     let mumu = mu * mu;
-    let gg = mieScattering * mieScattering;
-    let phaseMie = select(allowMie, 3.0 / (25.1327412287 /* (8 * pi) */) * ((1.0 - gg) * (mumu + 1.0)) / (pow(1.0 + gg - 2.0 * mu * mieScattering, 1.5) * (2.0 + gg)), 0.0);
+    let gg = atmosphere.mieScattering * atmosphere.mieScattering;
+    let phaseMie = select(allowMie, 3.0 / (25.1327412287 /* (8 * pi) */) * ((1.0 - gg) * (mumu + 1.0)) / (pow(1.0 + gg - 2.0 * mu * atmosphere.mieScattering, 1.5) * (2.0 + gg)), 0.0);
 
     let totalMie = (0.0).xxx;
 
-	for i in 0 -> primaryRayCount
+	for i in 0 -> atmosphere.primarySteps
 	{
-		let scatterStrength = 1.0;
+		let sunRayLength = raySphere(atmosphere.planetPosition, atmosphere.atmosphereMaxHeight, scatterPoint, atmosphere.sunDir).y;
+		let sunRayOpticalDepth = OpticalDepth_Torus(atmosphere.planetPosition, torus, atmosphere.atmosphereMaxHeight, atmosphere.absorptionFalloff, scatterPoint, atmosphere.sunDir, sunRayLength, atmosphere.lightSteps);
+		viewRayOpticalDepth = OpticalDepth_Torus(atmosphere.planetPosition, torus, atmosphere.atmosphereMaxHeight, atmosphere.absorptionFalloff, scatterPoint, -viewerDir, stepSize * f32(i), atmosphere.lightSteps);
+		let transmittance = exp(-(sunRayOpticalDepth + viewRayOpticalDepth) * atmosphere.scatteringCoefficients);
+		let localDensity = DensityEvaluator_Torus(atmosphere.planetPosition, torus, atmosphere.atmosphereMaxHeight, atmosphere.absorptionFalloff, scatterPoint);
 
-		let sunRayLength = raySphere(planetOrigin, atmosphereMaxHeight, scatterPoint, sunDir).y;
-		let sunRayOpticalDepth = OpticalDepth_Torus(planetOrigin, torus, atmosphereMaxHeight, densityFallOff, scatterPoint, sunDir, sunRayLength, secondaryRayCount);
-		viewRayOpticalDepth = OpticalDepth_Torus(planetOrigin, torus, atmosphereMaxHeight, densityFallOff, scatterPoint, -viewerDir, stepSize * f32(i), secondaryRayCount);
-		let transmittance = exp(-(sunRayOpticalDepth + viewRayOpticalDepth) * scatteringCoefficients * scatterStrength);
-		let localDensity = DensityEvaluator_Torus(planetOrigin, torus, atmosphereMaxHeight, densityFallOff, scatterPoint);
+	    totalMie += localDensity * transmittance * stepSize / atmosphere.mieHeight;
 
-	    totalMie += localDensity * transmittance * stepSize / heightMie;
-
-		scatteredLight += localDensity * transmittance * scatteringCoefficients * scatterStrength * stepSize;
+		scatteredLight += localDensity * transmittance * atmosphere.scatteringCoefficients * stepSize;
 		scatterPoint += viewerDir * stepSize;
 	}
 
-	scatteredLight *= clamp(maxDist / (atmosphereMaxHeight * 2.0), 0.0, 1.0);
+	scatteredLight *= clamp(maxDist / (atmosphere.atmosphereMaxHeight * 2.0), 0.0, 1.0);
 
 	let skyColor = scatteredLight + phaseMie.xxx * totalMie;
-	let skyLuminance = dot(skyColor, vec3[f32](0.2125, 0.7154, 0.0721));
-	let sceneColorLuminance = dot(sceneColor, vec3[f32](0.2125, 0.7154, 0.0721)) + clamp((maxDist - atmosphereMaxHeight * 2.0) / atmosphereMaxHeight, 0.0, 1.0);
+	let skyLuminance = ComputeLuminance(skyColor);
+	let sceneColorLuminance = ComputeLuminance(sceneColor) + clamp((maxDist - atmosphere.atmosphereMaxHeight * 2.0) / atmosphere.atmosphereMaxHeight, 0.0, 1.0);
 
 	let originalColorTransmittance = clamp(exp(-viewRayOpticalDepth) + (1.0 - skyLuminance), 0.0, 1.0);
 	return originalColorTransmittance * sceneColor + skyColor * sceneColorLuminance;
@@ -331,7 +280,7 @@ fn sdTorus(pos: vec3[f32], torus: vec2[f32]) -> f32
 
 fn DensityEvaluator_Torus(planetCenter: vec3[f32], torus: vec2[f32], atmosphereMaxHeight: f32, densityFallOff: f32, samplePoint: vec3[f32]) -> f32
 {
-	let heightAboveSurface = sdTorus(samplePoint - planetCenter, torus);
+	let heightAboveSurface = sdTorus(samplePoint - planetCenter, vec2[f32](torus.x * 0.5, 0.0));
 	let clampedHeight = max(0.0, heightAboveSurface);
 	let height01 = clampedHeight / (atmosphereMaxHeight); //< FIXME
 
@@ -394,9 +343,185 @@ fn raySphere(spherePos: vec3[f32], sphereRadius: f32, rayOrigin: vec3[f32], rayD
 	return vec2(-1.0, -1.0);
 }
 
-// https://www.shadertoy.com/view/4sBGDy
-// TODO: Use https://www.shadertoy.com/view/3XdyRj in case of numerical issue
-fn rayTorus(rayOrigin: vec3[f32], rayDirection: vec3[f32], torus: vec2[f32]) -> f32
+// https://www.shadertoy.com/view/3XdyRj
+fn solve_cubic(a1: f32, a2: f32, a3: f32) -> f32
+{
+	let A2 = a1 * a1;
+
+	let Q = (A2 - 3.0 * a2) * (1.0/ 9.0);
+	let RR = (a1 * (A2 - 4.5 * a2) + 13.5 * a3) * (1.0/ 27.0);
+	let Q3 = Q * Q * Q;
+	let R2 = RR * RR;
+	let d = Q3 - R2;
+	let an = a1 * (1.0/3.0);
+	if (d >= 0.0)
+	{
+		// 3 real roots, but only use the largest one!
+		d = RR * rsqrt(Q3);
+		let theta = acos(d) * (1. / 3.);
+		let sQ = -2. * sqrt(Q);
+        let s = 2.09439510239320;
+        let sol = sQ * cos(theta.xxx + vec3(0.0, s, -s)) - an.xxx;
+        return max(sol.x, max(sol.y, sol.z));
+	}
+    let S = sqrt(-d) + abs(RR);
+	let sQ = pow(S, 1./3.);
+	let t = (sQ + Q / sQ) * sign(-RR);
+	let res = t - an;
+    return res;
+}
+
+// https://en.wikipedia.org/wiki/Sorting_network
+fn sort2(val: vec2[f32]) -> vec2[f32]
+{
+	return vec2(min(val.x, val.y), max(val.x, val.y));
+}
+
+fn sort3(val: vec3[f32]) -> vec3[f32]
+{
+	val.xy = sort2(val.xy);
+	val.yz = sort2(val.yz);
+	val.xy = sort2(val.xy);
+	return val;
+}
+
+fn sort4(val: vec4[f32]) -> vec4[f32]
+{
+	val.xz = sort2(val.xz);
+	val.yw = sort2(val.yw);
+
+	val.xy = sort2(val.xy);
+	val.zw = sort2(val.zw);
+
+	val.yz = sort2(val.yz);
+
+	return val;
+}
+
+fn rayTorus(rayOrigin: vec3[f32], rayDirection: vec3[f32], torus: vec2[f32]) -> vec2[f32]
+{
+    let Ra2 = torus.x*torus.x;
+    let ra2 = torus.y*torus.y;
+	
+    let x = dot(rayOrigin,rayOrigin);
+    let d = dot(rayOrigin,rayDirection);
+
+    // bounding sphere
+    {
+        let r = torus.x + torus.y;
+        let h = d*d - x + r*r;
+        if (h < 0.0)
+			return (-1.0).xx;
+        if (d > 0.0 && r*r < x)
+			return (-1.0).xx;
+    }
+    
+	// find quartic equation in the form (t² + 2pt + q)² = 4(at² + 2bt + c)
+    let p = d;
+    let q = x + Ra2 - ra2; // >= Ra2 - ra2 >= 0
+    // these forms, which look like cancelation is happening are somehow better.
+    let a = Ra2 * (1.0 - rayDirection.z*rayDirection.z); // >= 0
+    let b = Ra2 * (d - rayDirection.z*rayOrigin.z); // >= 0
+    let c = Ra2 * (x - rayOrigin.z*rayOrigin.z); // >= 0
+    // now get the resolvent cubic using (t² + 2pt + q + 2m)² = 4(at² + 2bt + c + m² + m(t² + 2pt + q))
+    // = 4((a+m)t² + 2(b+mp)t + c + m² + mq) the resolvent cubic is the discriminant of this
+    // -> 0 = (b+mp)² - (a + m)(c + m² + mq)
+    // -> 0 = ac - b² + (aq + c - 2bp)m + (a + q - p²)m² + m³  (normalized cubic)
+    // since in the next step, a+m is needed, transform the cubic using m = n-a
+    // -> 0 = ac - b² + (aq + c - 2bp)(n - a) + (a + q - p²)(n² - 2na + a²) + n³ - 3n²a + 3na² - a³  (normalized cubic)
+    // -> 0 = -(ap - b)² + (c + a² + 2p(ap - b) - aq) n + (q - 2a - p²) n² + n³
+	// now the equation is Q := sqrt(a+m) = sqrt(n)
+    // (t² + 2pt + q + 2m)² = (2*Q*t + 2*(b+mp)/Q)²
+    // redefine a and b for the right side to be = (2at+b)² and don't forget the +2m on the left side.
+    let k = a*p - b;
+	let c0 = -k * k;
+    let c1 = c + a*(a - q) + 2.*p*k;
+    let c2 = q - 2.*a - p*p;
+    if (abs(c0 / c1) > 0.0000001)
+	{ // on the CPU this can be implemented as c0 + c1 != c1, but the GPU compiler apparently optimizes it away :(
+        // the flipping of the problem isn't needed in the cubic solver here!
+        let n = solve_cubic(c2, c1, c0);
+        // do one Newton iteration to improve the precision (this solves all precision issues)
+        n -= (c0 + n*(c1 + n*(c2 + n)))/(c1 + n*(c2*2. + n*3.));
+        if (n < 0.)
+			return (-1.0).xx;
+        let Q = sqrt(n);
+        b = 2. * (Q * p - k / Q);
+        q += 2.*(n - a);
+        a = Q;
+    }
+    else
+	{
+        //test_param = 0.0;
+        // for k = 0, the solution is n = 0. It is unstable around k = 0.
+        // remember c0 = -k*k
+        let n = -c0 / c1;
+        if (n < 0.)
+			return (-1.0).xx;
+
+        let C = sqrt(c1);
+        let Q = k / C; // cancel the sqrt
+        b = 2.*(Q * p - C);
+        q += 2.*(n - a);
+        a = Q;
+    }
+
+    // now take the sqrt on both sides (introducing a sign)
+    // and solve the resulting normalized quadratic for both signs.
+    // t² + 2(p-s*a)t + q - s*b = 0
+	let dist = vec4(-1.0, -1.0, -1.0, -1.0);
+
+	let distIdx = 0;
+
+	for i in 0 -> 2
+	{
+        let p2 = p - a;
+        let pp = p2 * p2;
+        let q2 = q - b;
+        let h = pp - q2;
+        a = -a;
+        b = -b;
+        if (h < 0.0)
+			continue;
+
+        h = sqrt(h);
+		for j in 0 -> 2
+		{
+            let t1 = -p2 + h;
+			if (t1 >= 0.0)
+			{
+				dist[distIdx] = t1;
+				distIdx += 1;
+			}
+
+            h = -h;
+        }
+    }
+
+	if (distIdx >= 4)
+		// Outside the torus, two enter points and two exit points
+		return sort4(dist).xw;
+	else if (distIdx == 3)
+		// Inside the torus, one exit point and one enter/exit point
+		return vec2[f32](0.0, max(dist.x, max(dist.y, dist.z)));
+	else if (distIdx == 2)
+		// Outside the torus, one enter point and one exit point
+		return sort2(dist.xy);
+	else if (distIdx == 1)
+		// Inside the torus, one exit point
+		return vec2[f32](0.0, dist.x);
+	else
+		return vec2[f32](-1.0, -1.0);
+}
+
+fn ComputeLuminance(color: vec3[f32]) -> f32
+{
+	// https://stackoverflow.com/questions/596216/formula-to-determine-perceived-brightness-of-rgb-color
+	const LuminanceFactors = vec3[f32](0.2125, 0.7154, 0.0721);
+	return dot(color, LuminanceFactors);
+}
+
+/*fn rayTorus(rayOrigin: vec3[f32], rayDirection: vec3[f32], torus: vec2[f32]) -> f32
 {
     let po = 1.0;
     let tx = 0.0;
@@ -513,4 +638,4 @@ fn rayTorus(rayOrigin: vec3[f32], rayDirection: vec3[f32], torus: vec2[f32]) -> 
     }
 
     return result + tx;
-}
+}*/

@@ -78,6 +78,8 @@ namespace tsom
 			static constexpr Nz::UInt32 InvalidIndex = Nz::MaxValue();
 
 		private:
+			void PropertiesFromJson(std::vector<EntityProperty>& properties, const nlohmann::json& propertiesJson, std::string_view prefix = "") const;
+
 			std::string m_name;
 			std::vector<Property> m_properties;
 			std::vector<RemoteProcedureCall> m_clientRpcs;

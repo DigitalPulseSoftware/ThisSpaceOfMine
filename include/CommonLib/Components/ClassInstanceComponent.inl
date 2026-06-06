@@ -18,14 +18,14 @@ namespace tsom
 	}
 
 	template<EntityPropertyType Property>
-	auto ClassInstanceComponent::GetProperty(Nz::UInt32 propertyIndex) const
+	decltype(auto) ClassInstanceComponent::GetProperty(Nz::UInt32 propertyIndex) const
 	{
 		assert(propertyIndex < m_properties.size());
 		return std::get<EntityPropertySingleValue<Property>>(m_properties[propertyIndex]);
 	}
 
 	template<EntityPropertyType Property>
-	auto ClassInstanceComponent::GetProperty(std::string_view propertyName) const
+	decltype(auto) ClassInstanceComponent::GetProperty(std::string_view propertyName) const
 	{
 		return GetProperty<Property>(GetPropertyIndex(propertyName));
 	}

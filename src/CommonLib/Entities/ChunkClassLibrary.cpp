@@ -20,11 +20,18 @@ namespace tsom
 	{
 		registry.RegisterClass(EntityClass("round_cube_planet", {
 			{
-				EntityClass::Property { .name = "BlockSize",            .type = EntityPropertyType::Float,       .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(1.f),                      .isNetworked = true },
-				EntityClass::Property { .name = "CornerRadius",         .type = EntityPropertyType::Float,       .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(16.f),                     .isNetworked = true },
-				EntityClass::Property { .name = "Gravity",              .type = EntityPropertyType::Float,       .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(9.81f),                    .isNetworked = true },
-				EntityClass::Property { .name = "Seed",                 .type = EntityPropertyType::Integer,     .defaultValue = EntityPropertySingleValue<EntityPropertyType::Integer>(0),                      .isNetworked = true },
-				EntityClass::Property { .name = "AtmospherePlanetDims", .type = EntityPropertyType::FloatSize3D, .defaultValue = EntityPropertySingleValue<EntityPropertyType::FloatSize3D>(Nz::Vector3f(60.f)), .isNetworked = true },
+				EntityClass::Property { .name = "BlockSize",                     .type = EntityPropertyType::Float,       .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(1.f),                                     .isNetworked = true },
+				EntityClass::Property { .name = "CornerRadius",                  .type = EntityPropertyType::Float,       .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(16.f),                                    .isNetworked = true },
+				EntityClass::Property { .name = "Gravity",                       .type = EntityPropertyType::Float,       .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(9.81f),                                   .isNetworked = true },
+				EntityClass::Property { .name = "Seed",                          .type = EntityPropertyType::Integer,     .defaultValue = EntityPropertySingleValue<EntityPropertyType::Integer>(0),                                     .isNetworked = true },
+				EntityClass::Property { .name = "Atmosphere.Shape",              .type = EntityPropertyType::String,      .defaultValue = EntityPropertySingleValue<EntityPropertyType::String>("RoundCube"),                            .isNetworked = true },
+				EntityClass::Property { .name = "Atmosphere.ShapeSettings",      .type = EntityPropertyType::Float4,      .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float4>(Nz::Vector4f(60.f, 60.f, 60.f, 16.f)),   .isNetworked = true },
+				EntityClass::Property { .name = "Atmosphere.MaxHeight",          .type = EntityPropertyType::Float,       .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(192.f),                                   .isNetworked = true },
+				EntityClass::Property { .name = "Atmosphere.ScatteringStrength", .type = EntityPropertyType::Float,       .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(1.f),                                     .isNetworked = true },
+				EntityClass::Property { .name = "Atmosphere.WaveLengths",        .type = EntityPropertyType::Float3,      .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float3>(Nz::Vector3f(700.f, 530.f, 440.f)),      .isNetworked = true },
+				EntityClass::Property { .name = "Atmosphere.MieScattering",      .type = EntityPropertyType::Float,       .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(0.9),                                     .isNetworked = true },
+				EntityClass::Property { .name = "Atmosphere.MieHeight",          .type = EntityPropertyType::Float,       .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(5.f),                                     .isNetworked = true },
+				EntityClass::Property { .name = "Atmosphere.DensityFalloff",     .type = EntityPropertyType::Float,       .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(20.f),                                    .isNetworked = true },
 			}
 		},
 		{
@@ -44,12 +51,19 @@ namespace tsom
 
 		registry.RegisterClass(EntityClass("torus_planet", {
 			{
-				EntityClass::Property { .name = "BlockSize",            .type = EntityPropertyType::Float,       .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(1.f),                      .isNetworked = true },
-				EntityClass::Property { .name = "Radius",               .type = EntityPropertyType::Float,       .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(80.f),                     .isNetworked = true },
-				EntityClass::Property { .name = "Thickness",            .type = EntityPropertyType::Float,       .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(20.f),                     .isNetworked = true },
-				EntityClass::Property { .name = "Gravity",              .type = EntityPropertyType::Float,       .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(9.81f),                    .isNetworked = true },
-				EntityClass::Property { .name = "Seed",                 .type = EntityPropertyType::Integer,     .defaultValue = EntityPropertySingleValue<EntityPropertyType::Integer>(0),                      .isNetworked = true },
-				EntityClass::Property { .name = "AtmospherePlanetDims", .type = EntityPropertyType::FloatSize3D, .defaultValue = EntityPropertySingleValue<EntityPropertyType::FloatSize3D>(Nz::Vector3f(60.f)), .isNetworked = true },
+				EntityClass::Property { .name = "BlockSize",                     .type = EntityPropertyType::Float,       .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(1.f),                                     .isNetworked = true },
+				EntityClass::Property { .name = "Radius",                        .type = EntityPropertyType::Float,       .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(80.f),                                    .isNetworked = true },
+				EntityClass::Property { .name = "Thickness",                     .type = EntityPropertyType::Float,       .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(20.f),                                    .isNetworked = true },
+				EntityClass::Property { .name = "Gravity",                       .type = EntityPropertyType::Float,       .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(9.81f),                                   .isNetworked = true },
+				EntityClass::Property { .name = "Seed",                          .type = EntityPropertyType::Integer,     .defaultValue = EntityPropertySingleValue<EntityPropertyType::Integer>(0),                                     .isNetworked = true },
+				EntityClass::Property { .name = "Atmosphere.Shape",              .type = EntityPropertyType::String,      .defaultValue = EntityPropertySingleValue<EntityPropertyType::String>("RoundCube"),                            .isNetworked = true },
+				EntityClass::Property { .name = "Atmosphere.ShapeSettings",      .type = EntityPropertyType::Float4,      .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float4>(Nz::Vector4f(60.f, 60.f, 60.f, 16.f)),   .isNetworked = true },
+				EntityClass::Property { .name = "Atmosphere.MaxHeight",          .type = EntityPropertyType::Float,       .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(192.f),                                   .isNetworked = true },
+				EntityClass::Property { .name = "Atmosphere.ScatteringStrength", .type = EntityPropertyType::Float,       .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(1.f),                                     .isNetworked = true },
+				EntityClass::Property { .name = "Atmosphere.WaveLengths",        .type = EntityPropertyType::Float3,      .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float3>(Nz::Vector3f(700.f, 530.f, 440.f)),      .isNetworked = true },
+				EntityClass::Property { .name = "Atmosphere.MieScattering",      .type = EntityPropertyType::Float,       .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(0.9),                                     .isNetworked = true },
+				EntityClass::Property { .name = "Atmosphere.MieHeight",          .type = EntityPropertyType::Float,       .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(5.f),                                     .isNetworked = true },
+				EntityClass::Property { .name = "Atmosphere.DensityFalloff",     .type = EntityPropertyType::Float,       .defaultValue = EntityPropertySingleValue<EntityPropertyType::Float>(20.f),                                    .isNetworked = true },
 			}
 		},
 		{

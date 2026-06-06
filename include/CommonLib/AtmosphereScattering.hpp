@@ -13,7 +13,7 @@
 
 namespace tsom
 {
-	enum class AtmosphereScatteringType
+	enum class AtmosphereScatteringShape
 	{
 		RoundCube,
 		Torus
@@ -22,15 +22,16 @@ namespace tsom
 	struct AtmosphereScattering
 	{
 		Nz::Vector3f sunDir = Nz::Vector3f(0.852868497f, 0.5f, 0.150383770f);
-		Nz::Vector4f planetSettings = Nz::Vector4f(60.0f, 60.0f, 60.0f, 16.0f);
-		float atmosphereMaxHeight = 192.f;
-		AtmosphereScatteringType type = AtmosphereScatteringType::RoundCube;
+		Nz::Vector3f waveLengths = Nz::Vector3f(700.0, 530.0, 440.0);
+		Nz::Vector4f shapeSettings = Nz::Vector4f(60.0f, 60.0f, 60.0f, 16.0f);
+		AtmosphereScatteringShape shape = AtmosphereScatteringShape::RoundCube;
 
+		float atmosphereMaxHeight = 192.f;
+		float scatteringStrength = 1.f;
 		float mieScattering = 0.9f;
 
-		float rayleighHeight = 32.f;
 		float mieHeight = 5.f;
-		float absorptionFalloff = 20.f;
+		float densityFalloff = 20.f;
 
 		Nz::Int32 primarySteps = 8;
 		Nz::Int32 lightSteps = 8;

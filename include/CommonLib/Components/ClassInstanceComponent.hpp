@@ -33,8 +33,8 @@ namespace tsom
 
 			inline const std::shared_ptr<const EntityClass>& GetClass() const;
 			inline const EntityProperty& GetProperty(Nz::UInt32 propertyIndex) const;
-			template<EntityPropertyType Property> auto GetProperty(Nz::UInt32 propertyIndex) const;
-			template<EntityPropertyType Property> auto GetProperty(std::string_view propertyName) const;
+			template<EntityPropertyType Property> decltype(auto) GetProperty(Nz::UInt32 propertyIndex) const;
+			template<EntityPropertyType Property> decltype(auto) GetProperty(std::string_view propertyName) const;
 			inline const std::vector<EntityProperty>& GetProperties() const&;
 			inline std::vector<EntityProperty>&& GetProperties() &&;
 

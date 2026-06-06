@@ -66,19 +66,35 @@ namespace tsom
 		for (const auto& property : m_properties)
 			properties.push_back(property.defaultValue);
 
-		for (auto&& [propertyName, propertyValue] : propertiesJson.items())
+		PropertiesFromJson(properties, propertiesJson);
+
+		return properties;
+	}
+
+	void EntityClass::PropertiesFromJson(std::vector<EntityProperty>& properties, const nlohmann::json& propertiesJson, std::string_view prefix) const
+	{
+		for (auto&& [key, value] : propertiesJson.items())
 		{
+			std::string propertyName = fmt::format("{}{}", prefix, key);
+
 			auto it = m_propertyIndices.find(propertyName);
 			if (it == m_propertyIndices.end())
 			{
-				spdlog::warn("property {} from json doesn't exist in class property list", propertyName);
+				if (value.is_object())
+				{
+					// Handle unknown objects as sub-properties
+					PropertiesFromJson(properties, value, fmt::format("{}.", key));
+					continue;
+				}
+
+				spdlog::warn("property {} from json doesn't exist in class {} property list", key, m_name);
 				continue;
 			}
 
 			std::size_t propertyIndex = it->second;
 			const auto& propertyData = m_properties[propertyIndex];
 
-			auto Deserialize = [&, &propertyName = propertyName, &propertyValue = propertyValue](auto dummyType)
+			auto Deserialize = [&, &value = value](auto dummyType)
 			{
 				using T = std::decay_t<decltype(dummyType)>;
 
@@ -87,25 +103,21 @@ namespace tsom
 
 				if (propertyData.isArray)
 				{
-					if (!propertyValue.is_array())
-						throw std::runtime_error("Expected array");
+					if (!value.is_array())
+						throw std::runtime_error("expected array");
 
-					std::size_t elementCount = propertyValue.size();
+					std::size_t elementCount = value.size();
 					if (elementCount == 0)
 						return; //< Ignore empty arrays
 
 					EntityPropertyArrayValue<Property> elements(elementCount);
 					for (std::size_t i = 0; i < elementCount; ++i)
-						elements[i] = propertyValue[i];
+						elements[i] = value[i];
 
 					properties[propertyIndex] = std::move(elements);
 				}
 				else
-				{
-					UnderlyingType extractedValue = propertyValue;
-					EntityPropertySingleValue<Property> propertyValue(std::move(extractedValue));
-					properties[propertyIndex] = std::move(propertyValue);
-				}
+					properties[propertyIndex] = EntityPropertySingleValue<Property>(value.get<UnderlyingType>());
 			};
 
 			switch (propertyData.type)
@@ -115,8 +127,6 @@ namespace tsom
 #include <CommonLib/EntityPropertyList.hpp>
 			}
 		}
-
-		return properties;
 	}
 
 	nlohmann::json EntityClass::PropertiesToJson(std::span<const EntityProperty> properties) const
@@ -132,16 +142,23 @@ namespace tsom
 				using TypeExtractor = EntityPropertyTypeExtractor<T>;
 				constexpr bool IsArray = TypeExtractor::IsArray;
 
+				nlohmann::json* value = &propertiesObject;
+				Nz::SplitString(propertyName, ".", [&](std::string_view part)
+				{
+					value = &(*value)[part];
+					return true;
+				});
+
 				if constexpr (IsArray)
 				{
 					auto elementArray = nlohmann::json::array();
 					for (std::size_t i = 0; i < propertyValue.size(); ++i)
 						elementArray.push_back(propertyValue[i]);
 
-					propertiesObject[propertyName] = std::move(elementArray);
+					*value = std::move(elementArray);
 				}
 				else
-					propertiesObject[propertyName] = propertyValue.value;
+					*value = propertyValue.value;
 
 			}, properties[propertyIndex]);
 		}
