@@ -150,7 +150,15 @@ namespace tsom
 
 	void ChunkEntities::CreateChunkEntity(const ChunkIndices& chunkIndices)
 	{
-		entt::handle chunkEntity = m_world.CreateEntity();
+		// Entity may still exist if the chunk was destroyed and re-created in a row
+		entt::handle chunkEntity;
+		if (auto it = m_chunkEntities.find(chunkIndices); it != m_chunkEntities.end())
+			chunkEntity = it->second;
+		else
+		{
+			chunkEntity = m_world.CreateEntity();
+			m_chunkEntities.emplace(chunkIndices, chunkEntity);
+		}
 
 		auto& nodeComponent = chunkEntity.emplace<Nz::NodeComponent>(m_chunkContainer.GetChunkOffset(chunkIndices));
 		if (m_parentEntity)
@@ -180,9 +188,6 @@ namespace tsom
 			chunkEntity.emplace<Physics::ContactPersistedCallbackComponent>().callback = &BuoyancySystem::HandleContactPersisted;
 			chunkEntity.emplace<Physics::ContactRemovedCallbackComponent>().callback = &BuoyancySystem::HandleContactRemoved;
 		}
-
-		assert(!m_chunkEntities.contains(chunkIndices));
-		m_chunkEntities.insert_or_assign(chunkIndices, chunkEntity);
 
 		if (chunk->HasContent())
 			ProcessChunkUpdate(*chunk, 0);

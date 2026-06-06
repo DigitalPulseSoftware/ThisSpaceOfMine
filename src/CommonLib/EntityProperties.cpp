@@ -65,7 +65,7 @@ namespace Nz
 
 		bool isArray = (isArrayInt != 0);
 
-		auto Unserialize = [&](auto dummyType)
+		auto DeserializeCallback = [&](auto dummyType)
 		{
 			using T = std::decay_t<decltype(dummyType)>;
 
@@ -96,7 +96,7 @@ namespace Nz
 
 		switch (propertyType)
 		{
-#define TSOM_ENTITYPROPERTYTYPE(V, T, UT) case tsom::EntityPropertyType:: T: return Unserialize(tsom::EntityPropertyTag<tsom::EntityPropertyType:: T>{}); break;
+#define TSOM_ENTITYPROPERTYTYPE(V, T, UT) case tsom::EntityPropertyType:: T: return DeserializeCallback(tsom::EntityPropertyTag<tsom::EntityPropertyType:: T>{}); break;
 
 #include <CommonLib/EntityPropertyList.hpp>
 		}

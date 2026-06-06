@@ -14,7 +14,7 @@
 namespace tsom
 {
 	TSOM_COMMONLIB_API EntityProperty TranslatePropertyFromLua(sol::object value, EntityPropertyType expectedType, bool isArray);
-	TSOM_COMMONLIB_API sol::object TranslatePropertyToLua(sol::state_view& lua, const EntityProperty& property);
+	TSOM_COMMONLIB_API sol::object TranslatePropertyToLua(sol::state_view lua, const EntityProperty& property);
 }
 
 #include <CommonLib/Scripting/ScriptingProperties.inl>

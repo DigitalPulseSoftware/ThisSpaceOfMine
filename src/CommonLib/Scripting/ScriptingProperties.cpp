@@ -24,7 +24,7 @@ namespace tsom
 		struct PropertyPusher
 		{
 			template<typename T>
-			sol::object operator()(sol::state_view& lua, T&& value)
+			sol::object operator()(sol::state_view lua, T&& value)
 			{
 				return sol::make_object(lua, std::forward<T>(value));
 			}
@@ -78,7 +78,7 @@ namespace tsom
 		NAZARA_UNREACHABLE();
 	}
 
-	sol::object TranslatePropertyToLua(sol::state_view& lua, const EntityProperty& property)
+	sol::object TranslatePropertyToLua(sol::state_view lua, const EntityProperty& property)
 	{
 		return std::visit([&](auto&& value) -> sol::object
 		{

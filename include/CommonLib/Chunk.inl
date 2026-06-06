@@ -30,6 +30,8 @@ namespace tsom
 		m_blockTypeCount.clear();
 		m_blockTypeCount.shrink_to_fit();
 
+		m_faceVisibilityMasks.fill(DirectionMask_All);
+
 		OnClear(this, activeLayerMask);
 	}
 
