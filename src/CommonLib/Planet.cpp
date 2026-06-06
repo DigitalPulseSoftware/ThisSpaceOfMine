@@ -13,7 +13,6 @@
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
 #include <CommonLib/Utility/SignedDistanceFunctions.hpp>
 #include <Nazara/Core/TaskScheduler.hpp>
-#include <Nazara/Math/Box.hpp>
 #include <NazaraUtils/CallOnExit.hpp>
 #include <PerlinNoise.hpp>
 #include <spdlog/spdlog.h>
@@ -21,11 +20,9 @@
 
 namespace tsom
 {
-	Planet::Planet(Nz::ApplicationBase& app, float tileSize, float cornerRadius, float gravity) :
+	Planet::Planet(Nz::ApplicationBase& app, float tileSize) :
 	ChunkContainer(tileSize),
-	m_app(app),
-	m_cornerRadius(cornerRadius),
-	m_gravity(gravity)
+	m_app(app)
 	{
 	}
 
@@ -48,7 +45,7 @@ namespace tsom
 			std::lock_guard lock(m_chunkLayerRemovedSignalMutex);
 			OnChunkLayerRemove(this, chunk, layerIndex);
 		});
-		
+	
 		chunkData.onClear.Connect(chunkData.chunk->OnClear, [this, &blockLibrary](Chunk* chunk, Nz::UInt32 previousActiveLayerMask)
 		{
 			// FIXME: Nz::Signal operator() is not thread-safe!
@@ -145,89 +142,12 @@ namespace tsom
 		}
 	}
 
-	auto Planet::ComputeGravity(const Nz::Vector3f& position) const -> GravityForce
-	{
-		constexpr float PlanetGravityCenterStartDecrease = 24.f;
-		constexpr float PlanetGravityCenterNoGravity = 8.f;
-		constexpr float PlanetGravitySpaceStart = 150.f;
-		constexpr float PlanetGravitySpaceFinish = 250.f;
-		constexpr float PlanetGravitySpaceNone = 500.f;
-
-		// Decrease gravity near the center
-		float distSq = position.SquaredDistance(GetCenter());
-		if (distSq < Nz::IntegralPow(PlanetGravityCenterStartDecrease, 2))
-		{
-			Nz::Vector3f up = ComputeUpDirection(position);
-			return GravityForce{
-				.direction = -up,
-				.acceleration = m_gravity,
-				.factor = std::max(std::sqrt(distSq) - PlanetGravityCenterNoGravity, 0.f) / (PlanetGravityCenterStartDecrease - PlanetGravityCenterNoGravity)
-			};
-		}
-
-		// Turn rounded gravity to newtonian gravity
-		if (distSq > Nz::IntegralPow(PlanetGravitySpaceStart, 2))
-		{
-			if (distSq > Nz::IntegralPow(PlanetGravitySpaceNone, 2))
-				return GravityForce::Zero();
-
-			float dist = std::sqrt(distSq);
-			float newtonianInterp;
-			if (distSq > Nz::IntegralPow(PlanetGravitySpaceFinish, 2))
-				newtonianInterp = 1.f;
-			else
-				newtonianInterp = std::max(dist - PlanetGravitySpaceStart, 0.f) / (PlanetGravitySpaceFinish - PlanetGravitySpaceStart);
-
-			Nz::Vector3f direction = Nz::Vector3f::Normalize(GetCenter() - position);
-			if (newtonianInterp < 0.99f)
-				direction = Nz::Lerp(-ComputeUpDirection(position), direction, newtonianInterp);
-			else
-				direction = GetCenter() - position;
-
-			direction.Normalize();
-
-			float gravity = std::max(dist - PlanetGravitySpaceFinish, 0.f) / (PlanetGravitySpaceNone - PlanetGravitySpaceFinish);
-			gravity *= gravity;
-
-			return GravityForce{
-				.direction = direction,
-				.acceleration = m_gravity,
-				.factor = 1.f - gravity
-			};
-		}
-
-		// Regular gravity
-		Nz::Vector3f up = ComputeUpDirection(position);
-		return GravityForce{
-			.direction = -up,
-			.acceleration = m_gravity,
-			.factor = 1.f
-		};
-	}
-
-	Nz::Vector3f Planet::ComputeUpDirection(const Nz::Vector3f& position) const
-	{
-		Nz::Vector3f center = GetCenter();
-
-		float distToCenter = std::max({
-			std::abs(position.x - center.x),
-			std::abs(position.y - center.y),
-			std::abs(position.z - center.z),
-		});
-
-		float innerReductionSize = std::max(distToCenter - std::max(m_cornerRadius, 1.f), 0.f);
-		Nz::Boxf innerBox(center - Nz::Vector3f(innerReductionSize), Nz::Vector3f(innerReductionSize * 2.f));
-
-		Nz::Vector3f innerPos = Nz::Vector3f::Clamp(position, innerBox.GetMinimum(), innerBox.GetMaximum());
-
-		return Nz::Vector3f::Normalize(position - innerPos);
-	}
-
 	void Planet::ClearChunks()
 	{
 		for (auto&& [chunkIndices, chunkData] : m_chunks)
 		{
 			Chunk* chunk = chunkData.chunk.get();
+			OnChunkRemove(this, chunk);
 			for (std::size_t layerIndex : chunk->GetActiveLayers())
 				OnChunkLayerRemove(this, chunk, layerIndex);
 		}
@@ -247,7 +167,7 @@ namespace tsom
 			callback(chunkIndices, *chunkData.chunk);
 	}
 
-	void Planet::GenerateChunk(Chunk& chunk, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, std::string_view scriptName)
+	void Planet::GenerateChunk(Chunk& chunk, const Nz::Vector3ui& chunkCount, std::string_view scriptName, const std::unordered_map<std::string, EntityProperty>& properties)
 	{
 		ChunkIndices chunkIndices = chunk.GetIndices();
 
@@ -255,229 +175,37 @@ namespace tsom
 		ChunkGenerator& chunkGenerator = m_chunkGenerators.GetOrCreate(created, m_app);
 		if (created)
 		{
-			chunkGenerator.scriptingContext.RegisterLibrary<BaseScriptingLibrary>();
-			chunkGenerator.scriptingContext.RegisterLibrary<MathScriptingLibrary>();
-			chunkGenerator.scriptingContext.RegisterLibrary<ChunkScriptingLibrary>();
-
-			chunkGenerator.scriptingContext.LoadDirectory("scripts/libraries");
-
-			Nz::Result execResult = chunkGenerator.scriptingContext.LoadFile(fmt::format("scripts/planets/{}.lua", scriptName));
-			if (!execResult)
+			if (!chunkGenerator.Load(scriptName))
 				return;
-
-			chunkGenerator.generationFunction = execResult.GetValue();
 		}
 
-		Nz::Time t1 = Nz::GetElapsedNanoseconds();
-		Nz::Time t2 = Nz::GetElapsedNanoseconds();
-
-		Nz::Time t3 = Nz::GetElapsedNanoseconds();
-		auto result = chunkGenerator.generationFunction(chunk, seed, chunkCount);
-		Nz::Time t4 = Nz::GetElapsedNanoseconds();
-
-		if (!result.valid())
+		auto result = chunkGenerator.Generate(chunk, chunkCount, properties);
+		if (!result)
 		{
-			sol::error err = result;
-			spdlog::error("chunk {};{};{} failed to generate: {}", chunkIndices.x, chunkIndices.y, chunkIndices.z, err.what());
+			spdlog::error("Chunk generator failed for {};{};{}: {}", chunkIndices.x, chunkIndices.y, chunkIndices.z, result.GetError());
 			return;
 		}
 
-		sol::object resultObject = result;
-
-		if (!resultObject.is<sol::table>())
-		{
-			spdlog::error("chunk {};{};{} failed to generate: is not a table (got {})", chunkIndices.x, chunkIndices.y, chunkIndices.z, sol::type_name(chunkGenerator.scriptingContext.GetState(), resultObject.get_type()));
-			return;
-		}
-
-		std::size_t blockCount = chunk.GetBlockCount();
-
-		sol::table blockTable = result;
-
-		std::size_t contentSize = blockTable.size();
-		if (contentSize != blockCount)
-			spdlog::error("Chunk generator returned a table containing {} entries, {} expected", contentSize, blockCount);
-
-		auto& blockLibrary = chunk.GetBlockLibrary();
-
-		Nz::Time t5 = Nz::GetElapsedNanoseconds();
-
-		std::vector<BlockIndex> blocks(blockCount, EmptyBlockIndex);
-		std::size_t maxEntries = std::min<std::size_t>(blockCount, contentSize);
-		for (std::size_t i = 0; i < maxEntries; ++i)
-		{
-			BlockIndex blockIndex = blockTable[i + 1].get<BlockIndex>();
-			if (!blockLibrary.IsValidBlock(blockIndex))
-			{
-				spdlog::error("Chunk:Reset content table #{} contained invalid block index \"{}\"", i, blockIndex);
-				blockIndex = EmptyBlockIndex;
-			}
-
-			blocks[i] = blockIndex;
-		}
-
-		Nz::Time t6 = Nz::GetElapsedNanoseconds();
+		std::vector<BlockIndex> blocks = std::move(result).GetValue();
 
 		ChunkWriteLock lock(&chunk);
 		chunk.Reset([&](BlockIndex* blockIndices)
 		{
-			std::memcpy(blockIndices, blocks.data(), blockCount * sizeof(BlockIndex));
+			std::memcpy(blockIndices, blocks.data(), blocks.size() * sizeof(BlockIndex));
 		});
-
-		Nz::Time t7 = Nz::GetElapsedNanoseconds();
-
-		/*
-		static std::atomic_int64_t counter = 0;
-		std::atomic_int64_t iterCount = ++counter;
-
-		static std::atomic_int64_t accFile = 0;
-		std::atomic_int64_t a1 = accFile.fetch_add((t2 - t1).AsMicroseconds());
-
-		static std::atomic_int64_t accLua = 0;
-		std::atomic_int64_t a2 = accLua.fetch_add((t4 - t3).AsMicroseconds());
-
-		static std::atomic_int64_t accConvert = 0;
-		std::atomic_int64_t a3 = accConvert.fetch_add((t6 - t5).AsMicroseconds());
-
-		static std::atomic_int64_t accChunk = 0;
-		std::atomic_int64_t a4 = accChunk.fetch_add((t7 - t6).AsMicroseconds());
-
-		static std::atomic_int64_t accTotal = 0;
-		std::atomic_int64_t a5 = accTotal.fetch_add((t7 - t1).AsMicroseconds());
-
-		fmt::print("Total: {}us (load file: {}us, lua: {}us ({}), convert: {}us, chunk: {}us)\n", a5 / iterCount, a1 / iterCount, a2 / iterCount, (t4 - t3).AsMicroseconds(), a3 / iterCount, a4 / iterCount);
-		*/
 	}
 
-	void Planet::GenerateChunkNative(Chunk& chunk, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, std::string_view scriptName)
-	{
-#if 0
-		siv::PerlinNoise perlinNoise(seed);
-		auto& blockLibrary = chunk.GetBlockLibrary();
-
-		float minGrenerationFreeHeight = 0; 
-		float baseFreeHeight = 30;
-
-		float blockSize = chunk.GetBlockSize();
-		float maxHeight = (chunk.GetSize() * chunkCount.x)/2 * blockSize;
-		float maxGenerationHeight = maxHeight - minGrenerationFreeHeight;
-		float baseHeight = maxHeight - baseFreeHeight;
-
-		float terrainVariation1Scale = 0.06 * baseHeight;
-		float terrainVariation2Scale = 0.16 * baseHeight;
-		float moutainScale = 0.035 * baseHeight;
-		float spikeScale = 0.2 * baseHeight;
-		float caveScale = 0.06;
-
-		std::size_t blockCount = chunk.GetBlockCount();
-		std::vector<BlockIndex> blocks(blockCount, EmptyBlockIndex);
-
-		std::size_t i = 0;
-		for (std::size_t z = 0; z < ChunkSize; ++z)
-		{
-			for (std::size_t y = 0; y < ChunkSize; ++y)
-			{
-				for (std::size_t x = 0; x < ChunkSize; ++x)
-				{
-					BlockIndices blockPos = GetBlockIndices(chunk.GetIndices(), { x, y, z });
-					Nz::Vector3f blockPosScaled(blockPos);
-					blockPosScaled *= 0.5f;
-
-					Nz::Vector3f blockPosNorm = blockPosScaled.GetNormal();
-					float distToCenter = sdRoundBox(blockPosScaled, Nz::Vector3f(baseHeight), 16.0);
-
-					//blocks[i];
-				}
-			}
-		}
-    for z = 0, chunksize - 1 do
-        for y = 0, chunksize - 1 do
-            for x = 0, chunksize - 1 do
-                local blockPos = planet:GetBlockIndices(chunkIndices, Vec3ui(x, y, z))
-                local blockPosScaled = Vec3f(blockPos.x * 0.5, blockPos.y * 0.5, blockPos.z * 0.5)
-                local blockPosNorm, distToCenter = blockPosScaled:GetNormal()
-                --distToCenter = math.max(math.abs(blockPos.x * 0.5 + 0.5), math.abs(blockPos.y * 0.5 + 0.5), math.abs(blockPos.z * 0.5 + 0.5))
-                distToCenter = SignedDistance.RoundBox(blockPosScaled, Vec3f(baseHeight), 16.0)
-
-                if distToCenter > baseFreeHeight then
-                    table.insert(content, emptyBlock)
-                    goto continue
-                end
-
-                local blockPresence = perlin:normalizedOctave3D_01(blockPosScaled.x * caveScale, blockPosScaled.y * caveScale, blockPosScaled.z * caveScale, 4, 0.1)
-
-                if distToCenter <= -32.0 then
-                    if blockPresence >= 0.3 and blockPresence <= 0.7 then
-                        if distToCenter <= -5 then
-                            table.insert(content, stoneBlock)
-                        else
-                            table.insert(content, dirtBlock)
-                        end
-                    else
-                        table.insert(content, stoneBlock)
-                    end
-                else
-                    local baseMountainous = perlin:normalizedOctave3D_01((blockPosNorm.x * moutainScale)+10, blockPosNorm.y * moutainScale, blockPosNorm.z * moutainScale, 4, 0.1)
-                    local mountainous
-                    if baseMountainous < 0.6 then 
-                        mountainous = 0
-                    elseif baseMountainous < 0.8 then 
-                        mountainous = 5*baseMountainous-3
-                    else
-                        mountainous = 1
-                    end
-
-                    local heightVariation1 = 10 * perlin:normalizedOctave3D_01(blockPosNorm.x * terrainVariation1Scale, blockPosNorm.y * terrainVariation1Scale, blockPosNorm.z * terrainVariation1Scale, 4, 0.1)
-                    local heightVariation2 = 40 * mountainous * perlin:normalizedOctave3D_01((blockPosNorm.x * terrainVariation2Scale)+20, blockPosNorm.y * terrainVariation2Scale, blockPosNorm.z * terrainVariation2Scale, 4, 0.1)
-
-                    local baseSpikeHeight = perlin:normalizedOctave3D_01((blockPosNorm.x * spikeScale)+30, blockPosNorm.y * spikeScale, blockPosNorm.z * spikeScale, 4, 0.1)
-                    local spikeHeight
-                    if baseSpikeHeight < 0.7 then 
-                        spikeHeight = 0
-                    elseif baseSpikeHeight < 0.9 then 
-                        spikeHeight = 5*baseSpikeHeight-3.5
-                    else
-                        spikeHeight = 1
-                    end
-                    spikeHeight = (1-mountainous) * spikeHeight * 20
-
-                    local height = heightVariation1 + heightVariation2 + spikeHeight
-
-                    if distToCenter <= height then
-                        if distToCenter >= height - spikeHeight then
-                            table.insert(content, stoneMossyBlock)
-                        elseif mountainous > 0.5 and heightVariation2 > 0.5 then
-                            table.insert(content, snowBlock)
-                        elseif mountainous > 0.1 then
-                            table.insert(content, stoneBlock)
-                        elseif baseMountainous < 0.4 then
-                            table.insert(content, grassBlock)
-                        else
-                            table.insert(content, dirtBlock)
-                        end
-                    else
-                        table.insert(content, emptyBlock)
-                    end
-                end
-
-                ::continue::
-            end
-        end
-    end
-#endif
-	}
-
-	void Planet::GenerateChunks(Nz::TaskScheduler& taskScheduler, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, std::string_view scriptName)
+	void Planet::GenerateChunks(Nz::TaskScheduler& taskScheduler, const Nz::Vector3ui& chunkCount, std::string_view scriptName, const std::unordered_map<std::string, EntityProperty>& properties)
 	{
 		m_chunkGenerators.Clear();
-		ForEachChunk([=, this, &taskScheduler](const ChunkIndices& chunkIndices, Chunk& chunk)
+		ForEachChunk([&](const ChunkIndices& chunkIndices, Chunk& chunk)
 		{
 			if (chunk.HasContent())
 				return;
 
-			taskScheduler.AddTask([=, this, &chunk]
+			taskScheduler.AddTask([=, this, &chunk, props = properties]
 			{
-				GenerateChunk(chunk, seed, chunkCount, scriptName);
+				GenerateChunk(chunk, chunkCount, scriptName, props);
 			});
 		});
 	}

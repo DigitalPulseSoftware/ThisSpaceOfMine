@@ -21,10 +21,8 @@
 #include <Nazara/Physics3D/Physics3D.hpp>
 #include <NazaraUtils/PathUtils.hpp>
 #include <Main/Main.hpp>
+#include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
-
-void MigrateFileToSqlite(tsom::ServerInstance& instance, const std::filesystem::path& saveDirectory);
-void MigratePlanetChunksToSqlite(const std::filesystem::path& saveDirectory, tsom::ServerDatabase& serverDatabase, Nz::UInt32 planetId, std::string_view planetName);
 
 int ServerMain(int argc, char* argv[])
 {
@@ -81,42 +79,28 @@ int ServerMain(int argc, char* argv[])
 	instanceConfig.enableDebugDrawer = config.GetBoolValue(tsom::Config::Debug_EnableDrawer);
 	instanceConfig.databaseFile = config.GetStringValue(tsom::Config::Database_Filename);
 
-	bool isMigratingToDatabase = !std::filesystem::is_regular_file(instanceConfig.databaseFile);
-
 	auto& instance = serverInstanceAppComponent.AddInstance(instanceConfig);
 	auto& sessionManager = instance.AddSessionManager(serverPort);
 	sessionManager.SetDefaultHandler<tsom::InitialSessionHandler>(std::ref(instance));
 
 	std::filesystem::path saveDirectory = Nz::Utf8Path(config.GetStringValue(tsom::Config::Save_Directory));
 
-	if (isMigratingToDatabase)
+	if (!std::filesystem::is_regular_file(instanceConfig.databaseFile))
 	{
-		if (std::filesystem::is_directory(saveDirectory))
-		{
-			spdlog::warn("first time launching after SQLite switch: migrating saves.");
-
-			MigrateFileToSqlite(instance, saveDirectory);
-			std::filesystem::path migratedSaveDir = saveDirectory;
-			migratedSaveDir += Nz::Utf8Path("_migrated");
-
-			std::filesystem::rename(saveDirectory, migratedSaveDir);
-
-			spdlog::info("save migrated.");
-		}
-		else
-		{
-			// No save exists, create a default planet
-			auto& serverDatabase = instance.GetServerDatabase();
-			serverDatabase.StorePlanet({
-				.id = 1,
-				.generatorName = "bob",
-				.seed = 42,
-				.chunkCount = Nz::Vector3ui(15),
-				.blockSize = 0.5f,
-				.cornerRadius = 16.f,
-				.gravity = 9.81f
-			});
-		}
+		// No save exists, create a default planet
+		auto& serverDatabase = instance.GetServerDatabase();
+		serverDatabase.StorePlanet({
+			.id = 1,
+			.generatorName = "bob",
+			.type = "round_cube",
+			.chunkCount = Nz::Vector3ui(15),
+			.properties = nlohmann::json{
+				{ "BlockSize", 0.5f },
+				{ "CornerRadius", 16.f },
+				{ "Gravity", 9.81f },
+				{ "Seed", 42 }
+			}
+		});
 	}
 
 	instance.LoadFromDatabase();
@@ -130,88 +114,3 @@ int ServerMain(int argc, char* argv[])
 }
 
 TSOMMain(ServerMain)
-
-void MigrateFileToSqlite(tsom::ServerInstance& instance, const std::filesystem::path& saveDirectory)
-{
-	auto& serverDatabase = instance.GetServerDatabase();
-
-	serverDatabase.StorePlanet({
-		.id = 1,
-		.generatorName = "alice",
-		.seed = 42,
-		.chunkCount = Nz::Vector3ui(5),
-		.cornerRadius = 16.f,
-		.gravity = 9.81f
-	});
-
-	serverDatabase.StorePlanet({
-		.id = 2,
-		.generatorName = "bob",
-		.seed = 41,
-		.chunkCount = Nz::Vector3ui(5),
-		.cornerRadius = 40.f,
-		.gravity = 9.81f
-	});
-
-	serverDatabase.StorePlanetLink({
-		.sourcePlanet = 1,
-		.destinationPlanet = 2,
-		.position = Nz::Vector3f(-10000.f, 0.f, 0.f)
-	});
-
-	serverDatabase.StorePlanetLink({
-		.sourcePlanet = 2,
-		.destinationPlanet = 1,
-		.position = Nz::Vector3f(10000.f, 0.f, 0.f)
-	});
-
-	MigratePlanetChunksToSqlite(saveDirectory, serverDatabase, 1, "alice");
-	MigratePlanetChunksToSqlite(saveDirectory, serverDatabase, 2, "bob");
-}
-
-void MigratePlanetChunksToSqlite(const std::filesystem::path& saveDirectory, tsom::ServerDatabase& serverDatabase, Nz::UInt32 planetId, std::string_view planetName)
-{
-	for (std::filesystem::path chunkFile : std::filesystem::directory_iterator(saveDirectory / Nz::Utf8Path(planetName)))
-	{
-		if (chunkFile.extension() != Nz::Utf8Path(".chunk"))
-			continue;
-
-		std::string fileName = Nz::PathToString(chunkFile.filename());
-		unsigned int x, y, z;
-		if (std::sscanf(fileName.c_str(), "%u_%u_%u.chunk", &x, &y, &z) != 3)
-		{
-			spdlog::error("failed to load planet {0} chunk: failed to parse chunk name {1}", planetName, fileName);
-			continue;
-		}
-
-		std::optional chunkBuffer = Nz::File::ReadWhole(chunkFile);
-		if (!chunkBuffer)
-		{
-			spdlog::error("failed to load planet {0} chunk: failed to load chunk file {1}", planetName, fileName);
-			continue;
-		}
-
-		Nz::UInt32 decompressedSize = Nz::SafeCaster(chunkBuffer->size());
-
-		tsom::BinaryCompressor& binaryCompressor = tsom::BinaryCompressor::GetThreadCompressor();
-		std::optional compressedDataOpt = binaryCompressor.Compress(chunkBuffer->data(), chunkBuffer->size());
-		if NAZARA_UNLIKELY(!compressedDataOpt)
-			throw std::runtime_error("chunk compression failed");
-
-		std::span<Nz::UInt8>& compressedData = *compressedDataOpt;
-
-		// Reuse byteArray
-		std::vector<Nz::UInt8> chunkData(sizeof(Nz::UInt32) + compressedData.size());
-
-		decompressedSize = Nz::HostToLittleEndian(decompressedSize);
-		std::memcpy(&chunkData[0], &decompressedSize, sizeof(decompressedSize));
-		std::memcpy(&chunkData[sizeof(decompressedSize)], &compressedData[0], compressedData.size());
-
-		serverDatabase.StorePlanetChunk(tsom::Database::PlanetChunk{
-			.planetId = planetId,
-			.position = tsom::ChunkIndices(x, y, z),
-			.version = 1,
-			.chunkData = chunkData
-		});
-	}
-}

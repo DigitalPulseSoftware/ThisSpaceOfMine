@@ -38,6 +38,11 @@ namespace tsom
 		return m_name;
 	}
 
+	inline auto EntityClass::GetProperties() const -> const std::vector<Property>&
+	{
+		return m_properties;
+	}
+
 	inline auto EntityClass::GetProperty(Nz::UInt32 propertyIndex) const -> const Property&
 	{
 		assert(propertyIndex < m_properties.size());

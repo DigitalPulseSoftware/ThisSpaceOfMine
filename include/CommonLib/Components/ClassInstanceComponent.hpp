@@ -53,6 +53,8 @@ namespace tsom
 			NazaraSignal(OnClientRpc, ClassInstanceComponent* /*classInstance*/, Nz::UInt32 /*rpcIndex*/, ServerPlayer* /*targetPlayer*/);
 			NazaraSignal(OnPropertyUpdate, ClassInstanceComponent* /*classInstance*/, Nz::UInt32 /*propertyIndex*/, const EntityProperty& /*newValue*/);
 
+			static constexpr Nz::UInt32 InvalidIndex = Nz::MaxValue();
+
 		private:
 			std::shared_ptr<const EntityClass> m_entityClass;
 			std::vector<EntityProperty> m_properties;

@@ -22,6 +22,7 @@
 #include <Nazara/Core/TaskSchedulerAppComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
+#include <nlohmann/json.hpp>
 
 template<>
 struct fmt::formatter<tsom::Direction> : formatter<string_view>
@@ -67,11 +68,11 @@ namespace tsom
 {
 	constexpr unsigned int s_chunkVersion = 1;
 
-	ServerPlanetEnvironment::ServerPlanetEnvironment(ServerInstance& serverInstance, std::optional<Nz::UInt32> databaseId, std::string generatorName, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, float cellSize, float cornerRadius) :
+	ServerPlanetEnvironment::ServerPlanetEnvironment(ServerInstance& serverInstance, std::optional<Nz::UInt32> databaseId, std::string generatorName, const Nz::Vector3ui& chunkCount, std::string_view planetType, std::unordered_map<std::string, EntityProperty> properties) :
 	ServerEnvironment(serverInstance, ServerEnvironmentType::Planet, true),
 	m_databaseId(databaseId),
 	m_generatorName(std::move(generatorName)),
-	m_generationSeed(seed),
+	m_planetProperties(std::move(properties)),
 	m_chunkCount(chunkCount)
 	{
 		m_world->GetRegistry().ctx().emplace<ServerPlanetEnvironment*>(this);
@@ -83,13 +84,23 @@ namespace tsom
 		m_planetEntity.emplace<Nz::NodeComponent>();
 		m_planetEntity.emplace<NetworkedComponent>();
 
-		std::shared_ptr<const EntityClass> planetClass = serverInstance.GetEntityRegistry().FindClass("planet");
+		std::shared_ptr<const EntityClass> planetClass = serverInstance.GetEntityRegistry().FindClass(planetType);
+		NazaraAssert(planetClass);
 
 		auto& entityInstance = m_planetEntity.emplace<ClassInstanceComponent>(planetClass);
-		entityInstance.UpdateProperty<EntityPropertyType::Float>("CellSize", cellSize);
-		entityInstance.UpdateProperty<EntityPropertyType::Float>("CornerRadius", cornerRadius);
 
-		entityInstance.UpdateProperty<EntityPropertyType::Float>("Gravity", 9.81f);
+		for (auto&& [key, value] : m_planetProperties)
+		{
+			Nz::UInt32 propertyIndex = planetClass->FindProperty(key);
+			if (propertyIndex == EntityClass::InvalidIndex)
+			{
+				spdlog::warn("Planet property \"{}\" doesn't exist for planet class \"{}\"", key, planetType);
+				continue;
+			}
+
+			const auto& property = planetClass->GetProperty(propertyIndex);
+			entityInstance.UpdateProperty(propertyIndex, EntityProperty(value));
+		}
 
 		planetClass->InitAndActivateEntity(m_planetEntity);
 
@@ -272,7 +283,7 @@ namespace tsom
 			auto& taskScheduler = m_serverInstance.GetApplication().GetComponent<Nz::TaskSchedulerAppComponent>();
 
 			m_chunkLoadingData->chunkLoadingCount++;
-			taskScheduler.AddTask([chunk, serverInstance = &m_serverInstance, databaseId = m_databaseId, chunkLoadingData = m_chunkLoadingData, seed = m_generationSeed, chunkCount = m_chunkCount, generatorName = m_generatorName, originDir = originDir]
+			taskScheduler.AddTask([chunk, serverInstance = &m_serverInstance, databaseId = m_databaseId, chunkLoadingData = m_chunkLoadingData, chunkCount = m_chunkCount, generatorName = m_generatorName, originDir = originDir, properties = m_planetProperties]
 			{
 				bool chunkFound = false;
 				if (databaseId)
@@ -307,7 +318,7 @@ namespace tsom
 				}
 
 				if (!chunkFound)
-					chunkLoadingData->planet->GenerateChunk(*chunk, seed, chunkCount, generatorName);
+					chunkLoadingData->planet->GenerateChunk(*chunk, chunkCount, generatorName, properties);
 
 				const auto& faceVisibilityMasks = chunk->GetFaceVisibilityMasks();
 

@@ -202,7 +202,48 @@ namespace tsom
 		m_databaseEnvironments.clear();
 		serverDatabase.GetAllPlanets([&](Database::Planet&& planetData)
 		{
-			RegisterDatabaseEnvironment(planetData.id, std::make_unique<ServerPlanetEnvironment>(*this, planetData.id, std::string(planetData.generatorName), planetData.seed, planetData.chunkCount, planetData.blockSize, planetData.cornerRadius));
+			std::shared_ptr<const EntityClass> planetClass = m_entityRegistry.FindClass(planetData.type);
+			if (!planetClass)
+			{
+				spdlog::error("Database planet {} has unknown planet type \"{}\"", planetData.id, planetData.type);
+				return true;
+			}
+
+			std::unordered_map<std::string, EntityProperty> properties;
+			for (auto&& [key, value] : planetData.properties.items())
+			{
+				Nz::UInt32 propertyIndex = planetClass->FindProperty(key);
+				if (propertyIndex == EntityClass::InvalidIndex)
+				{
+					spdlog::warn("property \"{}\" doesn't exist for planet class \"{}\"", key, planetData.type);
+					continue;
+				}
+
+				const auto& property = planetClass->GetProperty(propertyIndex);
+				switch (property.type)
+				{
+					case EntityPropertyType::Bool:
+						properties[key] = EntityPropertySingleValue<EntityPropertyType::Bool>(value.get<bool>());
+						break;
+
+					case EntityPropertyType::Float:
+						properties[key] = EntityPropertySingleValue<EntityPropertyType::Float>(value.get<float>());
+						break;
+
+					case EntityPropertyType::Integer:
+						properties[key] = EntityPropertySingleValue<EntityPropertyType::Integer>(value.get<Nz::Int64>());
+						break;
+
+					case EntityPropertyType::String:
+						properties[key] = EntityPropertySingleValue<EntityPropertyType::String>(value.get<std::string>());
+						break;
+
+					default:
+						spdlog::warn("Planet property \"{}\" unsupported type", key);
+				}
+			}
+
+			RegisterDatabaseEnvironment(planetData.id, std::make_unique<ServerPlanetEnvironment>(*this, planetData.id, std::string(planetData.generatorName), planetData.chunkCount, planetData.type, std::move(properties)));
 			return true;
 		});
 

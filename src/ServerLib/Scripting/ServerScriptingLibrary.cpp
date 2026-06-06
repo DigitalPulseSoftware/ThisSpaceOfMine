@@ -132,9 +132,10 @@ namespace tsom
 
 		state.new_usertype<ServerPlanetEnvironment>("PlanetEnvironment",
 			sol::base_classes, sol::bases<ServerEnvironment>(),
-			sol::meta_function::construct, sol::factories([this](std::optional<Nz::UInt32> databaseId, std::string generatorName, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, float cellSize, float cornerRadius)
+			sol::meta_function::construct, sol::factories([this](std::optional<Nz::UInt32> databaseId, std::string generatorName, const Nz::Vector3ui& chunkCount, const std::string& type)
 			{
-				return std::make_unique<ServerPlanetEnvironment>(m_serverInstance, databaseId, std::move(generatorName), seed, chunkCount, cellSize, cornerRadius);
+				// TODO: Build properties from Lua table
+				return std::make_unique<ServerPlanetEnvironment>(m_serverInstance, databaseId, std::move(generatorName), chunkCount, type, std::unordered_map<std::string, EntityProperty>{});
 			}),
 			"GetDatabaseId", LuaFunction(&ServerPlanetEnvironment::GetDatabaseId)
 		);
@@ -292,14 +293,19 @@ namespace tsom
 			"CreatePlanet", LuaFunction([this](sol::stack_table table)
 			{
 				std::string generatorName = table["generatorName"];
+				std::string type = table["type"];
 
 				Database::Planet planet;
-				planet.blockSize = table["blockSize"];
 				planet.chunkCount = table["chunkCount"];
-				planet.cornerRadius = table["cornerRadius"];
 				planet.generatorName = generatorName;
-				planet.gravity = table["gravity"];
-				planet.seed = table["seed"];
+				planet.type = type;
+
+				/*
+				TODO
+				sol::table properties = table["properties"];
+				for (const auto& [key, value] : properties.pairs())
+				{
+				}*/
 
 				return m_serverInstance.GetServerDatabase().CreatePlanet(planet);
 			}),

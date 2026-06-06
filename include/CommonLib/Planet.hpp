@@ -9,6 +9,7 @@
 
 #include <CommonLib/Export.hpp>
 #include <CommonLib/ChunkContainer.hpp>
+#include <CommonLib/ChunkGenerator.hpp>
 #include <CommonLib/Direction.hpp>
 #include <CommonLib/GravityController.hpp>
 #include <CommonLib/Scripting/ScriptingContext.hpp>
@@ -29,7 +30,7 @@ namespace tsom
 	class TSOM_COMMONLIB_API Planet : public ChunkContainer, public GravityController
 	{
 		public:
-			Planet(Nz::ApplicationBase& app, float tileSize, float cornerRadius, float gravity);
+			Planet(Nz::ApplicationBase& app, float blockSize);
 			Planet(const Planet&) = delete;
 			Planet(Planet&&) = delete;
 			~Planet() = default;
@@ -37,29 +38,21 @@ namespace tsom
 			Chunk& AddChunk(const BlockLibrary& blockLibrary, const ChunkIndices& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback = nullptr);
 			void AddChunks(const BlockLibrary& blockLibrary, const Nz::Vector3ui& chunkCount);
 
-			GravityForce ComputeGravity(const Nz::Vector3f& position) const override;
-			Nz::Vector3f ComputeUpDirection(const Nz::Vector3f& position) const;
-
 			void ClearChunks() override;
 
 			void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, Chunk& chunk)> callback) override;
 			void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, const Chunk& chunk)> callback) const override;
 
-			void GenerateChunk(Chunk& chunk, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, std::string_view scriptName);
-			void GenerateChunkNative(Chunk& chunk, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, std::string_view scriptName);
-			void GenerateChunks(Nz::TaskScheduler& taskScheduler, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, std::string_view scriptName);
+			void GenerateChunk(Chunk& chunk, const Nz::Vector3ui& chunkCount, std::string_view scriptName, const std::unordered_map<std::string, EntityProperty>& properties);
+			void GenerateChunks(Nz::TaskScheduler& taskScheduler, const Nz::Vector3ui& chunkCount, std::string_view scriptName, const std::unordered_map<std::string, EntityProperty>& properties);
 			void GeneratePlatform(const BlockLibrary& blockLibrary, Direction upDirection, const BlockIndices& platformCenter);
 
 			inline Nz::Vector3f GetCenter() const override;
 			inline Chunk* GetChunk(const ChunkIndices& chunkIndices) override;
 			inline const Chunk* GetChunk(const ChunkIndices& chunkIndices) const override;
 			inline std::size_t GetChunkCount() const override;
-			inline float GetCornerRadius() const;
-			inline float GetGravity() const;
 
 			void RemoveChunk(const ChunkIndices& indices) override;
-
-			inline void UpdateCornerRadius(float cornerRadius);
 
 			Planet& operator=(const Planet&) = delete;
 			Planet& operator=(Planet&&) = delete;
@@ -78,25 +71,12 @@ namespace tsom
 				NazaraSlot(Chunk, OnReset, onReset);
 			};
 
-			struct ChunkGenerator
-			{
-				ChunkGenerator(Nz::ApplicationBase& app) :
-				scriptingContext(app)
-				{
-				}
-
-				ScriptingContext scriptingContext;
-				sol::protected_function generationFunction;
-			};
-
 			std::mutex m_chunkLayerAddedSignalMutex;
 			std::mutex m_chunkLayerRemovedSignalMutex;
 			std::mutex m_chunkUpdatedSignalMutex;
 			tsl::hopscotch_map<ChunkIndices, ChunkData> m_chunks;
 			Nz::ThreadLocalData<ChunkGenerator> m_chunkGenerators;
 			Nz::ApplicationBase& m_app;
-			float m_cornerRadius;
-			float m_gravity;
 	};
 }
 

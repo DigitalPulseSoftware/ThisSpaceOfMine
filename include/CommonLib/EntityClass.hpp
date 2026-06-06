@@ -41,6 +41,7 @@ namespace tsom
 			inline const RemoteProcedureCall& GetClientRpc(Nz::UInt32 rpcIndex) const;
 			inline Nz::UInt32 GetClientRpcCount() const;
 			inline const std::string& GetName() const;
+			inline const std::vector<Property>& GetProperties() const;
 			inline const Property& GetProperty(Nz::UInt32 propertyIndex) const;
 			inline Nz::UInt32 GetPropertyCount() const;
 

@@ -26,11 +26,9 @@ namespace tsom::Database
 	{
 		Nz::UInt32 id;
 		std::string_view generatorName;
-		Nz::UInt32 seed;
+		std::string_view type = "round_cube";
 		Nz::Vector3ui32 chunkCount;
-		float blockSize = 0.5f;
-		float cornerRadius;
-		float gravity;
+		nlohmann::json properties = nlohmann::json::object();
 	};
 
 	struct PlanetChunk

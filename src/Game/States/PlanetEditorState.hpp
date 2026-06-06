@@ -8,7 +8,10 @@
 #define TSOM_GAME_STATES_PLANETEDITORSTATE_HPP
 
 #include <CommonLib/AtmosphereScattering.hpp>
+#include <CommonLib/ChunkGenerator.hpp>
 #include <CommonLib/ConsoleExecutor.hpp>
+#include <CommonLib/EntityProperties.hpp>
+#include <CommonLib/EntityRegistry.hpp>
 #include <CommonLib/InternalConstants.hpp>
 #include <Game/States/WidgetState.hpp>
 #include <Nazara/Core/State.hpp>
@@ -17,6 +20,7 @@
 #include <Nazara/Widgets/Canvas.hpp>
 #include <memory>
 #include <optional>
+#include <unordered_map>
 
 struct ImGuiContext;
 
@@ -32,6 +36,7 @@ namespace Nz
 namespace tsom
 {
 	class ClientChunkEntities;
+	class EntityClass;
 	class EscapeMenu;
 	class Planet;
 
@@ -52,7 +57,9 @@ namespace tsom
 
 		private:
 			void RefreshPlanet();
+			void RefreshScript();
 			void LayoutWidgets(const Nz::Vector2f& newSize) override;
+			void LoadScripts();
 			void UpdateMouseLock();
 
 			NazaraSlot(Nz::Canvas, OnUnhandledKeyPressed, m_onUnhandledKeyPressed);
@@ -63,14 +70,14 @@ namespace tsom
 
 			struct PlanetSettings
 			{
-				float cornerRadius = 0.f;
 				Nz::Vector3ui chunkCount = Nz::Vector3ui(10);
-				std::size_t seed = 42;
 				std::string scriptName = "bob";
+				std::unordered_map<std::string, EntityProperty> properties;
 			};
 
 			std::array<std::unique_ptr<ClientChunkEntities>, Constants::MaxChunkLayerCount> m_planetEntities;
 			std::optional<ConsoleExecutor> m_consoleExecutor;
+			std::shared_ptr<const EntityClass> m_planetClass;
 			std::unique_ptr<Planet> m_planet;
 			entt::handle m_atmosphereEntity;
 			entt::handle m_cameraEntity;
@@ -79,6 +86,8 @@ namespace tsom
 			entt::handle m_sunLightEntity;
 			Nz::EulerAnglesf m_cameraRotation;
 			AtmosphereScattering m_atmosphereSettings;
+			ChunkGenerator m_chunkGenerator;
+			EntityRegistry m_entityRegistry;
 			PlanetSettings m_planetSettings;
 			EscapeMenu* m_escapeMenu;
 			ImGuiContext* m_imguiContext;

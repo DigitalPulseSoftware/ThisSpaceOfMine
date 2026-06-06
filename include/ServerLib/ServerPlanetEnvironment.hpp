@@ -11,6 +11,7 @@
 #include <CommonLib/Chunk.hpp>
 #include <ServerLib/ServerAtmosphere.hpp>
 #include <ServerLib/ServerEnvironment.hpp>
+#include <nlohmann/json_fwd.hpp>
 #include <tsl/hopscotch_map.h>
 #include <tsl/ordered_map.h>
 #include <atomic>
@@ -27,7 +28,7 @@ namespace tsom
 	class TSOM_SERVERLIB_API ServerPlanetEnvironment final : public ServerEnvironment
 	{
 		public:
-			ServerPlanetEnvironment(ServerInstance& serverInstance, std::optional<Nz::UInt32> databaseId, std::string generatorName, Nz::UInt32 seed, const Nz::Vector3ui& chunkCount, float cellSize, float cornerRadius = 16.f);
+			ServerPlanetEnvironment(ServerInstance& serverInstance, std::optional<Nz::UInt32> databaseId, std::string generatorName, const Nz::Vector3ui& chunkCount, std::string_view planetType, std::unordered_map<std::string, EntityProperty> properties);
 			ServerPlanetEnvironment(const ServerPlanetEnvironment&) = delete;
 			ServerPlanetEnvironment(ServerPlanetEnvironment&&) = delete;
 			~ServerPlanetEnvironment();
@@ -75,8 +76,8 @@ namespace tsom
 			std::shared_ptr<ChunkLoadingData> m_chunkLoadingData;
 			std::string m_generatorName;
 			std::unordered_set<ChunkIndices /*chunkIndex*/> m_dirtyChunks;
+			std::unordered_map<std::string, EntityProperty> m_planetProperties;
 			entt::handle m_planetEntity;
-			Nz::UInt32 m_generationSeed;
 			Nz::Vector3ui m_chunkCount;
 	};
 }

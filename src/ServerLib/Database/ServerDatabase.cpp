@@ -14,9 +14,9 @@ namespace tsom
 {
 	ServerDatabase::PreparedStatements::PreparedStatements(SQLite::Database& database) :
 	getAllConfigQuery(database, "SELECT name, value FROM configs"),
-	createPlanetQuery(database, "INSERT INTO planets(generator, seed, chunk_count_x, chunk_count_y, chunk_count_z, block_size, corner_radius, gravity, block_size) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id"),
-	getAllPlanetQuery(database, "SELECT id, generator, seed, chunk_count_x, chunk_count_y, chunk_count_z, block_size, corner_radius, gravity FROM planets"),
-	storePlanetQuery(database, "REPLACE INTO planets(id, generator, seed, chunk_count_x, chunk_count_y, chunk_count_z, block_size, corner_radius, gravity) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)"),
+	createPlanetQuery(database, "INSERT INTO planets(generator, chunk_count_x, chunk_count_y, chunk_count_z, type, properties) VALUES(?, ?, ?, ?, ?, ?) RETURNING id"),
+	getAllPlanetQuery(database, "SELECT id, generator, chunk_count_x, chunk_count_y, chunk_count_z, type, properties FROM planets"),
+	storePlanetQuery(database, "REPLACE INTO planets(id, generator, chunk_count_x, chunk_count_y, chunk_count_z, type, properties) VALUES(?, ?, ?, ?, ?, ?, ?)"),
 	deletePlanetChunkQuery(database, "DELETE FROM planet_chunks WHERE planet_id = ? AND position_x = ? AND position_y = ? AND position_z = ?"),
 	getAllPlanetChunksQuery(database, "SELECT position_x, position_y, position_z, version, chunk_data FROM planet_chunks WHERE planet_id = ?"),
 	getPlanetChunkQuery(database, "SELECT version, chunk_data FROM planet_chunks WHERE planet_id = ? AND position_x = ? AND position_y = ? AND position_z = ?"),
@@ -42,15 +42,14 @@ namespace tsom
 	{
 		NAZARA_DEFER({ m_preparedStatements->createPlanetQuery.reset(); });
 
+		std::string propertiesStr = planet.properties.dump();
+
 		m_preparedStatements->createPlanetQuery.bindNoCopy(1, planet.generatorName.data());
-		m_preparedStatements->createPlanetQuery.bind(2, planet.seed);
 		m_preparedStatements->createPlanetQuery.bind(3, planet.chunkCount.x);
 		m_preparedStatements->createPlanetQuery.bind(4, planet.chunkCount.y);
 		m_preparedStatements->createPlanetQuery.bind(5, planet.chunkCount.z);
-		m_preparedStatements->createPlanetQuery.bind(6, planet.blockSize);
-		m_preparedStatements->createPlanetQuery.bind(7, planet.cornerRadius);
-		m_preparedStatements->createPlanetQuery.bind(8, planet.gravity);
-		m_preparedStatements->createPlanetQuery.bind(9, planet.blockSize);
+		m_preparedStatements->createPlanetQuery.bindNoCopy(6, planet.type.data());
+		m_preparedStatements->createPlanetQuery.bindNoCopy(7, propertiesStr.data());
 
 		try
 		{
@@ -129,13 +128,11 @@ namespace tsom
 			Database::Planet planet;
 			planet.id = m_preparedStatements->getAllPlanetQuery.getColumn(0);
 			planet.generatorName = m_preparedStatements->getAllPlanetQuery.getColumn(1).getText();
-			planet.seed = m_preparedStatements->getAllPlanetQuery.getColumn(2);
-			planet.chunkCount.x = m_preparedStatements->getAllPlanetQuery.getColumn(3);
-			planet.chunkCount.y = m_preparedStatements->getAllPlanetQuery.getColumn(4);
-			planet.chunkCount.z = m_preparedStatements->getAllPlanetQuery.getColumn(5);
-			planet.blockSize = Nz::SafeCaster(m_preparedStatements->getAllPlanetQuery.getColumn(6).getDouble());
-			planet.cornerRadius = Nz::SafeCaster(m_preparedStatements->getAllPlanetQuery.getColumn(7).getDouble());
-			planet.gravity = Nz::SafeCaster(m_preparedStatements->getAllPlanetQuery.getColumn(8).getDouble());
+			planet.chunkCount.x = m_preparedStatements->getAllPlanetQuery.getColumn(2);
+			planet.chunkCount.y = m_preparedStatements->getAllPlanetQuery.getColumn(3);
+			planet.chunkCount.z = m_preparedStatements->getAllPlanetQuery.getColumn(4);
+			planet.type = m_preparedStatements->getAllPlanetQuery.getColumn(5).getText();
+			planet.properties = nlohmann::json::parse(m_preparedStatements->getAllPlanetQuery.getColumn(6).getText());
 
 			if (!callback(std::move(planet)))
 				break;
@@ -316,15 +313,15 @@ namespace tsom
 	{
 		NAZARA_DEFER({ m_preparedStatements->storePlanetQuery.reset(); });
 
+		std::string propertiesStr = planet.properties.dump();
+
 		m_preparedStatements->storePlanetQuery.bind(1, planet.id);
 		m_preparedStatements->storePlanetQuery.bindNoCopy(2, planet.generatorName.data());
-		m_preparedStatements->storePlanetQuery.bind(3, planet.seed);
-		m_preparedStatements->storePlanetQuery.bind(4, planet.chunkCount.x);
-		m_preparedStatements->storePlanetQuery.bind(5, planet.chunkCount.y);
-		m_preparedStatements->storePlanetQuery.bind(6, planet.chunkCount.z);
-		m_preparedStatements->storePlanetQuery.bind(7, planet.blockSize);
-		m_preparedStatements->storePlanetQuery.bind(8, planet.cornerRadius);
-		m_preparedStatements->storePlanetQuery.bind(9, planet.gravity);
+		m_preparedStatements->storePlanetQuery.bind(3, planet.chunkCount.x);
+		m_preparedStatements->storePlanetQuery.bind(4, planet.chunkCount.y);
+		m_preparedStatements->storePlanetQuery.bind(5, planet.chunkCount.z);
+		m_preparedStatements->storePlanetQuery.bindNoCopy(6, planet.type.data());
+		m_preparedStatements->storePlanetQuery.bindNoCopy(7, propertiesStr.data());
 
 		try
 		{

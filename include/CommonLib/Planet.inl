@@ -31,19 +31,4 @@ namespace tsom
 	{
 		return m_chunks.size();
 	}
-
-	inline float Planet::GetCornerRadius() const
-	{
-		return m_cornerRadius;
-	}
-
-	inline float Planet::GetGravity() const
-	{
-		return m_gravity;
-	}
-
-	inline void Planet::UpdateCornerRadius(float cornerRadius)
-	{
-		m_cornerRadius = cornerRadius;
-	}
 }

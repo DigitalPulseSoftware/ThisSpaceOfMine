@@ -12,6 +12,8 @@
 
 namespace tsom
 {
+	template<typename F> Nz::Vector3f SignedDistanceNormal(const Nz::Vector3f& pos, F&& distCallback);
+
 	// https://iquilezles.org/articles/distfunctions/
 	inline float sdRoundBox(const Nz::Vector3f& pos, const Nz::Vector3f& halfDims, float cornerRadius);
 	inline float sdTorus(const Nz::Vector3f& pos, const Nz::Vector2f& dims);

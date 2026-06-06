@@ -8,6 +8,7 @@
 #include <ClientLib/ClientChunkEntities.hpp>
 #include <ClientLib/Components/ChunkNetworkMapComponent.hpp>
 #include <CommonLib/AtmosphereScattering.hpp>
+#include <CommonLib/EntityClass.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 
@@ -19,20 +20,47 @@ namespace tsom
 	{
 	}
 
-	void ClientChunkClassLibrary::InitializePlanetEntity(entt::handle entity)
+	PlanetComponent& ClientChunkClassLibrary::InitializePlanetEntity(entt::handle entity, std::shared_ptr<Planet>&& planet)
 	{
+		PlanetComponent& planetComponent = ChunkClassLibrary::InitializePlanetEntity(entity, std::move(planet));
+
 		entity.emplace<ChunkNetworkMapComponent>();
-		auto& atmosphereScattering = entity.emplace<AtmosphereScattering>();
 
 		auto& entityInstance = entity.get<ClassInstanceComponent>();
 
-		atmosphereScattering.planetCornerRadius = entityInstance.GetProperty<EntityPropertyType::Float>("CornerRadius");
-		atmosphereScattering.planetDimensions = entityInstance.GetProperty<EntityPropertyType::FloatSize3D>("AtmospherePlanetDims");
+		auto& atmosphereScattering = entity.emplace<AtmosphereScattering>();
+
+		if (entityInstance.GetClass()->GetName() == "round_cube_planet")
+		{
+			Nz::Vector4f planetSettings;
+
+			Nz::Vector3f planetDims = entityInstance.GetProperty<EntityPropertyType::FloatSize3D>("AtmospherePlanetDims");
+			float planetCornerRadius = entityInstance.GetProperty<EntityPropertyType::Float>("CornerRadius");
+
+			atmosphereScattering.type = AtmosphereScatteringType::RoundCube;
+			atmosphereScattering.planetSettings = Nz::Vector4f(planetDims, planetCornerRadius);
+		}
+		else if (entityInstance.GetClass()->GetName() == "torus_planet")
+		{
+			Nz::Vector4f planetSettings;
+
+			float planetRadius = entityInstance.GetProperty<EntityPropertyType::Float>("Radius");
+			float planetThickness = entityInstance.GetProperty<EntityPropertyType::Float>("Thickness");
+
+			atmosphereScattering.type = AtmosphereScatteringType::Torus;
+			atmosphereScattering.planetSettings = Nz::Vector4f(planetRadius, planetThickness, 0.0f, 0.0f);
+		}
+
+		return planetComponent;
 	}
 
-	void ClientChunkClassLibrary::InitializeShipEntity(entt::handle entity)
+	ShipComponent& ClientChunkClassLibrary::InitializeShipEntity(entt::handle entity, std::unique_ptr<Ship>&& ship)
 	{
+		ShipComponent& shipComponent = ChunkClassLibrary::InitializeShipEntity(entity, std::move(ship));
+
 		entity.emplace<ChunkNetworkMapComponent>();
+
+		return shipComponent;
 	}
 
 	std::unique_ptr<ChunkEntities> ClientChunkClassLibrary::SetupChunkEntities(Nz::EnttWorld& world, ChunkContainer& chunkContainer, std::size_t layerIndex)

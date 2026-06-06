@@ -7,8 +7,10 @@
 #include <ClientLib/EscapeMenu.hpp>
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Components/VisualEntityComponent.hpp>
-#include <CommonLib/Planet.hpp>
+#include <ClientLib/Entities/ClientChunkClassLibrary.hpp>
+#include <ClientLib/Entities/ClientEntityClassLibrary.hpp>
 #include <CommonLib/SurfaceNetsChunk.hpp>
+#include <CommonLib/Planets/RoundCubePlanet.hpp>
 #include <Game/GameConfigAppComponent.hpp>
 #include <Game/GameConfigs.hpp>
 #include <Game/States/StateData.hpp>
@@ -35,17 +37,21 @@
 #include <Nazara/Renderer/Plugins/ImGuiPlugin.hpp>
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
+#include <spdlog/spdlog.h>
 #include <numeric>
 
 namespace tsom
 {
 	PlanetEditorState::PlanetEditorState(std::shared_ptr<StateData> stateDataPtr) :
 	WidgetState(std::move(stateDataPtr)),
-	m_cameraRotation(-45.f, 180.f, 0.f)
+	m_cameraRotation(-45.f, 180.f, 0.f),
+	m_chunkGenerator(*GetStateData().app)
 	{
 		auto& stateData = GetStateData();
 		auto& config = stateData.app->GetComponent<GameConfigAppComponent>().GetConfig();
 		auto& filesystem = stateData.app->GetComponent<Nz::FilesystemAppComponent>();
+
+		LoadScripts();
 
 		m_cameraEntity = CreateEntity();
 		{
@@ -182,7 +188,7 @@ namespace tsom
 		m_planetParentEntity.emplace<Nz::NodeComponent>();
 		m_planetParentEntity.emplace<VisualEntityComponent>().visualEntity = m_planetParentEntity;
 
-		m_planet = std::make_unique<Planet>(*stateData.app, 0.5f, 16.f, 9.81f);
+		m_planet = std::make_unique<RoundCubePlanet>(*stateData.app, 0.5f, 0, 16.f, 9.81f);
 		for (std::size_t layerIndex = 0; layerIndex < m_planetEntities.size(); ++layerIndex)
 		{
 			if (!stateData.blockLibrary->IsValidLayer(layerIndex))
@@ -239,6 +245,7 @@ namespace tsom
 		});
 
 		UpdateMouseLock();
+		RefreshScript();
 		RefreshPlanet();
 	}
 
@@ -327,8 +334,6 @@ namespace tsom
 				ImGui::Text("Press F1 to lock/unlock mouse");
 				ImGui::Separator();
 
-				ImGui::SliderFloat("Corner radius", &m_planetSettings.cornerRadius, 0.f, 250.f);
-
 				int chunkCount[3] = {
 					int(m_planetSettings.chunkCount.x),
 					int(m_planetSettings.chunkCount.y),
@@ -337,13 +342,52 @@ namespace tsom
 				if (ImGui::InputInt3("Chunk count", chunkCount))
 					m_planetSettings.chunkCount = Nz::Vector3ui(std::max(chunkCount[0], 0), std::max(chunkCount[1], 0), std::max(chunkCount[2], 0));
 
-				int seed = m_planetSettings.seed;
-				if (ImGui::InputInt("Seed", &seed))
-					m_planetSettings.seed = std::max(seed, 0);
-
 				ImGui::InputText("Generator name", &m_planetSettings.scriptName);
 
+				if (ImGui::Button("Update"))
+					RefreshScript();
+
 				ImGui::Separator();
+
+				if (m_planetClass)
+				{
+					for (const auto& property : m_planetClass->GetProperties())
+					{
+						switch (property.type)
+						{
+							case EntityPropertyType::Bool:
+							{
+								bool& value = std::get<EntityPropertySingleValue<EntityPropertyType::Bool>>(m_planetSettings.properties[property.name]);
+								ImGui::Checkbox(property.name.data(), &value);
+								break;
+							}
+
+							case EntityPropertyType::Float:
+							{
+								float& value = std::get<EntityPropertySingleValue<EntityPropertyType::Float>>(m_planetSettings.properties[property.name]);
+								ImGui::InputFloat(property.name.data(), &value);
+								break;
+							}
+
+							case EntityPropertyType::Integer:
+							{
+								Nz::Int64& value = std::get<EntityPropertySingleValue<EntityPropertyType::Integer>>(m_planetSettings.properties[property.name]);
+								ImGui::InputScalar(property.name.data(), ImGuiDataType_S64, &value);
+								break;
+							}
+
+							case EntityPropertyType::String:
+							{
+								std::string& value = std::get<EntityPropertySingleValue<EntityPropertyType::String>>(m_planetSettings.properties[property.name]);
+								ImGui::InputText(property.name.data(), &value);
+								break;
+							}
+
+							default:
+								break;
+						}
+					}
+				}
 
 				if (ImGui::Button("Update planet"))
 					RefreshPlanet();
@@ -368,36 +412,20 @@ namespace tsom
 					m_sunLightEntity.get<Nz::NodeComponent>().SetRotation(Nz::Quaternionf::RotationBetween(Nz::Vector3f::Forward(), -atmosphereScattering.sunDir));
 				}
 
-				float sunIntensity[] = { atmosphereScattering.sunIntensity.x, atmosphereScattering.sunIntensity.y, atmosphereScattering.sunIntensity.z };
+				/*float sunIntensity[] = {atmosphereScattering.sunIntensity.x, atmosphereScattering.sunIntensity.y, atmosphereScattering.sunIntensity.z};
 				if (ImGui::DragFloat3("Sun intensity", sunIntensity))
 					atmosphereScattering.sunIntensity = Nz::Vector3f(sunIntensity[0], sunIntensity[1], sunIntensity[2]);
 
 				float planetDimensions[] = { atmosphereScattering.planetDimensions.x, atmosphereScattering.planetDimensions.y, atmosphereScattering.planetDimensions.z };
 				if (ImGui::DragFloat3("Planet dimensions", planetDimensions, 1.0f, 0.0f, 200.f))
-					atmosphereScattering.planetDimensions = Nz::Vector3f(planetDimensions[0], planetDimensions[1], planetDimensions[2]);
+					atmosphereScattering.planetDimensions = Nz::Vector3f(planetDimensions[0], planetDimensions[1], planetDimensions[2]);*/
 
 				ImGui::DragFloat("Atmosphere max height", &atmosphereScattering.atmosphereMaxHeight, 1.0f, 0.0f, 1000.f);
-				ImGui::DragFloat("Planet corner radius", &atmosphereScattering.planetCornerRadius, 1.0f, 0.0f, 128.f);
+				//ImGui::DragFloat("Planet corner radius", &atmosphereScattering.planetCornerRadius, 1.0f, 0.0f, 128.f);
 
 				ImGui::Separator();
 
 				ImGui::Text("Scattering coefficients");
-
-				float rayleighBeta[] = { atmosphereScattering.rayleighBeta.x, atmosphereScattering.rayleighBeta.y, atmosphereScattering.rayleighBeta.z };
-				if (ImGui::DragFloat3("Rayleigh beta", rayleighBeta, 0.000001f, 0.f, 1.f, "%.6f"))
-					atmosphereScattering.rayleighBeta = Nz::Vector3f(rayleighBeta[0], rayleighBeta[1], rayleighBeta[2]);
-
-				float mieBeta[] = { atmosphereScattering.mieBeta.x, atmosphereScattering.mieBeta.y, atmosphereScattering.mieBeta.z };
-				if (ImGui::DragFloat3("Mie beta", mieBeta, 0.000001f, 0.f, 1.f, "%.6f"))
-					atmosphereScattering.mieBeta = Nz::Vector3f(mieBeta[0], mieBeta[1], mieBeta[2]);
-
-				float ambientBeta[] = { atmosphereScattering.ambientBeta.x, atmosphereScattering.ambientBeta.y, atmosphereScattering.ambientBeta.z };
-				if (ImGui::DragFloat3("Ambient beta", ambientBeta, 0.000001f, 0.f, 1.f, "%.6f"))
-					atmosphereScattering.ambientBeta = Nz::Vector3f(ambientBeta[0], ambientBeta[1], ambientBeta[2]);
-
-				float absorptionBeta[] = { atmosphereScattering.absorptionBeta.x, atmosphereScattering.absorptionBeta.y, atmosphereScattering.absorptionBeta.z };
-				if (ImGui::DragFloat3("Absorption beta", absorptionBeta, 0.000001f, 0.f, 1.f, "%.6f"))
-					atmosphereScattering.absorptionBeta = Nz::Vector3f(absorptionBeta[0], absorptionBeta[1], absorptionBeta[2]);
 
 				ImGui::DragFloat("Mie scattering", &atmosphereScattering.mieScattering, 0.001f, 0.f, 1.f);
 
@@ -407,7 +435,6 @@ namespace tsom
 
 				ImGui::DragFloat("Rayleigh height", &atmosphereScattering.rayleighHeight, 0.1f, 0.f, Nz::MaxValue());
 				ImGui::DragFloat("Mie height", &atmosphereScattering.mieHeight, 0.1f, 0.f, Nz::MaxValue());
-				ImGui::DragFloat("Absorption height", &atmosphereScattering.heightAbsorption, 0.1f, 0.f, Nz::MaxValue());
 				ImGui::DragFloat("Absorption falloff", &atmosphereScattering.absorptionFalloff, 0.1f, 0.f, Nz::MaxValue());
 
 				ImGui::Separator();
@@ -447,20 +474,47 @@ namespace tsom
 		// In case previous chunks were still generating
 		taskScheduler.WaitForTasks();
 
-		m_planet->UpdateCornerRadius(m_planetSettings.cornerRadius);
-
 		SurfaceNetsChunk::ResetTime();
 
 		m_planet->ClearChunks();
 		m_planet->AddChunks(*stateData.blockLibrary, m_planetSettings.chunkCount);
-		m_planet->GenerateChunks(taskScheduler, m_planetSettings.seed, m_planetSettings.chunkCount, m_planetSettings.scriptName);
+		m_planet->GenerateChunks(taskScheduler, m_planetSettings.chunkCount, m_planetSettings.scriptName, m_planetSettings.properties);
+	}
 
-		taskScheduler.WaitForTasks();
+	void PlanetEditorState::RefreshScript()
+	{
+		if (auto result = m_chunkGenerator.Load(m_planetSettings.scriptName); !result)
+		{
+			spdlog::error("failed to load {} script: {}", m_planetSettings.scriptName, result.GetError());
+			m_planetClass = {};
+			return;
+		}
+
+		m_planetClass = m_entityRegistry.FindClass(m_chunkGenerator.GetPlanetType());
+		if (!m_planetClass)
+		{
+			spdlog::error("chunk generator references invalid planet type \"{}\"", m_chunkGenerator.GetPlanetType());
+			return;
+		}
+
+		for (const auto& property : m_planetClass->GetProperties())
+		{
+			auto it = m_planetSettings.properties.find(property.name);
+			if (it == m_planetSettings.properties.end())
+				it = m_planetSettings.properties.emplace(property.name, property.defaultValue).first;
+		}
 	}
 
 	void PlanetEditorState::LayoutWidgets(const Nz::Vector2f& /*newSize*/)
 	{
 		m_escapeMenu->Center();
+	}
+
+	void PlanetEditorState::LoadScripts()
+	{
+		auto& stateData = GetStateData();
+		m_entityRegistry.RegisterClassLibrary<ClientChunkClassLibrary>(*stateData.app, *stateData.config, *stateData.blockLibrary);
+		m_entityRegistry.RegisterClassLibrary<ClientEntityClassLibrary>(*stateData.app);
 	}
 
 	void PlanetEditorState::UpdateMouseLock()

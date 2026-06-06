@@ -4,6 +4,18 @@
 
 namespace tsom
 {
+	template<typename F>
+	Nz::Vector3f SignedDistanceNormal(const Nz::Vector3f& pos, F&& distCallback)
+	{
+		constexpr float epsilon = 0.0001f;
+		return Nz::Vector3f::Normalize(
+			Nz::Vector3f( 1.0f, -1.0f, -1.0f) * distCallback(pos + Nz::Vector3f( 1.0f, -1.0f, -1.0f) * epsilon) +
+			Nz::Vector3f(-1.0f, -1.0f,  1.0f) * distCallback(pos + Nz::Vector3f(-1.0f, -1.0f,  1.0f) * epsilon) +
+			Nz::Vector3f(-1.0f,  1.0f, -1.0f) * distCallback(pos + Nz::Vector3f(-1.0f,  1.0f, -1.0f) * epsilon) +
+			Nz::Vector3f( 1.0f,  1.0f,  1.0f) * distCallback(pos + Nz::Vector3f( 1.0f,  1.0f,  1.0f) * epsilon)
+		);
+	}
+
 	inline float sdRoundBox(const Nz::Vector3f& pos, const Nz::Vector3f& halfDims, float cornerRadius)
 	{
 		Nz::Vector3f edgeDistance = pos.GetAbs() - halfDims + Nz::Vector3f(cornerRadius);
