@@ -1,6 +1,6 @@
 #include <CommonLib/Chunk.hpp>
 #include <CommonLib/ChunkContainer.hpp>
-#include <CommonLib/Planet.hpp>
+#include <CommonLib/Planets/RoundCubePlanet.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <catch2/catch_test_macros.hpp>
 
@@ -8,11 +8,11 @@ using namespace tsom;
 
 TEST_CASE("Block positions", "[Chunks]")
 {
-	constexpr int ChunkSize = int(Planet::ChunkSize);
+	constexpr int ChunkSize = int(RoundCubePlanet::ChunkSize);
 	constexpr int HalfChunkSize = ChunkSize / 2;
 
 	Nz::ApplicationBase app;
-	Planet planet(app, 1.f, 0.f, 9.81f);
+	RoundCubePlanet planet(app, 1.f, 42, 0.f, 9.81f);
 
 	SECTION("Testing block indices")
 	{
