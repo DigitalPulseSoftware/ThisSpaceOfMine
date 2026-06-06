@@ -302,15 +302,17 @@ namespace tsom
 		filesystem.Mount("CookedAssets", Nz::Utf8Path("CookedAssets"));
 		filesystem.Mount("scripts", scriptPath);
 
+		Nz::Graphics* graphics = Nz::Graphics::Instance();
+		graphics->GetShaderModuleResolver()->RegisterDirectory(Nz::Utf8Path("CookedAssets/Shaders"), true);
+
 		auto& commandLineParams = GetApp().GetCommandLineParameters();
 		if (commandLineParams.HasFlag("dev-assets"))
 		{
 			filesystem.Mount("CookedAssets/Passes", Nz::Utf8Path("assets/Passes"));
 			filesystem.Mount("CookedAssets/Shaders", Nz::Utf8Path("assets/Shaders"));
-		}
 
-		Nz::Graphics* graphics = Nz::Graphics::Instance();
-		graphics->GetShaderModuleResolver()->RegisterDirectory(Nz::Utf8Path("CookedAssets/Shaders"), true);
+			graphics->GetShaderModuleResolver()->RegisterDirectory(Nz::Utf8Path("assets/Shaders"), true);
+		}
 
 		m_blockLibrary.emplace(app);
 
