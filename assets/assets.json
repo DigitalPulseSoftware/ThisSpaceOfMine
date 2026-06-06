@@ -126,22 +126,22 @@
             "generateMipmaps": false
         },
         {
-            "input": "2d.passlist",
+            "input": "Passes/2d.passlist",
             "output": "Passes/2d.passlist",
             "method": "Copy"
         },
         {
-            "input": "3d.passlist",
+            "input": "Passes/3d.passlist",
             "output": "Passes/3d.passlist",
             "method": "Copy"
         },
         {
-            "input": "3d_dev.passlist",
+            "input": "Passes/3d_dev.passlist",
             "output": "Passes/3d_dev.passlist",
             "method": "Copy"
         },
         {
-            "input": "skybox.passlist",
+            "input": "Passes/skybox.passlist",
             "output": "Passes/skybox.passlist",
             "method": "Copy"
         },
