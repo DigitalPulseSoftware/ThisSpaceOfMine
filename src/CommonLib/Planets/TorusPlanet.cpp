@@ -17,18 +17,22 @@ namespace tsom
 		constexpr float PlanetGravitySpaceNone = 500.f;
 
 		// Decrease gravity near the center
-		float dist = std::max(sdTorus(position, { m_radius, m_thickness }), 0.0f);
-		if (dist < PlanetGravityCenterStartDecrease)
+		float distToCenterSq = position.SquaredDistance(GetCenter());
+		if (distToCenterSq < Nz::IntegralPow(PlanetGravityCenterStartDecrease, 2))
 		{
+			float distToCenter = std::sqrt(distToCenterSq);
+
 			Nz::Vector3f up = ComputeUpDirection(position);
 			return GravityForce{
 				.direction = -up,
 				.acceleration = m_gravity,
-				.factor = std::max(dist - PlanetGravityCenterNoGravity, 0.f) / (PlanetGravityCenterStartDecrease - PlanetGravityCenterNoGravity)
+				.factor = std::max(distToCenter - PlanetGravityCenterNoGravity, 0.f) / (PlanetGravityCenterStartDecrease - PlanetGravityCenterNoGravity)
 			};
 		}
 
-		// Turn rounded gravity to newtonian gravity
+		float dist = std::max(sdTorus(position, { m_radius, m_thickness }), 0.0f);
+
+		// Turn torus gravity to newtonian gravity
 		if (dist > PlanetGravitySpaceStart)
 		{
 			if (dist > PlanetGravitySpaceNone)
