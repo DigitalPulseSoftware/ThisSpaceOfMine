@@ -93,7 +93,7 @@ int ServerMain(int argc, char* argv[])
 		serverDatabase.StorePlanet({
 			.id = 1,
 			.generatorName = "bob",
-			.type = "round_cube",
+			.type = "round_cube_planet",
 			.chunkCount = Nz::Vector3ui(15),
 			.properties = nlohmann::json{
 				{ "BlockSize", 0.5f },
