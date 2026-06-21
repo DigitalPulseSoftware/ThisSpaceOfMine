@@ -1,4 +1,5 @@
-![Logo](https://github.com/DigitalPulseSoftware/ThisSpaceOfMine/blob/images/logo.png?raw=true)
+<img src="https://github.com/DigitalPulseSoftware/ThisSpaceOfMine/blob/images/logo.png?raw=true" width="256">
+<img src="https://github.com/DigitalPulseSoftware/ThisSpaceOfMine/blob/images/game-image.png?raw=true" width="1280" height="720">
 
 # This Space Of Mine
 
