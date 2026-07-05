@@ -63,6 +63,21 @@ namespace tsom
 		m_selectedBlockIndex = m_blockLibrary.GetBlockIndex(s_selectableBlocks[m_selectedIndex]);
 	}
 
+	void BlockSelectionBar::SelectPickedBlock(tsom::BlockIndex pickedBlockIndex)
+	{
+		if (!m_blockLibrary.IsValidBlock(pickedBlockIndex))
+			return;
+
+		auto it = std::find(s_selectableBlocks.begin(), s_selectableBlocks.end(), m_blockLibrary.GetBlockData(pickedBlockIndex).name);
+		if (it == s_selectableBlocks.end())
+			return;
+
+		m_inventorySprites[m_selectedIndex]->SetColor(Nz::Color::sRGBToLinear(Nz::Color::Gray()));
+		m_selectedIndex = std::distance(s_selectableBlocks.begin(), it);
+		m_inventorySprites[m_selectedIndex]->SetColor(Nz::Color::White());
+		m_selectedBlockIndex = pickedBlockIndex;
+	}
+
 	void BlockSelectionBar::Layout()
 	{
 		BaseWidget::Layout();
