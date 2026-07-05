@@ -6,6 +6,7 @@
 #include <CommonLib/CharacterController.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
+#include <CommonLib/Planet.hpp>
 #include <ServerLib/ServerAtmosphere.hpp>
 #include <ServerLib/ServerInstance.hpp>
 #include <ServerLib/ServerPlanetEnvironment.hpp>
@@ -137,7 +138,8 @@ namespace tsom
 				// TODO: Build properties from Lua table
 				return std::make_unique<ServerPlanetEnvironment>(m_serverInstance, databaseId, std::move(generatorName), chunkCount, type, std::vector<EntityProperty>{});
 			}),
-			"GetDatabaseId", LuaFunction(&ServerPlanetEnvironment::GetDatabaseId)
+			"GetDatabaseId", LuaFunction(&ServerPlanetEnvironment::GetDatabaseId),
+			"GetChunkContainer", LuaFunction([](ServerPlanetEnvironment& env) -> ChunkContainer* { return &env.GetPlanet(); })
 		);
 
 		state.new_usertype<ServerShipEnvironment>("ShipEnvironment",
