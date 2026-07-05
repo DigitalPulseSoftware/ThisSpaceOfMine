@@ -718,9 +718,6 @@ namespace tsom
 			if (!m_isMouseLocked)
 				return;
 
-			if (event.button != Nz::Mouse::Left && event.button != Nz::Mouse::Right)
-				return;
-
 			auto& stateData = GetStateData();
 
 			if (!m_pilotedShip)
@@ -754,7 +751,7 @@ namespace tsom
 
 							stateData.networkSession->SendPacket(mineBlock);
 						}
-						else
+						else if (event.button == Nz::Mouse::Right)
 						{
 							BlockIndices blockIndices = chunkContainer.GetBlockIndices(hitChunk.GetIndices(), hitCoordinates->blockIndices);
 
@@ -776,6 +773,12 @@ namespace tsom
 							placeBlock.newContent = Nz::SafeCast<Nz::UInt8>(m_blockSelectionBar->GetSelectedBlock());
 
 							stateData.networkSession->SendPacket(placeBlock);
+						}
+						else
+						{
+							// Pick block
+							tsom::BlockIndex pickedBlockIndex = chunkComponent->chunk.Get()->GetBlockContent(hitCoordinates->blockIndices);
+							m_blockSelectionBar->SelectPickedBlock(pickedBlockIndex);
 						}
 					}
 				}
