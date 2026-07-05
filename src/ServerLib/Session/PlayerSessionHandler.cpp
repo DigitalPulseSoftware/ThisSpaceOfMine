@@ -205,6 +205,31 @@ namespace tsom
 			m_player->UpdateRootEnvironment(env);
 			m_player->Respawn(env, spawnPos, Nz::Quaternionf::Identity());
 		}
+		else if (message.starts_with("/tpplayer ") && m_player->HasPermission(PlayerPermission::Admin))
+		{
+			constexpr std::size_t commandLength = sizeof("/tpplayer ") - 1;
+
+			std::string targetName(&message[commandLength], message.size() - commandLength);
+			ServerPlayer* targetPlayer = m_player->GetServerInstance().FindPlayerByNickname(targetName);
+			if (!targetPlayer)
+			{
+				m_player->SendChatMessage("player not found");
+				return;
+			}
+
+			entt::handle targetEntity = targetPlayer->GetControlledEntityReference();
+			if (!targetEntity)
+			{
+				m_player->SendChatMessage("target player has no controlled entity");
+				return;
+			}
+
+			Nz::Vector3f targetPos = targetEntity.get<Nz::NodeComponent>().GetPosition();
+			ServerEnvironment* targetEnvironment = ServerEnvironment::GetEnvironment(targetEntity);
+			m_player->Respawn(targetEnvironment, targetPos + Nz::Vector3f::Up() * 2.f, Nz::Quaternionf::Identity());
+
+			return;
+		}
 		else if (message == "/fly")
 		{
 			entt::handle playerEntity = m_player->GetControlledEntityReference();
