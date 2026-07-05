@@ -752,6 +752,37 @@ namespace tsom
 		{
 			throw std::runtime_error("test exception");
 		}
+		else if (message == "/links")
+		{
+			m_player->SendChatMessage("--- Game ressources ---");
+			m_player->SendChatMessage("Join our community on Discord : http://discord.gg/2WUU6Sp");
+			m_player->SendChatMessage("Check out the wiki : https://tsom.fandom.com/fr");
+			m_player->SendChatMessage("To suggest a new feature or an idea : https://tsom-idea.digitalpulse.software");
+			m_player->SendChatMessage("To report an issue : https://github.com/DigitalPulseSoftware/ThisSpaceOfMine/issues");
+			return;
+		}
+		else if (message == "/help") {
+			m_player->SendChatMessage("--- Available commands ---");
+			m_player->SendChatMessage("/help - Show this help message");
+			m_player->SendChatMessage("/links - Show game resources");
+			m_player->SendChatMessage("/respawn - Respawn at the default spawnpoint");
+			m_player->SendChatMessage("/tpplanet <planet_id> - Teleport to the specified planet");
+			m_player->SendChatMessage("/fly - Toggle flying mode");
+			m_player->SendChatMessage("/spawnship [slot] - Spawn your ship from the specified slot (default: 0). Slot must be in [0;3[");
+			m_player->SendChatMessage("/spawncomputer - Spawn a computer where you're looking at");
+			m_player->SendChatMessage("/spawnsensor - Spawn an atmosphere sensor where you're looking at");
+			if (m_player->HasPermission(PlayerPermission::Admin))
+			{
+				m_player->SendChatMessage("/tpplayer <player_name> - Teleport to the specified player");
+				m_player->SendChatMessage("/regenchunk - Regenerate the chunk you're currently in");
+				m_player->SendChatMessage("/spawntree - Spawn a tree where you're looking at");
+				m_player->SendChatMessage("/removetree - Remove a tree where you're looking at");
+				m_player->SendChatMessage("/spawnplatform - Spawn a platform at your position (deprecated)");
+				m_player->SendChatMessage("/crashserver - Crash the server (for testing purposes)");
+				m_player->SendChatMessage("/crashserver 1 - Throw an exception on the server (for testing purposes)");
+			}
+			return;
+		}
 
 		m_player->GetServerInstance().BroadcastChatMessage(std::move(playerChat.message), m_player->GetPlayerIndex());
 	}
