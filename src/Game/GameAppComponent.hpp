@@ -10,6 +10,7 @@
 #include <ClientLib/ClientBlockLibrary.hpp>
 #include <CommonLib/Systems/GravityPhysicsSystem.hpp>
 #include <Nazara/Core/ApplicationComponent.hpp>
+#include <Nazara/Core/Clock.hpp>
 #include <Nazara/Core/StateMachine.hpp>
 #include <Nazara/Platform/WindowEventHandler.hpp>
 #include <Nazara/Widgets/Canvas.hpp>
@@ -62,6 +63,9 @@ namespace tsom
 			std::optional<ImGuiRuntime> m_imguiRuntime;
 #endif
 			Nz::StateMachine m_stateMachine;
+
+			Nz::HighPrecisionClock m_frameClock;
+			Nz::Int16 m_fpsLimit;
 	};
 }
 

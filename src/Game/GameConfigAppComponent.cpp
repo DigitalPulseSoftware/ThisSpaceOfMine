@@ -51,6 +51,8 @@ namespace tsom
 
 			return Nz::Ok(shadowMapSize);
 		});
+
+		RegisterIntegerOption(Config::Graphics_FPSLimit, -1, 1000, -1);
 	}
 
 	std::filesystem::path GameConfigFile::GetPath()

@@ -20,6 +20,7 @@
 #include <CommonLib/Systems/PlanetSystem.hpp>
 #include <CommonLib/Systems/ShipSystem.hpp>
 #include <Game/GameConfigAppComponent.hpp>
+#include <Game/GameConfigs.hpp>
 #include <Game/States/BackgroundState.hpp>
 #include <Game/States/ConnectionState.hpp>
 #include <Game/States/DebugInfoState.hpp>
@@ -160,6 +161,8 @@ namespace tsom
 			stateData->swapchain = &swapchain;
 			stateData->world = &world;
 
+			m_fpsLimit = stateData->config->GetIntegerValue<Nz::Int16>(Config::Graphics_FPSLimit);
+
 #ifdef TSOM_DEV_TOOLS
 			stateData->imgui = &m_imguiRuntime.value();
 #endif
@@ -209,6 +212,19 @@ namespace tsom
 		if (m_imguiRuntime)
 			m_imguiRuntime->EndFrame();
 #endif
+
+		// FPS limiting
+		if (m_fpsLimit > 0)
+		{
+			Nz::Time targetDuration = Nz::Time::Seconds(1.f / m_fpsLimit);
+			Nz::Time elapsed = m_frameClock.GetElapsedTime();
+			if (elapsed < targetDuration)
+			{
+				Nz::Time sleepTime = targetDuration - elapsed;
+				std::this_thread::sleep_for(std::chrono::microseconds(sleepTime.AsMicroseconds()));
+			}
+		}
+		m_frameClock.Restart();
 	}
 
 	bool GameAppComponent::CheckAssets()
