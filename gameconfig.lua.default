@@ -17,3 +17,6 @@ Server = {
 Visual = {
 	ChunkNormalSmoothAngle = 0.0
 }
+Graphics = {
+	FPSLimit = -1
+}
