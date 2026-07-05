@@ -42,7 +42,7 @@ namespace tsom
 
 					case LUA_TNUMBER:
 						if (lua_isinteger(L, idx))
-							lua_pushfstring(L, LUA_INTEGER_FMT, (LUAI_UACINT)lua_tointeger(L, idx));
+							lua_pushstring(L, std::to_string(lua_tointeger(L, idx)).c_str());
 						else
 							lua_pushfstring(L, LUA_NUMBER_FMT, (LUAI_UACNUMBER)lua_tonumber(L, idx));
 						break;
@@ -71,7 +71,7 @@ namespace tsom
 					default:
 					{
 						int tt = luaL_getmetafield(L, idx, "__name");
-						const char* name = (tt == LUA_TSTRING) ? lua_tostring(L, idx) : lua_typename(L, t);
+						const char* name = (tt == LUA_TSTRING) ? lua_tostring(L, -1) : lua_typename(L, t);
 						lua_pushfstring(L, "%s: %p", name, lua_topointer(L, idx));
 						if (tt != LUA_TNIL)
 							lua_replace(L, -2);
@@ -121,7 +121,9 @@ namespace tsom
 				{
 					lua_pushvalue(L, -1);
 					lua_gettable(L, visitedIndex);
-					if (lua_isnil(L, -1))
+					bool is_not_visited = lua_isnil(L, -1);
+					lua_pop(L, 1);
+					if (is_not_visited)
 					{
 						lua_pop(L, 1);
 
@@ -166,7 +168,7 @@ namespace tsom
 
 			lua_pop(L, 2); // pop new indentation and visited table
 
-			luaL_addvalue(&b); //< add (and pop) new indentation to the buffer
+			luaL_addvalue(&b); //< add (and pop) old indentation to the buffer
 
 			lua_pushstring(L, "}");
 			luaL_addvalue(&b);
@@ -202,9 +204,10 @@ namespace tsom
 
 				std::size_t length;
 				const char* str = lua_tolstring(L, -1, &length);
-				oss << std::string(str, length);
+				lua_pop(L, 1);
 				if (!first)
 					oss << "\t";
+				oss << std::string(str, length);
 
 				first = false;
 			}
