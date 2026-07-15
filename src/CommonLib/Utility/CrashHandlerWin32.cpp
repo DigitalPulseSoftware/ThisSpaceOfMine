@@ -9,7 +9,7 @@
 #include <CommonLib/Utility/CrashHandlerWin32.hpp>
 #include <Nazara/Core/Error.hpp>
 #include <cpptrace/cpptrace.hpp>
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <array>
 #include <cstring>
 #include <cstdio>
