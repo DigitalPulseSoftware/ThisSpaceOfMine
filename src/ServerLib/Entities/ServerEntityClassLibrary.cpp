@@ -100,6 +100,7 @@ namespace tsom
 		auto& characterComponent = entity.emplace<Nz::PhysCharacter3DComponent>(std::move(characterSettings));
 		characterComponent.SetImpl(characterController);
 		characterComponent.DisableSleeping();
+		characterComponent.SetMotionQuality(Nz::PhysMotionQuality3D::LinearCast);
 
 		player->GetVisibilityHandler().UpdateControlledEntity(entity, characterController.get()); // TODO: Reset to nullptr when player entity is destroyed
 
