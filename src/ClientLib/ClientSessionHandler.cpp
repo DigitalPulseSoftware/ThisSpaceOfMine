@@ -712,10 +712,6 @@ namespace tsom
 				shadowPass.states.depthClamp = Nz::Graphics::Instance()->GetRenderDevice()->GetEnabledFeatures().depthClamping;
 				settings.AddPass("ShadowPass", shadowPass);
 
-				Nz::MaterialPass distanceShadowPass = shadowPass;
-				distanceShadowPass.options[nzsl::Ast::HashOption("DistanceDepth")] = true;
-				settings.AddPass("DistanceShadowPass", distanceShadowPass);
-
 				auto playerMaterial = std::make_shared<Nz::Material>(std::move(settings), "TSOM.PlayerPBR");
 
 				std::shared_ptr<Nz::MaterialInstance> playerMat = playerMaterial->Instantiate();

@@ -47,7 +47,6 @@ namespace tsom
 			auto& materialPassRegistry = Nz::Graphics::Instance()->GetMaterialPassRegistry();
 			std::size_t depthPassIndex = materialPassRegistry.GetPassIndex("DepthPass");
 			std::size_t shadowPassIndex = materialPassRegistry.GetPassIndex("ShadowPass");
-			std::size_t distanceShadowPassIndex = materialPassRegistry.GetPassIndex("DistanceShadowPass");
 			std::size_t forwardPassIndex = materialPassRegistry.GetPassIndex("ForwardPass");
 
 			Nz::MaterialSettings settings;
@@ -91,10 +90,6 @@ namespace tsom
 			shadowPass.states.depthClamp = Nz::Graphics::Instance()->GetRenderDevice()->GetEnabledFeatures().depthClamping;
 			settings.AddPass(shadowPassIndex, shadowPass);
 
-			Nz::MaterialPass distanceShadowPass = shadowPass;
-			distanceShadowPass.options[nzsl::Ast::HashOption("DistanceDepth")] = true;
-			settings.AddPass(distanceShadowPassIndex, distanceShadowPass);
-
 			blockMaterial = std::make_shared<Nz::Material>(std::move(settings), "TSOM.BlockPBR");
 			clientAssets.RegisterMaterial("Chunk", blockMaterial);
 		}
@@ -114,7 +109,7 @@ namespace tsom
 		m_chunkMaterial->SetTextureProperty("BlockTexture4", blockLibrary.GetBlockTexture(CookedBlockRegistry::TextureType::BC5), blockSampler);
 		m_chunkMaterial->SetValueProperty("ShadowPosScale", 1.f);
 		m_chunkMaterial->SetValueProperty("AlphaTest", true);
-		m_chunkMaterial->UpdatePassesStates({ "ShadowPass", "DistanceShadowPass" }, [](Nz::RenderStates& states)
+		m_chunkMaterial->UpdatePassStates("ShadowPass", [](Nz::RenderStates& states)
 		{
 			states.frontFace = Nz::FrontFace::CounterClockwise;
 			states.depthBias = true;
@@ -287,7 +282,7 @@ namespace tsom
 				std::unique_ptr<Nz::AsyncRenderCommands> asyncTransfer = renderDevice.InstantiateAsyncCommands(Nz::QueueType::Transfer);
 				std::shared_ptr<Nz::GraphicalMesh> gfxMesh = Nz::GraphicalMesh::BuildFromMesh(*asyncTransfer, *colliderUpdateJob.mesh);
 
-				asyncTransfer->AddCompletionCallback([this, gfxMesh, visualEntity]
+				m_asyncTransfer->AddCompletionCallback([this, gfxMesh, visualEntity]() mutable
 				{
 					auto& gfxComponent = visualEntity.get_or_emplace<Nz::GraphicsComponent>();
 					gfxComponent.Clear();

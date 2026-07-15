@@ -12,7 +12,10 @@ passlist "2D"
 
     pass "UI Pass"
     {
-        impl "Forward"
+        impl "Raster"
+        {
+            MatPass "ForwardPass"
+        }
 
         output "Output0" "ForwardOutput"
         {

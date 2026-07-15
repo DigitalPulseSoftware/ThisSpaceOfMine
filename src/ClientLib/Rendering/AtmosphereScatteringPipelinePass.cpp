@@ -95,7 +95,6 @@ namespace tsom
 	}
 
 	AtmosphereScatteringPipelinePass::AtmosphereScatteringPipelinePass(PassData& passData, std::string passName, entt::registry& registry, const Nz::ParameterList& parameterList) :
-	FramePipelinePass({}),
 	m_passName(std::move(passName)),
 	m_registry(registry),
 	m_viewer(passData.viewer),
@@ -248,7 +247,7 @@ namespace tsom
 			return Nz::FramePassExecution::UpdateAndExecute;
 		});
 
-		postProcess.SetCommandCallback([this, inputColorBufferIndex, inputDepthBufferIndex](Nz::CommandBufferBuilder& builder, const Nz::FramePassEnvironment& env)
+		postProcess.SetRenderCallback([this, inputColorBufferIndex, inputDepthBufferIndex](Nz::CommandBufferBuilder& builder, const Nz::FramePassEnvironment& env)
 		{
 			auto& samplerCache = Nz::Graphics::Instance()->GetSamplerCache();
 

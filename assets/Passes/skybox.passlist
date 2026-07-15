@@ -12,7 +12,11 @@ passlist "Skybox"
 
     pass "Skybox rendering"
     {
-        impl "Forward"
+        impl "Raster"
+        {
+            MatPass "ForwardPass"
+        }
+
         output "Output0" "ForwardOutput"
         cleardepth "Viewer"
         depthstenciloutput "DepthBuffer"

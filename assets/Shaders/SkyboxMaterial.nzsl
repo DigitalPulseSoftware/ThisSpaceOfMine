@@ -1,6 +1,10 @@
 [nzsl_version("1.1")]
 module SkyboxMaterial;
 
+import InstanceBuffer from Engine.InstanceData;
+
+import Lighting.LightData;
+import Lighting.Shadow;
 import ViewerData from Engine.ViewerData;
 
 // Material options
@@ -21,19 +25,34 @@ struct MaterialSettings
 	BaseColor: vec4[f32]
 }
 
-[tag("Material")]
-[auto_binding]
-external
+[tag("Scene")]
+[set(0), auto_binding]
+external Scene
 {
-	[tag("Settings")] settings: uniform[MaterialSettings],
-	[tag("BaseColorMap")] SkyboxTexture: sampler_cube[f32]
+	[tag("ShadowAtlas")] shadowAtlas: depth_sampler2D[f32],
+
+	[tag("DirectionalLights")] directionalLights: storage[LightData.DirectionalLights, readonly],
+	[tag("DirectionalShadowAtlasMapping")] directionalShadowAtlasMapping: storage[Shadow.DirectionalShadowAtlasMapping, readonly],
+	[tag("InstanceBuffer")] instanceBuffer: storage[InstanceBuffer, readonly],
+	[tag("PointLights")] pointLights: storage[LightData.PointLights, readonly],
+	[tag("PointShadowAtlasMapping")] pointShadowAtlasMapping: storage[Shadow.PointShadowAtlasMapping, readonly],
+	[tag("SpotLights")] spotLights: storage[LightData.SpotLights, readonly],
+	[tag("SpotShadowAtlasMapping")] spotShadowAtlasMapping: storage[Shadow.SpotShadowAtlasMapping, readonly],
 }
 
-[tag("Engine")]
-[auto_binding]
-external
+[tag("Viewer")]
+[set(1), auto_binding]
+external Viewer
 {
-	[tag("ViewerData")] viewerData: uniform[ViewerData]
+	[tag("ViewerData")] viewerData: uniform[ViewerData],
+}
+
+[tag("Material")]
+[set(2), auto_binding]
+external Material
+{
+	[tag("Settings")] settings: uniform[MaterialSettings],
+	[tag("BaseColorMap")] skyboxTexture: sampler_cube[f32]
 }
 
 // Fragment stage
@@ -53,10 +72,10 @@ struct FragOut
 [entry(frag), depth_write(less)]
 fn main(input: VertOut) -> FragOut
 {
-	let color = settings.BaseColor;
+	let color = Material.settings.BaseColor;
 
 	const if (HasBaseColorTexture)
-		color *= SkyboxTexture.Sample(input.uvw);
+		color *= Material.skyboxTexture.Sample(input.uvw);
 
 	const if (HasColor)
 		color *= input.color;
@@ -82,11 +101,11 @@ struct VertIn
 fn main(input: VertIn) -> VertOut
 {
     // Set translation part to zero
-    let rotationMat = viewerData.viewMatrix;
+    let rotationMat = Viewer.viewerData.viewMatrix;
     rotationMat[3].xyz = vec3[f32](0.0, 0.0, 0.0);
 
     let output: VertOut;
-    output.position = viewerData.projectionMatrix * rotationMat * vec4[f32](input.pos, 1.0);
+    output.position = Viewer.viewerData.projectionMatrix * rotationMat * vec4[f32](input.pos, 1.0);
 	output.uvw = input.pos;
 
 	const if (HasColor)
