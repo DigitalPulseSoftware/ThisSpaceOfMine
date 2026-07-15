@@ -42,7 +42,7 @@ namespace tsom
 			~NetworkedEntitiesSystem() = default;
 
 			void ForEachVisibility(const Nz::FunctionRef<void(SessionVisibilityHandler& visibility)>& functor);
-			void ForgetEntity(entt::entity entity);
+			bool ForgetEntity(entt::entity entity);
 
 			inline void RegisterPlayer(ServerPlayer* player, bool createEntities);
 			void UnregisterPlayer(ServerPlayer* player);

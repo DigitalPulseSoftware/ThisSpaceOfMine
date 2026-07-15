@@ -22,9 +22,6 @@ namespace tsom
 {
 	entt::handle ServerEnvironmentSwitchComponent::Switch(entt::handle oldEntity, ServerEnvironment* previousEnvironment, ServerEnvironment* newEnvironment, const EnvironmentTransform& relativeTransform)
 	{
-		// Disable old entity to not take it into account in the callbacks (for example when changing root environment)
-		oldEntity.emplace<Nz::DisabledComponent>();
-
 		auto& previousNode = oldEntity.get<Nz::NodeComponent>();
 		auto& previousClassInstance = oldEntity.get<ClassInstanceComponent>();
 
@@ -38,9 +35,11 @@ namespace tsom
 		if (NetworkedComponent* networkComponent = oldEntity.try_get<NetworkedComponent>())
 		{
 			auto& networkedSystem = previousEnvironment->GetWorld().GetSystem<NetworkedEntitiesSystem>();
-			networkedSystem.ForgetEntity(oldEntity);
 
-			newEntity.emplace<NetworkedComponent>(false);
+			// ForgetEntity returns true if the entity was still pending and should be created
+			bool shouldCreate = networkedSystem.ForgetEntity(oldEntity);
+
+			newEntity.emplace<NetworkedComponent>(shouldCreate);
 
 			previousEnvironment->ForEachPlayer([&](ServerPlayer& serverPlayer)
 			{
@@ -98,6 +97,9 @@ namespace tsom
 
 		if (DatabaseComponent* databaseComponent = oldEntity.try_get<DatabaseComponent>())
 			newEntity.emplace<DatabaseComponent>(databaseComponent->uniqueId); // don't copy database planet id!
+
+		// Disable old entity to not take it into account in the callbacks (for example when changing root environment)
+		oldEntity.emplace<Nz::DisabledComponent>();
 
 		if (handleEnvironmentSwitch)
 			handleEnvironmentSwitch(oldEntity, newEntity, relativeTransform);

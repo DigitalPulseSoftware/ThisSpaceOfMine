@@ -50,10 +50,10 @@ namespace tsom
 		});
 	}
 
-	void NetworkedEntitiesSystem::ForgetEntity(entt::entity entity)
+	bool NetworkedEntitiesSystem::ForgetEntity(entt::entity entity)
 	{
 		m_networkedEntities.Remove(entity);
-		m_pendingCreatedEntities.remove(entity);
+		return m_pendingCreatedEntities.remove(entity);
 	}
 
 	void NetworkedEntitiesSystem::UnregisterPlayer(ServerPlayer* player)
