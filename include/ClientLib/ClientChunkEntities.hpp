@@ -15,6 +15,7 @@
 namespace Nz
 {
 	class ApplicationBase;
+	class AsyncRenderCommands;
 	class EnttWorld;
 	class MaterialInstance;
 	class Mesh;
@@ -39,9 +40,11 @@ namespace tsom
 			ClientChunkEntities(Nz::ApplicationBase& app, ConfigFile& config, Nz::EnttWorld& world, ChunkContainer& chunkContainer, const ClientBlockLibrary& blockLibrary, std::size_t layerIndex);
 			ClientChunkEntities(const ClientChunkEntities&) = delete;
 			ClientChunkEntities(ClientChunkEntities&&) = delete;
-			~ClientChunkEntities() = default;
+			~ClientChunkEntities();
 
 			inline void EnableCollisionGeneration(bool enable);
+
+			void Update() override;
 
 			ClientChunkEntities& operator=(const ClientChunkEntities&) = delete;
 			ClientChunkEntities& operator=(ClientChunkEntities&&) = delete;
@@ -59,6 +62,7 @@ namespace tsom
 
 			std::shared_ptr<Nz::MaterialInstance> m_chunkMaterial;
 			std::shared_ptr<Nz::VertexDeclaration> m_chunkVertexDeclaration;
+			std::unique_ptr<Nz::AsyncRenderCommands> m_asyncTransfer;
 			Nz::Signal<double>::ConnectionGuard m_onChunkNormalSmoothAngleUpdatedSlot;
 			ConfigFile& m_configFile;
 			bool m_isCollisionGenerationEnabled;

@@ -40,7 +40,7 @@ namespace tsom
 
 			void SetParentEntity(entt::handle entity);
 
-			void Update();
+			virtual void Update();
 
 			ChunkEntities& operator=(const ChunkEntities&) = delete;
 			ChunkEntities& operator=(ChunkEntities&&) = delete;

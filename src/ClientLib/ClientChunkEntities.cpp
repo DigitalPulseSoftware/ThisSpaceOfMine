@@ -153,6 +153,20 @@ namespace tsom
 		FillChunks();
 	}
 
+	ClientChunkEntities::~ClientChunkEntities() = default;
+
+	void ClientChunkEntities::Update()
+	{
+		ChunkEntities::Update();
+
+		if (m_asyncTransfer)
+		{
+			Nz::RenderDevice& renderDevice = *Nz::Graphics::Instance()->GetRenderDevice();
+			renderDevice.SubmitAsyncCommands(std::move(m_asyncTransfer));
+			m_asyncTransfer = nullptr;
+		}
+	}
+
 	std::shared_ptr<Nz::Mesh> ClientChunkEntities::BuildMesh(const Chunk& chunk)
 	{
 		std::vector<Nz::UInt32> indices;
@@ -278,9 +292,13 @@ namespace tsom
 
 			if (colliderUpdateJob.mesh)
 			{
-				Nz::RenderDevice& renderDevice = *Nz::Graphics::Instance()->GetRenderDevice();
-				std::unique_ptr<Nz::AsyncRenderCommands> asyncTransfer = renderDevice.InstantiateAsyncCommands(Nz::QueueType::Transfer);
-				std::shared_ptr<Nz::GraphicalMesh> gfxMesh = Nz::GraphicalMesh::BuildFromMesh(*asyncTransfer, *colliderUpdateJob.mesh);
+				if (!m_asyncTransfer)
+				{
+					Nz::RenderDevice& renderDevice = *Nz::Graphics::Instance()->GetRenderDevice();
+					m_asyncTransfer = renderDevice.InstantiateAsyncCommands(Nz::QueueType::Transfer);
+				}
+
+				std::shared_ptr<Nz::GraphicalMesh> gfxMesh = Nz::GraphicalMesh::BuildFromMesh(*m_asyncTransfer, *colliderUpdateJob.mesh);
 
 				m_asyncTransfer->AddCompletionCallback([this, gfxMesh, visualEntity]() mutable
 				{
@@ -293,8 +311,6 @@ namespace tsom
 
 					gfxComponent.AttachRenderable(std::move(model), tsom::Constants::RenderMask3D);
 				});
-
-				renderDevice.SubmitAsyncCommands(std::move(asyncTransfer));
 			}
 			else if (visualEntity)
 			{
