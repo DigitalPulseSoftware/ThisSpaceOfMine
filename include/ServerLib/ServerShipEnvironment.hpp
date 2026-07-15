@@ -47,6 +47,8 @@ namespace tsom
 			const Ship& GetShip() const;
 			inline entt::handle GetShipEntity() const;
 
+			bool IsEmpty() const;
+
 			entt::handle LinkOutsideEnvironment(ServerEnvironment* environment, const EnvironmentTransform& transform);
 
 			Nz::Result<void, std::string> Load(const nlohmann::json& data);

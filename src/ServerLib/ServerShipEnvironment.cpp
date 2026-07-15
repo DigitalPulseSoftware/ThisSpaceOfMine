@@ -180,7 +180,9 @@ namespace tsom
 	void ServerShipEnvironment::GenerateShip(bool small)
 	{
 		auto& blockLibrary = m_serverInstance.GetBlockLibrary();
-		GetShip().Generate(blockLibrary, small);
+		auto& ship = GetShip();
+		ship.ClearChunks();
+		ship.Generate(blockLibrary, small);
 	}
 
 	ServerAtmosphere* ServerShipEnvironment::GetFallbackAtmosphereAtPosition(const Nz::Vector3f& position)
@@ -203,6 +205,20 @@ namespace tsom
 	const Ship& ServerShipEnvironment::GetShip() const
 	{
 		return *m_shipEntity.get<ShipComponent>().ship;
+	}
+
+	bool ServerShipEnvironment::IsEmpty() const
+	{
+		bool isEmpty = true;
+
+		const Ship& ship = GetShip();
+		ship.ForEachChunk([&](const ChunkIndices& /*chunkIndices*/, const Chunk& chunk)
+		{
+			if (chunk.HasContent())
+				isEmpty = false;
+		});
+
+		return isEmpty;
 	}
 
 	entt::handle ServerShipEnvironment::LinkOutsideEnvironment(ServerEnvironment* exteriorEnvironment, const EnvironmentTransform& transform)

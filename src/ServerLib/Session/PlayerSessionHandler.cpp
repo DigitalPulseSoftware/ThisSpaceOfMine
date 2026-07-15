@@ -319,6 +319,9 @@ namespace tsom
 							player->SendChatMessage("failed to load ship (an internal error occurred)");
 							return;
 						}
+
+						if (shipEnv->IsEmpty())
+							shipEnv->GenerateShip(true);
 					}
 					else
 						shipEnv->GenerateShip(true);
