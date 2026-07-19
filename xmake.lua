@@ -20,7 +20,7 @@ end)
 add_repositories("nazara-repo https://github.com/NazaraEngine/xmake-repo.git")
 add_requires("fmt[header_only=n]")
 add_requires("libcurl[shared]", { system = false, configs = { openssl = is_plat("linux", "android", "cross") } })
-add_requires("nazaraengine c60d8881d6ff5b0c819c0620dfb0a80b7a12646b", { debug = is_mode("debug"), configs = { symbols = true, plugin_imgui = true }})
+add_requires("nazaraengine", { debug = is_mode("debug"), configs = { symbols = true, plugin_imgui = true }})
 add_requires(
 	"concurrentqueue",
 	"cppcodec",
@@ -32,7 +32,7 @@ add_requires(
 	"luajit",
 	"lz4",
 	"hopscotch-map",
-	"nazarautils d20136d17d15f9351046b3b9338940f4a81954b9",
+	"nazarautils",
 	"nlohmann_json",
 	"ordered_map",
 	"perlinnoise",
@@ -58,7 +58,7 @@ if has_config("serveronly") then
 			plugin_imgui = false
 		}
 	})
-	add_requires("nzsl 4f0cd74d426a40708edf4c4126157c3a53b1ec7f")
+	add_requires("nzsl")
 end
 
 if is_plat("macosx") then
@@ -66,6 +66,11 @@ if is_plat("macosx") then
 end
 
 add_requireconfs("fmt", { debug = is_mode("debug") })
+
+-- temporary use commits because those versions aren't released yet
+add_requireconfs("nazarautils", "**.nazarautils", { version = "d20136d17d15f9351046b3b9338940f4a81954b9", override = true })
+add_requireconfs("nzsl", "**.nzsl", { version = "4f0cd74d426a40708edf4c4126157c3a53b1ec7f", override = true })
+add_requireconfs("nazaraengine", "**.nazaraengine", { version = "c60d8881d6ff5b0c819c0620dfb0a80b7a12646b", override = true })
 
 -- Don't link with system-installed libs on CI
 if os.getenv("CI") then
