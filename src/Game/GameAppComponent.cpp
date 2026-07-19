@@ -84,15 +84,15 @@ namespace tsom
 	void GameAppComponent::Start()
 	{
 		// Check if GPU has minimum required specs
-		const Nz::RenderDevice& renderDevice = *Nz::Graphics::Instance()->GetRenderDevice();
-		const Nz::RenderDeviceFeatures& renderDeviceFeatures = renderDevice.GetEnabledFeatures();
+		const Nz::GpuDevice& gpuDevice = *Nz::Graphics::Instance()->GetGpuDevice();
+		const Nz::GpuDeviceFeatures& renderDeviceFeatures = gpuDevice.GetEnabledFeatures();
 
 		Nz::EnumArray<MandatoryFeature, bool> featureTests = {
-			renderDevice.IsTextureFormatSupported(Nz::PixelFormat::BC1_RGBA_Unorm, Nz::TextureUsage::ShaderSampling),
-			renderDevice.IsTextureFormatSupported(Nz::PixelFormat::BC3_Unorm, Nz::TextureUsage::ShaderSampling),
-			renderDevice.IsTextureFormatSupported(Nz::PixelFormat::BC4_Unorm, Nz::TextureUsage::ShaderSampling),
-			renderDevice.IsTextureFormatSupported(Nz::PixelFormat::BC5_Unorm, Nz::TextureUsage::ShaderSampling),
-			renderDevice.IsTextureFormatSupported(Nz::PixelFormat::Depth32F, Nz::TextureUsage::DepthStencilAttachment),
+			gpuDevice.IsTextureFormatSupported(Nz::PixelFormat::BC1_RGBA_Unorm, Nz::TextureUsage::ShaderSampling),
+			gpuDevice.IsTextureFormatSupported(Nz::PixelFormat::BC3_Unorm, Nz::TextureUsage::ShaderSampling),
+			gpuDevice.IsTextureFormatSupported(Nz::PixelFormat::BC4_Unorm, Nz::TextureUsage::ShaderSampling),
+			gpuDevice.IsTextureFormatSupported(Nz::PixelFormat::BC5_Unorm, Nz::TextureUsage::ShaderSampling),
+			gpuDevice.IsTextureFormatSupported(Nz::PixelFormat::Depth32F, Nz::TextureUsage::DepthStencilAttachment),
 			renderDeviceFeatures.persistentMapping,
 			renderDeviceFeatures.storageBuffers
 		};
@@ -112,14 +112,14 @@ namespace tsom
 				}
 			}
 
-			const Nz::RenderDeviceInfo& deviceInfo = renderDevice.GetDeviceInfo();
+			const Nz::GpuDeviceInfo& deviceInfo = gpuDevice.GetDeviceInfo();
 			Nz::MessageBox requestBox(Nz::MessageBoxType::Error, "Missing GPU features",
 				Nz::Format(
 					"Your GPU ({}) doesn't seem to support mandatory features for the game (missing {} support).\n"
 					"This is required for the game, try to update your drivers.{}",
 					deviceInfo.name,
 					missingFeatures,
-					(deviceInfo.type == Nz::RenderDeviceType::Integrated) ? "\nThe detected GPU seems to be integrated, try to use a dedicated GPU if possible.": ""
+					(deviceInfo.type == Nz::GpuDeviceType::Integrated) ? "\nThe detected GPU seems to be integrated, try to use a dedicated GPU if possible.": ""
 				)
 			);
 
@@ -322,7 +322,7 @@ namespace tsom
 			return true;
 		});
 
-		m_blockLibrary->BuildTexture(*Nz::Graphics::Instance()->GetRenderDevice());
+		m_blockLibrary->BuildTexture(*Nz::Graphics::Instance()->GetGpuDevice());
 
 		return true;
 	}

@@ -19,7 +19,7 @@ namespace tsom
 		return m_blockTextures[textureType];
 	}
 
-	inline const std::shared_ptr<Nz::RenderBuffer>& ClientBlockLibrary::GetGlobalBlockBuffer() const
+	inline const std::shared_ptr<Nz::GpuBuffer>& ClientBlockLibrary::GetGlobalBlockBuffer() const
 	{
 		return m_globalBlockBuffer;
 	}

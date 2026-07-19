@@ -9,7 +9,7 @@
 #include <Nazara/Graphics/FrameGraph.hpp>
 #include <Nazara/Graphics/FramePipelinePassRegistry.hpp>
 #include <Nazara/Graphics/Graphics.hpp>
-#include <Nazara/Graphics/RenderBufferPool.hpp>
+#include <Nazara/Graphics/GpuBufferPool.hpp>
 #include <Nazara/Graphics/ViewerInstance.hpp>
 #include <NZSL/Math/FieldOffsets.hpp>
 
@@ -100,11 +100,11 @@ namespace tsom
 	m_viewer(passData.viewer),
 	m_shader(nzsl::ShaderStageType::Fragment | nzsl::ShaderStageType::Vertex, "TSOM.PlanetAtmosphere")
 	{
-		std::shared_ptr<Nz::RenderDevice> renderDevice = Nz::Graphics::Instance()->GetRenderDevice();
+		std::shared_ptr<Nz::GpuDevice> gpuDevice = Nz::Graphics::Instance()->GetGpuDevice();
 
-		m_passDataBufferPool = std::make_shared<Nz::RenderBufferPool>(renderDevice, Nz::BufferUsage::UniformBuffer, AtmosphereScatteringPassFields.totalSize, 32);
+		m_passDataBufferPool = std::make_shared<Nz::GpuBufferPool>(gpuDevice, Nz::BufferUsage::UniformBuffer, AtmosphereScatteringPassFields.totalSize, 32);
 
-		Nz::RenderPipelineLayoutInfo layoutInfo;
+		Nz::GpuPipelineLayoutInfo layoutInfo;
 		layoutInfo.bindings.assign({
 			{
 				0, 0, 1,
@@ -123,7 +123,7 @@ namespace tsom
 			}
 		});
 
-		m_renderPipelineLayout = renderDevice->InstantiateRenderPipelineLayout(std::move(layoutInfo));
+		m_renderPipelineLayout = gpuDevice->InstantiateRenderPipelineLayout(std::move(layoutInfo));
 		if (!m_renderPipelineLayout)
 			throw std::runtime_error("failed to instantiate atmosphere postprocess RenderPipelineLayout");
 
@@ -204,7 +204,7 @@ namespace tsom
 			atmosphereBasePtr += AtmosphereScatteringFields.totalSize;
 		}
 
-		frameData.renderResources.Execute([&](Nz::CommandBufferBuilder& builder)
+		frameData.renderResources.Execute([&](Nz::GpuCommandBufferBuilder& builder)
 		{
 			builder.CopyBuffer(allocation, renderBufferView);
 			builder.MemoryBarrier({ .srcStageMask = Nz::PipelineStage::Transfer, .dstStageMask = Nz::PipelineStage::FragmentShader, .srcAccessMask = Nz::MemoryAccess::TransferWrite, .dstAccessMask = Nz::MemoryAccess::UniformBufferRead });
@@ -247,7 +247,7 @@ namespace tsom
 			return Nz::FramePassExecution::UpdateAndExecute;
 		});
 
-		postProcess.SetRenderCallback([this, inputColorBufferIndex, inputDepthBufferIndex](Nz::CommandBufferBuilder& builder, const Nz::FramePassEnvironment& env)
+		postProcess.SetRenderCallback([this, inputColorBufferIndex, inputDepthBufferIndex](Nz::GpuCommandBufferBuilder& builder, const Nz::FramePassEnvironment& env)
 		{
 			auto& samplerCache = Nz::Graphics::Instance()->GetSamplerCache();
 
@@ -302,7 +302,7 @@ namespace tsom
 
 	void AtmosphereScatteringPipelinePass::BuildPipeline()
 	{
-		std::shared_ptr<Nz::RenderDevice> renderDevice = Nz::Graphics::Instance()->GetRenderDevice();
+		std::shared_ptr<Nz::GpuDevice> gpuDevice = Nz::Graphics::Instance()->GetGpuDevice();
 
 		Nz::UberShader::Config config;
 		config.optionValues[nzsl::Ast::HashOption("MaxAtmosphereCount")] = MaxAtmosphereCount;
@@ -311,6 +311,6 @@ namespace tsom
 		pipelineInfo.pipelineLayout = m_renderPipelineLayout;
 		pipelineInfo.shaderModules.push_back(m_shader.Get(config));
 
-		m_nextRenderPipeline = renderDevice->InstantiateRenderPipeline(pipelineInfo);
+		m_nextRenderPipeline = gpuDevice->InstantiateRenderPipeline(pipelineInfo);
 	}
 }

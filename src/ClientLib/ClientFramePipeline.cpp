@@ -6,8 +6,8 @@
 
 namespace tsom
 {
-	void ClientFramePipeline::Render(Nz::RenderResources& renderResources)
+	void ClientFramePipeline::Render(Nz::GpuResources& gpuResources)
 	{
-		DefaultFramePipeline::Render(renderResources);
+		DefaultFramePipeline::Render(gpuResources);
 	}
 }

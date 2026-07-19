@@ -11,7 +11,7 @@
 #include <Nazara/Core/ParameterList.hpp>
 #include <Nazara/Graphics/FramePipelinePass.hpp>
 #include <Nazara/Graphics/UberShader.hpp>
-#include <Nazara/Renderer/RenderBufferView.hpp>
+#include <Nazara/Renderer/GpuBufferView.hpp>
 #include <entt/fwd.hpp>
 
 namespace Nz
@@ -19,9 +19,9 @@ namespace Nz
 	class FrameGraph;
 	class FramePass;
 	class FramePipeline;
-	class RenderBufferPool;
 	class RenderFrame;
-	class RenderPipeline;
+	class GpuBufferPool;
+	class GpuPipeline;
 }
 
 namespace tsom
@@ -50,15 +50,15 @@ namespace tsom
 
 			NazaraSlot(Nz::UberShader, OnShaderUpdated, m_onShaderUpdated);
 
-			std::shared_ptr<Nz::RenderPipelineLayout> m_renderPipelineLayout;
-			std::shared_ptr<Nz::RenderBufferPool> m_passDataBufferPool;
-			std::shared_ptr<Nz::RenderPipeline> m_renderPipeline;
-			std::shared_ptr<Nz::RenderPipeline> m_nextRenderPipeline;
+			std::shared_ptr<Nz::GpuPipelineLayout> m_renderPipelineLayout;
+			std::shared_ptr<Nz::GpuBufferPool> m_passDataBufferPool;
+			std::shared_ptr<Nz::GpuRenderPipeline> m_renderPipeline;
+			std::shared_ptr<Nz::GpuRenderPipeline> m_nextRenderPipeline;
 			std::string m_passName;
 			std::vector<std::pair<Nz::Vector3f, AtmosphereScattering*>> m_cachedAtmospheres;
 			entt::registry& m_registry;
 			Nz::AbstractViewer* m_viewer;
-			Nz::RenderBufferView m_passDataBuffer;
+			Nz::GpuBufferView m_passDataBuffer;
 			Nz::UberShader m_shader;
 			bool m_rebuildFramePass;
 	};

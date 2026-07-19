@@ -15,8 +15,8 @@
 namespace Nz
 {
 	class ApplicationBase;
-	class AsyncRenderCommands;
 	class EnttWorld;
+	class GpuAsyncCommands;
 	class MaterialInstance;
 	class Mesh;
 	class TaskScheduler;
@@ -62,7 +62,7 @@ namespace tsom
 
 			std::shared_ptr<Nz::MaterialInstance> m_chunkMaterial;
 			std::shared_ptr<Nz::VertexDeclaration> m_chunkVertexDeclaration;
-			std::unique_ptr<Nz::AsyncRenderCommands> m_asyncTransfer;
+			std::unique_ptr<Nz::GpuAsyncCommands> m_asyncTransfer;
 			Nz::Signal<double>::ConnectionGuard m_onChunkNormalSmoothAngleUpdatedSlot;
 			ConfigFile& m_configFile;
 			bool m_isCollisionGenerationEnabled;

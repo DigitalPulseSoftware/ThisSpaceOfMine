@@ -687,6 +687,11 @@ namespace tsom
 				animParams.jointRotation = params.mesh.vertexRotation;
 				animParams.jointScale = params.mesh.vertexScale;
 
+				auto& renderQueueRegistry = Nz::Graphics::Instance()->GetRenderQueueRegistry();
+				std::size_t depthOpaqueQueue = renderQueueRegistry.GetIndex("DepthOpaque");
+				std::size_t forwardOpaqueQueue = renderQueueRegistry.GetIndex("ForwardOpaque");
+				std::size_t shadowQueue = renderQueueRegistry.GetIndex("Shadow");
+
 				Nz::MaterialSettings settings;
 				Nz::PredefinedMaterials::AddBasicSettings(settings);
 				Nz::PredefinedMaterials::AddPbrSettings(settings);
@@ -696,20 +701,23 @@ namespace tsom
 				settings.AddPropertyHandler(std::make_unique<Nz::TexturePropertyHandler>("MetalnessSmoothnessMap", "HasMetalnessSmoothnessTexture"));
 
 				Nz::MaterialPass forwardPass;
+				forwardPass.renderQueue = forwardOpaqueQueue;
 				forwardPass.states.depthBuffer = true;
 				forwardPass.states.depthCompare = Nz::RendererComparison::GreaterOrEqual;
 				forwardPass.shaders.push_back(std::make_shared<Nz::UberShader>(nzsl::ShaderStageType::Fragment | nzsl::ShaderStageType::Vertex, "TSOM.PlayerPBR"));
 				settings.AddPass("ForwardPass", forwardPass);
 
 				Nz::MaterialPass depthPass = forwardPass;
+				depthPass.renderQueue = depthOpaqueQueue;
 				depthPass.options[nzsl::Ast::HashOption("DepthPass")] = true;
 				settings.AddPass("DepthPass", depthPass);
 
 				Nz::MaterialPass shadowPass = depthPass;
+				shadowPass.renderQueue = shadowQueue;
 				shadowPass.options[nzsl::Ast::HashOption("ShadowPass")] = true;
 				shadowPass.states.depthCompare = Nz::RendererComparison::LessOrEqual; //< TODO: Reverse depth for shadow pass?
 				shadowPass.states.frontFace = Nz::FrontFace::Clockwise;
-				shadowPass.states.depthClamp = Nz::Graphics::Instance()->GetRenderDevice()->GetEnabledFeatures().depthClamping;
+				shadowPass.states.depthClamp = Nz::Graphics::Instance()->GetGpuDevice()->GetEnabledFeatures().depthClamping;
 				settings.AddPass("ShadowPass", shadowPass);
 
 				auto playerMaterial = std::make_shared<Nz::Material>(std::move(settings), "TSOM.PlayerPBR");

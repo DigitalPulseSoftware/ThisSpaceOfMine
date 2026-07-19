@@ -45,9 +45,14 @@ namespace tsom
 		if (!blockMaterial)
 		{
 			auto& materialPassRegistry = Nz::Graphics::Instance()->GetMaterialPassRegistry();
-			std::size_t depthPassIndex = materialPassRegistry.GetPassIndex("DepthPass");
-			std::size_t shadowPassIndex = materialPassRegistry.GetPassIndex("ShadowPass");
-			std::size_t forwardPassIndex = materialPassRegistry.GetPassIndex("ForwardPass");
+			std::size_t depthPassIndex = materialPassRegistry.GetIndex("DepthPass");
+			std::size_t shadowPassIndex = materialPassRegistry.GetIndex("ShadowPass");
+			std::size_t forwardPassIndex = materialPassRegistry.GetIndex("ForwardPass");
+
+			auto& renderQueueRegistry = Nz::Graphics::Instance()->GetRenderQueueRegistry();
+			std::size_t depthOpaqueQueue = renderQueueRegistry.GetIndex("DepthOpaque");
+			std::size_t forwardOpaqueQueue = renderQueueRegistry.GetIndex("ForwardOpaque");
+			std::size_t shadowQueue = renderQueueRegistry.GetIndex("Shadow");
 
 			Nz::MaterialSettings settings;
 			settings.AddValueProperty<Nz::Color>("BaseColor", Nz::Color::White());
@@ -74,20 +79,23 @@ namespace tsom
 			settings.AddPropertyHandler<Nz::UniformValuePropertyHandler>("ShadowPosScale");
 
 			Nz::MaterialPass forwardPass;
+			forwardPass.renderQueue = forwardOpaqueQueue;
 			forwardPass.states.depthBuffer = true;
 			forwardPass.states.depthCompare = Nz::RendererComparison::GreaterOrEqual;
 			forwardPass.shaders.push_back(std::make_shared<Nz::UberShader>(nzsl::ShaderStageType::Fragment | nzsl::ShaderStageType::Vertex, "TSOM.BlockPBR"));
 			settings.AddPass(forwardPassIndex, forwardPass);
 
 			Nz::MaterialPass depthPass = forwardPass;
+			depthPass.renderQueue = depthOpaqueQueue;
 			depthPass.options[nzsl::Ast::HashOption("DepthPass")] = true;
 			settings.AddPass(depthPassIndex, depthPass);
 
 			Nz::MaterialPass shadowPass = depthPass;
+			forwardPass.renderQueue = shadowQueue;
 			shadowPass.options[nzsl::Ast::HashOption("ShadowPass")] = true;
 			shadowPass.states.depthCompare = Nz::RendererComparison::LessOrEqual; //< TODO: Reverse depth for shadow pass?
 			shadowPass.states.frontFace = Nz::FrontFace::Clockwise;
-			shadowPass.states.depthClamp = Nz::Graphics::Instance()->GetRenderDevice()->GetEnabledFeatures().depthClamping;
+			shadowPass.states.depthClamp = Nz::Graphics::Instance()->GetGpuDevice()->GetEnabledFeatures().depthClamping;
 			settings.AddPass(shadowPassIndex, shadowPass);
 
 			blockMaterial = std::make_shared<Nz::Material>(std::move(settings), "TSOM.BlockPBR");
@@ -161,8 +169,8 @@ namespace tsom
 
 		if (m_asyncTransfer)
 		{
-			Nz::RenderDevice& renderDevice = *Nz::Graphics::Instance()->GetRenderDevice();
-			renderDevice.SubmitAsyncCommands(std::move(m_asyncTransfer));
+			Nz::GpuDevice& gpuDevice = *Nz::Graphics::Instance()->GetGpuDevice();
+			gpuDevice.SubmitAsyncCommands(std::move(m_asyncTransfer));
 			m_asyncTransfer = nullptr;
 		}
 	}
@@ -294,8 +302,8 @@ namespace tsom
 			{
 				if (!m_asyncTransfer)
 				{
-					Nz::RenderDevice& renderDevice = *Nz::Graphics::Instance()->GetRenderDevice();
-					m_asyncTransfer = renderDevice.InstantiateAsyncCommands(Nz::QueueType::Transfer);
+					Nz::GpuDevice& gpuDevice = *Nz::Graphics::Instance()->GetGpuDevice();
+					m_asyncTransfer = gpuDevice.InstantiateAsyncCommands(Nz::QueueType::Transfer);
 				}
 
 				std::shared_ptr<Nz::GraphicalMesh> gfxMesh = Nz::GraphicalMesh::BuildFromMesh(*m_asyncTransfer, *colliderUpdateJob.mesh);

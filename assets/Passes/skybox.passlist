@@ -14,7 +14,7 @@ passlist "Skybox"
     {
         impl "Raster"
         {
-            MatPass "ForwardPass"
+            RenderQueues "ForwardOpaque"
         }
 
         output "Output0" "ForwardOutput"

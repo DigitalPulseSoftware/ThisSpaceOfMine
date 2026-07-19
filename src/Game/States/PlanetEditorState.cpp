@@ -86,6 +86,9 @@ namespace tsom
 
 		m_skyboxEntity = CreateEntity();
 		{
+			auto& renderQueueRegistry = Nz::Graphics::Instance()->GetRenderQueueRegistry();
+			std::size_t forwardOpaqueQueue = renderQueueRegistry.GetIndex("ForwardOpaque");
+
 			// Create a new material (custom properties + shaders) for the skybox
 			Nz::MaterialSettings skyboxSettings;
 			skyboxSettings.AddValueProperty<Nz::Color>("BaseColor", Nz::Color::White());
@@ -95,6 +98,7 @@ namespace tsom
 
 			// Setup only a forward pass (using the SkyboxMaterial module)
 			Nz::MaterialPass forwardPass;
+			forwardPass.renderQueue = forwardOpaqueQueue;
 			forwardPass.states.depthBuffer = true;
 			forwardPass.states.depthCompare = Nz::RendererComparison::GreaterOrEqual;
 			forwardPass.shaders.push_back(std::make_shared<Nz::UberShader>(nzsl::ShaderStageType::Fragment | nzsl::ShaderStageType::Vertex, "SkyboxMaterial"));

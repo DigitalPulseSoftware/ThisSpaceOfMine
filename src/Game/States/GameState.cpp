@@ -57,6 +57,7 @@
 #include <Nazara/TextRenderer/RichTextBuilder.hpp>
 #include <Nazara/Widgets/LabelWidget.hpp>
 #include <Nazara/Widgets/SimpleLabelWidget.hpp>
+#include <Nazara/Widgets/Widgets.hpp>
 #include <imgui.h>
 #include <fmt/ostream.h>
 #include <spdlog/spdlog.h>
@@ -104,7 +105,7 @@ namespace tsom
 
 		m_crosshairEntity = CreateEntity();
 		{
-			auto sprite = std::make_shared<Nz::Sprite>(filesystem.Load<Nz::MaterialInstance>("CookedAssets/Textures/crosshair.dds"));
+			auto sprite = std::make_shared<Nz::Sprite>(filesystem.Load<Nz::MaterialInstance>("CookedAssets/Textures/crosshair.dds", { .presets = Nz::MaterialInstancePreset::UI }));
 			sprite->SetOrigin({ 0.5f, 0.5f });
 			sprite->SetSize(sprite->GetSize() * 0.15f);
 
@@ -115,7 +116,7 @@ namespace tsom
 
 		m_healthOxygen.entity = CreateEntity();
 		{
-			m_healthOxygen.textSprite = std::make_shared<Nz::TextSprite>();
+			m_healthOxygen.textSprite = std::make_shared<Nz::TextSprite>(Nz::Widgets::Instance()->GetTransparentMaterial());
 
 			m_healthOxygen.entity.emplace<Nz::NodeComponent>();
 			m_healthOxygen.entity.emplace<Nz::GraphicsComponent>(m_healthOxygen.textSprite, tsom::Constants::RenderMask2D);
@@ -148,6 +149,9 @@ namespace tsom
 
 		m_skyboxEntity = CreateEntity();
 		{
+			auto& renderQueueRegistry = Nz::Graphics::Instance()->GetRenderQueueRegistry();
+			std::size_t forwardOpaqueQueue = renderQueueRegistry.GetIndex("ForwardOpaque");
+
 			// Create a new material (custom properties + shaders) for the skybox
 			Nz::MaterialSettings skyboxSettings;
 			skyboxSettings.AddValueProperty<Nz::Color>("BaseColor", Nz::Color::White());
@@ -157,6 +161,7 @@ namespace tsom
 
 			// Setup only a forward pass (using the SkyboxMaterial module)
 			Nz::MaterialPass forwardPass;
+			forwardPass.renderQueue = forwardOpaqueQueue;
 			forwardPass.states.depthBuffer = true;
 			forwardPass.states.depthCompare = Nz::RendererComparison::GreaterOrEqual;
 			forwardPass.shaders.push_back(std::make_shared<Nz::UberShader>(nzsl::ShaderStageType::Fragment | nzsl::ShaderStageType::Vertex, "SkyboxMaterial"));

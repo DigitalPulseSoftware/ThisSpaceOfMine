@@ -22,7 +22,7 @@ namespace tsom
 	{
 		auto& fs = GetStateData().app->GetComponent<Nz::FilesystemAppComponent>();
 
-		std::shared_ptr<Nz::MaterialInstance> logoMat = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic);
+		std::shared_ptr<Nz::MaterialInstance> logoMat = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic, Nz::MaterialInstancePreset::UI);
 		logoMat->SetTextureProperty("BaseColorMap", fs.Open<Nz::TextureAsset>("CookedAssets/Textures/Logo.dds", { .sRGB = true }));
 
 		m_logo = CreateWidget<Nz::ImageWidget>(logoMat);

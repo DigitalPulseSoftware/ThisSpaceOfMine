@@ -14,8 +14,8 @@
 namespace Nz
 {
 	class ApplicationBase;
-	class RenderBuffer;
-	class RenderDevice;
+	class GpuBuffer;
+	class GpuDevice;
 	class Texture;
 	class TextureAsset;
 }
@@ -28,14 +28,14 @@ namespace tsom
 			inline ClientBlockLibrary(Nz::ApplicationBase& applicationBase);
 			~ClientBlockLibrary() = default;
 
-			void BuildTexture(Nz::RenderDevice& renderDevice);
+			void BuildTexture(Nz::GpuDevice& gpuDevice);
 
 			inline const std::shared_ptr<Nz::TextureAsset>& GetBlockTexture(CookedBlockRegistry::TextureType textureType) const;
-			inline const std::shared_ptr<Nz::RenderBuffer>& GetGlobalBlockBuffer() const;
+			inline const std::shared_ptr<Nz::GpuBuffer>& GetGlobalBlockBuffer() const;
 			inline const std::shared_ptr<Nz::TextureAsset>& GetPreviewTexture(BlockIndex blockIndex) const;
 
 		private:
-			std::shared_ptr<Nz::RenderBuffer> m_globalBlockBuffer;
+			std::shared_ptr<Nz::GpuBuffer> m_globalBlockBuffer;
 			std::vector<std::shared_ptr<Nz::TextureAsset>> m_previewTextures;
 			Nz::EnumArray<CookedBlockRegistry::TextureType, std::shared_ptr<Nz::TextureAsset>> m_blockTextures;
 			Nz::ApplicationBase& m_applicationBase;

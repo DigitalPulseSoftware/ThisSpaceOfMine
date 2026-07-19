@@ -9,7 +9,7 @@ passlist "Forward Passlist"
     {
         impl "Raster"
         {
-            MatPass "DepthPass"
+            RenderQueues "ForwardOpaque"
         }
 
         cleardepth "Viewer"
@@ -25,7 +25,7 @@ passlist "Forward Passlist"
     {
         impl "Raster"
         {
-            MatPass "ForwardPass"
+            RenderQueues "ForwardOpaque + ForwardTransparent"
         }
 
         output "Output0" "ForwardOutput"

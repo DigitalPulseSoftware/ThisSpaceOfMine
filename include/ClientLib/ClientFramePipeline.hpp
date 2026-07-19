@@ -22,7 +22,7 @@ namespace tsom
 			ClientFramePipeline(ClientFramePipeline&&) = delete;
 			~ClientFramePipeline() = default;
 
-			void Render(Nz::RenderResources& renderResources) override;
+			void Render(Nz::GpuResources& gpuResources) override;
 
 			ClientFramePipeline& operator=(const ClientFramePipeline&) = delete;
 			ClientFramePipeline& operator=(ClientFramePipeline&&) = delete;

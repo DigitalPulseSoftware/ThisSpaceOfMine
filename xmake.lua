@@ -20,7 +20,7 @@ end)
 add_repositories("nazara-repo https://github.com/NazaraEngine/xmake-repo.git")
 add_requires("fmt[header_only=n]")
 add_requires("libcurl[shared]", { system = false, configs = { openssl = is_plat("linux", "android", "cross") } })
-add_requires("nazaraengine 61834e6be891d428ca5e06af750d9eb4a0d7426c", { debug = is_mode("debug"), configs = { symbols = true, plugin_imgui = true }})
+add_requires("nazaraengine c60d8881d6ff5b0c819c0620dfb0a80b7a12646b", { debug = is_mode("debug"), configs = { symbols = true, plugin_imgui = true }})
 add_requires(
 	"concurrentqueue",
 	"cppcodec",

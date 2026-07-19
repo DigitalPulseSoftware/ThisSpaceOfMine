@@ -79,11 +79,11 @@ namespace tsom
 		constexpr GlobalBlockBufferOffsets s_blockBufferOffsets = BuildGlobalBlockBufferOffsets();
 	}
 
-	void ClientBlockLibrary::BuildTexture(Nz::RenderDevice& renderDevice)
+	void ClientBlockLibrary::BuildTexture(Nz::GpuDevice& gpuDevice)
 	{
 		std::size_t bufferSize = s_blockBufferOffsets.fieldOffsets.GetAlignedSize() * m_blocks.size();
 
-		m_globalBlockBuffer = renderDevice.InstantiateBuffer(bufferSize, Nz::BufferUsage::DeviceLocal | Nz::BufferUsage::StorageBuffer | Nz::BufferUsage::PersistentMapping);
+		m_globalBlockBuffer = gpuDevice.InstantiateBuffer(bufferSize, Nz::BufferUsage::DeviceLocal | Nz::BufferUsage::StorageBuffer | Nz::BufferUsage::PersistentMapping);
 		m_globalBlockBufferPtr = m_globalBlockBuffer->Map(0, bufferSize);
 
 		auto& fs = m_applicationBase.GetComponent<Nz::FilesystemAppComponent>();
@@ -156,7 +156,7 @@ namespace tsom
 		{
 			if (sliceCount > 0)
 			{
-				blockTextures[type] = renderDevice.InstantiateTexture({
+				blockTextures[type] = gpuDevice.InstantiateTexture({
 					.pixelFormat = textureFormat[type],
 					.type = Nz::ImageType::E2D_Array,
 					.layerCount = sliceCount,
