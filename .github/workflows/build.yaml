@@ -99,7 +99,7 @@ jobs:
       shell: bash
 
     # For some reason macOS-14 doesn't seem to have Python
-    - uses: actions/setup-python@v5
+    - uses: actions/setup-python@v7
       if: ${{ matrix.platform.runner == 'macos-14' }}
       with:
         python-version: "3.11"
