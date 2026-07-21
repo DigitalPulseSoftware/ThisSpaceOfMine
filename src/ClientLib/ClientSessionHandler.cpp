@@ -671,11 +671,6 @@ namespace tsom
 				animParams.jointRotation = params.mesh.vertexRotation;
 				animParams.jointScale = params.mesh.vertexScale;
 
-				auto& renderQueueRegistry = Nz::Graphics::Instance()->GetRenderQueueRegistry();
-				std::size_t depthOpaqueQueue = renderQueueRegistry.GetIndex("DepthOpaque");
-				std::size_t forwardOpaqueQueue = renderQueueRegistry.GetIndex("ForwardOpaque");
-				std::size_t shadowQueue = renderQueueRegistry.GetIndex("Shadow");
-
 				Nz::MaterialSettings settings;
 				Nz::PredefinedMaterials::AddBasicSettings(settings);
 				Nz::PredefinedMaterials::AddPbrSettings(settings);
@@ -683,6 +678,12 @@ namespace tsom
 				settings.AddTextureProperty("MetalnessSmoothnessMap", Nz::ImageType::E2D);
 				settings.AddPropertyHandler(std::make_unique<Nz::TexturePropertyHandler>("AmbientOcclusionMap", "HasAmbientOcclusionTexture"));
 				settings.AddPropertyHandler(std::make_unique<Nz::TexturePropertyHandler>("MetalnessSmoothnessMap", "HasMetalnessSmoothnessTexture"));
+
+				auto& renderQueueRegistry = Nz::Graphics::Instance()->GetRenderQueueRegistry();
+				std::size_t depthQueue = renderQueueRegistry.GetIndex("DepthOpaque");
+				std::size_t forwardOpaqueQueue = renderQueueRegistry.GetIndex("ForwardOpaque");
+				std::size_t forwardTransparentQueue = renderQueueRegistry.GetIndex("ForwardTransparent");
+				std::size_t shadowQueue = renderQueueRegistry.GetIndex("Shadow");
 
 				Nz::MaterialPass forwardPass;
 				forwardPass.renderQueue = forwardOpaqueQueue;
@@ -692,7 +693,7 @@ namespace tsom
 				settings.AddPass("ForwardPass", forwardPass);
 
 				Nz::MaterialPass depthPass = forwardPass;
-				depthPass.renderQueue = depthOpaqueQueue;
+				depthPass.renderQueue = depthQueue;
 				depthPass.options[nzsl::Ast::HashOption("DepthPass")] = true;
 				settings.AddPass("DepthPass", depthPass);
 

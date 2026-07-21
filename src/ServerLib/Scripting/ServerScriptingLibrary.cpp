@@ -191,7 +191,7 @@ namespace tsom
 			{
 				auto uuidOpt = player.GetUuid();
 				if (!uuidOpt)
-					return sol::nil;
+					return sol::lua_nil;
 
 				return sol::make_object(L, uuidOpt->ToString());
 			}),

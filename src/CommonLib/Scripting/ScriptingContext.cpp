@@ -9,14 +9,6 @@
 #include <spdlog/spdlog.h>
 #include <sstream>
 
-#ifndef LUAI_UACINT
-#define LUAI_UACINT LUA_INTFRM_T
-#endif
-
-#ifndef LUA_INTEGER_FMT
-#define LUA_INTEGER_FMT LUA_INTFRMLEN
-#endif
-
 namespace tsom
 {
 	namespace
@@ -41,10 +33,7 @@ namespace tsom
 						break;
 
 					case LUA_TNUMBER:
-						if (lua_isinteger(L, idx))
-							lua_pushstring(L, std::to_string(lua_tointeger(L, idx)).c_str());
-						else
-							lua_pushfstring(L, LUA_NUMBER_FMT, (LUAI_UACNUMBER)lua_tonumber(L, idx));
+						lua_pushfstring(L, LUA_NUMBER_FMT, (LUAI_UACNUMBER)lua_tonumber(L, idx));
 						break;
 
 					case LUA_TBOOLEAN:
@@ -74,7 +63,7 @@ namespace tsom
 						const char* name = (tt == LUA_TSTRING) ? lua_tostring(L, -1) : lua_typename(L, t);
 						lua_pushfstring(L, "%s: %p", name, lua_topointer(L, idx));
 						if (tt != LUA_TNIL)
-							lua_replace(L, -2);
+							lua_replace(L, -2); //< replaces the metafield by the string
 						break;
 					}
 				}
@@ -121,12 +110,11 @@ namespace tsom
 				{
 					lua_pushvalue(L, -1);
 					lua_gettable(L, visitedIndex);
-					bool is_not_visited = lua_isnil(L, -1);
+					bool isNotVisited = lua_isnil(L, -1);
 					lua_pop(L, 1);
-					if (is_not_visited)
-					{
-						lua_pop(L, 1);
 
+					if (isNotVisited)
+					{
 						lua_pushvalue(L, -1);
 						lua_pushboolean(L, true);
 						lua_settable(L, visitedIndex);

@@ -49,8 +49,9 @@ namespace tsom
 			std::size_t forwardPassIndex = materialPassRegistry.GetIndex("ForwardPass");
 
 			auto& renderQueueRegistry = Nz::Graphics::Instance()->GetRenderQueueRegistry();
-			std::size_t depthOpaqueQueue = renderQueueRegistry.GetIndex("DepthOpaque");
+			std::size_t depthQueue = renderQueueRegistry.GetIndex("DepthOpaque");
 			std::size_t forwardOpaqueQueue = renderQueueRegistry.GetIndex("ForwardOpaque");
+			std::size_t forwardTransparentQueue = renderQueueRegistry.GetIndex("ForwardTransparent");
 			std::size_t shadowQueue = renderQueueRegistry.GetIndex("Shadow");
 
 			Nz::MaterialSettings settings;
@@ -85,7 +86,7 @@ namespace tsom
 			settings.AddPass(forwardPassIndex, forwardPass);
 
 			Nz::MaterialPass depthPass = forwardPass;
-			depthPass.renderQueue = depthOpaqueQueue;
+			depthPass.renderQueue = depthQueue;
 			depthPass.options[nzsl::Ast::HashOption("DepthPass")] = true;
 			settings.AddPass(depthPassIndex, depthPass);
 
