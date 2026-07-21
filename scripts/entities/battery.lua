@@ -3,8 +3,10 @@ classData:Set("spawnable", true)
 classData:Set("spawnable_model", "battery")
 classData:Set("spawnable_collider", Vec3(0.5, 1.1, 0.5))
 
-classData:AddProperty("capacity", { type = "integer", default = 10000 * 1000 / Constants.DistributionTickRate, isNetworked = true })
+classData:AddProperty("capacity", { type = "integer", default = Distribution.ToStorageUnit(10000), isNetworked = true })
 classData:AddProperty("charge", { type = "integer", default = 0, isNetworked = true })
+
+local id = 1
 
 classData:On("init", function (self)
 	local physSettings = {
@@ -30,7 +32,7 @@ classData:On("init", function (self)
 		local charge = self:GetProperty("charge")
 
 		local chargeFactor = charge / capacity
-		self:SetInteractibleText(string.format("Battery (%d mAh - %d %%)", charge * Constants.DistributionTickRate / 1000, math.floor(chargeFactor * 100 + 0.5)))
+		self:SetInteractibleText(string.format("Battery (%d Wh - %d %%)", Distribution.FromTickUnit(charge), math.floor(chargeFactor * 100 + 0.5)))
 
 		local model = AssetLibrary.GetModel("battery"):Clone()
 		self.ChargeMaterial = model:GetMaterial(6):Clone()
@@ -53,12 +55,12 @@ if SERVER then
 		local charge = self:GetProperty("charge")
 
 		if charge < capacity then
-			distribution:UpdateConsumptionValue(0, math.min(capacity - charge, 200 * 1000 / Constants.DistributionTickRate))
+			distribution:UpdateConsumptionValue(0, math.min(capacity - charge, Distribution.ToTickUnit(200)))
 		else
 			distribution:UpdateConsumptionValue(0, 0)
 		end
 
-		local outputValue = math.min(charge, 200 * 1000 / Constants.DistributionTickRate)
+		local outputValue = math.min(charge, Distribution.ToTickUnit(200))
 
 		local outputEntity = distribution:GetOutputConnectedEntity(0)
 		if outputEntity then
@@ -78,7 +80,7 @@ else
 	classData:OnPropertyUpdate("charge", function (self, charge)
 		local capacity = self:GetProperty("capacity")
 		local chargeFactor = charge / capacity
-		self:SetInteractibleText(string.format("Battery (%d mAh - %d %%)", math.floor(charge * Constants.DistributionTickRate / 1000), math.floor(chargeFactor * 100 + 0.5)))
+		self:SetInteractibleText(string.format("Battery (%d Wh - %d %%)", math.floor(Distribution.FromStorageUnit(charge)), math.floor(chargeFactor * 100 + 0.5)))
 		self.ChargeMaterial:SetValueProperty("EmissiveColor", self.ChargeColor * math.easeInCubic(chargeFactor))
 	end)
 end

@@ -49,7 +49,7 @@ if SERVER then
 		local powerFactor = math.max(node:GetUp():DotProduct(correctedSunDir), 0)
 
 		local distribution = self:GetComponent("distribution")
-		distribution:UpdateProductionValue(0, math.floor(powerFactor * 100) * 1000 / Constants.DistributionTickRate)
+		distribution:UpdateProductionValue(0, Distribution.ToTickUnit(math.floor(powerFactor * 100)))
 
 		self:UpdateProperty("power_factor", powerFactor)
 	end)
