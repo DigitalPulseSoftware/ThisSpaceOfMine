@@ -9,8 +9,6 @@
 #include <CommonLib/NetworkSession.hpp>
 #include <CommonLib/Components/ChunkComponent.hpp>
 #include <CommonLib/Protocol/Packets.hpp>
-#include <Game/States/GameState.hpp>
-#include <Game/States/StateData.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
 #include <Nazara/Renderer/DebugDrawer.hpp>

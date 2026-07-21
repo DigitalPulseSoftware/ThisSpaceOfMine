@@ -6,19 +6,19 @@
 #include <ClientLib/ClientAssetLibraryAppComponent.hpp>
 #include <ClientLib/Components/ChunkNetworkMapComponent.hpp>
 #include <CommonLib/ChunkContainer.hpp>
+#include <CommonLib/EntityRegistry.hpp>
 #include <CommonLib/NetworkSession.hpp>
 #include <CommonLib/PhysicsConstants.hpp>
 #include <CommonLib/Components/ChunkComponent.hpp>
 #include <CommonLib/Protocol/Packets.hpp>
-#include <Game/States/GameState.hpp>
-#include <Game/States/StateData.hpp>
+#include <Nazara/Core/EnttWorld.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Graphics/MaterialInstance.hpp>
 #include <Nazara/Graphics/Model.hpp>
+#include <Nazara/Graphics/Components/GraphicsComponent.hpp>
 #include <Nazara/Physics3D/PhysFilter3D.hpp>
 #include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
-#include <Nazara/Platform/Window.hpp>
 #include <spdlog/spdlog.h>
 #include <numeric>
 
