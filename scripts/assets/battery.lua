@@ -34,7 +34,7 @@ local mat6 = MaterialInstance.Instantiate(MaterialType.PhysicallyBased)
 mat6:SetValueProperty("BaseColor", Color(0.0377317034, 0.0312860906, 0.0312860906))
 
 local mat7 = MaterialInstance.Instantiate(MaterialType.PhysicallyBased)
-mat7:SetValueProperty("EmissiveColor", Color(0.106969856, 0.891318083, 0.0688068941))
+mat7:SetValueProperty("EmissiveColor", Color(0, 0.94117647, 1.0) * 2.0) -- Original: Color(0.106969856, 0.891318083, 0.0688068941)
 
 battery:SetMaterial(0, mat1)
 battery:SetMaterial(1, mat2)
