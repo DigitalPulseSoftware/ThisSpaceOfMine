@@ -34,9 +34,22 @@ namespace tsom
 				LuaFunction(Nz::Overload<std::string, std::shared_ptr<Nz::SubMesh>>(&Nz::Mesh::AddSubMesh))
 			),
 			"BuildSubMesh", sol::overload(
-				LuaFunction([](Nz::Mesh& mesh, const Nz::Primitive& primitive)
+				LuaFunction([](Nz::Mesh& mesh, const Nz::Primitive& primitive, sol::optional<sol::table> paramOpt)
 				{
-					return mesh.BuildSubMesh(primitive);
+					Nz::Mesh::Params params;
+					if (paramOpt)
+					{
+						sol::table& meshParams = *paramOpt;
+						params.animated = meshParams.get_or("animated", params.animated);
+						params.center = meshParams.get_or("center", params.center);
+						params.texCoordOffset = meshParams.get_or("texCoordOffset", params.texCoordOffset);
+						params.texCoordScale = meshParams.get_or("texCoordScale", params.texCoordScale);
+						params.vertexOffset = meshParams.get_or("vertexOffset", params.vertexOffset);
+						params.vertexRotation = meshParams.get_or<Nz::EulerAnglesf>("vertexRotation", params.vertexRotation);
+						params.vertexScale = meshParams.get_or("vertexScale", params.vertexScale);
+					}
+
+					return mesh.BuildSubMesh(primitive, params);
 				})
 			),
 			"GetAABB", LuaFunction(&Nz::Mesh::GetAABB),
@@ -106,6 +119,12 @@ namespace tsom
 				[](const Nz::Vector3f& lengths, const Nz::Vector3ui& subdivisions, const Nz::Vector3f& position, const Nz::Quaternionf& rotation)
 				{
 					return Nz::Primitive::Box(lengths, subdivisions, position);
+				}
+			),
+			"Cone", sol::overload(
+				[](float length, float radius)
+				{
+					return Nz::Primitive::Cone(length, radius, 20);
 				}
 			),
 			"IcoSphere", sol::overload(

@@ -1,6 +1,6 @@
 local classData = EntityRegistry.ClassBuilder()
 classData:Set("spawnable", true)
-classData:Set("spawnable_model", "light")
+classData:Set("spawnable_model", "spotlight")
 classData:Set("spawnable_collider", Vec3(0.5))
 
 classData:AddProperty("light_enabled", { type = "bool", default = false, isNetworked = true })
@@ -26,12 +26,12 @@ classData:On("init", function (self)
 		self:SetInteractible(true)
 		self:SetInteractibleText("Light")
 
-		local model = AssetLibrary.GetModel("light"):Clone()
+		local model = AssetLibrary.GetModel("spotlight"):Clone()
 		self.LightMat = model:GetMaterial(0):Clone()
 		model:SetMaterial(0, self.LightMat)
 
 		local light = self:AddComponent("light")
-		light:AddPointLight({ Color = Color.White })
+		light:AddSpotLight({ Color = Color.White, radius = 50 })
 		light:Show(self:GetProperty("light_enabled"))
 
 		local gfx = self:AddComponent("graphics")
@@ -53,4 +53,4 @@ else
 		self.LightMat:UpdateValueProperty("EmissiveColor", isEnabled and Color.White or Color.Black)
 	end)
 end
-EntityRegistry.RegisterClass("light", classData)
+EntityRegistry.RegisterClass("spotlight", classData)
