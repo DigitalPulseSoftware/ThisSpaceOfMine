@@ -6,6 +6,7 @@
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Entities/EntityClassLibrary.hpp>
 #include <entt/entt.hpp>
+#include <fmt/format.h>
 
 namespace tsom
 {
@@ -27,13 +28,11 @@ namespace tsom
 			auto view = reg->view<ClassInstanceComponent>();
 			for (auto [entity, classInstance] : view.each())
 			{
-				auto& instance = view.get<ClassInstanceComponent>(entity);
-
-				auto refreshIt = m_refreshMap.find(instance.GetClass().get());
+				auto refreshIt = m_refreshMap.find(classInstance.GetClass().get());
 				if (refreshIt == m_refreshMap.end())
 					continue; // class wasn't touched
 
-				instance.UpdateClass(refreshIt->second);
+				classInstance.UpdateClass(refreshIt->second);
 			}
 		}
 
@@ -44,7 +43,17 @@ namespace tsom
 	{
 		std::string name = entityClass.GetName();
 		std::shared_ptr<EntityClass> entityClassPtr = std::make_shared<EntityClass>(std::move(entityClass));
-		m_classes[std::move(name)] = entityClassPtr;
+
+		if (auto it = m_classes.find(name); it != m_classes.end())
+		{
+			if (!m_isRefreshing)
+				throw std::runtime_error(fmt::format("Class {} is already registered", name));
+
+			m_refreshMap.emplace(it->second.get(), entityClassPtr);
+			it.value() = entityClassPtr;
+		}
+		else
+			m_classes[std::move(name)] = entityClassPtr;
 
 		return entityClassPtr;
 	}

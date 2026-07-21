@@ -219,6 +219,25 @@ namespace tsom
 		}
 	}
 
+	void ServerInstance::LoadScripts(bool isReloading)
+	{
+		if (!isReloading)
+		{
+			m_scriptingContext.LoadDirectory("scripts/libraries");
+			m_scriptingContext.LoadDirectory("scripts/entities");
+			return;
+		}
+
+		std::vector<entt::registry*> registries;
+		for (ServerEnvironment* environment : m_environments)
+			registries.push_back(&environment->GetWorld().GetRegistry());
+
+		m_entityRegistry.Refresh(registries, [this]
+		{
+			LoadScripts(false);
+		});
+	}
+
 	void ServerInstance::RegisterDatabaseEnvironment(Nz::UInt32 databaseId, std::unique_ptr<ServerEnvironment>&& serverEnvironment)
 	{
 		NazaraAssert(!m_databaseEnvironments.contains(databaseId));
@@ -288,25 +307,6 @@ namespace tsom
 
 		std::vector<EntityProperty> properties = planetClass->PropertiesFromJson(planetData.properties);
 		RegisterDatabaseEnvironment(planetData.id, std::make_unique<ServerPlanetEnvironment>(*this, planetData.id, std::string(planetData.generatorName), planetData.chunkCount, planetData.type, std::move(properties)));
-	}
-
-	void ServerInstance::LoadScripts(bool isReloading)
-	{
-		if (!isReloading)
-		{
-			m_scriptingContext.LoadDirectory("scripts/libraries");
-			m_scriptingContext.LoadDirectory("scripts/entities");
-			return;
-		}
-
-		std::vector<entt::registry*> registries;
-		for (ServerEnvironment* environment : m_environments)
-			registries.push_back(&environment->GetWorld().GetRegistry());
-
-		m_entityRegistry.Refresh(registries, [this]
-		{
-			LoadScripts(false);
-		});
 	}
 
 	void ServerInstance::HandleNetworkEvents()

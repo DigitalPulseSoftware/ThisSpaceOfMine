@@ -80,6 +80,7 @@ namespace tsom
 
 			void LinkDatabaseEnvironments(Nz::UInt32 sourceDatabaseId, Nz::UInt32 destinationDatabaseId, const Nz::Vector3f& position);
 			void LoadFromDatabase();
+			void LoadScripts(bool isReloading = false);
 
 			void RegisterDatabaseEnvironment(Nz::UInt32 databaseId, std::unique_ptr<ServerEnvironment>&& serverEnvironment);
 			std::unique_ptr<Nz::EnttWorld> RegisterEnvironment(ServerEnvironment* environment);
@@ -114,7 +115,6 @@ namespace tsom
 
 		private:
 			void LoadPlanetFromDatabase(Database::Planet&& planetData);
-			void LoadScripts(bool isReloading = false);
 			void HandleNetworkEvents();
 			void OnNetworkTick();
 			void OnSave();
