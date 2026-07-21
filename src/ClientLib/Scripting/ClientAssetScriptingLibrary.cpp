@@ -8,6 +8,7 @@
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
+#include <Nazara/Graphics/Graphics.hpp>
 #include <Nazara/Graphics/Material.hpp>
 #include <Nazara/Graphics/MaterialInstance.hpp>
 #include <Nazara/Graphics/Model.hpp>
@@ -115,10 +116,32 @@ namespace tsom
 
 			"ApplyPreset", LuaFunction(&Nz::MaterialInstance::ApplyPreset),
 
+			"Clone", LuaFunction(&Nz::MaterialInstance::Clone),
+
 			"DisablePass", LuaFunction(Nz::Overload<std::string_view>(&Nz::MaterialInstance::DisablePass)),
 			"EnablePass", LuaFunction([](Nz::MaterialInstance& mat, std::string_view passName, sol::optional<bool> enable)
 			{
 				mat.EnablePass(passName, enable.value_or(true));
+			}),
+
+			"GetValueProperty", LuaFunction([](Nz::MaterialInstance& matInstance, std::string_view propertyName, sol::this_state L) -> sol::object
+			{
+				const Nz::MaterialSettings::Value* value = matInstance.GetValueProperty(propertyName);
+				if (!value)
+					TriggerLuaArgError(L, 2, fmt::format("property {} doesn't exist", propertyName));
+
+				if (const bool* bValue = std::get_if<bool>(value))
+					return sol::make_object(L, *bValue);
+				else if (const float* fValue = std::get_if<float>(value))
+					return sol::make_object(L, *fValue);
+				else if (const Nz::Int32* iValue = std::get_if<Nz::Int32>(value))
+					return sol::make_object(L, *iValue);
+				else if (const Nz::UInt32* uValue = std::get_if<Nz::UInt32>(value))
+					return sol::make_object(L, *uValue);
+				else if (const Nz::Color* colorValue = std::get_if<Nz::Color>(value))
+					return sol::make_object(L, *colorValue);
+				else
+					TriggerLuaError(L, "property type is not yet mapped to Lua");
 			}),
 
 			"SetTextureProperty", LuaFunction(Nz::Overload<std::string_view, std::shared_ptr<Nz::TextureAsset>>(&Nz::MaterialInstance::SetTextureProperty)),
@@ -194,7 +217,10 @@ namespace tsom
 			}),
 			"AddPass", LuaFunction([](Nz::MaterialSettings& settings, std::string_view passName, sol::stack_table passParameters)
 			{
+				auto& renderQueueRegistry = Nz::Graphics::Instance()->GetRenderQueueRegistry();
+
 				Nz::MaterialPass pass;
+				pass.renderQueue = renderQueueRegistry.GetIndex(passParameters.get_or<std::string_view>("renderQueue", "ForwardOpaque"));
 				pass.flags = passParameters.get_or("flags", pass.flags);
 				pass.states = passParameters.get_or("states", pass.states);
 
@@ -228,7 +254,6 @@ namespace tsom
 		state.new_usertype<Nz::Model>("Model",
 			sol::no_constructor,
 			sol::base_classes, sol::bases<Nz::InstancedRenderable>(),
-			"SetMaterial", LuaFunction(&Nz::Model::SetMaterial),
 			"BuildFromMesh", LuaFunction([](const Nz::Mesh& mesh)
 			{
 				std::shared_ptr<Nz::Model> model = Nz::Model::BuildFromMesh(mesh);
@@ -243,6 +268,8 @@ namespace tsom
 
 				return model;
 			}),
+			"Clone", LuaFunction(&Nz::Model::Clone),
+			"SetMaterial", LuaFunction(&Nz::Model::SetMaterial),
 			"UpdateRenderLayer", LuaFunction(&Nz::Model::UpdateRenderLayer),
 			"Load", LuaFunction([this](std::string assetPath, sol::optional<sol::table> paramOpt)
 			{

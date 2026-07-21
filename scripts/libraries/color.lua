@@ -14,6 +14,10 @@ function ColorMt:GetLengths()
     return Vec3(self.width, self.height, self.depth)
 end
 
+function ColorMt:__mul(scale)
+    return Color(self.r * scale, self.g * scale, self.b * scale)
+end
+
 function Color(r, g, b, a)
     return setmetatable({
         r = r,

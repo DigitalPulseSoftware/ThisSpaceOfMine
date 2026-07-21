@@ -154,6 +154,81 @@
             "input": "blocks.json",
             "output": "BlockData.json",
             "method": "Copy"
+        },
+        {
+            "input": "sci-fi-battery/battery.obj",
+            "output": "Models/Battery/Battery.obj",
+            "method": "Copy"
+        },
+        {
+            "input": "sci-fi-battery/textures/lambert3SG_baseColor.png",
+            "output": "Models/Battery/Textures/lambert3SG_baseColor.dds",
+            "method": "Texture"
+        },
+        {
+            "input": "sci-fi-battery/textures/lambert3SG_metallicRoughness.png",
+            "output": "Models/Battery/Textures/lambert3SG_metallicRoughness.dds",
+            "method": "Texture",
+            "type": "BiGreyscale",
+            "channel0": "Green",
+            "channel1": "Blue"
+        },
+        {
+            "input": "sci-fi-battery/textures/lambert3SG_normal.png",
+            "output": "Models/Battery/Textures/lambert3SG_normal.dds",
+            "method": "Texture",
+            "type": "Normal"
+        },
+        {
+            "input": "sci-fi-battery/textures/lambert4SG_baseColor.png",
+            "output": "Models/Battery/Textures/lambert4SG_baseColor.dds",
+            "method": "Texture"
+        },
+        {
+            "input": "sci-fi-battery/textures/lambert4SG_metallicRoughness.png",
+            "output": "Models/Battery/Textures/lambert4SG_metallicRoughness.dds",
+            "method": "Texture",
+            "type": "BiGreyscale",
+            "channel0": "Green",
+            "channel1": "Blue"
+        },
+        {
+            "input": "sci-fi-battery/textures/lambert5SG_baseColor.png",
+            "output": "Models/Battery/Textures/lambert5SG_baseColor.dds",
+            "method": "Texture"
+        },
+        {
+            "input": "sci-fi-battery/textures/lambert5SG_metallicRoughness.png",
+            "output": "Models/Battery/Textures/lambert5SG_metallicRoughness.dds",
+            "method": "Texture",
+            "type": "BiGreyscale",
+            "channel0": "Green",
+            "channel1": "Blue"
+        },
+        {
+            "input": "sci-fi-battery/textures/lambert5SG_normal.png",
+            "output": "Models/Battery/Textures/lambert5SG_normal.dds",
+            "method": "Texture",
+            "type": "Normal"
+        },
+        {
+            "input": "sci-fi-battery/textures/lambert6SG_baseColor.png",
+            "output": "Models/Battery/Textures/lambert6SG_baseColor.dds",
+            "method": "Texture"
+        },
+        {
+            "input": "sci-fi-battery/textures/lambert6SG_metallicRoughness.png",
+            "output": "Models/Battery/Textures/lambert6SG_metallicRoughness.dds",
+            "method": "Texture",
+            "type": "BiGreyscale",
+            "channel0": "Green",
+            "channel1": "Blue"
+        },
+        {
+            "input": "sci-fi-battery/textures/lambert6SG_normal.png",
+            "output": "Models/Battery/Textures/lambert6SG_normal.dds",
+            "method": "Texture",
+            "type": "Normal"
         }
     ]
 }
