@@ -47,7 +47,10 @@ namespace tsom
 		}
 
 		if (isProducer)
-			m_producers.emplace(entity);
+		{
+			if (!m_producers.contains(entity))
+				m_producers.emplace(entity);
+		}
 		else
 			m_producers.remove(entity);
 	}
