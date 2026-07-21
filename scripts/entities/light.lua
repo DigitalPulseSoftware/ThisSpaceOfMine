@@ -21,7 +21,7 @@ classData:On("init", function (self)
 			inputs = { DistributionType.Electrical },
 			outputs = {}
 		})
-		distribution:UpdateConsumptionValue(0, self:GetProperty("consumption") * 1000 / Constants.DistributionTickRate)
+		distribution:UpdateConsumptionValue(0, Distribution.ToTickUnit(self:GetProperty("consumption")))
 	elseif CLIENT then
 		self:SetInteractible(true)
 		self:SetInteractibleText("Light")
@@ -41,7 +41,7 @@ if SERVER then
 	classData:On("distribution", function (self)
 		local distribution = self:GetComponent("distribution")
 		local electricity = distribution:GetDistributedValue(DistributionType.Electrical)
-		self:UpdateProperty("light_enabled", electricity >= self:GetProperty("consumption") * 1000 / Constants.DistributionTickRate)
+		self:UpdateProperty("light_enabled", electricity >= Distribution.ToTickUnit(self:GetProperty("consumption")))
 	end)
 else
 	classData:OnPropertyUpdate("light_enabled", function (self, isEnabled)
