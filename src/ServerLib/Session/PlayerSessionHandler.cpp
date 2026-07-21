@@ -7,12 +7,14 @@
 #include <CommonLib/CharacterController.hpp>
 #include <CommonLib/ChunkEntities.hpp>
 #include <CommonLib/ChunkLock.hpp>
+#include <CommonLib/Direction.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/PhysicsConstants.hpp>
 #include <CommonLib/Planet.hpp>
 #include <CommonLib/Components/ChunkComponent.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Components/PlanetComponent.hpp>
+#include <CommonLib/Components/TickComponent.hpp>
 #include <ServerLib/PlayerTokenAppComponent.hpp>
 #include <ServerLib/ServerEnvironment.hpp>
 #include <ServerLib/ServerInstance.hpp>
@@ -24,6 +26,7 @@
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/TaskSchedulerAppComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
+#include <Nazara/Physics3D/PhysConstraint3D.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
@@ -32,6 +35,46 @@
 
 namespace tsom
 {
+	namespace
+	{
+		struct GrabConstraint
+		{
+			GrabConstraint(Nz::RigidBody3D& body, const Nz::Vector3f& grabPos) :
+			grabBody(body.GetWorld(), BodySettings(grabPos)),
+			grabConstraint(body, grabBody, grabPos)
+			{
+				body.WakeUp();
+				body.EnableSleeping(false);
+				grabConstraint.SetDamping(1.f);
+				grabConstraint.SetFrequency(5.f);
+			}
+
+			~GrabConstraint()
+			{
+				grabConstraint.GetBodyA().EnableSleeping(true);
+			}
+
+			void SetPosition(const Nz::Vector3f& pos)
+			{
+				grabBody.SetPosition(pos);
+			}
+
+			static Nz::RigidBody3D::DynamicSettings BodySettings(const Nz::Vector3f& pos)
+			{
+				Nz::RigidBody3D::DynamicSettings settings;
+				settings.mass = 0.f; //< kinematic
+				settings.isSimulationEnabled = false;
+				settings.position = pos;
+
+				return settings;
+			}
+
+			Nz::RigidBody3D grabBody;
+			Nz::PhysDistanceConstraint3D grabConstraint;
+		};
+
+	}
+
 	constexpr SessionHandler::SendAttributeTable s_packetAttributes = SessionHandler::BuildAttributeTable({
 		{ PacketIndex<Packets::S_ChatMessage>,             { .channel = 0, .flags = Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::S_ChunkCreate>,             { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
@@ -827,6 +870,53 @@ namespace tsom
 		{
 			throw std::runtime_error("test exception");
 		}
+		else if (message == "/grab")
+		{
+			entt::handle playerEntity = m_player->GetControlledEntityReference();
+			if (!playerEntity)
+				return;
+
+			const auto& characterController = m_player->GetCharacterController();
+			Nz::Quaternionf cameraRot = characterController->GetCameraRotation();
+
+			Nz::Vector3f hitPos;
+			entt::handle hitEntity;
+			auto callback = [&](const Nz::Physics3DSystem::RaycastHit& hitInfo)
+			{
+				if (hitInfo.hitEntity.try_get<Nz::RigidBody3DComponent>())
+				{
+					hitPos = hitInfo.hitPosition;
+					hitEntity = hitInfo.hitEntity;
+				}
+			};
+
+			struct ObjectFilter : Nz::PhysObjectLayerFilter3D
+			{
+				bool ShouldCollide(Nz::PhysObjectLayer3D layer) const override
+				{
+					return layer == Constants::ObjectLayerDynamic;
+				}
+			};
+			ObjectFilter objectFilter;
+
+			auto& playerNode = playerEntity.get<Nz::NodeComponent>();
+
+			Nz::Vector3f cameraPos = characterController->GetEyePosition();
+
+			ServerEnvironment* environment = m_player->GetRootEnvironment();
+
+			auto& physSystem = environment->GetWorld().GetSystem<Nz::Physics3DSystem>();
+			if (physSystem.RaycastQueryFirst(cameraPos, cameraPos + cameraRot * Nz::Vector3f::Forward() * 10.f, callback, nullptr, &objectFilter))
+			{
+				auto& hitBody = hitEntity.get<Nz::RigidBody3DComponent>();
+
+				Nz::Vector3f localPos = cameraRot.GetConjugate() * (hitPos - cameraPos);
+				playerEntity.emplace_or_replace<TickComponent>().onTick = [characterController, localPos, grab = std::make_shared<GrabConstraint>(hitBody, hitPos)](entt::handle entity) mutable
+				{
+					grab->SetPosition(characterController->GetEyePosition() + characterController->GetCameraRotation() * localPos);
+				};
+			}
+		}
 		else if (message == "/links")
 		{
 			m_player->SendChatMessage("--- Game ressources ---");
@@ -836,7 +926,8 @@ namespace tsom
 			m_player->SendChatMessage("To report an issue : https://github.com/DigitalPulseSoftware/ThisSpaceOfMine/issues");
 			return;
 		}
-		else if (message == "/help") {
+		else if (message == "/help")
+		{
 			m_player->SendChatMessage("--- Available commands ---");
 			m_player->SendChatMessage("/help - Show this help message");
 			m_player->SendChatMessage("/links - Show game resources");
@@ -846,6 +937,7 @@ namespace tsom
 			m_player->SendChatMessage("/spawnship [slot] - Spawn your ship from the specified slot (default: 0). Slot must be in [0;3[");
 			m_player->SendChatMessage("/spawncomputer - Spawn a computer where you're looking at");
 			m_player->SendChatMessage("/spawnsensor - Spawn an atmosphere sensor where you're looking at");
+
 			if (m_player->HasPermission(PlayerPermission::Admin))
 			{
 				m_player->SendChatMessage("/tpplayer <player_name> - Teleport to the specified player");
