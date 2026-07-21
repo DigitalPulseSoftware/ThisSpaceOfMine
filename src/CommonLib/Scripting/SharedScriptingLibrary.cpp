@@ -53,7 +53,7 @@ namespace tsom
 			{
 				sol::state_view state(L);
 
-				sol::object retVal = sol::nil;
+				sol::object retVal = sol::lua_nil;
 				auto callback = [&](const Nz::Physics3DSystem::RaycastHit& hitInfo)
 				{
 					ScriptedEntityComponent* scriptedEntity = nullptr;

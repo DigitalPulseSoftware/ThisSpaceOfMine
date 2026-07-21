@@ -27,7 +27,7 @@ namespace tsom
 
 	ChunkGenerator::~ChunkGenerator()
 	{
-		m_generationFunction = sol::nil;
+		m_generationFunction = sol::lua_nil;
 	}
 
 	Nz::Result<std::vector<BlockIndex>, std::string> ChunkGenerator::Generate(Chunk& chunk, const Nz::Vector3ui& chunkCount, const std::unordered_map<std::string, EntityProperty>& properties) const
