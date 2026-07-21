@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
@@ -13,6 +13,7 @@
 #include <NazaraUtils/FixedVector.hpp>
 #include <NazaraUtils/Signal.hpp>
 #include <entt/entt.hpp>
+#include <functional>
 #include <span>
 
 namespace tsom
@@ -29,10 +30,14 @@ namespace tsom
 		friend class DistributionSystem;
 
 		public:
+			using DistributionCallback = std::function<void(entt::handle)>;
+
 			inline DistributionComponent(std::span<DistributionType> inputs, std::span<DistributionType> outputs);
 			DistributionComponent(const DistributionComponent&) = delete;
 			DistributionComponent(DistributionComponent&&) noexcept = default;
 			~DistributionComponent() = default;
+
+			inline void BindDistributionCallback(DistributionCallback&& callback);
 
 			inline void ConnectInput(std::size_t inputIndex, entt::handle entity, std::size_t outputIndex);
 			inline void ConnectOutput(std::size_t outputIndex, entt::handle entity, std::size_t inputIndex);
@@ -67,6 +72,7 @@ namespace tsom
 		private:
 			inline void ClearDistributedValues();
 			inline void IncrementDistributedValue(DistributionType type, Nz::UInt32 value);
+			inline void TriggerDistributionCallback(entt::handle entity);
 
 			struct Port
 			{
@@ -77,17 +83,18 @@ namespace tsom
 
 			struct InputPort : Port
 			{
-				Nz::UInt64 consumptionValue = 0;
+				Nz::UInt32 consumptionValue = 0;
 			};
 
 			struct OutputPort : Port
 			{
-				Nz::UInt64 productionValue = 0;
+				Nz::UInt32 productionValue = 0;
 			};
 
 			Nz::EnumArray<DistributionType, Nz::UInt64> m_distributedValues;
 			Nz::HybridVector<InputPort, 3> m_inputs;
 			Nz::HybridVector<OutputPort, 3> m_outputs;
+			DistributionCallback m_distributionCallback;
 	};
 }
 

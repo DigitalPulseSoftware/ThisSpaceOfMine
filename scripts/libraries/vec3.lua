@@ -77,3 +77,10 @@ function Vec3.Distance(vec1, vec2)
 end
 
 setmetatable(Vec3, Vec3ClassMt)
+
+Vec3.Backward = Vec3(0, 0, 1)
+Vec3.Down = Vec3(0, -1, 0)
+Vec3.Forward = Vec3(0, 0, -1)
+Vec3.Left = Vec3(-1, 0, 0)
+Vec3.Right = Vec3(1, 0, 0)
+Vec3.Up = Vec3(0, 1, 0)

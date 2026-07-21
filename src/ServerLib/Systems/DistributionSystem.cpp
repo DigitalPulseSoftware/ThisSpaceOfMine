@@ -1,14 +1,16 @@
-// Copyright (C) 2025 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ServerLib/Systems/DistributionSystem.hpp>
+#include <CommonLib/GameConstants.hpp>
 #include <Nazara/Core/Components/DisabledComponent.hpp>
 
 namespace tsom
 {
 	DistributionSystem::DistributionSystem(entt::registry& registry) :
 	m_distributionObserver(registry),
+	m_tickAccumulator(Nz::Time::Zero()),
 	m_registry(registry)
 	{
 		m_distributionObserver.OnEntityAdded.Connect([this](entt::entity entity)
@@ -50,33 +52,46 @@ namespace tsom
 			m_producers.remove(entity);
 	}
 
-	void DistributionSystem::Update(Nz::Time /*elapsedTime*/)
+	void DistributionSystem::Update(Nz::Time elapsedTime)
 	{
-		for (const auto& [distributionEntity, entityData] : m_distributionObserver.each())
+		m_tickAccumulator += elapsedTime;
+		while (m_tickAccumulator >= Constants::DistributionTickInterval)
 		{
-			NazaraUnused(entityData);
-
-			DistributionComponent& producerDistribution = m_registry.get<DistributionComponent>(distributionEntity);
-			producerDistribution.ClearDistributedValues();
-		}
-
-		for (entt::entity producerEntity : m_producers)
-		{
-			DistributionComponent& producerDistribution = m_registry.get<DistributionComponent>(producerEntity);
-			for (std::size_t outputIndex = 0; outputIndex < producerDistribution.GetOutputCount(); ++outputIndex)
+			for (const auto& [distributionEntity, entityData] : m_distributionObserver.each())
 			{
-				entt::handle connectedEntity = producerDistribution.GetOutputConnectedEntity(outputIndex);
-				if (connectedEntity)
-				{
-					DistributionType type = producerDistribution.GetOutputType(outputIndex);
-					Nz::UInt32 producedValue = producerDistribution.GetProductionValue(outputIndex);
-					std::size_t connectedPort = producerDistribution.GetOutputConnectedPort(outputIndex);
+				NazaraUnused(entityData);
 
-					DistributionComponent& consumptionDistribution = connectedEntity.get<DistributionComponent>();
-					Nz::UInt32 consumedValue = consumptionDistribution.GetConsumptionValue(connectedPort);
-					consumptionDistribution.IncrementDistributedValue(type, std::min(producedValue, consumedValue));
+				DistributionComponent& entityDistribution = m_registry.get<DistributionComponent>(distributionEntity);
+				entityDistribution.ClearDistributedValues();
+			}
+
+			for (entt::entity producerEntity : m_producers)
+			{
+				DistributionComponent& producerDistribution = m_registry.get<DistributionComponent>(producerEntity);
+				for (std::size_t outputIndex = 0; outputIndex < producerDistribution.GetOutputCount(); ++outputIndex)
+				{
+					entt::handle connectedEntity = producerDistribution.GetOutputConnectedEntity(outputIndex);
+					if (connectedEntity)
+					{
+						DistributionType type = producerDistribution.GetOutputType(outputIndex);
+						Nz::UInt32 producedValue = producerDistribution.GetProductionValue(outputIndex);
+						std::size_t connectedPort = producerDistribution.GetOutputConnectedPort(outputIndex);
+
+						DistributionComponent& consumptionDistribution = connectedEntity.get<DistributionComponent>();
+						Nz::UInt32 consumedValue = consumptionDistribution.GetConsumptionValue(connectedPort);
+						consumptionDistribution.IncrementDistributedValue(type, std::min(producedValue, consumedValue));
+					}
 				}
 			}
+
+			for (const auto& [distributionEntity, entityData] : m_distributionObserver.each())
+			{
+				NazaraUnused(entityData);
+				DistributionComponent& entityDistribution = m_registry.get<DistributionComponent>(distributionEntity);
+				entityDistribution.TriggerDistributionCallback(entt::handle(m_registry, distributionEntity));
+			}
+
+			m_tickAccumulator -= Constants::DistributionTickInterval;
 		}
 	}
 }

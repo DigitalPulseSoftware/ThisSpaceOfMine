@@ -6,6 +6,10 @@ function QuaternionMt:GetConjugate()
     return Quaternion(-self.x, -self.y, -self.z, self.w)
 end
 
+function QuaternionMt:ToDirection()
+    return self * Vec3.Forward
+end
+
 function QuaternionMt:__mul(quat)
     local mt = getmetatable(quat)
     if mt == QuaternionMt then

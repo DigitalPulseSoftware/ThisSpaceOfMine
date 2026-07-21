@@ -3,25 +3,25 @@ classData:Set("spawnable", true)
 classData:Set("spawnable_model", "light")
 classData:Set("spawnable_collider", Vec3(0.5))
 
-classData:AddProperty("light_enabled", { type = "bool", default = true, isNetworked = true })
+classData:AddProperty("light_enabled", { type = "bool", default = false, isNetworked = true })
+classData:AddProperty("consumption", { type = "integer", default = 25, isNetworked = true })
 
 classData:On("init", function (self)
 	local physSettings = {
-		kind = "dynamic",
-		mass = 1.0,
+		kind = "static",
+		mass = 0.0,
 		collider = BoxCollider3D.new(Vec3(0.5)),
-		objectLayer = Constants.ObjectLayerDynamic
+		objectLayer = Constants.ObjectLayerStatic
 	}
 
 	self:AddComponent("rigidbody3d", physSettings)
 
 	if SERVER then
-		self:AllowEnvironmentSwitch()
 		local distribution = self:AddComponent("distribution", {
 			inputs = { DistributionType.Electrical },
 			outputs = {}
 		})
-		distribution:UpdateConsumptionValue(0, 25)
+		distribution:UpdateConsumptionValue(0, self:GetProperty("consumption") * 1000 / Constants.DistributionTickRate)
 	elseif CLIENT then
 		self:SetInteractible(true)
 		self:SetInteractibleText("Light")
@@ -38,10 +38,10 @@ classData:On("init", function (self)
 end)
 
 if SERVER then
-	classData:On("tick", function (self)
+	classData:On("distribution", function (self)
 		local distribution = self:GetComponent("distribution")
 		local electricity = distribution:GetDistributedValue(DistributionType.Electrical)
-		self:UpdateProperty("light_enabled", electricity > 0)
+		self:UpdateProperty("light_enabled", electricity >= self:GetProperty("consumption") * 1000 / Constants.DistributionTickRate)
 	end)
 else
 	classData:OnPropertyUpdate("light_enabled", function (self, isEnabled)

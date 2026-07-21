@@ -22,7 +22,7 @@ namespace tsom
 		private:
 			void FillEntityMetatable(sol::state& state, sol::table entityMetatable) override;
 
-			void HandleInit(sol::table classMetatable, entt::handle entity) override;
+			void PostInit(sol::table classMetatable, entt::handle entity) override;
 
 			bool RegisterEvent(sol::table classMetatable, std::string_view eventName, sol::protected_function callback) override;
 

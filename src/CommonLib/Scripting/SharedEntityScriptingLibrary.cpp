@@ -124,8 +124,11 @@ namespace tsom
 		RegisterPhysics(state);
 	}
 
-	sol::table SharedEntityScriptingLibrary::ToEntityTable(sol::state_view& state, entt::handle entity)
+	sol::object SharedEntityScriptingLibrary::ToEntityTable(sol::state_view& state, entt::handle entity)
 	{
+		if (!entity)
+			return sol::lua_nil;
+
 		if (ScriptedEntityComponent* scriptedComponent = entity.try_get<ScriptedEntityComponent>())
 		{
 			if (scriptedComponent->entityTable.lua_state() == state)
@@ -144,6 +147,7 @@ namespace tsom
 	{
 		// Game
 		constants["PlayerOxygenConsumption"] = Constants::PlayerOxygenConsumption;
+		constants["DistributionTickRate"] = Constants::DistributionTickRate;
 
 		// Internal
 		constants["TickDuration"] = Constants::TickDuration;
@@ -224,7 +228,7 @@ namespace tsom
 		});
 	}
 
-	void SharedEntityScriptingLibrary::HandleInit(sol::table classMetatable, entt::handle entity)
+	void SharedEntityScriptingLibrary::PostInit(sol::table classMetatable, entt::handle entity)
 	{
 	}
 
@@ -268,18 +272,19 @@ namespace tsom
 	{
 		state.new_usertype<Nz::NodeComponent>("NodeComponent",
 			sol::no_constructor,
-			"GetRotation", LuaFunction([](const Nz::NodeComponent& nodeComponent)
-			{
-				return nodeComponent.GetRotation();
-			}),
-			"GetPosition", LuaFunction([](const Nz::NodeComponent& nodeComponent)
-			{
-				return nodeComponent.GetPosition();
-			}),
+			"GetPosition", LuaFunction(&Nz::Node::GetPosition),
+			"GetRotation", LuaFunction(&Nz::Node::GetRotation),
+			"GetForward", LuaFunction(&Nz::Node::GetForward),
+			"GetRight", LuaFunction(&Nz::Node::GetRight),
+			"GetUp", LuaFunction(&Nz::Node::GetUp),
 			"Scale", LuaFunction([](Nz::NodeComponent& nodeComponent, const Nz::Vector3f& scale)
 			{
 				return nodeComponent.Scale(scale);
 			}),
+			"ToGlobalDirection", LuaFunction(&Nz::NodeComponent::ToGlobalDirection),
+			"ToGlobalPosition", LuaFunction(&Nz::NodeComponent::ToGlobalPosition),
+			"ToGlobalRotation", LuaFunction(&Nz::NodeComponent::ToGlobalRotation),
+			"ToGlobalScale", LuaFunction(&Nz::NodeComponent::ToGlobalScale),
 			"ToLocalDirection", LuaFunction(&Nz::NodeComponent::ToLocalDirection),
 			"ToLocalPosition", LuaFunction(&Nz::NodeComponent::ToLocalPosition),
 			"ToLocalRotation", LuaFunction(&Nz::NodeComponent::ToLocalRotation),
@@ -517,8 +522,6 @@ namespace tsom
 				entityScripted.entityTable[sol::metatable_key] = entityScripted.classMetatable;
 				entityScripted.entityTable["_Entity"] = EntityReference(entity);
 
-				HandleInit(entityScripted.classMetatable, entity);
-
 				if (tickCallback)
 				{
 					auto& entityTick = entity.emplace<TickComponent>();
@@ -544,7 +547,11 @@ namespace tsom
 						spdlog::error("entity init event failed: {}", err.what());
 					}
 				}
+
+				PostInit(entityScripted.classMetatable, entity);
 			};
+
+			// TODO: In case of script reloading, we must update the classMetatable for existing entities as well
 
 			m_entityRegistry.RegisterClass(EntityClass{ std::move(name), std::move(entityBuilder.properties), std::move(entityBuilder.callbacks), std::move(entityBuilder.clientRpcs), std::move(entityBuilder.metadata) });
 		});

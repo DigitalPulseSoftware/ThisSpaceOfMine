@@ -1,7 +1,8 @@
-// Copyright (C) 2025 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
+#include <CommonLib/GameConstants.hpp>
 #include <NazaraUtils/Assert.hpp>
 
 namespace tsom
@@ -21,6 +22,11 @@ namespace tsom
 			auto& port = m_outputs.emplace_back();
 			port.type = distributionType;
 		}
+	}
+
+	inline void DistributionComponent::BindDistributionCallback(DistributionCallback&& callback)
+	{
+		m_distributionCallback = std::move(callback);
 	}
 
 	inline void DistributionComponent::ConnectInput(std::size_t inputIndex, entt::handle entity, std::size_t outputIndex)
@@ -136,5 +142,11 @@ namespace tsom
 	inline void DistributionComponent::IncrementDistributedValue(DistributionType type, Nz::UInt32 value)
 	{
 		m_distributedValues[type] += value;
+	}
+
+	void DistributionComponent::TriggerDistributionCallback(entt::handle entity)
+	{
+		if (m_distributionCallback)
+			m_distributionCallback(entity);
 	}
 }

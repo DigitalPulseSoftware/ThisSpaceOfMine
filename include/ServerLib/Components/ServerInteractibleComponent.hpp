@@ -17,7 +17,7 @@ namespace tsom
 	struct ServerInteractibleComponent
 	{
 		std::function<void(entt::handle entity, ServerPlayer* player)> onInteraction;
-		bool isEnabled;
+		bool isEnabled = false;
 	};
 }
 

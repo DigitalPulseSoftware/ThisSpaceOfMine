@@ -20,6 +20,7 @@
 #include <CommonLib/Physics/PhysicsSettings.hpp>
 #include <CommonLib/Systems/PlanetSystem.hpp>
 #include <CommonLib/Systems/ShipSystem.hpp>
+#include <CommonLib/Systems/TickSystem.hpp>
 #include <Game/GameConfigAppComponent.hpp>
 #include <Game/GameConfigs.hpp>
 #include <Game/States/BackgroundState.hpp>
@@ -447,6 +448,7 @@ namespace tsom
 		world.AddSystem<NetworkMovementInterpolationSystem>(Constants::TickDuration);
 		world.AddSystem<PlanetSystem>();
 		world.AddSystem<ShipSystem>();
+		world.AddSystem<TickSystem>();
 		world.AddSystem<TransformCopySystem>();
 		world.AddSystem<Nz::LifetimeSystem>();
 		world.AddSystem<Nz::RenderSystem>([this](Nz::ElementRendererRegistry& elementRegistry) { return std::make_unique<ClientFramePipeline>(elementRegistry, *m_blockLibrary); });
