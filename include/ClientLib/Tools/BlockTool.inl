@@ -2,12 +2,10 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
-#include <cassert>
-
 namespace tsom
 {
-	inline BlockSelectionBar* GameState::GetBlockSelectionBar() const
+	inline BlockTool::BlockTool(GameInterface& gameInterface) :
+	ToolBase(gameInterface, "Block")
 	{
-		return m_blockSelectionBar;
 	}
 }

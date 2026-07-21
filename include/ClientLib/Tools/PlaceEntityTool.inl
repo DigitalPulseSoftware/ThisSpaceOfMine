@@ -2,12 +2,11 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
-#include <cassert>
-
 namespace tsom
 {
-	inline BlockSelectionBar* GameState::GetBlockSelectionBar() const
+	inline PlaceEntityTool::PlaceEntityTool(GameInterface& gameInterface, ClientAssetLibraryAppComponent& assetLibrary) :
+	ToolBase(gameInterface, "Place entity"),
+	m_assetLibrary(assetLibrary)
 	{
-		return m_blockSelectionBar;
 	}
 }

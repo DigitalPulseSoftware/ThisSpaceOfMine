@@ -8,8 +8,8 @@
 #include <Nazara/Graphics/AbstractViewer.hpp>
 #include <Nazara/Graphics/FrameGraph.hpp>
 #include <Nazara/Graphics/FramePipelinePassRegistry.hpp>
-#include <Nazara/Graphics/Graphics.hpp>
 #include <Nazara/Graphics/GpuBufferPool.hpp>
+#include <Nazara/Graphics/Graphics.hpp>
 #include <Nazara/Graphics/ViewerInstance.hpp>
 #include <NZSL/Math/FieldOffsets.hpp>
 

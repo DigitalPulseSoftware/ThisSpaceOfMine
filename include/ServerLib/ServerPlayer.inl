@@ -79,6 +79,11 @@ namespace tsom
 		return m_uuid;
 	}
 
+	inline bool ServerPlayer::HasGrabbedEntity() const
+	{
+		return m_grabConstraint.HasValue();
+	}
+
 	inline bool ServerPlayer::HasPermission(PlayerPermission permission)
 	{
 		return m_permissions.Test(permission);

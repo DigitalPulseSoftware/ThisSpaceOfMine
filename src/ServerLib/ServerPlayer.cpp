@@ -22,6 +22,8 @@
 #include <ServerLib/Scripting/ServerScriptingLibrary.hpp>
 #include <ServerLib/Systems/EnvironmentProxySystem.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
+#include <Nazara/Physics3D/PhysConstraint3D.hpp>
+#include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <cassert>
 
 namespace tsom
@@ -38,10 +40,51 @@ namespace tsom
 		ConsoleExecutor executor;
 	};
 
+	struct ServerPlayer::GrabConstraint
+	{
+		GrabConstraint(entt::handle entity, Nz::RigidBody3D& body, const Nz::Vector3f& grabPos, const Nz::Vector3f& offset) :
+		grabEntity(entity),
+		grabBody(body.GetWorld(), BodySettings(grabPos)),
+		grabConstraint(body, grabBody, grabPos),
+		grabOffset(offset)
+		{
+			body.WakeUp();
+			body.EnableSleeping(false);
+			grabConstraint.SetDamping(1.f);
+			grabConstraint.SetFrequency(5.f);
+		}
+
+		~GrabConstraint()
+		{
+			grabConstraint.GetBodyA().EnableSleeping(true);
+		}
+
+		void SetPosition(const Nz::Vector3f& pos)
+		{
+			grabBody.SetPosition(pos);
+		}
+
+		static Nz::RigidBody3D::DynamicSettings BodySettings(const Nz::Vector3f& pos)
+		{
+			Nz::RigidBody3D::DynamicSettings settings;
+			settings.mass = 0.f; //< kinematic
+			settings.isSimulationEnabled = false;
+			settings.position = pos;
+
+			return settings;
+		}
+
+		entt::handle grabEntity;
+		Nz::RigidBody3D grabBody;
+		Nz::PhysDistanceConstraint3D grabConstraint;
+		Nz::Vector3f grabOffset;
+	};
+
 	ServerPlayer::ServerPlayer(ServerInstance& instance, PlayerIndex playerIndex, NetworkSession* session, const std::optional<Nz::Uuid>& uuid, std::string nickname, PlayerPermissionFlags permissions) :
 	m_uuid(uuid),
 	m_nickname(std::move(nickname)),
 	m_console(nullptr),
+	m_grabConstraint(nullptr),
 	m_respawnTimer(Nz::Time::Zero()),
 	m_inputQueueAdvancement(0),
 	m_session(session),
@@ -166,6 +209,16 @@ namespace tsom
 		return shipController->GetShipEntity();
 	}
 
+	void ServerPlayer::GrabEntity(EntityReference entity, const Nz::Vector3f& grabOffset)
+	{
+		m_grabConstraint.Reset();
+		if (entity)
+		{
+			auto& hitBody = entity->get<Nz::RigidBody3DComponent>();
+			m_grabConstraint.Emplace(entity, hitBody, m_controller->GetEyePosition() + m_controller->GetCameraRotation() * grabOffset, grabOffset);
+		}
+	}
+
 	void ServerPlayer::PilotShip(EntityReference shipEntity, EntityReference shipExteriorEntity, const Nz::Quaternionf& referenceRotation)
 	{
 		if (!m_controlledEntity)
@@ -283,11 +336,24 @@ namespace tsom
 			if (m_controller)
 				m_controller->SetInputs(inputs);
 		}
+
+		if (m_grabConstraint)
+		{
+			if (m_grabConstraint->grabEntity)
+				m_grabConstraint->SetPosition(m_controller->GetEyePosition() + m_controller->GetCameraRotation() * m_grabConstraint->grabOffset);
+			else
+				m_grabConstraint.Reset();
+		}
 	}
 
 	std::string ServerPlayer::ToString() const
 	{
 		return fmt::format("<Player #{}: {}>", m_playerIndex, m_nickname);
+	}
+
+	void ServerPlayer::Ungrab()
+	{
+		m_grabConstraint.Reset();
 	}
 
 	void ServerPlayer::UpdateRootEnvironment(ServerEnvironment* environment)

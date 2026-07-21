@@ -194,7 +194,7 @@ namespace sol
 {
 	template<typename T>
 	struct lua_size<Nz::Box<T>> : std::integral_constant<int, 1> {};
-	
+
 	template<>
 	struct lua_size<Nz::Color> : std::integral_constant<int, 1> {};
 
