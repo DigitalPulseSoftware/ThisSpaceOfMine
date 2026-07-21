@@ -19,6 +19,7 @@
 #include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <Nazara/Platform/Window.hpp>
+#include <spdlog/spdlog.h>
 #include <numeric>
 
 #ifdef TSOM_DEV_TOOLS
@@ -98,6 +99,24 @@ namespace tsom
 		}
 	}
 
+	void PlaceEntityTool::OnWheel(float delta)
+	{
+		if (delta < 0.f)
+		{
+			if (m_preview->rotationMultiplier == 0)
+				m_preview->rotationMultiplier = 7;
+			else
+				m_preview->rotationMultiplier--;
+		}
+		else
+		{
+			if (m_preview->rotationMultiplier == 7)
+				m_preview->rotationMultiplier = 0;
+			else
+				m_preview->rotationMultiplier++;
+		}
+	}
+
 	void PlaceEntityTool::Update(Nz::Time /*elapsedTime*/, const GameInterface::RaycastResult* previewRaycast)
 	{
 		if (previewRaycast)
@@ -127,10 +146,16 @@ namespace tsom
 							const Nz::ParameterList& metadata = entityClass->GetMetadata();
 							if (auto result = metadata.GetStringViewParameter("spawnable_model"))
 							{
-								std::shared_ptr<Nz::Model> previewModel = m_assetLibrary.GetModel(*result)->Clone();
+								std::shared_ptr<Nz::Model> previewModel = m_assetLibrary.GetModel(*result);
+								if (previewModel)
+								{
+									previewModel = previewModel->Clone();
 
-								for (std::size_t i = 0; i < previewModel->GetMaterialCount(); ++i)
-									previewModel->SetMaterial(i, m_preview->material);
+									for (std::size_t i = 0; i < previewModel->GetMaterialCount(); ++i)
+										previewModel->SetMaterial(i, m_preview->material);
+								}
+								else
+									spdlog::warn("invalid model {} (no preview)", *result);
 
 								m_preview->entity = m_gameInterface.GetWorld().CreateEntity();
 								m_preview->entity.emplace<Nz::NodeComponent>();

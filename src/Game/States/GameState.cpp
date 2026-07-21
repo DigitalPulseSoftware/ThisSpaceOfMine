@@ -307,33 +307,8 @@ namespace tsom
 			{
 				m_targetCameraDistance = Nz::Clamp(m_targetCameraDistance - event.delta, m_defaultCameraDistance * 0.5f, m_defaultCameraDistance * 2.f);
 			}
-			else if (m_toolIndex == 1) //< BlockTool
-			{
-				if (m_blockSelectionBar->IsVisible())
-				{
-					if (event.delta < 0.f)
-						m_blockSelectionBar->SelectNext();
-					else
-						m_blockSelectionBar->SelectPrevious();
-				}
-			}
-			/*else if (m_toolMode == ToolMode::PlaceEntity)
-			{
-				if (event.delta < 0.f)
-				{
-					if (m_preview->rotationMultiplier == 0)
-						m_preview->rotationMultiplier = 7;
-					else
-						m_preview->rotationMultiplier--;
-				}
-				else
-				{
-					if (m_preview->rotationMultiplier == 7)
-						m_preview->rotationMultiplier = 0;
-					else
-						m_preview->rotationMultiplier++;
-				}
-			}*/
+			else
+				m_tools[m_toolIndex]->OnWheel(event.delta);
 		});
 
 		m_escapeMenu = CreateWidget<EscapeMenu>();

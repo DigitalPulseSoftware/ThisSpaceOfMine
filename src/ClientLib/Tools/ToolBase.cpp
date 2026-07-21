@@ -16,6 +16,10 @@ namespace tsom
 	{
 	}
 
+	void ToolBase::OnWheel(float /*delta*/)
+	{
+	}
+
 	void ToolBase::Update(Nz::Time /*elapsedTime*/, const GameInterface::RaycastResult* /*previewRaycast*/)
 	{
 	}
