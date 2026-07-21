@@ -149,6 +149,81 @@ namespace tsom
 		chunk->UpdateBlock(voxelLoc, static_cast<BlockIndex>(placeBlock.newContent));
 	}
 
+	void PlayerSessionHandler::HandlePacket(Packets::C_PlaceEntity&& placeEntity)
+	{
+		entt::handle playerEntity = m_player->GetControlledEntityReference();
+		if (!playerEntity)
+			return; //< player is either dead or not spawned yet
+
+		Chunk* chunk;
+		entt::handle entityOwner;
+		if (!m_player->GetVisibilityHandler().GetChunkByNetworkId(placeEntity.chunkId, &entityOwner, &chunk))
+			return; //< ignore
+
+		const std::string& className = GetSession()->GetStringStore().GetString(placeEntity.entityClass);
+
+		auto& serverInstance = m_player->GetServerInstance();
+		std::shared_ptr<const EntityClass> entityClass = serverInstance.GetEntityRegistry().FindClass(className);
+		if (!entityClass)
+			return;
+
+		ServerEnvironment* chunkEnvironment = ServerEnvironment::GetEnvironment(entityOwner);
+
+		const Nz::ParameterList& metadata = entityClass->GetMetadata();
+		auto colliderXResult = metadata.GetDoubleParameter("spawnable_collider.x");
+		auto colliderYResult = metadata.GetDoubleParameter("spawnable_collider.y");
+		auto colliderZResult = metadata.GetDoubleParameter("spawnable_collider.z");
+
+		Nz::Vector3f collider;
+		collider.x = static_cast<float>(colliderXResult.GetValueOr(1.0));
+		collider.y = static_cast<float>(colliderYResult.GetValueOr(1.0));
+		collider.z = static_cast<float>(colliderZResult.GetValueOr(1.0));
+
+		Nz::Vector3ui blockIndices(placeEntity.voxelLoc.x, placeEntity.voxelLoc.y, placeEntity.voxelLoc.z);
+		if (!CheckCanPlaceEntity(chunkEnvironment, chunk, blockIndices, placeEntity.topFace, collider, placeEntity.entityRotation))
+			return;
+
+		auto& chunkOwnerNode = entityOwner.get<Nz::NodeComponent>();
+
+		Nz::Vector3f chunkOffset = chunk->GetContainer().GetChunkOffset(chunk->GetIndices());
+
+		auto cornerPos = chunk->ComputeBlockCorners(blockIndices);
+		auto& corners = s_faceCorners[placeEntity.topFace];
+		std::array<Nz::Vector3f, 4> cornerGlobalPos;
+		for (std::size_t i = 0; i < 4; ++i)
+			cornerGlobalPos[i] = chunkOwnerNode.ToGlobalPosition(chunkOffset + cornerPos[corners[i]]);
+
+		Nz::Vector3f faceCenter = std::accumulate(cornerGlobalPos.begin(), cornerGlobalPos.end(), Nz::Vector3f::Zero()) / corners.size();
+
+		Nz::Vector3f normal = s_dirNormals[placeEntity.topFace];
+		Nz::Vector3f deformedNormal = s_dirNormals[placeEntity.topFace];
+		//chunk->DeformNormals(&deformedNormal, normal, &faceCenter, 1);
+
+		Nz::Vector3f entityPos = faceCenter + deformedNormal * collider.y * 0.5f;
+		Nz::Quaternionf entityRot = Nz::Quaternionf::RotationBetween(Nz::Vector3f::Up(), deformedNormal) * Nz::Quaternionf(Nz::DegreeAnglef(placeEntity.entityRotation * 45.f), Nz::Vector3f::Up());
+
+		entt::handle entity = chunkEnvironment->CreateEntity();
+		entity.emplace<Nz::NodeComponent>(entityPos, entityRot);
+		entity.emplace<NetworkedComponent>();
+		entity.emplace<ClassInstanceComponent>(entityClass);
+
+		entityClass->InitAndActivateEntity(entity);
+	}
+
+	void PlayerSessionHandler::HandlePacket(Packets::C_RemoveEntity&& removeEntity)
+	{
+		entt::handle playerEntity = m_player->GetControlledEntityReference();
+		if (!playerEntity)
+			return; //< player is either dead or not spawned yet
+
+		entt::handle entity;
+		if (!m_player->GetVisibilityHandler().GetEntityByNetworkId(removeEntity.entityId, &entity))
+			return;
+
+		if (entity)
+			entity.destroy();
+	}
+
 	void PlayerSessionHandler::HandlePacket(Packets::C_SendChatMessage&& playerChat)
 	{
 		std::string_view message = static_cast<std::string_view>(playerChat.message);
@@ -880,6 +955,20 @@ namespace tsom
 		if (doesCollide)
 			return false;
 
+		return true;
+	}
+
+	bool PlayerSessionHandler::CheckCanPlaceEntity(ServerEnvironment* environment, const Chunk* chunk, const Nz::Vector3ui& blockIndices, Direction direction, const Nz::Vector3f& collider, Nz::UInt8 entityRotation) const
+	{
+		Nz::Vector3ui chunkSize = chunk->GetSize();
+		if (blockIndices.x >= chunkSize.x || blockIndices.y >= chunkSize.y || blockIndices.z >= chunkSize.z)
+			return false;
+
+		// Check that target block is full
+		if (chunk->GetBlockContent(blockIndices) == EmptyBlockIndex)
+			return false;
+
+		// TODO
 		return true;
 	}
 }

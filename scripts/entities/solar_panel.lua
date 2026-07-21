@@ -1,4 +1,7 @@
 local classData = EntityRegistry.ClassBuilder()
+classData:Set("spawnable", true)
+classData:Set("spawnable_model", "solar_panel")
+classData:Set("spawnable_collider", Vec3(2.0, 0.1, 2.0))
 
 classData:AddProperty("enabled", { type = "bool", default = true, isNetworked = true })
 
@@ -6,13 +9,14 @@ classData:On("init", function (self)
 	local physSettings = {
 		kind = "dynamic",
 		mass = 10.0,
-		collider = BoxCollider3D.new(Vec3f(2.0, 0.1, 2.0)),
+		collider = BoxCollider3D.new(Vec3(2.0, 0.1, 2.0)),
 		objectLayer = Constants.ObjectLayerDynamic
 	}
 
 	self:AddComponent("rigidbody3d", physSettings)
 
 	if SERVER then
+		self:AllowEnvironmentSwitch()
 		local distribution = self:AddComponent("distribution", {
 			inputs = {}, 
 			outputs = { DistributionType.Electrical }
@@ -37,9 +41,9 @@ if SERVER then
 		distribution:UpdateProductionValue(0, self:GetProperty("enabled") and 100 or 0)
 	end)
 else
-	classData:OnPropertyUpdate("enabled", function (self)
+	classData:OnPropertyUpdate("enabled", function (self, isEnabled)
 		local text = "Solar panel"
-		if not self:GetProperty("enabled") then
+		if not isEnabled then
 			text = text .. " (disabled)"
 		end
 		self:SetInteractibleText(text)

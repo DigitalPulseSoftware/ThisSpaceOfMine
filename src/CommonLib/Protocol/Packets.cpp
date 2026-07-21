@@ -170,6 +170,20 @@ namespace tsom
 			serializer &= data.newContent;
 		}
 
+		void Serialize(PacketSerializer& serializer, C_PlaceEntity& data)
+		{
+			serializer &= data.chunkId;
+			Helper::Serialize(serializer, data.voxelLoc);
+			serializer &= data.topFace;
+			serializer.Serialize(data.entityClass);
+			serializer &= data.entityRotation;
+		}
+
+		void Serialize(PacketSerializer& serializer, C_RemoveEntity& data)
+		{
+			serializer &= data.entityId;
+		}
+
 		void Serialize(PacketSerializer& serializer, C_SendChatMessage& data)
 		{
 			serializer &= data.message;

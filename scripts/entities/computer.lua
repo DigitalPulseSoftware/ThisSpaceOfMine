@@ -1,4 +1,7 @@
 local classData = EntityRegistry.ClassBuilder()
+classData:Set("spawnable", true)
+classData:Set("spawnable_model", "computer")
+classData:Set("spawnable_collider", Vec3(0.5))
 
 classData:On("init", function (self)
 	local physSettings = {

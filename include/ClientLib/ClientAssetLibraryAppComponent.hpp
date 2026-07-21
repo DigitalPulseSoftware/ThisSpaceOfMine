@@ -15,6 +15,7 @@ namespace Nz
 {
 	class Font;
 	class Material;
+	class MaterialInstance;
 	class Model;
 	class TextureAsset;
 }
@@ -31,18 +32,21 @@ namespace tsom
 
 			inline std::shared_ptr<Nz::Font> GetFont(std::string_view name) const;
 			inline std::shared_ptr<Nz::Material> GetMaterial(std::string_view name) const;
+			inline std::shared_ptr<Nz::MaterialInstance> GetMaterialInstance(std::string_view name) const;
 			inline std::shared_ptr<Nz::Model> GetModel(std::string_view name) const;
 			inline std::shared_ptr<Nz::TextureAsset> GetTexture(std::string_view name) const;
 
 			inline std::shared_ptr<Nz::Font> QueryFont(std::string_view name) const;
 			inline std::shared_ptr<Nz::Material> QueryMaterial(std::string_view name) const;
+			inline std::shared_ptr<Nz::MaterialInstance> QueryMaterialInstance(std::string_view name) const;
 			inline std::shared_ptr<Nz::Model> QueryModel(std::string_view name) const;
 			inline std::shared_ptr<Nz::TextureAsset> QueryTexture(std::string_view name) const;
 
 			inline void RegisterFont(std::string name, std::shared_ptr<Nz::Font> font);
 			inline void RegisterMaterial(std::string name, std::shared_ptr<Nz::Material> material);
-			inline void RegisterModel(std::string name, std::shared_ptr<Nz::Model> model);
-			inline void RegisterTexture(std::string name, std::shared_ptr<Nz::TextureAsset> texture);
+			inline void RegisterMaterialInstance(std::string name, std::shared_ptr<Nz::MaterialInstance> materialInstance);
+			inline void RegisterModel(std::string name, std::shared_ptr<Nz::Model> font);
+			inline void RegisterTexture(std::string name, std::shared_ptr<Nz::TextureAsset> font);
 
 			ClientAssetLibraryAppComponent& operator=(const ClientAssetLibraryAppComponent&) = delete;
 			ClientAssetLibraryAppComponent& operator=(ClientAssetLibraryAppComponent&&) = delete;
@@ -50,6 +54,7 @@ namespace tsom
 		private:
 			Nz::ObjectLibrary<Nz::Font> m_fontLibrary;
 			Nz::ObjectLibrary<Nz::Material> m_materialLibrary;
+			Nz::ObjectLibrary<Nz::MaterialInstance> m_materialInstanceLibrary;
 			Nz::ObjectLibrary<Nz::Model> m_modelLibrary;
 			Nz::ObjectLibrary<Nz::TextureAsset> m_textureLibrary;
 	};

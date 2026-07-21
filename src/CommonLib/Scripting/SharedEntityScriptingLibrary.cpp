@@ -41,6 +41,7 @@ namespace tsom
 			std::vector<EntityClass::RemoteProcedureCall> clientRpcs;
 			std::vector<EntityClass::Property> properties;
 			std::vector<sol::protected_function> propertyUpdateCallbacks;
+			Nz::ParameterList metadata;
 			EntityClass::Callbacks callbacks;
 		};
 
@@ -354,6 +355,30 @@ namespace tsom
 					.isNetworked = isNetworked
 				});
 			}),
+			"Set", sol::overload(
+				LuaFunction([this](EntityBuilder& entityBuilder, std::string parameter, bool value)
+				{
+					entityBuilder.metadata.SetParameter(std::move(parameter), value);
+				}),
+				LuaFunction([this](EntityBuilder& entityBuilder, std::string parameter, long long value)
+				{
+					entityBuilder.metadata.SetParameter(std::move(parameter), value);
+				}),
+				LuaFunction([this](EntityBuilder& entityBuilder, std::string parameter, double value)
+				{
+					entityBuilder.metadata.SetParameter(std::move(parameter), value);
+				}),
+				LuaFunction([this](EntityBuilder& entityBuilder, std::string parameter, std::string value)
+				{
+					entityBuilder.metadata.SetParameter(std::move(parameter), std::move(value));
+				}),
+				LuaFunction([this](EntityBuilder& entityBuilder, const std::string& parameter, const Nz::Vector3f& value)
+				{
+					entityBuilder.metadata.SetParameter(parameter + ".x", value.x);
+					entityBuilder.metadata.SetParameter(parameter + ".y", value.y);
+					entityBuilder.metadata.SetParameter(parameter + ".z", value.z);
+				})
+			),
 			"On", LuaFunction([this](sol::this_state L, EntityBuilder& entityBuilder, std::string_view eventName, sol::protected_function callback)
 			{
 				if (eventName == "init")
@@ -521,7 +546,7 @@ namespace tsom
 				}
 			};
 
-			m_entityRegistry.RegisterClass(EntityClass{ std::move(name), std::move(entityBuilder.properties), std::move(entityBuilder.callbacks), std::move(entityBuilder.clientRpcs) });
+			m_entityRegistry.RegisterClass(EntityClass{ std::move(name), std::move(entityBuilder.properties), std::move(entityBuilder.callbacks), std::move(entityBuilder.clientRpcs), std::move(entityBuilder.metadata) });
 		});
 	}
 

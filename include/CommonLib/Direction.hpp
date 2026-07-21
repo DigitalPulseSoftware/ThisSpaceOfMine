@@ -180,6 +180,21 @@ namespace tsom
 		Direction::Down,  //< Up
 	};
 
+	constexpr Nz::EnumArray<Direction, std::array<Nz::BoxCorner, 4>> s_faceCorners = {
+		// Back
+		std::array{ Nz::BoxCorner::LeftBottomNear, Nz::BoxCorner::LeftBottomFar, Nz::BoxCorner::LeftTopFar, Nz::BoxCorner::LeftTopNear },
+		// Down
+		std::array{ Nz::BoxCorner::LeftBottomFar, Nz::BoxCorner::RightBottomFar, Nz::BoxCorner::RightTopFar, Nz::BoxCorner::LeftTopFar },
+		// Front
+		std::array{ Nz::BoxCorner::RightBottomFar, Nz::BoxCorner::RightBottomNear, Nz::BoxCorner::RightTopNear, Nz::BoxCorner::RightTopFar },
+		// Left
+		std::array{ Nz::BoxCorner::LeftBottomNear, Nz::BoxCorner::RightBottomNear, Nz::BoxCorner::RightBottomFar, Nz::BoxCorner::LeftBottomFar },
+		// Right
+		std::array{ Nz::BoxCorner::RightTopNear, Nz::BoxCorner::LeftTopNear, Nz::BoxCorner::LeftTopFar, Nz::BoxCorner::RightTopFar },
+		// Up
+		std::array{ Nz::BoxCorner::RightBottomNear, Nz::BoxCorner::LeftBottomNear, Nz::BoxCorner::LeftTopNear, Nz::BoxCorner::RightTopNear },
+	};
+
 	constexpr Direction DirectionFromNormal(const Nz::Vector3f& outsideNormal);
 	constexpr NeighborChunk ToNeighborChunk(const Nz::Vector3i32& neighborIndices);
 }

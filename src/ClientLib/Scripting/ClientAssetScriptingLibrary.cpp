@@ -53,10 +53,22 @@ namespace tsom
 	{
 		sol::table assetLibrary = state.create_named_table("AssetLibrary");
 
+		assetLibrary["GetMaterial"] = LuaFunction([this](std::string_view name)
+		{
+			auto& clientAsset = m_app.GetComponent<ClientAssetLibraryAppComponent>();
+			return clientAsset.GetMaterial(name);
+		});
+
 		assetLibrary["GetModel"] = LuaFunction([this](std::string_view name)
 		{
 			auto& clientAsset = m_app.GetComponent<ClientAssetLibraryAppComponent>();
 			return clientAsset.GetModel(name);
+		});
+
+		assetLibrary["RegisterMaterialInstance"] = LuaFunction([this](std::string name, std::shared_ptr<Nz::MaterialInstance> materialInstance)
+		{
+			auto& clientAsset = m_app.GetComponent<ClientAssetLibraryAppComponent>();
+			clientAsset.RegisterMaterialInstance(std::move(name), std::move(materialInstance));
 		});
 
 		assetLibrary["RegisterModel"] = LuaFunction([this](std::string name, std::shared_ptr<Nz::Model> model)

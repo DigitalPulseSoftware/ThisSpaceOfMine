@@ -68,6 +68,17 @@ namespace tsom
 				Last = ThirdpersonRear
 			};
 
+			enum class ToolMode
+			{
+				None,
+				Block,
+				PlaceEntity,
+				RemoveEntity,
+
+				First = None,
+				Last = RemoveEntity
+			};
+
 			struct RaycastResult
 			{
 				entt::handle hitEntity;
@@ -141,9 +152,19 @@ namespace tsom
 				entt::handle interiorEntity;
 			};
 
+			struct PreviewData
+			{
+				std::shared_ptr<Nz::MaterialInstance> material;
+				entt::handle entity;
+				Nz::UInt8 rotationMultiplier = 0; // * 45°
+				Nz::Vector3f collider;
+			};
+
 			std::optional<ConsoleExecutor> m_consoleExecutor;
 			std::optional<PilotedShip> m_pilotedShip;
+			std::optional<PreviewData> m_preview;
 			std::shared_ptr<DebugOverlay> m_debugOverlay;
+			std::string_view m_selectedEntityClass;
 			std::vector<InputRotation> m_predictedInputRotations;
 			tsl::hopscotch_map<Nz::UInt64, DebugDrawLines> m_debugDrawLines;
 			entt::handle m_cameraEntity;
@@ -151,6 +172,7 @@ namespace tsom
 			entt::handle m_crosshairEntity;
 			entt::handle m_skyboxEntity;
 			entt::handle m_sunLightEntity;
+			entt::handle m_targetEntity;
 			Nz::Boxf m_shipAABB;
 			Nz::DegreeAnglef m_targetCameraFOV;
 			Nz::EulerAnglesf m_incomingCameraRotation;  //< Accumulated rotation from inputs (will be applied on inputs)
@@ -167,6 +189,7 @@ namespace tsom
 			Nz::UInt8 m_nextInputIndex;
 			CameraMode m_cameraMode;
 			HealthOxygen m_healthOxygen;
+			ToolMode m_toolMode;
 			Nz::SimpleLabelWidget* m_interactionLabel;
 			BlockSelectionBar* m_blockSelectionBar;
 			Chatbox* m_chatBox;
@@ -174,6 +197,7 @@ namespace tsom
 			Console* m_remoteConsole;
 			EscapeMenu* m_escapeMenu;
 			bool m_isMouseLocked;
+			bool m_isSelectingEntities;
 			float m_currentCameraDistance;
 			float m_defaultCameraDistance;
 			float m_targetCameraDistance;

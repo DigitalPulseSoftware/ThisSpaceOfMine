@@ -9,6 +9,7 @@
 
 #include <CommonLib/Export.hpp>
 #include <CommonLib/BlockIndex.hpp>
+#include <CommonLib/Direction.hpp>
 #include <CommonLib/EntityProperties.hpp>
 #include <CommonLib/EnvironmentTransform.hpp>
 #include <CommonLib/GameConstants.hpp>
@@ -185,6 +186,20 @@ namespace tsom
 			Helper::ChunkId chunkId;
 			Helper::VoxelLocation voxelLoc;
 			Nz::UInt8 newContent;
+		};
+
+		struct C_PlaceEntity
+		{
+			Helper::ChunkId chunkId;
+			Helper::VoxelLocation voxelLoc;
+			Direction topFace;
+			CompressedUnsigned<Nz::UInt32> entityClass;
+			Nz::UInt8 entityRotation;
+		};
+
+		struct C_RemoveEntity
+		{
+			Helper::EntityId entityId;
 		};
 
 		struct C_SendChatMessage
@@ -366,6 +381,8 @@ namespace tsom
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_Interact& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_MineBlock& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_PlaceBlock& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_PlaceEntity& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_RemoveEntity& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_SendChatMessage& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_SendConsoleCommand& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_UpdatePlayerInputs& data);

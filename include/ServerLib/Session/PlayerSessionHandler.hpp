@@ -24,6 +24,8 @@ namespace tsom
 			void HandlePacket(Packets::C_Interact&& interact);
 			void HandlePacket(Packets::C_MineBlock&& mineBlock);
 			void HandlePacket(Packets::C_PlaceBlock&& placeBlock);
+			void HandlePacket(Packets::C_PlaceEntity&& placeEntity);
+			void HandlePacket(Packets::C_RemoveEntity&& removeEntity);
 			void HandlePacket(Packets::C_SendChatMessage&& chatMessage);
 			void HandlePacket(Packets::C_SendConsoleCommand&& consoleCommand);
 			void HandlePacket(Packets::C_UpdatePlayerInputs&& playerInputs);
@@ -35,6 +37,7 @@ namespace tsom
 		private:
 			bool CheckCanMineBlock(const Chunk* chunk, const Nz::Vector3ui& blockIndices) const;
 			bool CheckCanPlaceBlock(ServerEnvironment* environment, const Chunk* chunk, const Nz::Vector3ui& blockIndices) const;
+			bool CheckCanPlaceEntity(ServerEnvironment* environment, const Chunk* chunk, const Nz::Vector3ui& blockIndices, Direction direction, const Nz::Vector3f& collider, Nz::UInt8 entityRotation) const;
 
 			ServerPlayer* m_player;
 	};

@@ -1,4 +1,7 @@
 local classData = EntityRegistry.ClassBuilder()
+classData:Set("spawnable", true)
+classData:Set("spawnable_model", "light")
+classData:Set("spawnable_collider", Vec3(0.5))
 
 classData:AddProperty("light_enabled", { type = "bool", default = true, isNetworked = true })
 
@@ -6,13 +9,14 @@ classData:On("init", function (self)
 	local physSettings = {
 		kind = "dynamic",
 		mass = 1.0,
-		collider = BoxCollider3D.new(Vec3f(0.5, 0.5, 0.5)),
+		collider = BoxCollider3D.new(Vec3(0.5)),
 		objectLayer = Constants.ObjectLayerDynamic
 	}
 
 	self:AddComponent("rigidbody3d", physSettings)
 
 	if SERVER then
+		self:AllowEnvironmentSwitch()
 		local distribution = self:AddComponent("distribution", {
 			inputs = { DistributionType.Electrical },
 			outputs = {}
@@ -26,6 +30,7 @@ classData:On("init", function (self)
 
 		local light = self:AddComponent("light")
 		light:AddPointLight()
+		light:Show(self:GetProperty("light_enabled"))
 
 		local gfx = self:AddComponent("graphics")
 		gfx:AttachRenderable(model, Constants.RenderMask3D)
@@ -39,9 +44,9 @@ if SERVER then
 		self:UpdateProperty("light_enabled", electricity > 0)
 	end)
 else
-	classData:OnPropertyUpdate("light_enabled", function (self)
+	classData:OnPropertyUpdate("light_enabled", function (self, isEnabled)
 		local light = self:GetComponent("light")
-		light:Show(self:GetProperty("light_enabled"))
+		light:Show(isEnabled)
 	end)
 end
 EntityRegistry.RegisterClass("light", classData)
