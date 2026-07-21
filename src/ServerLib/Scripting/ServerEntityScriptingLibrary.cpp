@@ -76,7 +76,7 @@ namespace tsom
 			entity.emplace<ServerEnvironmentSwitchComponent>();
 		});
 
-		entityMetatable["CallClientRPC"] = LuaFunction([](sol::table entityTable, std::string rpcName, std::optional<ServerPlayerHandle> targetPlayer)
+		entityMetatable["CallClientRPC"] = LuaFunction([](sol::table entityTable, std::string_view rpcName, std::optional<ServerPlayerHandle> targetPlayer)
 		{
 			entt::handle entity = AssertScriptEntity(entityTable);
 

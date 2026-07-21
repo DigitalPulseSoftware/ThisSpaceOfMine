@@ -6,6 +6,7 @@
 #include <ClientLib/BlockSelectionBar.hpp>
 #include <ClientLib/Chatbox.hpp>
 #include <ClientLib/ClientConfigs.hpp>
+#include <ClientLib/ClientAssetLibraryAppComponent.hpp>
 #include <ClientLib/Console.hpp>
 #include <ClientLib/EscapeMenu.hpp>
 #include <ClientLib/RenderConstants.hpp>
@@ -60,6 +61,11 @@
 #include <imgui.h>
 #include <fmt/ostream.h>
 #include <spdlog/spdlog.h>
+#include <numeric>
+
+#ifdef TSOM_DEV_TOOLS
+#include <imgui.h>
+#endif
 
 #define DEBUG_ROTATION 0
 
@@ -74,7 +80,9 @@ namespace tsom
 	m_tickDuration(Constants::TickDuration),
 	m_nextInputIndex(1),
 	m_cameraMode(CameraMode::Firstperson),
-	m_isMouseLocked(true)
+	m_toolMode(ToolMode::Block),
+	m_isMouseLocked(true),
+	m_isSelectingEntities(false)
 	{
 		auto& stateData = GetStateData();
 		auto& filesystem = stateData.app->GetComponent<Nz::FilesystemAppComponent>();
@@ -284,12 +292,32 @@ namespace tsom
 			{
 				m_targetCameraDistance = Nz::Clamp(m_targetCameraDistance - event.delta, m_defaultCameraDistance * 0.5f, m_defaultCameraDistance * 2.f);
 			}
-			else if (m_blockSelectionBar->IsVisible())
+			else if (m_toolMode == ToolMode::Block)
+			{
+				if (m_blockSelectionBar->IsVisible())
+				{
+					if (event.delta < 0.f)
+						m_blockSelectionBar->SelectNext();
+					else
+						m_blockSelectionBar->SelectPrevious();
+				}
+			}
+			else if (m_toolMode == ToolMode::PlaceEntity)
 			{
 				if (event.delta < 0.f)
-					m_blockSelectionBar->SelectNext();
+				{
+					if (m_preview->rotationMultiplier == 0)
+						m_preview->rotationMultiplier = 7;
+					else
+						m_preview->rotationMultiplier--;
+				}
 				else
-					m_blockSelectionBar->SelectPrevious();
+				{
+					if (m_preview->rotationMultiplier == 7)
+						m_preview->rotationMultiplier = 0;
+					else
+						m_preview->rotationMultiplier++;
+				}
 			}
 		});
 
@@ -379,6 +407,51 @@ namespace tsom
 					}
 					UpdateMouseLock();
 
+					break;
+				}
+
+				case Nz::Keyboard::Scancode::Tab:
+				{
+					if (m_toolMode != ToolMode::Last)
+						m_toolMode = static_cast<ToolMode>(Nz::UnderlyingCast(m_toolMode) + 1);
+					else
+						m_toolMode = ToolMode::First;
+
+					switch (m_toolMode)
+					{
+						case ToolMode::Block:  spdlog::debug("New toolmode: Block"); break;
+						case ToolMode::PlaceEntity: spdlog::debug("New toolmode: Place entity"); break;
+						case ToolMode::RemoveEntity: spdlog::debug("New toolmode: Remove entity"); break;
+						case ToolMode::None:   spdlog::debug("New toolmode: None"); break;
+					}
+
+					m_isSelectingEntities = false;
+
+					if (m_toolMode == ToolMode::PlaceEntity)
+					{
+						if (m_selectedEntityClass.empty())
+						{
+							// First time: select which entity to spawn
+							m_isSelectingEntities = true;
+						}
+
+						auto& assetLibrary = stateData.app->GetComponent<ClientAssetLibraryAppComponent>();
+
+						m_preview.emplace();
+						m_preview->material = assetLibrary.GetMaterialInstance("preview_mat")->Clone();
+					}
+					else if (m_preview)
+					{
+						if (m_preview->entity)
+							m_preview->entity.destroy();
+
+						m_preview.reset();
+					}
+
+					UpdateMouseLock();
+
+					m_blockSelectionBar->Show(m_toolMode == ToolMode::Block && !m_pilotedShip.has_value());
+					LayoutWidgets(Nz::Vector2f(GetStateData().renderTarget->GetSize()));
 					break;
 				}
 
@@ -622,7 +695,7 @@ namespace tsom
 
 			bool isControllingShip = static_cast<bool>(shipExteriorEntity);
 
-			m_blockSelectionBar->Show(!isControllingShip);
+			m_blockSelectionBar->Show(m_toolMode == ToolMode::Block && !isControllingShip);
 			m_crosshairEntity.get<Nz::GraphicsComponent>().Show(isControllingShip);
 
 			m_shipAABB = Nz::Boxf::Invalid();
@@ -653,7 +726,8 @@ namespace tsom
 		m_onControlledShipFinished.Connect(stateData.sessionHandler->OnControlledShipFinished, [this]
 		{
 			m_pilotedShip = {};
-			m_blockSelectionBar->Show();
+			if (m_toolMode == ToolMode::Block)
+				m_blockSelectionBar->Show();
 			m_crosshairEntity.get<Nz::GraphicsComponent>().Show(false);
 			LayoutWidgets(Nz::Vector2f(GetStateData().renderTarget->GetSize()));
 		});
@@ -733,45 +807,86 @@ namespace tsom
 						if (!hitCoordinates)
 							return;
 
-						if (event.button == Nz::Mouse::Left)
+						if (m_toolMode == ToolMode::Block)
 						{
-							// Mine
-							Packets::C_MineBlock mineBlock;
-							mineBlock.chunkId = Nz::Retrieve(chunkNetworkMap.chunkNetworkIndices, &hitChunk);
-							mineBlock.voxelLoc.x = hitCoordinates->blockIndices.x;
-							mineBlock.voxelLoc.y = hitCoordinates->blockIndices.y;
-							mineBlock.voxelLoc.z = hitCoordinates->blockIndices.z;
+							if (event.button == Nz::Mouse::Left)
+							{
+								// Mine
+								Packets::C_MineBlock mineBlock;
+								mineBlock.chunkId = Nz::Retrieve(chunkNetworkMap.chunkNetworkIndices, &hitChunk);
+								mineBlock.voxelLoc.x = hitCoordinates->blockIndices.x;
+								mineBlock.voxelLoc.y = hitCoordinates->blockIndices.y;
+								mineBlock.voxelLoc.z = hitCoordinates->blockIndices.z;
 
-							stateData.networkSession->SendPacket(mineBlock);
-						}
-						else if (event.button == Nz::Mouse::Right)
-						{
-							BlockIndices blockIndices = chunkContainer.GetBlockIndices(hitChunk.GetIndices(), hitCoordinates->blockIndices);
-
-							const DirectionAxis& dirAxis = s_dirAxis[hitCoordinates->direction];
-
-							blockIndices[dirAxis.upAxis] += dirAxis.upDir;
-
-							Nz::Vector3ui innerCoordinates;
-							ChunkIndices chunkIndices = chunkContainer.GetChunkIndicesByBlockIndices(blockIndices, &innerCoordinates);
-							const Chunk* chunk = chunkContainer.GetChunk(chunkIndices);
-							if (!chunk)
+								stateData.networkSession->SendPacket(mineBlock);
 								return;
+							}
+							else if (event.button = Nz::Mouse::Right)
+							{
+								BlockIndices blockIndices = chunkContainer.GetBlockIndices(hitChunk.GetIndices(), hitCoordinates->blockIndices);
 
-							Packets::C_PlaceBlock placeBlock;
-							placeBlock.chunkId = Nz::Retrieve(chunkNetworkMap.chunkNetworkIndices, chunk);
-							placeBlock.voxelLoc.x = innerCoordinates.x;
-							placeBlock.voxelLoc.y = innerCoordinates.y;
-							placeBlock.voxelLoc.z = innerCoordinates.z;
-							placeBlock.newContent = Nz::SafeCast<Nz::UInt8>(m_blockSelectionBar->GetSelectedBlock());
+								const DirectionAxis& dirAxis = s_dirAxis[hitCoordinates->direction];
 
-							stateData.networkSession->SendPacket(placeBlock);
+								blockIndices[dirAxis.upAxis] += dirAxis.upDir;
+
+								Nz::Vector3ui innerCoordinates;
+								ChunkIndices chunkIndices = chunkContainer.GetChunkIndicesByBlockIndices(blockIndices, &innerCoordinates);
+								const Chunk* chunk = chunkContainer.GetChunk(chunkIndices);
+								if (!chunk)
+									return;
+
+								Packets::C_PlaceBlock placeBlock;
+								placeBlock.chunkId = Nz::Retrieve(chunkNetworkMap.chunkNetworkIndices, chunk);
+								placeBlock.voxelLoc.x = innerCoordinates.x;
+								placeBlock.voxelLoc.y = innerCoordinates.y;
+								placeBlock.voxelLoc.z = innerCoordinates.z;
+								placeBlock.newContent = Nz::SafeCast<Nz::UInt8>(m_blockSelectionBar->GetSelectedBlock());
+
+								stateData.networkSession->SendPacket(placeBlock);
+								return;
+							}
+							else
+							{
+								// Pick block
+								tsom::BlockIndex pickedBlockIndex = chunkComponent->chunk.Get()->GetBlockContent(hitCoordinates->blockIndices);
+								m_blockSelectionBar->SelectPickedBlock(pickedBlockIndex);
+							}
 						}
-						else
+						else if (m_toolMode == ToolMode::PlaceEntity)
 						{
-							// Pick block
-							tsom::BlockIndex pickedBlockIndex = chunkComponent->chunk.Get()->GetBlockContent(hitCoordinates->blockIndices);
-							m_blockSelectionBar->SelectPickedBlock(pickedBlockIndex);
+							if (event.button == Nz::Mouse::Left)
+							{
+								Packets::C_PlaceEntity placeEntity;
+								placeEntity.chunkId = Nz::Retrieve(chunkNetworkMap.chunkNetworkIndices, &hitChunk);
+								placeEntity.voxelLoc.x = hitCoordinates->blockIndices.x;
+								placeEntity.voxelLoc.y = hitCoordinates->blockIndices.y;
+								placeEntity.voxelLoc.z = hitCoordinates->blockIndices.z;
+								placeEntity.topFace = hitCoordinates->direction;
+								placeEntity.entityRotation = m_preview->rotationMultiplier;
+								placeEntity.entityClass = stateData.networkSession->GetStringStore().CheckStringIndex(m_selectedEntityClass);
+
+								stateData.networkSession->SendPacket(placeEntity);
+								return;
+							}
+							else if (event.button == Nz::Mouse::Right)
+							{
+								m_isSelectingEntities = !m_isSelectingEntities;
+								UpdateMouseLock();
+								GetStateData().window->SetCursor(Nz::SystemCursor::Default);
+							}
+						}
+					}
+					else if (m_toolMode == ToolMode::RemoveEntity && event.button == Nz::Mouse::Left && m_targetEntity)
+					{
+						const ClientEntityNetworkIndex* entityNetwork = m_targetEntity.try_get<const ClientEntityNetworkIndex>();
+						if (entityNetwork)
+						{
+							auto& entityNetId = raycastHit->hitEntity.get<ClientEntityNetworkIndex>();
+
+							Packets::C_RemoveEntity removeEntity;
+							removeEntity.entityId = entityNetwork->networkIndex;
+
+							stateData.networkSession->SendPacket(removeEntity);
 						}
 					}
 				}
@@ -1073,36 +1188,114 @@ namespace tsom
 							m_debugOverlay->textDrawer.AppendText(fmt::format("Target block depth: {0}\n", depth));
 						}
 
-						auto cornerPos = hitChunk.ComputeBlockCorners(hitCoordinates->blockIndices);
-						for (Nz::Vector3f& pos : cornerPos)
-							pos = chunkNode.ToGlobalPosition(pos) + raycastHit->hitNormal * 0.02f;
+						if (m_toolMode == ToolMode::Block)
+						{
+							auto cornerPos = hitChunk.ComputeBlockCorners(hitCoordinates->blockIndices);
+							auto& corners = s_faceCorners[hitCoordinates->direction];
 
-						constexpr Nz::EnumArray<Direction, std::array<Nz::BoxCorner, 4>> directionToCorners = {
-							// Back
-							std::array{ Nz::BoxCorner::LeftBottomNear, Nz::BoxCorner::LeftBottomFar, Nz::BoxCorner::LeftTopFar, Nz::BoxCorner::LeftTopNear },
-							// Down
-							std::array{ Nz::BoxCorner::LeftBottomFar, Nz::BoxCorner::RightBottomFar, Nz::BoxCorner::RightTopFar, Nz::BoxCorner::LeftTopFar },
-							// Front
-							std::array{ Nz::BoxCorner::RightBottomFar, Nz::BoxCorner::RightBottomNear, Nz::BoxCorner::RightTopNear, Nz::BoxCorner::RightTopFar },
-							// Left
-							std::array{ Nz::BoxCorner::LeftBottomNear, Nz::BoxCorner::RightBottomNear, Nz::BoxCorner::RightBottomFar, Nz::BoxCorner::LeftBottomFar },
-							// Right
-							std::array{ Nz::BoxCorner::RightTopNear, Nz::BoxCorner::LeftTopNear, Nz::BoxCorner::LeftTopFar, Nz::BoxCorner::RightTopFar },
-							// Up
-							std::array{ Nz::BoxCorner::RightBottomNear, Nz::BoxCorner::LeftBottomNear, Nz::BoxCorner::LeftTopNear, Nz::BoxCorner::RightTopNear },
-						};
+							Nz::Vector3f offset = raycastHit->hitNormal * 0.03f;
 
-						auto& corners = directionToCorners[hitCoordinates->direction];
+							debugDrawer->DrawLine(chunkNode.ToGlobalPosition(cornerPos[corners[0]]) + offset, chunkNode.ToGlobalPosition(cornerPos[corners[1]]) + offset, Nz::Color::Green());
+							debugDrawer->DrawLine(chunkNode.ToGlobalPosition(cornerPos[corners[1]]) + offset, chunkNode.ToGlobalPosition(cornerPos[corners[2]]) + offset, Nz::Color::Green());
+							debugDrawer->DrawLine(chunkNode.ToGlobalPosition(cornerPos[corners[2]]) + offset, chunkNode.ToGlobalPosition(cornerPos[corners[3]]) + offset, Nz::Color::Green());
+							debugDrawer->DrawLine(chunkNode.ToGlobalPosition(cornerPos[corners[3]]) + offset, chunkNode.ToGlobalPosition(cornerPos[corners[0]]) + offset, Nz::Color::Green());
+						}
+						else if (m_toolMode == ToolMode::PlaceEntity)
+						{
+							NazaraAssert(m_preview);
+							if (!m_preview->entity)
+							{
+								auto& assetLibrary = stateData.app->GetComponent<ClientAssetLibraryAppComponent>();
 
-						debugDrawer->DrawLine(cornerPos[corners[0]], cornerPos[corners[1]], Nz::Color::Green());
-						debugDrawer->DrawLine(cornerPos[corners[1]], cornerPos[corners[2]], Nz::Color::Green());
-						debugDrawer->DrawLine(cornerPos[corners[2]], cornerPos[corners[3]], Nz::Color::Green());
-						debugDrawer->DrawLine(cornerPos[corners[3]], cornerPos[corners[0]], Nz::Color::Green());
+								const EntityRegistry& entityRegistry = GetStateData().sessionHandler->GetEntityRegistry();
+
+								const auto& entityClass = entityRegistry.FindClass(m_selectedEntityClass);
+								if (entityClass)
+								{
+									const Nz::ParameterList& metadata = entityClass->GetMetadata();
+									if (auto result = metadata.GetStringViewParameter("spawnable_model"))
+									{
+										std::shared_ptr<Nz::Model> previewModel = assetLibrary.GetModel(*result)->Clone();
+
+										for (std::size_t i = 0; i < previewModel->GetMaterialCount(); ++i)
+											previewModel->SetMaterial(i, m_preview->material);
+
+										m_preview->entity = stateData.world->CreateEntity();
+										m_preview->entity.emplace<Nz::NodeComponent>();
+										m_preview->entity.emplace<Nz::GraphicsComponent>(std::move(previewModel));
+
+										m_preview->collider.x = static_cast<float>(metadata.GetDoubleParameter("spawnable_collider.x").GetValueOr(1.0));
+										m_preview->collider.y = static_cast<float>(metadata.GetDoubleParameter("spawnable_collider.y").GetValueOr(1.0));
+										m_preview->collider.z = static_cast<float>(metadata.GetDoubleParameter("spawnable_collider.z").GetValueOr(1.0));
+									}
+								}
+							}
+
+							if (m_preview->entity)
+							{
+								auto cornerPos = hitChunk.ComputeBlockCorners(hitCoordinates->blockIndices);
+								auto& corners = s_faceCorners[hitCoordinates->direction];
+								std::array<Nz::Vector3f, 4> cornerGlobalPos;
+								for (std::size_t i = 0; i < 4; ++i)
+									cornerGlobalPos[i] = chunkNode.ToGlobalPosition(cornerPos[corners[i]]);
+								Nz::Vector3f faceCenter = std::accumulate(cornerGlobalPos.begin(), cornerGlobalPos.end(), Nz::Vector3f::Zero()) / corners.size();
+
+								auto& previewNode = m_preview->entity.get<Nz::NodeComponent>();
+								Nz::Vector3f entityPos = faceCenter + raycastHit->hitNormal * m_preview->collider.y * 0.5f;
+								Nz::Quaternionf entityRot = Nz::Quaternionf::RotationBetween(Nz::Vector3f::Up(), raycastHit->hitNormal) * Nz::Quaternionf(Nz::DegreeAnglef(45.f) * m_preview->rotationMultiplier, Nz::Vector3f::Up());
+								previewNode.SetTransform(entityPos, entityRot);
+
+								struct IgnoreTrigger : Nz::PhysObjectLayerFilter3D
+								{
+									bool ShouldCollide(Nz::PhysObjectLayer3D objectLayer) const override
+									{
+										return objectLayer != Constants::ObjectLayerStatic;
+									}
+								};
+
+								IgnoreTrigger physObjectLayerFilter;
+
+								Nz::BoxCollider3D collider(m_preview->collider * 0.9f);
+
+								auto& physSystem = GetStateData().world->GetSystem<Nz::Physics3DSystem>();
+								bool doesCollide = physSystem.CollisionQuery(collider, previewNode.GetTransformMatrix(), [](const Nz::Physics3DSystem::ShapeCollisionInfo& hitInfo) -> std::optional<float>
+								{
+									return hitInfo.penetrationDepth;
+								});
+
+								m_preview->material->SetValueProperty("BaseColor", doesCollide ? Nz::Color(0.8f, 0.2f, 0.2f, 0.5f) : Nz::Color(1.f, 1.f, 1.f, 0.5f));
+							}
+						}
 					}
 				}
 				else if (auto* interactible = raycastHit->hitEntity.try_get<ClientInteractibleComponent>(); interactible && interactible->isEnabled)
 				{
 					interactibleEntity = raycastHit->hitEntity;
+				}
+
+				if (m_toolMode == ToolMode::RemoveEntity)
+				{
+					entt::handle visualEntity = raycastHit->hitEntity;
+					if (VisualEntityComponent* visualComponent = visualEntity.try_get<VisualEntityComponent>())
+						visualEntity = visualComponent->visualEntity;
+
+					if (Nz::GraphicsComponent* gfxComponent = visualEntity.try_get<Nz::GraphicsComponent>())
+					{
+						Nz::NodeComponent& visualNode = visualEntity.get<Nz::NodeComponent>();
+
+						Nz::Boxf aabb = gfxComponent->GetAABB();
+						aabb.ScaleAroundCenter(1.05f);
+
+						auto aabbCorners = aabb.GetCorners();
+						for (Nz::Vector3f& corner : aabbCorners)
+							corner = visualNode.ToGlobalPosition(corner);
+
+						debugDrawer->DrawBoxCorners(aabbCorners, Nz::Color::Red());
+
+						m_targetEntity = raycastHit->hitEntity;
+					}
+					else
+						m_targetEntity = {};
 				}
 			}
 		}
@@ -1170,6 +1363,38 @@ namespace tsom
 				}
 			}
 			ImGui::End();
+#endif
+
+#ifdef TSOM_DEV_TOOLS
+		if (m_isSelectingEntities)
+		{
+			if (ImGui::Begin("Entity selection", &m_isSelectingEntities))
+			{
+				ImGui::Text("Select the entity you wish to use");
+
+				const EntityRegistry& entityRegistry = GetStateData().sessionHandler->GetEntityRegistry();
+				entityRegistry.ForEachClass([&](std::string_view className, const EntityClass& entityClass)
+				{
+					const Nz::ParameterList& metadata = entityClass.GetMetadata();
+					if (auto result = metadata.GetBooleanParameter("spawnable"); !result || !*result)
+						return; //< not spawnable
+
+					if (ImGui::Button(className.data()))
+					{
+						m_selectedEntityClass = className;
+						m_isSelectingEntities = false;
+
+						// force re-creation of preview entity
+						if (m_preview->entity)
+							m_preview->entity.destroy();
+					}
+				});
+			}
+
+			ImGui::End();
+
+			if (!m_isSelectingEntities) //< if entity selection has been closed
+				UpdateMouseLock();
 		}
 #endif
 
@@ -1446,7 +1671,7 @@ namespace tsom
 
 	void GameState::UpdateMouseLock()
 	{
-		m_isMouseLocked = !m_chatBox->IsTyping() && !m_escapeMenu->IsVisible() && !m_localConsole->IsVisible() && !m_remoteConsole->IsVisible();
+		m_isMouseLocked = !m_chatBox->IsTyping() && !m_escapeMenu->IsVisible() && !m_localConsole->IsVisible() && !m_remoteConsole->IsVisible() && !m_isSelectingEntities;
 		m_chatBox->EnableMouseInput(!m_isMouseLocked);
 		m_localConsole->EnableMouseInput(!m_isMouseLocked);
 		m_remoteConsole->EnableMouseInput(!m_isMouseLocked);

@@ -1,6 +1,9 @@
 local CONVERSION_RATE = 10
 
 local classData = EntityRegistry.ClassBuilder()
+classData:Set("spawnable", true)
+classData:Set("spawnable_model", "tree-01-1")
+classData:Set("spawnable_collider", Vec3(0.2, 3.0, 0.2))
 
 classData:AddProperty("scale", { type = "float", default = 1, isNetworked = true })
 

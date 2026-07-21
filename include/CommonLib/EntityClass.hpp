@@ -9,6 +9,7 @@
 
 #include <CommonLib/Export.hpp>
 #include <CommonLib/EntityProperties.hpp>
+#include <Nazara/Core/ParameterList.hpp>
 #include <entt/fwd.hpp>
 #include <nlohmann/json_fwd.hpp>
 #include <tsl/hopscotch_map.h>
@@ -28,7 +29,7 @@ namespace tsom
 			struct Property;
 			struct RemoteProcedureCall;
 
-			EntityClass(std::string name, std::vector<Property> properties, Callbacks callbacks, std::vector<RemoteProcedureCall> clientRpcs);
+			EntityClass(std::string name, std::vector<Property> properties, Callbacks callbacks, std::vector<RemoteProcedureCall> clientRpcs, Nz::ParameterList metadata = {});
 			EntityClass(const EntityClass&) = delete;
 			EntityClass(EntityClass&&) noexcept = default;
 			~EntityClass() = default;
@@ -40,6 +41,7 @@ namespace tsom
 
 			inline const RemoteProcedureCall& GetClientRpc(Nz::UInt32 rpcIndex) const;
 			inline Nz::UInt32 GetClientRpcCount() const;
+			inline const Nz::ParameterList& GetMetadata() const;
 			inline const std::string& GetName() const;
 			inline const std::vector<Property>& GetProperties() const;
 			inline const Property& GetProperty(Nz::UInt32 propertyIndex) const;
@@ -85,6 +87,7 @@ namespace tsom
 			std::vector<RemoteProcedureCall> m_clientRpcs;
 			tsl::hopscotch_map<std::string, std::size_t, std::hash<std::string_view>, std::equal_to<>> m_clientRpcIndices;
 			tsl::hopscotch_map<std::string, std::size_t, std::hash<std::string_view>, std::equal_to<>> m_propertyIndices;
+			Nz::ParameterList m_metadata;
 			Callbacks m_callbacks;
 	};
 }

@@ -44,6 +44,8 @@ namespace tsom
 			~ClientSessionHandler();
 
 			inline entt::handle GetControlledEntity() const;
+			inline EntityRegistry& GetEntityRegistry();
+			inline const EntityRegistry& GetEntityRegistry() const;
 			const Nz::Node* GetEnvironmentNode(std::size_t environmentIndex) const;
 			inline const GravityController* GetGravityController(std::size_t environmentIndex) const;
 			inline ScriptingContext& GetScriptingContext();

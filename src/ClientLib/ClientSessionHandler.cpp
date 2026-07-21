@@ -60,6 +60,8 @@ namespace tsom
 		{ PacketIndex<Packets::C_Interact>,           { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::C_MineBlock>,          { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::C_PlaceBlock>,         { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::C_PlaceEntity>,        { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::C_RemoveEntity>,       { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::C_SendChatMessage>,    { .channel = 0, .flags = Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::C_SendConsoleCommand>, { .channel = 0, .flags = Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::C_UpdatePlayerInputs>, { .channel = 1, .flags = Nz::ENetPacketFlag_Unreliable } }
@@ -100,6 +102,16 @@ namespace tsom
 			if (entityDataOpt)
 				entityDataOpt->entity.destroy();
 		}
+	}
+
+	inline EntityRegistry& ClientSessionHandler::GetEntityRegistry()
+	{
+		return m_entityRegistry;
+	}
+
+	inline const EntityRegistry& ClientSessionHandler::GetEntityRegistry() const
+	{
+		return m_entityRegistry;
 	}
 
 	const Nz::Node* ClientSessionHandler::GetEnvironmentNode(std::size_t environmentIndex) const

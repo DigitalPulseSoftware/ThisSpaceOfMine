@@ -33,6 +33,11 @@ namespace tsom
 		return Nz::UInt32(m_clientRpcs.size());
 	}
 
+	inline const Nz::ParameterList& EntityClass::GetMetadata() const
+	{
+		return m_metadata;
+	}
+
 	inline const std::string& EntityClass::GetName() const
 	{
 		return m_name;

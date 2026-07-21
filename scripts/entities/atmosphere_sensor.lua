@@ -1,4 +1,7 @@
 local classData = EntityRegistry.ClassBuilder()
+classData:Set("spawnable", true)
+classData:Set("spawnable_model", "computer")
+classData:Set("spawnable_collider", Vec3(0.75))
 
 -- TODO: Replace by RPC
 classData:AddProperty("sensor_o2", { type = "integer", default = 0, isNetworked = true })

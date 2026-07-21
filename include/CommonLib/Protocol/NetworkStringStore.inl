@@ -4,6 +4,7 @@
 
 #include <CommonLib/Protocol/NetworkStringStore.hpp>
 #include <cassert>
+#include <stdexcept>
 
 namespace tsom
 {
@@ -19,7 +20,7 @@ namespace tsom
 		RegisterString(""); //< Force #0 to be empty string
 	}
 
-	inline Nz::UInt32 NetworkStringStore::CheckStringIndex(const std::string & string) const
+	inline Nz::UInt32 NetworkStringStore::CheckStringIndex(std::string_view string) const
 	{
 		Nz::UInt32 index = GetStringIndex(string);
 		assert(index != InvalidIndex);
@@ -28,11 +29,19 @@ namespace tsom
 
 	inline const std::string& NetworkStringStore::GetString(Nz::UInt32 id) const
 	{
+		if (id >= m_strings.size())
+			throw std::runtime_error("network string id out of range");
+
+		return m_strings[id];
+	}
+
+	inline const std::string& NetworkStringStore::GetStringUnchecked(Nz::UInt32 id) const
+	{
 		assert(id < m_strings.size());
 		return m_strings[id];
 	}
 
-	inline Nz::UInt32 NetworkStringStore::GetStringIndex(const std::string& string) const
+	inline Nz::UInt32 NetworkStringStore::GetStringIndex(std::string_view string) const
 	{
 		auto it = m_stringMap.find(string);
 		if (it == m_stringMap.end())
