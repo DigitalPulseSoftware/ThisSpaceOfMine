@@ -29,6 +29,10 @@ namespace tsom::Constants
 	// Console constants
 	constexpr std::size_t ConsoleMaxCommandLength = 1024;
 
+	// Distribution constants
+	constexpr Nz::UInt32 DistributionTickRate = 5;
+	constexpr Nz::Time DistributionTickInterval = Nz::Time::TickDuration(DistributionTickRate);
+
 	// Player constants
 	constexpr std::size_t PlayerMaxNicknameLength = 16;
 	constexpr float PlayerColliderRadius = 0.2f;
