@@ -4,9 +4,9 @@
 
 #include <ServerLib/Scripting/ServerScriptingLibrary.hpp>
 #include <CommonLib/CharacterController.hpp>
+#include <CommonLib/Planet.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
-#include <CommonLib/Planet.hpp>
 #include <ServerLib/ServerAtmosphere.hpp>
 #include <ServerLib/ServerInstance.hpp>
 #include <ServerLib/ServerPlanetEnvironment.hpp>
@@ -35,10 +35,12 @@ namespace tsom
 		state["SERVER"] = true;
 
 		RegisterAtmosphere(state);
+		RegisterDebugDraw(state);
 		RegisterServerDatabase(state);
 		RegisterEnvironment(state);
 		RegisterPlayer(state);
 		RegisterServer(state);
+		RegisterScripts(state);
 	}
 
 	void ServerScriptingLibrary::RegisterAtmosphere(sol::state& state)
@@ -68,6 +70,20 @@ namespace tsom
 			}),
 			"GetGasAmount", LuaFunction(&ServerAtmosphere::GetGasAmount),
 			"SetGasAmount", LuaFunction(&ServerAtmosphere::SetGasAmount)
+		);
+	}
+
+	void ServerScriptingLibrary::RegisterDebugDraw(sol::state& state)
+	{
+		state.new_usertype<DebugDrawInterface>("DebugDrawInterface",
+			sol::no_constructor,
+
+			"DrawBox", LuaFunction(&DebugDrawInterface::DrawBox),
+			"DrawLine", LuaFunction([](DebugDrawInterface* debugDraw, Nz::UInt64 hash, float duration, const Nz::Vector3f& from, const Nz::Vector3f& to, const Nz::Color& color)
+			{
+				std::array points = { from, to };
+				debugDraw->DrawLines(hash, duration, points, color);
+			})
 		);
 	}
 
@@ -122,6 +138,7 @@ namespace tsom
 			}),
 
 			"GetAtmosphereAtPosition", LuaFunction(&ServerEnvironment::GetAtmosphereAtPosition),
+			"GetDebugDrawInterface", LuaFunction(&ServerEnvironment::GetDebugDrawInterface),
 			"GetPhysWorld", LuaFunction([](ServerEnvironment* environment)
 			{
 				return &environment->GetWorld().GetSystem<Nz::Physics3DSystem>();
@@ -327,5 +344,15 @@ namespace tsom
 				return m_serverInstance.GetThreadServerDatabase().StorePlanetLink(planetLink);
 			})
 		);
+	}
+
+	void ServerScriptingLibrary::RegisterScripts(sol::state& state)
+	{
+		sol::table scriptsLibrary = state.create_named_table("Scripts");
+
+		scriptsLibrary["Reload"] = LuaFunction([this]
+		{
+			m_serverInstance.LoadScripts(true);
+		});
 	}
 }
