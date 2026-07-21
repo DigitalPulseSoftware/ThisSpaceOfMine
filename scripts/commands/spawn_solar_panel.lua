@@ -7,7 +7,7 @@ return function ()
 	local eyePos = controller:GetEyePosition()
 	local cameraRot = controller:GetCameraRotation()
 
-	local result = physWorld:RaycastQueryFirst(eyePos, eyePos + cameraRot * Vec3f(0, 0, -10), { IgnorePlayers = true })
+	local result = physWorld:RaycastQueryFirst(eyePos, eyePos + cameraRot * Vec3(0, 0, -10), { IgnorePlayers = true })
 
 	if not result.hitEntity or not result.hitChunk then
 		print("no chunk hit")
@@ -15,11 +15,11 @@ return function ()
 	end
 
     local solarPanel = env:CreateEntity("solar_panel", {
-        position = result.hitPosition + result.hitNormal + Vec3f(-2, 0, 0)
+        position = result.hitPosition + result.hitNormal + Vec3(-2, 0, 0)
     })
 
 	local light = env:CreateEntity("light", {
-        position = result.hitPosition + result.hitNormal + Vec3f(2, 0, 0)
+        position = result.hitPosition + result.hitNormal + Vec3(2, 0, 0)
     })
 
 	local solarPanelDis = solarPanel:GetComponent("distribution")
