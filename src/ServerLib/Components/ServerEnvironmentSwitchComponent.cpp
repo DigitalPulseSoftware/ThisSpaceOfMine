@@ -5,6 +5,7 @@
 #include <ServerLib/Components/ServerEnvironmentSwitchComponent.hpp>
 #include <CommonLib/EntityReference.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
+#include <CommonLib/Components/DistributionComponent.hpp>
 #include <CommonLib/Components/ScriptedEntityComponent.hpp>
 #include <CommonLib/Components/TickComponent.hpp>
 #include <ServerLib/ServerEnvironment.hpp>
@@ -76,6 +77,9 @@ namespace tsom
 
 		if (AtmosphereMonitor* atmosphereMonitor = oldEntity.try_get<AtmosphereMonitor>())
 			newEntity.emplace<AtmosphereMonitor>(*atmosphereMonitor);
+
+		if (DistributionComponent* distributionComponent = oldEntity.try_get<DistributionComponent>())
+			newEntity.emplace<DistributionComponent>(std::move(*distributionComponent));
 
 		if (ScriptedEntityComponent* scriptedEntityComponent = oldEntity.try_get<ScriptedEntityComponent>())
 		{
