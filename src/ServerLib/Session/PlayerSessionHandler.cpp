@@ -13,6 +13,7 @@
 #include <CommonLib/Planet.hpp>
 #include <CommonLib/Components/ChunkComponent.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
+#include <CommonLib/Components/DistributionComponent.hpp>
 #include <CommonLib/Components/PlanetComponent.hpp>
 #include <CommonLib/Components/TickComponent.hpp>
 #include <ServerLib/PlayerTokenAppComponent.hpp>
@@ -35,46 +36,6 @@
 
 namespace tsom
 {
-	namespace
-	{
-		struct GrabConstraint
-		{
-			GrabConstraint(Nz::RigidBody3D& body, const Nz::Vector3f& grabPos) :
-			grabBody(body.GetWorld(), BodySettings(grabPos)),
-			grabConstraint(body, grabBody, grabPos)
-			{
-				body.WakeUp();
-				body.EnableSleeping(false);
-				grabConstraint.SetDamping(1.f);
-				grabConstraint.SetFrequency(5.f);
-			}
-
-			~GrabConstraint()
-			{
-				grabConstraint.GetBodyA().EnableSleeping(true);
-			}
-
-			void SetPosition(const Nz::Vector3f& pos)
-			{
-				grabBody.SetPosition(pos);
-			}
-
-			static Nz::RigidBody3D::DynamicSettings BodySettings(const Nz::Vector3f& pos)
-			{
-				Nz::RigidBody3D::DynamicSettings settings;
-				settings.mass = 0.f; //< kinematic
-				settings.isSimulationEnabled = false;
-				settings.position = pos;
-
-				return settings;
-			}
-
-			Nz::RigidBody3D grabBody;
-			Nz::PhysDistanceConstraint3D grabConstraint;
-		};
-
-	}
-
 	constexpr SessionHandler::SendAttributeTable s_packetAttributes = SessionHandler::BuildAttributeTable({
 		{ PacketIndex<Packets::S_ChatMessage>,             { .channel = 0, .flags = Nz::ENetPacketFlag::Reliable } },
 		{ PacketIndex<Packets::S_ChunkCreate>,             { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
@@ -113,9 +74,87 @@ namespace tsom
 		m_player->Destroy();
 	}
 
+	void PlayerSessionHandler::HandlePacket(Packets::C_ConnectEntities&& connectEntities)
+	{
+		entt::handle playerEntity = m_player->GetControlledEntityReference();
+		if (!playerEntity)
+			return; //< player is either dead or not spawned yet
+
+		entt::handle sourceEntity;
+		if (!m_player->GetVisibilityHandler().GetEntityByNetworkId(connectEntities.sourceEntityId, &sourceEntity))
+			return;
+
+		entt::handle targetEntity;
+		if (!m_player->GetVisibilityHandler().GetEntityByNetworkId(connectEntities.targetEntityId, &targetEntity))
+			return;
+
+		DistributionComponent* sourceDistribution = sourceEntity.try_get<DistributionComponent>();
+		DistributionComponent* targetDistribution = targetEntity.try_get<DistributionComponent>();
+		if (!sourceDistribution || !targetDistribution)
+			return;
+
+		if (connectEntities.sourceEntitySlot >= sourceDistribution->GetOutputCount())
+			return;
+
+		if (connectEntities.targetEntitySlot >= targetDistribution->GetInputCount())
+			return;
+
+		sourceDistribution->ConnectOutput(connectEntities.sourceEntitySlot, targetEntity, connectEntities.targetEntitySlot);
+		targetDistribution->ConnectInput(connectEntities.targetEntitySlot, sourceEntity, connectEntities.sourceEntitySlot);
+	}
+
 	void PlayerSessionHandler::HandlePacket(Packets::C_ExitShipControl&& exitShipControl)
 	{
 		m_player->ExitPiloting();
+	}
+
+	void PlayerSessionHandler::HandlePacket(Packets::C_GrabEntity&& /*grab*/)
+	{
+		entt::handle playerEntity = m_player->GetControlledEntityReference();
+		if (!playerEntity)
+			return;
+
+		if (m_player->HasGrabbedEntity())
+		{
+			m_player->Ungrab();
+			return;
+		}
+
+		const auto& characterController = m_player->GetCharacterController();
+		Nz::Quaternionf cameraRot = characterController->GetCameraRotation();
+
+		Nz::Vector3f hitPos;
+		entt::handle hitEntity;
+		auto callback = [&](const Nz::Physics3DSystem::RaycastHit& hitInfo)
+		{
+			if (hitInfo.hitEntity.try_get<Nz::RigidBody3DComponent>())
+			{
+				hitPos = hitInfo.hitPosition;
+				hitEntity = hitInfo.hitEntity;
+			}
+		};
+
+		struct ObjectFilter : Nz::PhysObjectLayerFilter3D
+		{
+			bool ShouldCollide(Nz::PhysObjectLayer3D layer) const override
+			{
+				return layer == Constants::ObjectLayerDynamic;
+			}
+		};
+		ObjectFilter objectFilter;
+
+		auto& playerNode = playerEntity.get<Nz::NodeComponent>();
+
+		Nz::Vector3f cameraPos = characterController->GetEyePosition();
+
+		ServerEnvironment* environment = m_player->GetRootEnvironment();
+
+		auto& physSystem = environment->GetWorld().GetSystem<Nz::Physics3DSystem>();
+		if (physSystem.RaycastQueryFirst(cameraPos, cameraPos + cameraRot * Nz::Vector3f::Forward() * 10.f, callback, nullptr, &objectFilter))
+		{
+			Nz::Vector3f localPos = cameraRot.GetConjugate() * (hitPos - cameraPos);
+			m_player->GrabEntity(hitEntity, localPos);
+		}
 	}
 
 	void PlayerSessionHandler::HandlePacket(Packets::C_Interact&& interact)
@@ -869,53 +908,6 @@ namespace tsom
 		else if (message == "/crashserver 1" && m_player->HasPermission(PlayerPermission::Admin))
 		{
 			throw std::runtime_error("test exception");
-		}
-		else if (message == "/grab")
-		{
-			entt::handle playerEntity = m_player->GetControlledEntityReference();
-			if (!playerEntity)
-				return;
-
-			const auto& characterController = m_player->GetCharacterController();
-			Nz::Quaternionf cameraRot = characterController->GetCameraRotation();
-
-			Nz::Vector3f hitPos;
-			entt::handle hitEntity;
-			auto callback = [&](const Nz::Physics3DSystem::RaycastHit& hitInfo)
-			{
-				if (hitInfo.hitEntity.try_get<Nz::RigidBody3DComponent>())
-				{
-					hitPos = hitInfo.hitPosition;
-					hitEntity = hitInfo.hitEntity;
-				}
-			};
-
-			struct ObjectFilter : Nz::PhysObjectLayerFilter3D
-			{
-				bool ShouldCollide(Nz::PhysObjectLayer3D layer) const override
-				{
-					return layer == Constants::ObjectLayerDynamic;
-				}
-			};
-			ObjectFilter objectFilter;
-
-			auto& playerNode = playerEntity.get<Nz::NodeComponent>();
-
-			Nz::Vector3f cameraPos = characterController->GetEyePosition();
-
-			ServerEnvironment* environment = m_player->GetRootEnvironment();
-
-			auto& physSystem = environment->GetWorld().GetSystem<Nz::Physics3DSystem>();
-			if (physSystem.RaycastQueryFirst(cameraPos, cameraPos + cameraRot * Nz::Vector3f::Forward() * 10.f, callback, nullptr, &objectFilter))
-			{
-				auto& hitBody = hitEntity.get<Nz::RigidBody3DComponent>();
-
-				Nz::Vector3f localPos = cameraRot.GetConjugate() * (hitPos - cameraPos);
-				playerEntity.emplace_or_replace<TickComponent>().onTick = [characterController, localPos, grab = std::make_shared<GrabConstraint>(hitBody, hitPos)](entt::handle entity) mutable
-				{
-					grab->SetPosition(characterController->GetEyePosition() + characterController->GetCameraRotation() * localPos);
-				};
-			}
 		}
 		else if (message == "/links")
 		{

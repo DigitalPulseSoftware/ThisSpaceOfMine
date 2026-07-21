@@ -20,7 +20,9 @@ namespace tsom
 			PlayerSessionHandler(NetworkSession* session, ServerPlayer* player);
 			~PlayerSessionHandler();
 
+			void HandlePacket(Packets::C_ConnectEntities&& connectEntities);
 			void HandlePacket(Packets::C_ExitShipControl&& exitShipControl);
+			void HandlePacket(Packets::C_GrabEntity&& grab);
 			void HandlePacket(Packets::C_Interact&& interact);
 			void HandlePacket(Packets::C_MineBlock&& mineBlock);
 			void HandlePacket(Packets::C_PlaceBlock&& placeBlock);

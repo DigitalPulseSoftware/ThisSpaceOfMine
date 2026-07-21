@@ -148,6 +148,14 @@ namespace tsom
 			}
 		}
 
+		void Serialize(PacketSerializer& serializer, C_ConnectEntities& data)
+		{
+			serializer &= data.sourceEntityId;
+			serializer &= data.targetEntityId;
+			serializer &= data.sourceEntitySlot;
+			serializer &= data.targetEntitySlot;
+		}
+
 		void Serialize(PacketSerializer& serializer, C_ExitShipControl& data)
 		{
 		}
@@ -155,6 +163,10 @@ namespace tsom
 		void Serialize(PacketSerializer& serializer, C_Interact& data)
 		{
 			serializer &= data.entityId;
+		}
+
+		void Serialize(PacketSerializer& serializer, C_GrabEntity& data)
+		{
 		}
 
 		void Serialize(PacketSerializer& serializer, C_MineBlock& data)

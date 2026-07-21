@@ -117,7 +117,19 @@ namespace tsom
 			std::variant<AuthenticatedPlayerData, AnonymousPlayerData> token;
 		};
 
+		struct C_ConnectEntities
+		{
+			Helper::EntityId sourceEntityId;
+			Helper::EntityId targetEntityId;
+			Nz::UInt8 sourceEntitySlot;
+			Nz::UInt8 targetEntitySlot;
+		};
+
 		struct C_ExitShipControl
+		{
+		};
+
+		struct C_GrabEntity
 		{
 		};
 
@@ -125,6 +137,49 @@ namespace tsom
 		{
 			Helper::EntityId entityId;
 		};
+
+		struct C_MineBlock
+		{
+			Helper::ChunkId chunkId;
+			Helper::VoxelLocation voxelLoc;
+		};
+
+		struct C_PlaceBlock
+		{
+			Helper::ChunkId chunkId;
+			Helper::VoxelLocation voxelLoc;
+			Nz::UInt8 newContent;
+		};
+
+		struct C_PlaceEntity
+		{
+			Helper::ChunkId chunkId;
+			Helper::VoxelLocation voxelLoc;
+			Direction topFace;
+			CompressedUnsigned<Nz::UInt32> entityClass;
+			Nz::UInt8 entityRotation;
+		};
+
+		struct C_RemoveEntity
+		{
+			Helper::EntityId entityId;
+		};
+
+		struct C_SendChatMessage
+		{
+			SecuredString<Constants::ChatMaxPlayerMessageLength> message;
+		};
+
+		struct C_SendConsoleCommand
+		{
+			SecuredString<Constants::ConsoleMaxCommandLength> command;
+		};
+
+		struct C_UpdatePlayerInputs
+		{
+			PlayerInputs inputs;
+		};
+
 
 		struct S_AuthResponse
 		{
@@ -173,48 +228,6 @@ namespace tsom
 			Helper::ChunkId chunkId;
 			Helper::EntityId entityId;
 			std::vector<BlockIndex> content;
-		};
-
-		struct C_MineBlock
-		{
-			Helper::ChunkId chunkId;
-			Helper::VoxelLocation voxelLoc;
-		};
-
-		struct C_PlaceBlock
-		{
-			Helper::ChunkId chunkId;
-			Helper::VoxelLocation voxelLoc;
-			Nz::UInt8 newContent;
-		};
-
-		struct C_PlaceEntity
-		{
-			Helper::ChunkId chunkId;
-			Helper::VoxelLocation voxelLoc;
-			Direction topFace;
-			CompressedUnsigned<Nz::UInt32> entityClass;
-			Nz::UInt8 entityRotation;
-		};
-
-		struct C_RemoveEntity
-		{
-			Helper::EntityId entityId;
-		};
-
-		struct C_SendChatMessage
-		{
-			SecuredString<Constants::ChatMaxPlayerMessageLength> message;
-		};
-
-		struct C_SendConsoleCommand
-		{
-			SecuredString<Constants::ConsoleMaxCommandLength> command;
-		};
-
-		struct C_UpdatePlayerInputs
-		{
-			PlayerInputs inputs;
 		};
 
 		struct S_ChunkUpdate
@@ -377,7 +390,9 @@ namespace tsom
 		};
 
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_AuthRequest& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_ConnectEntities& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_ExitShipControl& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_GrabEntity& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_Interact& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_MineBlock& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_PlaceBlock& data);
