@@ -8,21 +8,28 @@
 namespace tsom
 {
 	DistributionSystem::DistributionSystem(entt::registry& registry) :
-	m_distributionConstructObserver(registry, entt::collector.group<DistributionComponent>(entt::exclude<Nz::DisabledComponent>)),
+	m_distributionObserver(registry),
 	m_registry(registry)
 	{
-		m_distributionDestroyConnection = registry.on_destroy<DistributionComponent>().connect<&DistributionSystem::OnDistributionDestroy>(this);
-	}
+		m_distributionObserver.OnEntityAdded.Connect([this](entt::entity entity)
+		{
+			DistributionComponent& distributionComponent = m_registry.get<DistributionComponent>(entity);
 
-	DistributionSystem::~DistributionSystem()
-	{
-		m_distributionConstructObserver.disconnect();
-	}
+			auto& entityData = m_distributionObserver.Get(entity);
+			entityData.onInputOutputChangedSlot.Connect(distributionComponent.OnInputOutputChanged, [this, entity](DistributionComponent* distributionComponent)
+			{
+				HandleDistributionEntity(entity, *distributionComponent);
+			});
 
-	void DistributionSystem::OnDistributionDestroy(entt::entity entity)
-	{
-		m_distributionEntities.erase(entity);
-		m_producers.erase(entity);
+			HandleDistributionEntity(entity, distributionComponent);
+		});
+
+		m_distributionObserver.OnEntityRemove.Connect([this](entt::entity entity)
+		{
+			m_producers.remove(entity);
+		});
+
+		m_distributionObserver.SignalExisting();
 	}
 
 	void DistributionSystem::HandleDistributionEntity(entt::entity entity, DistributionComponent& distribution)
@@ -38,30 +45,19 @@ namespace tsom
 		}
 
 		if (isProducer)
-			m_producers.insert(entity);
+			m_producers.emplace(entity);
 		else
-			m_producers.erase(entity);
+			m_producers.remove(entity);
 	}
 
-	void DistributionSystem::Update(Nz::Time elapsedTime)
+	void DistributionSystem::Update(Nz::Time /*elapsedTime*/)
 	{
-		m_distributionConstructObserver.each([this](entt::entity entity)
+		for (const auto& [distributionEntity, entityData] : m_distributionObserver.each())
 		{
-			DistributionComponent& distributionComponent = m_registry.get<DistributionComponent>(entity);
+			NazaraUnused(entityData);
 
-			auto& entityData = m_distributionEntities[entity];
-			entityData.onInputOutputChangedSlot.Connect(distributionComponent.OnInputOutputChanged, [this, entity](DistributionComponent* distributionComponent)
-			{
-				HandleDistributionEntity(entity, *distributionComponent);
-			});
-
-			HandleDistributionEntity(entity, distributionComponent);
-		});
-
-		for (auto [distributionEntity, entityDistribution]: m_registry.view<DistributionComponent>().each())
-		{
-			NazaraUnused(distributionEntity);
-			entityDistribution.ClearDistributedValues();
+			DistributionComponent& producerDistribution = m_registry.get<DistributionComponent>(distributionEntity);
+			producerDistribution.ClearDistributedValues();
 		}
 
 		for (entt::entity producerEntity : m_producers)
@@ -76,7 +72,7 @@ namespace tsom
 					Nz::UInt32 producedValue = producerDistribution.GetProductionValue(outputIndex);
 					std::size_t connectedPort = producerDistribution.GetOutputConnectedPort(outputIndex);
 
-					DistributionComponent& consumptionDistribution = m_registry.get<DistributionComponent>(connectedEntity);
+					DistributionComponent& consumptionDistribution = connectedEntity.get<DistributionComponent>();
 					Nz::UInt32 consumedValue = consumptionDistribution.GetConsumptionValue(connectedPort);
 					consumptionDistribution.IncrementDistributedValue(type, std::min(producedValue, consumedValue));
 				}

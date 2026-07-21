@@ -7,10 +7,11 @@
 #ifndef TSOM_COMMONLIB_COMPONENTS_DISTRIBUTIONCOMPONENT_HPP
 #define TSOM_COMMONLIB_COMPONENTS_DISTRIBUTIONCOMPONENT_HPP
 
+#include <CommonLib/Export.hpp>
+#include <CommonLib/EntityReference.hpp>
 #include <NazaraUtils/EnumArray.hpp>
 #include <NazaraUtils/FixedVector.hpp>
 #include <NazaraUtils/Signal.hpp>
-#include <CommonLib/Export.hpp>
 #include <entt/entt.hpp>
 #include <span>
 
@@ -30,7 +31,7 @@ namespace tsom
 		public:
 			inline DistributionComponent(std::span<DistributionType> inputs, std::span<DistributionType> outputs);
 			DistributionComponent(const DistributionComponent&) = delete;
-			DistributionComponent(DistributionComponent&&) = delete;
+			DistributionComponent(DistributionComponent&&) noexcept = default;
 			~DistributionComponent() = default;
 
 			inline void ConnectInput(std::size_t inputIndex, entt::handle entity, std::size_t outputIndex);
@@ -59,7 +60,7 @@ namespace tsom
 			inline void UpdateProductionValue(std::size_t outputIndex, Nz::UInt32 production);
 
 			DistributionComponent& operator=(const DistributionComponent&) = delete;
-			DistributionComponent& operator=(DistributionComponent&&) = delete;
+			DistributionComponent& operator=(DistributionComponent&&) noexcept = default;
 
 			NazaraSignal(OnInputOutputChanged, DistributionComponent*);
 
@@ -70,7 +71,7 @@ namespace tsom
 			struct Port
 			{
 				DistributionType type;
-				entt::handle connectedEntity;
+				EntityReference connectedEntity;
 				std::size_t connectedPort;
 			};
 

@@ -107,13 +107,13 @@ namespace tsom
 	inline bool DistributionComponent::IsInputConnected(std::size_t inputIndex) const
 	{
 		NazaraAssert(inputIndex < m_inputs.size());
-		return m_inputs[inputIndex].connectedEntity.valid();
+		return m_inputs[inputIndex].connectedEntity.IsValid();
 	}
 
 	inline bool DistributionComponent::IsOutputConnected(std::size_t outputIndex) const
 	{
 		NazaraAssert(outputIndex < m_outputs.size());
-		return m_outputs[outputIndex].connectedEntity.valid();
+		return m_outputs[outputIndex].connectedEntity.IsValid();
 	}
 
 	inline void DistributionComponent::UpdateConsumptionValue(std::size_t inputIndex, Nz::UInt32 consumption)

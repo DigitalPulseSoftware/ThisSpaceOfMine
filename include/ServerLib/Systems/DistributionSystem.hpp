@@ -9,11 +9,17 @@
 
 #include <ServerLib/Export.hpp>
 #include <CommonLib/Components/DistributionComponent.hpp>
+#include <Nazara/Core/EnttObserver.hpp>
 #include <Nazara/Core/Time.hpp>
 #include <NazaraUtils/TypeList.hpp>
 #include <entt/entt.hpp>
 #include <tsl/hopscotch_map.h>
 #include <tsl/hopscotch_set.h>
+
+namespace Nz
+{
+	class DisabledComponent;
+}
 
 namespace tsom
 {
@@ -27,7 +33,7 @@ namespace tsom
 			DistributionSystem(entt::registry& registry);
 			DistributionSystem(const DistributionSystem&) = delete;
 			DistributionSystem(DistributionSystem&&) = delete;
-			~DistributionSystem();
+			~DistributionSystem() = default;
 
 			void Update(Nz::Time elapsedTime);
 
@@ -35,7 +41,6 @@ namespace tsom
 			DistributionSystem& operator=(DistributionSystem&&) = delete;
 
 		private:
-			void OnDistributionDestroy(entt::entity entity);
 			void HandleDistributionEntity(entt::entity entity, DistributionComponent& distribution);
 
 			struct EntityData
@@ -43,10 +48,8 @@ namespace tsom
 				NazaraSlot(DistributionComponent, OnInputOutputChanged, onInputOutputChangedSlot);
 			};
 
-			tsl::hopscotch_map<entt::entity, EntityData> m_distributionEntities;
-			tsl::hopscotch_set<entt::entity> m_producers;
-			entt::observer m_distributionConstructObserver;
-			entt::scoped_connection m_distributionDestroyConnection;
+			entt::storage<void> m_producers;
+			Nz::EnttObserver<Nz::TypeList<DistributionComponent>, Nz::TypeList<Nz::DisabledComponent>, EntityData> m_distributionObserver;
 			entt::registry& m_registry;
 	};
 }
