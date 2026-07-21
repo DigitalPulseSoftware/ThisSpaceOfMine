@@ -31,6 +31,7 @@ namespace tsom
 			virtual void OnDeactivate();
 
 			virtual void OnTrigger(bool primary) = 0;
+			virtual void OnWheel(float delta);
 
 			virtual void Update(Nz::Time elapsedTime, const GameInterface::RaycastResult* previewRaycast);
 

@@ -77,7 +77,19 @@ namespace tsom
 		}
 	}
 
-	void BlockTool::Update(Nz::Time elapsedTime, const GameInterface::RaycastResult* previewRaycast)
+	void BlockTool::OnWheel(float delta)
+	{
+		BlockSelectionBar* blockSelectionBar = m_gameInterface.GetBlockSelectionBar();
+		if (blockSelectionBar->IsVisible())
+		{
+			if (delta < 0.f)
+				blockSelectionBar->SelectNext();
+			else
+				blockSelectionBar->SelectPrevious();
+		}
+	}
+
+	void BlockTool::Update(Nz::Time /*elapsedTime*/, const GameInterface::RaycastResult* previewRaycast)
 	{
 		if (!previewRaycast)
 			return;

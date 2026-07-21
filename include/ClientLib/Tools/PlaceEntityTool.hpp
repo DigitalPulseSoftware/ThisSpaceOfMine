@@ -33,6 +33,7 @@ namespace tsom
 			void OnDeactivate() override;
 
 			void OnTrigger(bool primary) override;
+			void OnWheel(float delta) override;
 
 			void Update(Nz::Time elapsedTime, const GameInterface::RaycastResult* previewRaycast) override;
 

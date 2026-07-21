@@ -20,6 +20,7 @@ namespace tsom
 			inline BlockTool(GameInterface& gameInterface);
 
 			void OnTrigger(bool primary) override;
+			void OnWheel(float delta) override;
 
 			void Update(Nz::Time elapsedTime, const GameInterface::RaycastResult* previewRaycast) override;
 	};
