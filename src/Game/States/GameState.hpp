@@ -78,6 +78,7 @@ namespace tsom
 
 			void BindControlledEntitySignals();
 			void LayoutWidgets(const Nz::Vector2f& newSize) override;
+			void RefreshPlayerListWidget();
 			Nz::Vector3f RaycastCamera(const Nz::Vector3f& from, const Nz::Vector3f& to);
 			std::optional<RaycastResult> RaycastQuery() const;
 			void OnTick(Nz::Time elapsedTime, bool lastTick);
@@ -122,6 +123,12 @@ namespace tsom
 				unsigned int mode = 0;
 			};
 
+			struct ConnectedPlayer
+			{
+				std::string nickname;
+				bool isAuthenticated;
+			};
+
 			struct HealthOxygen
 			{
 				Nz::RichTextDrawer textDrawer;
@@ -144,6 +151,8 @@ namespace tsom
 			std::optional<ConsoleExecutor> m_consoleExecutor;
 			std::optional<PilotedShip> m_pilotedShip;
 			std::shared_ptr<DebugOverlay> m_debugOverlay;
+			Nz::LabelWidget* m_playerListWidget = nullptr;
+			std::vector<ConnectedPlayer> m_connectedPlayers;
 			std::vector<InputRotation> m_predictedInputRotations;
 			tsl::hopscotch_map<Nz::UInt64, DebugDrawLines> m_debugDrawLines;
 			entt::handle m_cameraEntity;

@@ -348,6 +348,8 @@ namespace tsom
 		});
 
 		m_interactionLabel = CreateWidget<Nz::SimpleLabelWidget>();
+		m_playerListWidget = CreateWidget<Nz::LabelWidget>();
+		m_playerListWidget->Hide();
 
 		m_onUnhandledKeyPressed.Connect(stateData.canvas->OnUnhandledKeyPressed, [this](const Nz::WindowEventHandler*, const Nz::WindowEvent::KeyEvent& event)
 		{
@@ -385,6 +387,12 @@ namespace tsom
 					}
 					UpdateMouseLock();
 
+					break;
+				}
+
+				case Nz::Keyboard::Scancode::Tab:
+				{
+					m_playerListWidget->Show();
 					break;
 				}
 
@@ -526,6 +534,21 @@ namespace tsom
 			}
 		});
 
+		m_onUnhandledKeyReleased.Connect(stateData.canvas->OnUnhandledKeyReleased, [this](const Nz::WindowEventHandler*, const Nz::WindowEvent::KeyEvent& event)
+		{
+			switch (event.scancode)
+			{
+				case Nz::Keyboard::Scancode::Tab:
+				{
+					m_playerListWidget->Hide();
+					break;
+				}
+
+				default:
+					break;
+			}
+		});
+
 		m_onChatMessage.Connect(stateData.sessionHandler->OnChatMessage, [this](const std::string& message)
 		{
 			m_chatBox->PrintMessage({
@@ -586,6 +609,8 @@ namespace tsom
 				}
 				});
 
+			m_connectedPlayers.push_back({playerInfo.nickname, playerInfo.isAuthenticated});
+			RefreshPlayerListWidget();
 			spdlog::info("{0} joined the server", playerInfo.nickname);
 		});
 
@@ -600,6 +625,8 @@ namespace tsom
 				}
 			});
 
+			std::erase_if(m_connectedPlayers, [&](const ConnectedPlayer& p) { return p.nickname == playerInfo.nickname; });
+			RefreshPlayerListWidget();
 			spdlog::info("{0} left the server", playerInfo.nickname);
 		});
 
@@ -616,6 +643,12 @@ namespace tsom
 				}
 			});
 
+			auto player = std::ranges::find_if(m_connectedPlayers, [&](const ConnectedPlayer& p) { return p.nickname == playerInfo.nickname; });
+			if (player != m_connectedPlayers.end())
+			{
+				player->nickname = newNickname;
+				RefreshPlayerListWidget();
+			}
 			spdlog::info("{0} renamed to {1}", playerInfo.nickname, newNickname);
 		});
 
@@ -1251,8 +1284,24 @@ namespace tsom
 
 		m_crosshairEntity.get<Nz::NodeComponent>().SetPosition({ newSize.x * 0.5f, newSize.y * 0.5f });
 		m_healthOxygen.entity.get<Nz::NodeComponent>().SetPosition({ newSize.x * 0.5f - m_healthOxygen.entity.get<Nz::GraphicsComponent>().GetAABB().x / 2.f, hudNextHeight });
+		m_playerListWidget->SetPosition({ newSize.x * 0.5f - m_playerListWidget->GetWidth() * 0.5f, 50.f });
 
 		m_escapeMenu->Center();
+	}
+
+	void GameState::RefreshPlayerListWidget()
+	{
+		Nz::RichTextDrawer textDrawer;
+		textDrawer.AppendText(fmt::format("Players ({0})\n", m_connectedPlayers.size()));
+
+		for (const ConnectedPlayer& player : m_connectedPlayers)
+		{
+			textDrawer.SetTextColor((player.isAuthenticated) ? Nz::Color::Yellow() : Nz::Color::Gray());
+			textDrawer.AppendText(player.nickname + "\n");
+		}
+
+		m_playerListWidget->UpdateText(textDrawer);
+		m_playerListWidget->SetPosition({ Nz::Vector2f(GetStateData().renderTarget->GetSize()).x * 0.5f - m_playerListWidget->GetWidth() * 0.5f, 50.f });
 	}
 
 	Nz::Vector3f GameState::RaycastCamera(const Nz::Vector3f& from, const Nz::Vector3f& to)
