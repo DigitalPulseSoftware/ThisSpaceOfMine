@@ -97,6 +97,7 @@ namespace tsom
 
 			void BindControlledEntitySignals();
 			void LayoutWidgets(const Nz::Vector2f& newSize) override;
+			void RefreshPlayerListWidget();
 			Nz::Vector3f RaycastCamera(const Nz::Vector3f& from, const Nz::Vector3f& to);
 			void OnTick(Nz::Time elapsedTime, bool lastTick);
 			void SendInputs();
@@ -114,6 +115,7 @@ namespace tsom
 			NazaraSlot(ClientSessionHandler, OnPlayerJoined, m_onPlayerJoined);
 			NazaraSlot(ClientSessionHandler, OnPlayerLeave, m_onPlayerLeave);
 			NazaraSlot(ClientSessionHandler, OnPlayerNameUpdate, m_onPlayerNameUpdate);
+			NazaraSlot(ClientSessionHandler, OnPlayerListUpdated, m_onPlayerListUpdated);
 			NazaraSlot(Nz::Canvas, OnUnhandledKeyPressed, m_onUnhandledKeyPressed);
 			NazaraSlot(Nz::Canvas, OnUnhandledKeyReleased, m_onUnhandledKeyReleased);
 			NazaraSlot(Nz::Canvas, OnUnhandledMouseButtonPressed, m_mouseButtonReleasedSlot);
@@ -187,6 +189,7 @@ namespace tsom
 			Nz::UInt8 m_nextInputIndex;
 			CameraMode m_cameraMode;
 			HealthOxygen m_healthOxygen;
+			Nz::LabelWidget* m_playerListWidget;
 			Nz::SimpleLabelWidget* m_interactionLabel;
 			BlockSelectionBar* m_blockSelectionBar;
 			Chatbox* m_chatBox;

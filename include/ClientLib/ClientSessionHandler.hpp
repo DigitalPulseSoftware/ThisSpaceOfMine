@@ -43,6 +43,8 @@ namespace tsom
 			ClientSessionHandler(NetworkSession* session, Nz::ApplicationBase& app, ConfigFile& config, Nz::EnttWorld& world, ClientBlockLibrary& blockLibrary);
 			~ClientSessionHandler();
 
+			template<typename F> void ForEachPlayer(F&& callback) const;
+
 			inline entt::handle GetControlledEntity() const;
 			inline EntityRegistry& GetEntityRegistry();
 			inline const EntityRegistry& GetEntityRegistry() const;
@@ -92,6 +94,7 @@ namespace tsom
 			NazaraSignal(OnPlayerJoined, const PlayerInfo& /*playerInfo*/);
 			NazaraSignal(OnPlayerLeave, const PlayerInfo& /*playerInfo*/);
 			NazaraSignal(OnPlayerNameUpdate, const PlayerInfo& /*playerInfo*/, const std::string& /*newNickname*/);
+			NazaraSignal(OnPlayerListUpdated);
 
 			static constexpr Packets::Helper::EntityId InvalidEntity = Nz::MaxValue();
 
