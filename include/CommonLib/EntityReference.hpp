@@ -36,6 +36,8 @@ namespace tsom
 			inline entt::handle* operator->();
 			inline const entt::handle* operator->() const;
 
+			inline bool operator==(const EntityReference& other) const;
+
 			EntityReference& operator=(const EntityReference&) = default;
 			EntityReference& operator=(EntityReference&&) noexcept;
 

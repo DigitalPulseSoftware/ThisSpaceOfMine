@@ -414,6 +414,15 @@ namespace tsom
 	{
 		m_entityMetatable = state.create_table();
 		m_entityMetatable[sol::meta_method::index] = m_entityMetatable;
+		m_entityMetatable[sol::meta_method::equal_to] = [](sol::stack_table t1, sol::stack_table t2)
+		{
+			auto t1Entity = t1.get<sol::optional<EntityReference>>("_Entity");
+			auto t2Entity = t2.get<sol::optional<EntityReference>>("_Entity");
+			if (!t1Entity || !t2Entity)
+				return false;
+
+			return *t1Entity == *t2Entity;
+		};
 
 		FillEntityMetatable(state, m_entityMetatable);
 	}
