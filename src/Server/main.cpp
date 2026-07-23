@@ -84,8 +84,6 @@ int ServerMain(int argc, char* argv[])
 	auto& sessionManager = instance.AddSessionManager(serverPort);
 	sessionManager.SetDefaultHandler<tsom::InitialSessionHandler>(std::ref(instance));
 
-	std::filesystem::path saveDirectory = Nz::Utf8Path(config.GetStringValue(tsom::Config::Save_Directory));
-
 	if (!std::filesystem::is_regular_file(instanceConfig.databaseFile))
 	{
 		// No save exists, create a default planet

@@ -9,6 +9,5 @@ Server = {
 	SleepWhenEmpty = true
 }
 Save = {
-	Directory = "saves/chunks",
 	Interval = 30
 }

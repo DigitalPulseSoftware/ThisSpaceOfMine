@@ -20,7 +20,6 @@ namespace tsom
 		RegisterIntegerOption(Config::Server_MaxStuckSeconds, 0, 60, 10);
 		RegisterBoolOption(Config::Debug_EnableDrawer, true);
 		RegisterBoolOption(Config::Server_SleepWhenEmpty, true);
-		RegisterStringOption(Config::Save_Directory, "saves/chunks");
 		RegisterStringOption(Config::Database_Filename, "server_database.db");
 		RegisterIntegerOption(Config::Save_Interval, 0, 60 * 60, 30);
 
