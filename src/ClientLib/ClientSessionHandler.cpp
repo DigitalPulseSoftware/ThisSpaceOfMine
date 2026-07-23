@@ -424,6 +424,8 @@ namespace tsom
 			playerInfo.nickname = std::move(playerData.nickname).Str();
 			playerInfo.isAuthenticated = playerData.isAuthenticated;
 		}
+
+		OnPlayerListUpdated();
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::S_NetworkStrings&& networkStrings)
@@ -455,6 +457,7 @@ namespace tsom
 		playerInfo.isAuthenticated = playerJoin.isAuthenticated;
 
 		OnPlayerJoined(playerInfo);
+		OnPlayerListUpdated();
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::S_PlayerLeave&& playerLeave)
@@ -466,6 +469,7 @@ namespace tsom
 		}
 
 		OnPlayerLeave(*m_players[playerLeave.index]);
+		OnPlayerListUpdated();
 
 		m_players[playerLeave.index].reset();
 	}
@@ -481,6 +485,8 @@ namespace tsom
 		auto& playerInfo = *m_players[playerNameUpdate.index];
 
 		OnPlayerNameUpdate(playerInfo, playerNameUpdate.newNickname);
+		OnPlayerListUpdated();
+
 		playerInfo.nickname = std::move(playerNameUpdate.newNickname).Str();
 		if (playerInfo.textSprite)
 			playerInfo.textSprite->Update(Nz::SimpleTextDrawer::Draw(playerInfo.nickname, 48, Nz::TextStyle_Regular, (playerInfo.isAuthenticated) ? Nz::Color::White() : Nz::Color::Gray()), 0.01f);

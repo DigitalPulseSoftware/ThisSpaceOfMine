@@ -98,6 +98,7 @@ namespace tsom
 			NazaraSlot(ClientSessionHandler, OnPlayerJoined, m_onPlayerJoined);
 			NazaraSlot(ClientSessionHandler, OnPlayerLeave, m_onPlayerLeave);
 			NazaraSlot(ClientSessionHandler, OnPlayerNameUpdate, m_onPlayerNameUpdate);
+			NazaraSlot(ClientSessionHandler, OnPlayerListUpdated, m_onPlayerListUpdated);
 			NazaraSlot(Nz::Canvas, OnUnhandledKeyPressed, m_onUnhandledKeyPressed);
 			NazaraSlot(Nz::Canvas, OnUnhandledKeyReleased, m_onUnhandledKeyReleased);
 			NazaraSlot(Nz::Canvas, OnUnhandledMouseButtonPressed, m_mouseButtonReleasedSlot);
@@ -123,12 +124,6 @@ namespace tsom
 				unsigned int mode = 0;
 			};
 
-			struct ConnectedPlayer
-			{
-				std::string nickname;
-				bool isAuthenticated;
-			};
-
 			struct HealthOxygen
 			{
 				Nz::RichTextDrawer textDrawer;
@@ -152,7 +147,6 @@ namespace tsom
 			std::optional<PilotedShip> m_pilotedShip;
 			std::shared_ptr<DebugOverlay> m_debugOverlay;
 			Nz::LabelWidget* m_playerListWidget = nullptr;
-			std::vector<ConnectedPlayer> m_connectedPlayers;
 			std::vector<InputRotation> m_predictedInputRotations;
 			tsl::hopscotch_map<Nz::UInt64, DebugDrawLines> m_debugDrawLines;
 			entt::handle m_cameraEntity;

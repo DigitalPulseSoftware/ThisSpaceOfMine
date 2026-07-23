@@ -6,6 +6,17 @@
 
 namespace tsom
 {
+	template<typename F>
+	void ClientSessionHandler::ForEachPlayer(F&& callback) const
+	{
+		for (PlayerIndex index = 0; index < m_players.size(); ++index)
+		{
+			auto& playerInfoOpt = m_players[index];
+			if (playerInfoOpt)
+				callback(index, *playerInfoOpt);
+		}
+	}
+
 	inline entt::handle ClientSessionHandler::GetControlledEntity() const
 	{
 		return m_playerControlledEntity;
