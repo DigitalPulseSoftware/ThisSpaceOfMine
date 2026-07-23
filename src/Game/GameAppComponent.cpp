@@ -133,6 +133,8 @@ namespace tsom
 
 		if (CheckAssets())
 		{
+			auto& commandLineParams = GetApp().GetCommandLineParameters();
+
 			auto& window = SetupWindow();
 			auto& world = SetupWorld();
 			auto& swapchain = SetupSwapchain(world, window);
@@ -162,6 +164,17 @@ namespace tsom
 			stateData->world = &world;
 
 			m_fpsLimit = stateData->config->GetIntegerValue<Nz::Int16>(Config::Graphics_FPSLimit);
+			m_fpsLimitUpdateSlot.Connect(stateData->config->GetIntegerUpdateSignal(Config::Graphics_FPSLimit), [this](long long newValue)
+			{
+				m_fpsLimit = Nz::SafeCaster(newValue);
+			});
+
+			std::string_view fpsParam;
+			if (commandLineParams.GetParameter("fps-limit", &fpsParam))
+			{
+				if (std::from_chars(fpsParam.data(), fpsParam.data() + fpsParam.size(), m_fpsLimit).ec != std::errc{})
+					spdlog::error("failed to parse fps-limit parameter (expected an integer, got \"{}\")", fpsParam);
+			}
 
 #ifdef TSOM_DEV_TOOLS
 			stateData->imgui = &m_imguiRuntime.value();
@@ -174,7 +187,6 @@ namespace tsom
 				stateData->window = nullptr;
 			});
 
-			auto& commandLineParams = GetApp().GetCommandLineParameters();
 			if (commandLineParams.HasFlag("planet-editor"))
 			{
 				m_stateMachine.PushState(std::make_shared<tsom::DebugInfoState>(stateData));
@@ -216,7 +228,7 @@ namespace tsom
 		// FPS limiting
 		if (m_fpsLimit > 0)
 		{
-			Nz::Time targetDuration = Nz::Time::Seconds(1.f / m_fpsLimit);
+			Nz::Time targetDuration = Nz::Time::TickDuration(m_fpsLimit);
 			Nz::Time elapsed = m_frameClock.GetElapsedTime();
 			if (elapsed < targetDuration)
 			{
