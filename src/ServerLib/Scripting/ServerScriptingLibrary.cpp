@@ -190,6 +190,7 @@ namespace tsom
 
 				return sol::make_object(L, uuidOpt->ToString());
 			}),
+			"IsValid", &ServerPlayerHandle::IsValid,
 			"PilotShip", LuaFunction([](ServerPlayer& player, sol::table shipEntity, sol::table shipExteriorEntity, const Nz::Quaternionf& referenceRotation)
 			{
 				entt::handle entity = AssertScriptEntity(shipEntity);
