@@ -331,14 +331,22 @@ namespace tsom
 		}
 
 		m_blockLibrary.emplace(app);
-
-		filesystem.GetFileContent("CookedAssets/BlockData.json", [&](const void* ptr, Nz::UInt64 size)
 		{
-			m_blockLibrary->LoadFromString(std::string_view(reinterpret_cast<const char*>(ptr), Nz::SafeCast<std::size_t>(size)));
-			return true;
-		});
+			auto callback = [&](const void* ptr, Nz::UInt64 size)
+			{
+				m_blockLibrary->LoadFromString(std::string_view(reinterpret_cast<const char*>(ptr), Nz::SafeCast<std::size_t>(size)));
+				return true;
+			};
+		
+			if (!filesystem.GetFileContent("CookedAssets/BlockData.json", callback))
+			{
+				spdlog::critical("failed to load block data (missing assets)");
+				app.Quit();
+				return false;
+			}
 
-		m_blockLibrary->BuildTexture(*Nz::Graphics::Instance()->GetGpuDevice());
+			m_blockLibrary->BuildTexture(*Nz::Graphics::Instance()->GetGpuDevice());
+		}
 
 		return true;
 	}
