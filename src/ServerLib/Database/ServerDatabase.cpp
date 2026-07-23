@@ -6,6 +6,7 @@
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <NazaraUtils/CallOnExit.hpp>
+#include <sqlite3.h>
 #include <SQLiteCpp/Transaction.h>
 #include <spdlog/spdlog.h>
 #include <tsl/hopscotch_set.h>
@@ -25,6 +26,8 @@ namespace tsom
 	deletePlanetEntityQuery(database, "DELETE FROM planet_entities WHERE id = ?"),
 	getAllPlanetEntitiesQuery(database, "SELECT id, unique_id, class_name, class_version, position_x, position_y, position_z, rotation_x, rotation_y, rotation_z, rotation_w, properties FROM planet_entities WHERE planet_id = ?"),
 	partialUpdatePlanetEntityQuery(database, "UPDATE planet_entities SET class_version = ?, position_x = ?, position_y = ?, position_z = ?, rotation_x = ?, rotation_y = ?, rotation_z = ?, rotation_w = ?, properties = ?, last_update = datetime() WHERE id = ?"),
+	getPlanetGeneratorCacheChunk(database, "SELECT generator_hash, chunk_data_version, chunk_data FROM planet_generator_cache WHERE generator_name = ? AND chunk_x = ? AND chunk_y = ? AND chunk_z = ?"),
+	storePlanetGeneratorCacheChunk(database, "REPLACE INTO planet_generator_cache(generator_name, generator_hash, chunk_x, chunk_y, chunk_z, chunk_data_version, chunk_data) VALUES(?, ?, ?, ?, ?, ?, ?)"),
 	getAllPlanetLinkQuery(database, "SELECT source_planet_id, destination_planet_id, position_x, position_y, position_z FROM planet_links"),
 	storePlanetLinkQuery(database, "REPLACE INTO planet_links(source_planet_id, destination_planet_id, position_x, position_y, position_z) VALUES(?, ?, ?, ?, ?)")
 	{
@@ -216,8 +219,24 @@ namespace tsom
 		m_preparedStatements->getPlanetChunkQuery.bind(3, chunkIndices.y);
 		m_preparedStatements->getPlanetChunkQuery.bind(4, chunkIndices.z);
 
-		if (!m_preparedStatements->getPlanetChunkQuery.executeStep())
+		int resultCode;
+		for (;;)
+		{
+			resultCode = m_preparedStatements->getPlanetChunkQuery.tryExecuteStep();
+			if (resultCode != SQLITE_BUSY)
+				break;
+
+			std::this_thread::yield();
+		}
+
+		if (resultCode == SQLITE_DONE)
+			return false; //< row doesn't exist
+
+		if (resultCode != SQLITE_ROW)
+		{
+			spdlog::error("getPlanetChunkQuery query failed: {} (error code: {})", m_database.getErrorMsg(), resultCode);
 			return false;
+		}
 
 		Database::PlanetChunk planetChunk;
 		planetChunk.planetId = planetId;
@@ -231,6 +250,47 @@ namespace tsom
 		planetChunk.chunkData = std::span(chunkData, chunkData + column.getBytes());
 
 		callback(std::move(planetChunk));
+		return true;
+	}
+
+	bool ServerDatabase::GetPlanetGeneratorCache(const std::string& generatorName, const Nz::Vector3i32& chunkIndices, Nz::FunctionRef<void(Database::PlanetGeneratorCache&& /*planetGeneratorCache*/)> callback) const
+	{
+		NAZARA_DEFER({ m_preparedStatements->getPlanetGeneratorCacheChunk.reset(); });
+		m_preparedStatements->getPlanetGeneratorCacheChunk.bindNoCopy(1, generatorName);
+		m_preparedStatements->getPlanetGeneratorCacheChunk.bind(2, chunkIndices.x);
+		m_preparedStatements->getPlanetGeneratorCacheChunk.bind(3, chunkIndices.y);
+		m_preparedStatements->getPlanetGeneratorCacheChunk.bind(4, chunkIndices.z);
+
+		int resultCode;
+		for (;;)
+		{
+			resultCode = m_preparedStatements->getPlanetGeneratorCacheChunk.tryExecuteStep();
+			if (resultCode != SQLITE_BUSY)
+				break;
+
+			std::this_thread::yield();
+		}
+
+		if (resultCode == SQLITE_DONE)
+			return false; //< row doesn't exist
+
+		if (resultCode != SQLITE_ROW)
+		{
+			spdlog::error("getPlanetGeneratorCacheChunk query failed: {} (error code: {})", m_database.getErrorMsg(), resultCode);
+			return false;
+		}
+
+		Database::PlanetGeneratorCache planetGeneratorCache;
+		planetGeneratorCache.generatorName = generatorName;
+		planetGeneratorCache.generatorHash = m_preparedStatements->getPlanetGeneratorCacheChunk.getColumn(0).getString();
+		planetGeneratorCache.chunkIndices = { chunkIndices.x, chunkIndices.y, chunkIndices.z };
+		planetGeneratorCache.chunkDataVersion = m_preparedStatements->getPlanetGeneratorCacheChunk.getColumn(1);
+
+		SQLite::Column column = m_preparedStatements->getPlanetGeneratorCacheChunk.getColumn(2);
+		const Nz::UInt8* chunkData = static_cast<const Nz::UInt8*>(column.getBlob());
+		planetGeneratorCache.chunkData = std::span(chunkData, chunkData + column.getBytes());
+
+		callback(std::move(planetGeneratorCache));
 		return true;
 	}
 
@@ -372,6 +432,41 @@ namespace tsom
 		{
 			spdlog::error("store planet link failed: {}", e.what());
 		}
+	}
+
+	void ServerDatabase::StorePlanetGeneratorCache(const Database::PlanetGeneratorCache& planetGeneratorCache)
+	{
+		NAZARA_DEFER({
+			try
+			{
+				m_preparedStatements->storePlanetGeneratorCacheChunk.reset();
+			}
+			catch (const SQLite::Exception& e)
+			{
+				spdlog::error("store planet generator cache query failed: {} (error code: {})", e.getErrorStr(), e.getErrorCode());
+			}
+		});
+
+		m_preparedStatements->storePlanetGeneratorCacheChunk.bindNoCopy(1, planetGeneratorCache.generatorName);
+		m_preparedStatements->storePlanetGeneratorCacheChunk.bindNoCopy(2, planetGeneratorCache.generatorHash);
+		m_preparedStatements->storePlanetGeneratorCacheChunk.bind(3, planetGeneratorCache.chunkIndices.x);
+		m_preparedStatements->storePlanetGeneratorCacheChunk.bind(4, planetGeneratorCache.chunkIndices.y);
+		m_preparedStatements->storePlanetGeneratorCacheChunk.bind(5, planetGeneratorCache.chunkIndices.z);
+		m_preparedStatements->storePlanetGeneratorCacheChunk.bind(6, planetGeneratorCache.chunkDataVersion);
+		m_preparedStatements->storePlanetGeneratorCacheChunk.bindNoCopy(7, planetGeneratorCache.chunkData.data(), Nz::SafeCaster(planetGeneratorCache.chunkData.size()));
+
+		int resultCode;
+		for (;;)
+		{
+			resultCode = m_preparedStatements->storePlanetGeneratorCacheChunk.tryExecuteStep();
+			if (resultCode != SQLITE_BUSY)
+				break;
+
+			std::this_thread::yield();
+		}
+
+		if (resultCode != SQLITE_DONE)
+			spdlog::error("storePlanetGeneratorCacheChunk query failed: {} (error code: {})", m_database.getErrorMsg(), resultCode);
 	}
 
 	void ServerDatabase::Transaction(Nz::FunctionRef<bool(ServerDatabase& database)> callback)

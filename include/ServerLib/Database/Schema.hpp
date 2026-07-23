@@ -55,6 +55,15 @@ namespace tsom::Database
 		std::string_view className;
 	};
 
+	struct PlanetGeneratorCache
+	{
+		std::string generatorName;
+		std::string generatorHash;
+		Nz::Vector3i32 chunkIndices;
+		Nz::UInt32 chunkDataVersion;
+		std::span<const Nz::UInt8> chunkData;
+	};
+
 	struct PlanetLink
 	{
 		Nz::UInt32 sourcePlanet;

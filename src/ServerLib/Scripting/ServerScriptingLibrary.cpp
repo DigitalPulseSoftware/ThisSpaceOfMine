@@ -309,7 +309,7 @@ namespace tsom
 				{
 				}*/
 
-				return m_serverInstance.GetServerDatabase().CreatePlanet(planet);
+				return m_serverInstance.GetThreadServerDatabase().CreatePlanet(planet);
 			}),
 			"StorePlanetLink", LuaFunction([this](sol::stack_table table)
 			{
@@ -318,7 +318,7 @@ namespace tsom
 				planetLink.destinationPlanet = table["destinationPlanet"];
 				planetLink.position = table["position"];
 
-				return m_serverInstance.GetServerDatabase().StorePlanetLink(planetLink);
+				return m_serverInstance.GetThreadServerDatabase().StorePlanetLink(planetLink);
 			})
 		);
 	}

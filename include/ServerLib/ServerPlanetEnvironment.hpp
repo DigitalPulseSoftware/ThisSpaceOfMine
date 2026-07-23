@@ -58,6 +58,7 @@ namespace tsom
 			ServerAtmosphere* GetFallbackAtmosphereAtPosition(const Nz::Vector3f& position) override;
 			void LoadChunksFromDatabase();
 			void LoadEntitiesFromDatabase();
+			void SavePlanetGeneratorCache();
 
 			struct ChunkLoadingData
 			{
@@ -67,6 +68,7 @@ namespace tsom
 				std::shared_ptr<Planet> planet;
 				tsl::hopscotch_map<ChunkIndices, bool> visitedChunks;
 				tsl::ordered_map<ChunkIndices, DirectionMask> remainingChunks;
+				std::unordered_set<ChunkIndices /*chunkIndex*/> generatedChunks;
 
 				void HandleChunkLoaded(const ChunkIndices& chunkIndices, DirectionMask visibilityMask);
 			};
@@ -75,6 +77,7 @@ namespace tsom
 			std::filesystem::path m_savePath;
 			std::optional<Nz::UInt32> m_databaseId;
 			std::shared_ptr<ChunkLoadingData> m_chunkLoadingData;
+			std::string m_generatorHash;
 			std::string m_generatorName;
 			std::unordered_set<ChunkIndices /*chunkIndex*/> m_dirtyChunks;
 			std::unordered_map<std::string, EntityProperty> m_planetProperties;

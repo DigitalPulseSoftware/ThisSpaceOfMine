@@ -196,7 +196,7 @@ namespace tsom
 
 	void ServerInstance::LoadFromDatabase()
 	{
-		ServerDatabase& serverDatabase = GetServerDatabase();
+		ServerDatabase& serverDatabase = GetThreadServerDatabase();
 		ServerConfig databaseConfig = ServerConfig::Load(serverDatabase);
 
 		m_databaseEnvironments.clear();

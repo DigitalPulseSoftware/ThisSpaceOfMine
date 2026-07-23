@@ -41,6 +41,7 @@ namespace tsom
 
 	enum class ChunkFlag
 	{
+		PlayerModified,
 		SaveToDatabase,
 
 		Max = SaveToDatabase

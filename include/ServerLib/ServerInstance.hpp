@@ -74,7 +74,7 @@ namespace tsom
 			inline const EntityRegistry& GetEntityRegistry() const;
 			inline ServerPlayer* GetPlayer(PlayerIndex playerIndex);
 			inline const ServerPlayer* GetPlayer(PlayerIndex playerIndex) const;
-			inline ServerDatabase& GetServerDatabase();
+			inline ServerDatabase& GetThreadServerDatabase();
 			inline Nz::Time GetTickDuration() const;
 			inline Nz::TimerManager& GetTickedTimerManager();
 

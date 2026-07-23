@@ -39,12 +39,14 @@ namespace tsom
 			void GetAllPlanets(Nz::FunctionRef<bool(Database::Planet&& /*planet*/)> callback) const;
 			void GetAllPlanetEntities(Nz::UInt32 planetEntityId, Nz::FunctionRef<bool(Database::PlanetEntity&& /*planetEntities*/)> callback) const;
 			void GetAllPlanetLinks(Nz::FunctionRef<bool(Database::PlanetLink&& /*planetLink*/)> callback) const;
-			void GetAllPlanetChunks(Nz::UInt32 planetId, Nz::FunctionRef<bool(Database::PlanetChunk&& /*PlanetChunk*/)> callback) const;
-			bool GetPlanetChunk(Nz::UInt32 planetId, const Nz::Vector3i32& chunkIndices, Nz::FunctionRef<void(Database::PlanetChunk&& /*PlanetChunk*/)> callback) const;
+			void GetAllPlanetChunks(Nz::UInt32 planetId, Nz::FunctionRef<bool(Database::PlanetChunk&& /*planetChunk*/)> callback) const;
+			bool GetPlanetChunk(Nz::UInt32 planetId, const Nz::Vector3i32& chunkIndices, Nz::FunctionRef<void(Database::PlanetChunk&& /*planetChunk*/)> callback) const;
+			bool GetPlanetGeneratorCache(const std::string& generatorName, const Nz::Vector3i32& chunkIndices, Nz::FunctionRef<void(Database::PlanetGeneratorCache&& /*planetGeneratorCache*/)> callback) const;
 
 			void StorePlanet(const Database::Planet& planetChunk);
 			void StorePlanetChunk(const Database::PlanetChunk& planetChunk);
 			void StorePlanetLink(const Database::PlanetLink& planetChunk);
+			void StorePlanetGeneratorCache(const Database::PlanetGeneratorCache& planetGeneratorCache);
 
 			void Transaction(Nz::FunctionRef<bool(ServerDatabase& database)> callback);
 
@@ -80,6 +82,10 @@ namespace tsom
 				SQLite::Statement deletePlanetEntityQuery;
 				SQLite::Statement getAllPlanetEntitiesQuery;
 				SQLite::Statement partialUpdatePlanetEntityQuery;
+
+				// planet generator cache
+				SQLite::Statement getPlanetGeneratorCacheChunk;
+				SQLite::Statement storePlanetGeneratorCacheChunk;
 
 				// planet links
 				SQLite::Statement getAllPlanetLinkQuery;
