@@ -167,6 +167,11 @@ namespace tsom
 				return player.ExitPiloting();
 			}),
 			"GetController", LuaFunction(&ServerPlayer::GetCharacterController),
+			"GetControlledShipEntity", LuaFunction([this](ServerPlayer& player, sol::this_state L)
+			{
+				sol::state_view stateView(L);
+				return m_entityScriptingLibrary.ToEntityTable(stateView, player.GetControlledShipEntityReference());
+			}),
 			"GetEntity", LuaFunction([this](ServerPlayer& player, sol::this_state L)
 			{
 				sol::state_view stateView(L);
