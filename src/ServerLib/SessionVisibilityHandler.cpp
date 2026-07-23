@@ -605,9 +605,11 @@ namespace tsom
 	{
 		if (!m_propertyUpdatedEntities.empty())
 		{
-			for (auto&& [entity, propertyData] : m_propertyUpdatedEntities)
+			for (auto it = m_propertyUpdatedEntities.begin(); it != m_propertyUpdatedEntities.end(); ++it)
 			{
-				EntityId entityIndex = Nz::Retrieve(m_entityIndices, entity);
+				EntityId entityIndex = Nz::Retrieve(m_entityIndices, it.key());
+
+				auto& propertyData = it.value();
 
 				Nz::UInt32 propertyBits = propertyData.propertiesMask;
 

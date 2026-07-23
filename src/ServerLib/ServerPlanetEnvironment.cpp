@@ -106,12 +106,7 @@ namespace tsom
 		{
 			for (int x = 0; x < m_chunkCount.x; ++x)
 			{
-				ChunkIndices chunkIndices;
-				if ((x % 2) == (z % 2))
-					chunkIndices = ChunkIndices(-int(m_chunkCount.x / 2) + x, -int(m_chunkCount.y / 2), -int(m_chunkCount.z / 2) + z);
-				else
-					chunkIndices = ChunkIndices(-int(m_chunkCount.x / 2) + x, -int(m_chunkCount.y / 2) + m_chunkCount.y - 1, -int(m_chunkCount.z / 2) + z);
-
+				ChunkIndices chunkIndices = ChunkIndices(-int(m_chunkCount.x / 2) + x, -int(m_chunkCount.y / 2) + m_chunkCount.y - 1, -int(m_chunkCount.z / 2) + z);
 				m_chunkLoadingData->remainingChunks[chunkIndices] |= (x % 2) == (z % 2) ? Direction::Up : Direction::Down;
 				m_chunkLoadingData->visitedChunks.emplace(chunkIndices, true);
 			}

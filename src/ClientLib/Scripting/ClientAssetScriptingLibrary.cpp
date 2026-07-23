@@ -289,6 +289,11 @@ namespace tsom
 			"Point", Nz::FaceFilling::Point
 		);
 
+		state.new_enum("FrontFace",
+			"Clockwise", Nz::FrontFace::Clockwise,
+			"CounterClockwise", Nz::FrontFace::CounterClockwise
+		);
+
 		state.new_usertype<Nz::RenderStates>("RenderStates",
 			sol::meta_function::construct, LuaFunction([]
 			{
@@ -299,6 +304,7 @@ namespace tsom
 			}),
 			"faceCulling", &Nz::RenderStates::faceCulling,
 			"faceFilling", &Nz::RenderStates::faceFilling,
+			"frontFace",   &Nz::RenderStates::frontFace,
 
 			"blending",    &Nz::RenderStates::blending,
 			"depthBias",   &Nz::RenderStates::depthBias,
