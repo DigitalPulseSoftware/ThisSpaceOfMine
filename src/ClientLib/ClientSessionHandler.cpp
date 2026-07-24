@@ -650,7 +650,7 @@ namespace tsom
 
 		entity.emplace<Nz::RigidBody3DComponent>(physSettings, Nz::PhysicsReplication3D::None);
 
-		// Player model (collider for now)
+		// Player model
 		if (!m_playerModel)
 		{
 			m_playerModel.emplace();

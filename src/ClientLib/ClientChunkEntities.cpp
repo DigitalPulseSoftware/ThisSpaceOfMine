@@ -91,7 +91,7 @@ namespace tsom
 			settings.AddPass(depthPassIndex, depthPass);
 
 			Nz::MaterialPass shadowPass = depthPass;
-			forwardPass.renderQueue = shadowQueue;
+			shadowPass.renderQueue = shadowQueue;
 			shadowPass.options[nzsl::Ast::HashOption("ShadowPass")] = true;
 			shadowPass.states.depthCompare = Nz::RendererComparison::LessOrEqual; //< TODO: Reverse depth for shadow pass?
 			shadowPass.states.frontFace = Nz::FrontFace::Clockwise;
