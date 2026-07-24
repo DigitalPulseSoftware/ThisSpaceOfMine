@@ -154,6 +154,18 @@ namespace tsom
 		return ServerEnvironment::GetEnvironment(m_controlledEntity);
 	}
 
+	EntityReference ServerPlayer::GetControlledShipEntityReference() const
+	{
+		if (!m_controlledEntity)
+			return {};
+
+		const auto& shipController = m_controller->GetShipController();
+		if (!shipController)
+			return {};
+
+		return shipController->GetShipEntity();
+	}
+
 	void ServerPlayer::PilotShip(EntityReference shipEntity, EntityReference shipExteriorEntity, const Nz::Quaternionf& referenceRotation)
 	{
 		if (!m_controlledEntity)

@@ -55,6 +55,7 @@ namespace tsom
 			inline const EntityReference& GetControlledEntityReference() const;
 			ServerEnvironment* GetControlledEntityEnvironment();
 			const ServerEnvironment* GetControlledEntityEnvironment() const;
+			EntityReference GetControlledShipEntityReference() const;
 			inline ServerEnvironment* GetRootEnvironment();
 			inline const ServerEnvironment* GetRootEnvironment() const;
 			inline const std::string& GetNickname() const;
