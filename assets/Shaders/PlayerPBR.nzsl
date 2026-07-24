@@ -72,6 +72,16 @@ struct MaterialSettings
 
 	[tag("BaseColor")]
 	BaseColor: vec4[f32],
+	
+	// PBR settings
+	[tag("EmissiveColor")]
+	EmissiveColor: vec4[f32], //< TODO: Switch to vec3[f32]
+
+	[tag("MetallicFactor")]
+	MetallicFactor: f32,
+
+	[tag("RoughnessFactor")]
+	RoughnessFactor: f32
 }
 
 // TODO: Add enums
@@ -193,21 +203,21 @@ fn ComputeLighting(color: vec3[f32], input: VertOut) -> vec3[f32]
 		normal = normalize(input.normal);
 
 	let albedo = color.xyz;
-	let metallic = 0.0;
-	let roughness = 0.3;
+	let metallic = Material.settings.MetallicFactor;
+	let roughness = Material.settings.RoughnessFactor;
 
 	const if (HasMetalnessSmoothnessTexture)
 	{
 		let ms = Material.metalnessSmoothness.Sample(input.uv).xyza;
-		metallic = ms.x;
-		roughness = (1.0 - ms.y);
+		metallic *= ms.x;
+		roughness *= (1.0 - ms.y);
 	}
 
 	const if (HasMetallicTexture)
-		metallic = Material.metallicMap.Sample(input.uv).x;
+		metallic *= Material.metallicMap.Sample(input.uv).x;
 
 	const if (HasRoughnessTexture)
-		roughness = Material.roughnessMap.Sample(input.uv).x;
+		roughness *= Material.roughnessMap.Sample(input.uv).x;
 
 	let F0 = vec3[f32](0.04, 0.04, 0.04);
 	F0 = lerp(F0, albedo, metallic.rrr);
@@ -264,7 +274,7 @@ fn ComputeLighting(color: vec3[f32], input: VertOut) -> vec3[f32]
 		ambient *= Material.ambientOcclusionMap.Sample(input.uv).x;
 
 	let finalColor = ambient + lightRadiance;
-	//finalColor = finalColor / (finalColor + vec3[f32](1.0, 1.0, 1.0));
+	finalColor += Material.settings.EmissiveColor.rgb;
 
 	return finalColor;
 }

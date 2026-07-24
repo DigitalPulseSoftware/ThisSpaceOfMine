@@ -55,9 +55,6 @@ struct MaterialSettings
 	[tag("ShadowPosScale")]
 	ShadowPosScale: f32,
 
-	[tag("BaseColor")]
-	BaseColor: vec4[f32],
-
 	[tag("TriplanarOffset")]
 	TriplanarOffset: vec3[f32]
 }
