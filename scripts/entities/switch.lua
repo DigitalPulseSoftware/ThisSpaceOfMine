@@ -38,15 +38,27 @@ if SERVER then
 		if not self:GetProperty("enabled") then
 			-- TODO: Disable tick when not enabled
 			local distribution = self:GetComponent("distribution")
+			distribution:UpdateConsumptionValue(0, 0)
 			distribution:UpdateProductionValue(0, 0)
 		end
 	end)
 
 	classData:On("distribution", function (self)
-		if self:GetProperty("enabled") then
-			local distribution = self:GetComponent("distribution")
-			local electricity = distribution:GetDistributedValue(DistributionType.Electrical)
-			distribution:UpdateProductionValue(0, electricity)
+		if not self:GetProperty("enabled") then
+			return
+		end
+
+		local distribution = self:GetComponent("distribution")
+
+		local electricity = distribution:GetDistributedValue(DistributionType.Electrical)
+		distribution:UpdateProductionValue(0, electricity)
+
+		local outputEntity = distribution:GetOutputConnectedEntity(0)
+		if outputEntity then
+			local outputDistribution = outputEntity:GetComponent("distribution")
+			distribution:UpdateConsumptionValue(0, outputDistribution:GetConsumptionValue(0))
+		else
+			distribution:UpdateConsumptionValue(0, electricity)
 		end
 	end)
 else
