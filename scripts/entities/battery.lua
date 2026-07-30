@@ -1,3 +1,5 @@
+local maxOutput = Distribution.ToTickUnit(200)
+
 local classData = EntityRegistry.ClassBuilder()
 classData:Set("spawnable", true)
 classData:Set("spawnable_model", "battery")
@@ -5,8 +7,6 @@ classData:Set("spawnable_collider", Vec3(0.5, 1.1, 0.5))
 
 classData:AddProperty("capacity", { type = "integer", default = Distribution.ToStorageUnit(10000), isNetworked = true })
 classData:AddProperty("charge", { type = "integer", default = 0, isNetworked = true })
-
-local id = 1
 
 classData:On("init", function (self)
 	local physSettings = {
@@ -49,32 +49,26 @@ end)
 if SERVER then
 	classData:On("distribution", function (self)
 		local distribution = self:GetComponent("distribution")
-		local incomingElectricity = distribution:GetDistributedValue(DistributionType.Electrical)
 
 		local capacity = self:GetProperty("capacity")
-		local charge = self:GetProperty("charge")
 
-		if charge < capacity then
-			distribution:UpdateConsumptionValue(0, math.min(capacity - charge, Distribution.ToTickUnit(200)))
-		else
-			distribution:UpdateConsumptionValue(0, 0)
-		end
-
-		local outputValue = math.min(charge, Distribution.ToTickUnit(200))
+		local incomingElectricity = distribution:GetDistributedValue(DistributionType.Electrical)
 
 		local outputEntity = distribution:GetOutputConnectedEntity(0)
+		local outputValue = 0
 		if outputEntity then
-			local connectedSlot = distribution:GetOutputConnectedPort(0)
 			local outputDistribution = outputEntity:GetComponent("distribution")
-			local consumedValue = outputDistribution:GetConsumptionValue(connectedSlot)
-			outputValue = math.min(outputValue, consumedValue)
-		else
-			outputValue = 0
+			local consumedValue = outputDistribution:GetDistributedValue(DistributionType.Electrical)
+			outputValue = math.min(maxOutput, consumedValue)
 		end
 
-		distribution:UpdateProductionValue(0, outputValue)
 
-		self:UpdateProperty("charge", math.min(charge + incomingElectricity - outputValue, capacity))
+		local charge = math.min(self:GetProperty("charge") + incomingElectricity - outputValue, capacity)
+		self:UpdateProperty("charge", charge)
+
+		local outputValue = math.min(charge, maxOutput)
+		distribution:UpdateConsumptionValue(0, math.min(capacity - charge, maxOutput))
+		distribution:UpdateProductionValue(0, outputValue)
 	end)
 else
 	classData:OnPropertyUpdate("charge", function (self, charge)
