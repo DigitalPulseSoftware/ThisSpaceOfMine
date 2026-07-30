@@ -79,7 +79,7 @@ namespace tsom
 
 			inline bool IsInEnvironment(const ServerEnvironment* environment);
 
-			void PilotShip(EntityReference shipEntity, EntityReference shipExteriorEntity, const Nz::Quaternionf& referenceRotation);
+			bool PilotShip(EntityReference shipEntity, EntityReference shipExteriorEntity, const Nz::Quaternionf& referenceRotation);
 
 			void PushInputs(const PlayerInputs& inputs);
 

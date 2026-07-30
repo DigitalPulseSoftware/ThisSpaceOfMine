@@ -219,13 +219,14 @@ namespace tsom
 		}
 	}
 
-	void ServerPlayer::PilotShip(EntityReference shipEntity, EntityReference shipExteriorEntity, const Nz::Quaternionf& referenceRotation)
+	bool ServerPlayer::PilotShip(EntityReference shipEntity, EntityReference shipExteriorEntity, const Nz::Quaternionf& referenceRotation)
 	{
 		if (!m_controlledEntity)
-			return;
+			return false;
 
 		m_controller->SetShipController(std::make_shared<ShipController>(shipExteriorEntity, referenceRotation));
 		m_visibilityHandler.SetControlledShip(shipEntity, shipExteriorEntity, referenceRotation);
+		return true;
 	}
 
 	void ServerPlayer::PushInputs(const PlayerInputs& inputs)
