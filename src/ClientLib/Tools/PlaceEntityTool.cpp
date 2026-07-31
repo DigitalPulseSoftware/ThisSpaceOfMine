@@ -179,7 +179,7 @@ namespace tsom
 
 						auto& previewNode = m_preview->entity.get<Nz::NodeComponent>();
 						Nz::Vector3f entityPos = faceCenter + previewRaycast->hitNormal * m_preview->collider.y * 0.5f;
-						Nz::Quaternionf entityRot = Nz::Quaternionf::RotationBetween(Nz::Vector3f::Up(), localNormal) * Nz::Quaternionf(Nz::DegreeAnglef(45.f) * m_preview->rotationMultiplier, Nz::Vector3f::Up());
+						Nz::Quaternionf entityRot = chunkNode.ToGlobalRotation(Nz::Quaternionf::RotationBetween(Nz::Vector3f::Up(), s_dirNormals[hitCoordinates->direction]) * Nz::Quaternionf(Nz::DegreeAnglef(45.f) * m_preview->rotationMultiplier, Nz::Vector3f::Up()));
 						previewNode.SetTransform(entityPos, entityRot);
 
 						struct IgnoreTrigger : Nz::PhysObjectLayerFilter3D
