@@ -1,4 +1,4 @@
-local consumption = 50
+local computerConsumption = Distribution.ToTickUnit(50)
 
 local classData = EntityRegistry.ClassBuilder()
 classData:Set("spawnable", true)
@@ -46,7 +46,7 @@ if SERVER then
 		end
 
 		local consumptionValue = distribution:GetConsumptionValue(0) -- Get consumption value to handle update delay
-		distribution:UpdateConsumptionValue(0, Distribution.ToTickUnit(consumption))
+		distribution:UpdateConsumptionValue(0, computerConsumption)
 
 		local electricity = distribution:GetDistributedValue(DistributionType.Electrical)
 

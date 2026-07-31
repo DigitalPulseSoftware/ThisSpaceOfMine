@@ -62,7 +62,6 @@ if SERVER then
 			outputValue = math.min(maxOutput, consumedValue)
 		end
 
-
 		local charge = math.min(self:GetProperty("charge") + incomingElectricity - outputValue, capacity)
 		self:UpdateProperty("charge", charge)
 
