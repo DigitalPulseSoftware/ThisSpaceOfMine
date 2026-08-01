@@ -9,20 +9,60 @@
 
 #include <CommonLib/Export.hpp>
 #include <CommonLib/EntityReference.hpp>
+#include <CommonLib/GasType.hpp>
 #include <NazaraUtils/EnumArray.hpp>
 #include <NazaraUtils/FixedVector.hpp>
 #include <NazaraUtils/Signal.hpp>
 #include <entt/entt.hpp>
 #include <functional>
 #include <span>
+#include <variant>
 
 namespace tsom
 {
 	enum class DistributionType
 	{
 		Electrical,
+		Gas,
 
-		Max = Electrical
+		Max = Gas
+	};
+
+	struct ElectricalQuantity
+	{
+		inline void Clear();
+		inline void ComputeMin(const ElectricalQuantity& val1, const ElectricalQuantity& val2);
+
+		inline ElectricalQuantity& operator+=(const ElectricalQuantity& quantity);
+
+		Nz::UInt32 energy = 0; //< kWh
+	};
+
+	struct GasQuantity
+	{
+		inline void Clear();
+		inline void ComputeMin(const GasQuantity& val1, const GasQuantity& val2);
+
+		inline Nz::UInt32 Get(GasType type) const;
+		inline Nz::UInt32 Increment(GasType type, Nz::UInt32 quantity);
+		inline void Set(GasType type, Nz::UInt32 quantity);
+
+		inline GasQuantity& operator+=(const GasQuantity& quantity);
+
+		struct Entry
+		{
+			GasType type;
+			Nz::UInt32 quantity = 0; //< liter
+		};
+
+		Nz::HybridVector<Entry, 3> gases;
+	};
+
+	using DistributionQuantity = std::variant<ElectricalQuantity, GasQuantity>;
+
+	constexpr Nz::EnumArray<DistributionType, DistributionQuantity(*)()> s_defaultDistributionQuantityBuilder = {
+		[]() -> DistributionQuantity { return ElectricalQuantity{ 0 }; }, // DistributionType::Electrical
+		[]() -> DistributionQuantity { return GasQuantity{}; },           // DistributionType::Gas
 	};
 
 	class TSOM_COMMONLIB_API DistributionComponent
@@ -42,9 +82,9 @@ namespace tsom
 			inline void ConnectInput(std::size_t inputIndex, entt::handle entity, std::size_t outputIndex);
 			inline void ConnectOutput(std::size_t outputIndex, entt::handle entity, std::size_t inputIndex);
 
-			inline Nz::UInt32 GetConsumptionValue(std::size_t inputIndex) const;
+			inline const DistributionQuantity& GetConsumptionValue(std::size_t inputIndex) const;
 
-			inline Nz::UInt64 GetDistributedValue(DistributionType type) const;
+			inline const DistributionQuantity& GetDistributedValue(DistributionType type) const;
 
 			inline entt::handle GetInputConnectedEntity(std::size_t inputIndex) const;
 			inline std::size_t GetInputConnectedPort(std::size_t inputIndex) const;
@@ -56,13 +96,13 @@ namespace tsom
 			inline std::size_t GetOutputCount() const;
 			inline DistributionType GetOutputType(std::size_t outputIndex) const;
 
-			inline Nz::UInt32 GetProductionValue(std::size_t outputIndex) const;
+			inline const DistributionQuantity& GetProductionValue(std::size_t outputIndex) const;
 
 			inline bool IsInputConnected(std::size_t inputIndex) const;
 			inline bool IsOutputConnected(std::size_t outputIndex) const;
 
-			inline void UpdateConsumptionValue(std::size_t inputIndex, Nz::UInt32 consumption);
-			inline void UpdateProductionValue(std::size_t outputIndex, Nz::UInt32 production);
+			inline void UpdateConsumptionValue(std::size_t inputIndex, DistributionQuantity consumption);
+			inline void UpdateProductionValue(std::size_t outputIndex, DistributionQuantity production);
 
 			DistributionComponent& operator=(const DistributionComponent&) = delete;
 			DistributionComponent& operator=(DistributionComponent&&) noexcept = default;
@@ -70,8 +110,8 @@ namespace tsom
 			NazaraSignal(OnInputOutputChanged, DistributionComponent*);
 
 		private:
-			inline void ClearDistributedValues();
-			inline void IncrementDistributedValue(DistributionType type, Nz::UInt32 value);
+			void ClearDistributedValues();
+			void IncrementDistributedValue(DistributionType type, const DistributionQuantity& value);
 			inline void TriggerDistributionCallback(entt::handle entity);
 
 			struct Port
@@ -83,15 +123,15 @@ namespace tsom
 
 			struct InputPort : Port
 			{
-				Nz::UInt32 consumptionValue = 0;
+				DistributionQuantity consumptionValue;
 			};
 
 			struct OutputPort : Port
 			{
-				Nz::UInt32 productionValue = 0;
+				DistributionQuantity productionValue;
 			};
 
-			Nz::EnumArray<DistributionType, Nz::UInt64> m_distributedValues;
+			Nz::EnumArray<DistributionType, DistributionQuantity> m_distributedValues;
 			Nz::HybridVector<InputPort, 3> m_inputs;
 			Nz::HybridVector<OutputPort, 3> m_outputs;
 			DistributionCallback m_distributionCallback;

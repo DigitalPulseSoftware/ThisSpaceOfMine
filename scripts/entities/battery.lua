@@ -23,8 +23,8 @@ classData:On("init", function (self)
 			inputs = { DistributionType.Electrical },
 			outputs = { DistributionType.Electrical }
 		})
-		distribution:UpdateConsumptionValue(0, 200)
-		distribution:UpdateProductionValue(0, 0)
+		distribution:UpdateConsumptionValue(0, ElectricalQuantity(maxOutput))
+		distribution:UpdateProductionValue(0, ElectricalQuantity(0))
 	elseif CLIENT then
 		self:SetInteractible(true)
 
@@ -52,13 +52,13 @@ if SERVER then
 
 		local capacity = self:GetProperty("capacity")
 
-		local incomingElectricity = distribution:GetDistributedValue(DistributionType.Electrical)
+		local incomingElectricity = distribution:GetDistributedValue(DistributionType.Electrical).energy
 
 		local outputEntity = distribution:GetOutputConnectedEntity(0)
 		local outputValue = 0
 		if outputEntity then
 			local outputDistribution = outputEntity:GetComponent("distribution")
-			local consumedValue = outputDistribution:GetDistributedValue(DistributionType.Electrical)
+			local consumedValue = outputDistribution:GetDistributedValue(DistributionType.Electrical).energy
 			outputValue = math.min(maxOutput, consumedValue)
 		end
 
@@ -66,8 +66,8 @@ if SERVER then
 		self:UpdateProperty("charge", charge)
 
 		local outputValue = math.min(charge, maxOutput)
-		distribution:UpdateConsumptionValue(0, math.min(capacity - charge, maxOutput))
-		distribution:UpdateProductionValue(0, outputValue)
+		distribution:UpdateConsumptionValue(0, ElectricalQuantity(math.min(capacity - charge, maxOutput)))
+		distribution:UpdateProductionValue(0, ElectricalQuantity(outputValue))
 	end)
 else
 	classData:OnPropertyUpdate("charge", function (self, charge)

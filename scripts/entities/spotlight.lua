@@ -1,10 +1,11 @@
+local lightConsumption = Distribution.ToTickUnit(25)
+
 local classData = EntityRegistry.ClassBuilder()
 classData:Set("spawnable", true)
 classData:Set("spawnable_model", "spotlight")
 classData:Set("spawnable_collider", Vec3(0.5))
 
 classData:AddProperty("light_enabled", { type = "bool", default = false, isNetworked = true })
-classData:AddProperty("consumption", { type = "integer", default = 25, isNetworked = true })
 
 classData:On("init", function (self)
 	local physSettings = {
@@ -21,7 +22,7 @@ classData:On("init", function (self)
 			inputs = { DistributionType.Electrical },
 			outputs = {}
 		})
-		distribution:UpdateConsumptionValue(0, Distribution.ToTickUnit(self:GetProperty("consumption")))
+		distribution:UpdateConsumptionValue(0, ElectricalQuantity(lightConsumption))
 	elseif CLIENT then
 		self:SetInteractible(true)
 		self:SetInteractibleText("Light")
@@ -43,7 +44,7 @@ if SERVER then
 	classData:On("distribution", function (self)
 		local distribution = self:GetComponent("distribution")
 		local electricity = distribution:GetDistributedValue(DistributionType.Electrical)
-		self:UpdateProperty("light_enabled", electricity >= Distribution.ToTickUnit(self:GetProperty("consumption")))
+		self:UpdateProperty("light_enabled", electricity.energy >= lightConsumption)
 	end)
 else
 	classData:OnPropertyUpdate("light_enabled", function (self, isEnabled)
