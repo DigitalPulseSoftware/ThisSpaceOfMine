@@ -20,7 +20,7 @@ classData:On("init", function (self)
 			inputs = {}, 
 			outputs = { DistributionType.Electrical }
 		})
-		distribution:UpdateProductionValue(0, 100)
+		distribution:UpdateProductionValue(0, ElectricalQuantity(100))
 	elseif CLIENT then
 		self:SetInteractible(true)
 		self:SetInteractibleText(string.format("Solar panel (%d %%)", math.floor(self:GetProperty("power_factor") * 100 + 0.5)))
@@ -49,7 +49,7 @@ if SERVER then
 		local powerFactor = math.max(node:GetUp():DotProduct(correctedSunDir), 0)
 
 		local distribution = self:GetComponent("distribution")
-		distribution:UpdateProductionValue(0, Distribution.ToTickUnit(math.floor(powerFactor * 100)))
+		distribution:UpdateProductionValue(0, ElectricalQuantity(Distribution.ToTickUnit(math.floor(powerFactor * 100))))
 
 		self:UpdateProperty("power_factor", powerFactor)
 	end)

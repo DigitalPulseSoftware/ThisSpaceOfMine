@@ -41,12 +41,12 @@ if SERVER then
 	classData:On("distribution", function (self)
 		local distribution = self:GetComponent("distribution")
 		if not self:GetProperty("active") then
-			distribution:UpdateConsumptionValue(0, 0)
+			distribution:UpdateConsumptionValue(0, ElectricalQuantity(0))
 			return
 		end
 
 		local consumptionValue = distribution:GetConsumptionValue(0) -- Get consumption value to handle update delay
-		distribution:UpdateConsumptionValue(0, computerConsumption)
+		distribution:UpdateConsumptionValue(0, ElectricalQuantity(computerConsumption))
 
 		local electricity = distribution:GetDistributedValue(DistributionType.Electrical)
 

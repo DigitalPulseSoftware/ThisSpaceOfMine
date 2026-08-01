@@ -228,7 +228,20 @@ namespace tsom
 			"Atmosphere", sol::readonly_property(&AtmosphereMonitor::atmosphere));
 
 		state.new_enum("DistributionType",
-			"Electrical", DistributionType::Electrical
+			"Electrical", DistributionType::Electrical,
+			"Gas", DistributionType::Gas
+		);
+
+		state.new_usertype<ElectricalQuantity>("ElectricalQuantity",
+			sol::call_constructor, [](std::uint32_t energy) { return ElectricalQuantity{ energy }; },
+			"energy", &ElectricalQuantity::energy
+		);
+
+		state.new_usertype<GasQuantity>("GasQuantity",
+			sol::call_constructor, sol::constructors<GasQuantity()>(),
+			"Increment", &GasQuantity::Increment,
+			sol::meta_function::index, &GasQuantity::Get,
+			sol::meta_function::new_index, &GasQuantity::Set
 		);
 
 		state.new_usertype<DistributionComponent>("Distribution",

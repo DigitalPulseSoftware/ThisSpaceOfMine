@@ -1,3 +1,5 @@
+local maxOutputValue = Distribution.ToTickUnit(1000)
+
 local classData = EntityRegistry.ClassBuilder()
 classData:Set("spawnable", true)
 classData:Set("spawnable_model", "switch")
@@ -21,7 +23,7 @@ classData:On("init", function (self)
 			inputs = { DistributionType.Electrical },
 			outputs = { DistributionType.Electrical }
 		})
-		distribution:UpdateConsumptionValue(0, Distribution.ToTickUnit(1000))
+		distribution:UpdateConsumptionValue(0, ElectricalQuantity(maxOutputValue))
 	elseif CLIENT then
 		self:SetInteractibleText("Switch (enabled)")
 
@@ -38,8 +40,8 @@ if SERVER then
 		if not self:GetProperty("enabled") then
 			-- TODO: Disable tick when not enabled
 			local distribution = self:GetComponent("distribution")
-			distribution:UpdateConsumptionValue(0, 0)
-			distribution:UpdateProductionValue(0, 0)
+			distribution:UpdateConsumptionValue(0, ElectricalQuantity(0))
+			distribution:UpdateProductionValue(0, ElectricalQuantity(0))
 		end
 	end)
 

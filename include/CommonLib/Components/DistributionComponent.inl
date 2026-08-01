@@ -7,6 +7,79 @@
 
 namespace tsom
 {
+	inline void ElectricalQuantity::Clear()
+	{
+		energy = 0;
+	}
+
+	inline void ElectricalQuantity::ComputeMin(const ElectricalQuantity& val1, const ElectricalQuantity& val2)
+	{
+		energy = std::min(val1.energy, val2.energy);
+	}
+
+	inline ElectricalQuantity& ElectricalQuantity::operator+=(const ElectricalQuantity& quantity)
+	{
+		energy += quantity.energy;
+		return *this;
+	}
+
+	inline void GasQuantity::Clear()
+	{
+		gases.clear();
+	}
+
+	inline void GasQuantity::ComputeMin(const GasQuantity& val1, const GasQuantity& val2)
+	{
+		Clear();
+		for (auto&& [gasType, quantity] : val1.gases)
+			Increment(gasType, std::min(quantity, val2.Get(gasType)));
+	}
+
+	inline Nz::UInt32 GasQuantity::Get(GasType type) const
+	{
+		auto it = std::find_if(gases.begin(), gases.end(), [&](const GasQuantity::Entry& entry) { return entry.type == type; });
+		if (it != gases.end())
+			return it->quantity;
+		else
+			return 0;
+	}
+
+	inline Nz::UInt32 GasQuantity::Increment(GasType type, Nz::UInt32 quantity)
+	{
+		auto it = std::find_if(gases.begin(), gases.end(), [&](const GasQuantity::Entry& entry) { return entry.type == type; });
+		if (it != gases.end())
+		{
+			it->quantity += quantity;
+			return it->quantity;
+		}
+		else if (quantity > 0)
+			gases.push_back({ type, quantity });
+
+		return quantity;
+	}
+
+	inline void GasQuantity::Set(GasType type, Nz::UInt32 quantity)
+	{
+		auto it = std::find_if(gases.begin(), gases.end(), [&](const GasQuantity::Entry& entry) { return entry.type == type; });
+		if (it != gases.end())
+		{
+			if (quantity > 0)
+				it->quantity = quantity;
+			else
+				gases.erase(it);
+		}
+		else if (quantity > 0)
+			gases.push_back({ type, quantity });
+	}
+
+	inline GasQuantity& GasQuantity::operator+=(const GasQuantity& quantity)
+	{
+		for (auto&& [type, gasQuantity] : quantity.gases)
+			Increment(type, gasQuantity);
+
+		return *this;
+	}
+
 	inline DistributionComponent::DistributionComponent(std::span<DistributionType> inputs, std::span<DistributionType> outputs)
 	{
 		m_inputs.reserve(inputs.size());
@@ -14,6 +87,7 @@ namespace tsom
 		{
 			auto& port = m_inputs.emplace_back();
 			port.type = distributionType;
+			port.consumptionValue = s_defaultDistributionQuantityBuilder[distributionType]();
 		}
 
 		m_outputs.reserve(inputs.size());
@@ -21,7 +95,11 @@ namespace tsom
 		{
 			auto& port = m_outputs.emplace_back();
 			port.type = distributionType;
+			port.productionValue = s_defaultDistributionQuantityBuilder[distributionType]();
 		}
+
+		for (auto&& [type, quantity] : m_distributedValues.iter_kv())
+			quantity = s_defaultDistributionQuantityBuilder[type]();
 	}
 
 	inline void DistributionComponent::BindDistributionCallback(DistributionCallback&& callback)
@@ -47,13 +125,13 @@ namespace tsom
 		OnInputOutputChanged(this);
 	}
 
-	inline Nz::UInt32 DistributionComponent::GetConsumptionValue(std::size_t inputIndex) const
+	inline const DistributionQuantity& DistributionComponent::GetConsumptionValue(std::size_t inputIndex) const
 	{
 		NazaraAssert(inputIndex < m_inputs.size());
 		return m_inputs[inputIndex].consumptionValue;
 	}
 
-	inline Nz::UInt64 DistributionComponent::GetDistributedValue(DistributionType type) const
+	inline const DistributionQuantity& DistributionComponent::GetDistributedValue(DistributionType type) const
 	{
 		return m_distributedValues[type];
 	}
@@ -104,7 +182,7 @@ namespace tsom
 		return m_outputs[outputIndex].type;
 	}
 
-	inline Nz::UInt32 DistributionComponent::GetProductionValue(std::size_t outputIndex) const
+	inline const DistributionQuantity& DistributionComponent::GetProductionValue(std::size_t outputIndex) const
 	{
 		NazaraAssert(outputIndex < m_outputs.size());
 		return m_outputs[outputIndex].productionValue;
@@ -122,26 +200,16 @@ namespace tsom
 		return m_outputs[outputIndex].connectedEntity.IsValid();
 	}
 
-	inline void DistributionComponent::UpdateConsumptionValue(std::size_t inputIndex, Nz::UInt32 consumption)
+	inline void DistributionComponent::UpdateConsumptionValue(std::size_t inputIndex, DistributionQuantity consumption)
 	{
 		NazaraAssert(inputIndex < m_inputs.size());
-		m_inputs[inputIndex].consumptionValue = consumption;
+		m_inputs[inputIndex].consumptionValue = std::move(consumption);
 	}
 
-	inline void DistributionComponent::UpdateProductionValue(std::size_t outputIndex, Nz::UInt32 production)
+	inline void DistributionComponent::UpdateProductionValue(std::size_t outputIndex, DistributionQuantity production)
 	{
 		NazaraAssert(outputIndex < m_outputs.size());
-		m_outputs[outputIndex].productionValue = production;
-	}
-
-	inline void DistributionComponent::ClearDistributedValues()
-	{
-		m_distributedValues.fill(0);
-	}
-
-	inline void DistributionComponent::IncrementDistributedValue(DistributionType type, Nz::UInt32 value)
-	{
-		m_distributedValues[type] += value;
+		m_outputs[outputIndex].productionValue = std::move(production);
 	}
 
 	void DistributionComponent::TriggerDistributionCallback(entt::handle entity)

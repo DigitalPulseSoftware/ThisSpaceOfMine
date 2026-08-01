@@ -13,6 +13,9 @@ namespace tsom
 	m_tickAccumulator(Nz::Time::Zero()),
 	m_registry(registry)
 	{
+		for (auto&& [type, quantity] : m_cachedValues.iter_kv())
+			quantity = s_defaultDistributionQuantityBuilder[type]();
+
 		m_distributionObserver.OnEntityAdded.Connect([this](entt::entity entity)
 		{
 			DistributionComponent& distributionComponent = m_registry.get<DistributionComponent>(entity);
@@ -77,12 +80,18 @@ namespace tsom
 					if (connectedEntity)
 					{
 						DistributionType type = producerDistribution.GetOutputType(outputIndex);
-						Nz::UInt32 producedValue = producerDistribution.GetProductionValue(outputIndex);
+						const DistributionQuantity& producedValue = producerDistribution.GetProductionValue(outputIndex);
 						std::size_t connectedPort = producerDistribution.GetOutputConnectedPort(outputIndex);
 
 						DistributionComponent& consumptionDistribution = connectedEntity.get<DistributionComponent>();
-						Nz::UInt32 consumedValue = consumptionDistribution.GetConsumptionValue(connectedPort);
-						consumptionDistribution.IncrementDistributedValue(type, std::min(producedValue, consumedValue));
+						const DistributionQuantity& consumedValue = consumptionDistribution.GetConsumptionValue(connectedPort);
+
+						std::visit([&](auto&& cachedType)
+						{
+							using T = std::decay_t<decltype(cachedType)>;
+							cachedType.ComputeMin(std::get<T>(producedValue), std::get<T>(consumedValue));
+							consumptionDistribution.IncrementDistributedValue(type, cachedType);
+						}, m_cachedValues[type]);
 					}
 				}
 			}
