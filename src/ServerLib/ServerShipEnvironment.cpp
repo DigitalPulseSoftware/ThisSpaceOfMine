@@ -187,9 +187,34 @@ namespace tsom
 
 	ServerAtmosphere* ServerShipEnvironment::GetFallbackAtmosphereAtPosition(const Nz::Vector3f& position)
 	{
-		// Should (almost) never be called since entities exit the ship when exiting atmosphere
-		// Atmosphere is handled by multiple entities AtmosphereCarrier
-		return nullptr;
+		if (!m_exteriorEnvironment || !m_exteriorEntity)
+			return nullptr;
+
+		auto& ship = GetShip();
+
+		bool isInside = false;
+		for (const auto& [chunkIndices, chunkData] : m_chunkData)
+		{
+			if (!chunkData.hullCollider)
+				continue;
+
+			Nz::Vector3f relativePos = position - ship.GetChunkOffset(chunkIndices);
+			relativePos -= chunkData.hullCollider->GetCenterOfMass(); //< https://jrouwe.github.io/JoltPhysics/index.html#center-of-mass
+			if (chunkData.hullCollider->CollisionQuery(relativePos))
+			{
+				isInside = true;
+				break;
+			}
+		}
+
+		if (isInside)
+			return nullptr; //< Inside the ship but outside of an atmosphere carrier (inside a wall for example)
+
+		// Compute the outside position
+		auto& outsideNode = m_exteriorEntity.get<Nz::NodeComponent>();
+
+		EnvironmentTransform outsideTransform(outsideNode.GetPosition(), outsideNode.GetRotation());
+		return m_exteriorEnvironment->GetAtmosphereAtPosition(outsideTransform.Translate(position));
 	}
 
 	const GravityController* ServerShipEnvironment::GetGravityController() const
