@@ -77,6 +77,7 @@ int ServerMain(int argc, char* argv[])
 	instanceConfig.pauseWhenEmpty = config.GetBoolValue(tsom::Config::Server_SleepWhenEmpty);
 	instanceConfig.saveInterval = Nz::Time::Seconds(config.GetIntegerValue<long long>(tsom::Config::Save_Interval));
 	instanceConfig.connectionTokenEncryptionKey = config.GetConnectionTokenEncryptionKey();
+	instanceConfig.enableChunkCache = config.GetBoolValue(tsom::Config::Chunk_EnableCache);
 	instanceConfig.enableDebugDrawer = config.GetBoolValue(tsom::Config::Debug_EnableDrawer);
 	instanceConfig.databaseFile = config.GetStringValue(tsom::Config::Database_Filename);
 

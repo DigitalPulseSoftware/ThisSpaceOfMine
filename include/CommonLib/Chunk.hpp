@@ -41,8 +41,8 @@ namespace tsom
 
 	enum class ChunkFlag
 	{
-		PlayerModified,
-		SaveToDatabase,
+		PlayerModified, //< Chunk modified by a player
+		SaveToDatabase, //< Chunk pending a save to the database
 
 		Max = SaveToDatabase
 	};

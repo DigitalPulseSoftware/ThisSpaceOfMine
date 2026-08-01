@@ -119,7 +119,7 @@ namespace tsom
 
 		ChunkWriteLock lock(chunk);
 
-		chunk->SetFlags(ChunkFlag::SaveToDatabase);
+		chunk->SetFlags(ChunkFlag::PlayerModified | ChunkFlag::SaveToDatabase);
 		chunk->UpdateBlock(voxelLoc, EmptyBlockIndex);
 	}
 
@@ -145,7 +145,7 @@ namespace tsom
 
 		ChunkWriteLock lock(chunk);
 
-		chunk->SetFlags(ChunkFlag::SaveToDatabase);
+		chunk->SetFlags(ChunkFlag::PlayerModified | ChunkFlag::SaveToDatabase);
 		chunk->UpdateBlock(voxelLoc, static_cast<BlockIndex>(placeBlock.newContent));
 	}
 

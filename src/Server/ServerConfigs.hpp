@@ -11,6 +11,7 @@
 
 namespace tsom::Config
 {
+	static constexpr auto Chunk_EnableCache = ConfigFile::BoolOptionName{ "Chunk.EnableCache" };
 	static constexpr auto ConnectionToken_EncryptionKey = ConfigFile::StringOptionName{ "ConnectionToken.EncryptionKey" };
 	static constexpr auto Database_Filename = ConfigFile::StringOptionName{ "Database.Filename" };
 	static constexpr auto Debug_EnableDrawer = ConfigFile::BoolOptionName{ "Debug.EnableDrawer" };

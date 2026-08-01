@@ -15,6 +15,7 @@ namespace tsom
 	ServerConfigFile::ServerConfigFile()
 	{
 		RegisterStringOption(Config::Api_Url);
+		RegisterBoolOption(Config::Chunk_EnableCache, false);
 		RegisterStringOption(Config::ConnectionToken_EncryptionKey, "");
 		RegisterIntegerOption(Config::Server_Port, 1, 0xFFFF, 29536);
 		RegisterIntegerOption(Config::Server_MaxStuckSeconds, 0, 60, 10);

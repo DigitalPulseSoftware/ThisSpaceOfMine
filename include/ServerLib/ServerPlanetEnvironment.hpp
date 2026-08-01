@@ -58,7 +58,6 @@ namespace tsom
 			ServerAtmosphere* GetFallbackAtmosphereAtPosition(const Nz::Vector3f& position) override;
 			void LoadChunksFromDatabase();
 			void LoadEntitiesFromDatabase();
-			void SavePlanetGeneratorCache();
 
 			struct ChunkLoadingData
 			{

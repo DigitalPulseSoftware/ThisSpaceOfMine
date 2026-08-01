@@ -101,6 +101,7 @@ namespace tsom
 				std::string databaseFile;
 				Nz::Time saveInterval = Nz::Time::Seconds(30);
 				bool enableDebugDrawer = false;
+				bool enableChunkCache = false;
 				bool pauseWhenEmpty = true;
 			};
 

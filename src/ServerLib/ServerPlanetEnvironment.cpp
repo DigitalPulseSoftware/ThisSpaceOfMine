@@ -53,7 +53,7 @@ struct fmt::formatter<Nz::Flags<T>> : formatter<string_view>
 
 	auto format(Nz::Flags<T> flags, format_context& ctx) const -> format_context::iterator
 	{
-		std::string flagStr = "";
+		std::string flagStr;
 		for (T flag : flags)
 		{
 			if (!flagStr.empty())
@@ -232,6 +232,8 @@ namespace tsom
 				{
 					Chunk* chunk = planet.GetChunk(chunkIndices);
 
+					ChunkWriteLock lock(chunk); //< write lock because we clear its flags
+
 					byteArray.Clear();
 
 					Nz::ByteStream byteStream(&byteArray);
@@ -257,7 +259,8 @@ namespace tsom
 						.planetId = *m_databaseId,
 						.position = chunkIndices,
 						.version = s_chunkVersion,
-						.chunkData = std::span(byteArray.GetBuffer(), byteArray.GetSize())
+						.chunkData = std::span(byteArray.GetBuffer(), byteArray.GetSize()),
+						.cacheState = !chunk->HasFlags(ChunkFlag::PlayerModified)
 					});
 
 					chunk->ClearFlags(ChunkFlag::SaveToDatabase);
@@ -286,9 +289,10 @@ namespace tsom
 				chunk = &GetPlanet().AddChunk(m_serverInstance.GetBlockLibrary(), indices);
 
 			auto& taskScheduler = m_serverInstance.GetApplication().GetComponent<Nz::TaskSchedulerAppComponent>();
+			bool enableChunkCache = m_serverInstance.GetConfig().enableChunkCache;
 
 			m_chunkLoadingData->chunkLoadingCount++;
-			taskScheduler.AddTask([chunk, serverInstance = &m_serverInstance, databaseId = m_databaseId, chunkLoadingData = m_chunkLoadingData, chunkCount = m_chunkCount, generatorName = m_generatorName, generatorHash = m_generatorHash, originDir = originDir, properties = m_planetProperties]
+			taskScheduler.AddTask([chunk, enableChunkCache, serverInstance = &m_serverInstance, databaseId = m_databaseId, chunkLoadingData = m_chunkLoadingData, chunkCount = m_chunkCount, generatorName = m_generatorName, generatorHash = m_generatorHash, originDir = originDir, properties = m_planetProperties]
 			{
 				ServerDatabase& serverDatabase = serverInstance->GetThreadServerDatabase();
 				BinaryCompressor& binaryCompressor = BinaryCompressor::GetThreadCompressor();
@@ -296,8 +300,6 @@ namespace tsom
 				ChunkIndices chunkIndices = chunk->GetIndices();
 
 				bool chunkFound = false;
-				bool cacheFound = false;
-
 				if (databaseId)
 				{
 					chunkFound = serverDatabase.GetPlanetChunk(*databaseId, chunkIndices, [&](Database::PlanetChunk&& planetChunk)
@@ -320,62 +322,15 @@ namespace tsom
 
 						Nz::ByteStream byteStream(decompressedData.data(), decompressedData.size());
 
-						chunk->LockWrite();
+						ChunkWriteLock lock(chunk);
 						chunk->Deserialize(byteStream);
-						chunk->SetFlags(ChunkFlag::PlayerModified);
-						chunk->UnlockWrite();
+						if (!planetChunk.cacheState)
+							chunk->SetFlags(ChunkFlag::PlayerModified);
 					});
 				}
 
 				if (!chunkFound)
-				{
-					// Try to get it from the planet generator cache
-					cacheFound = true;
-					cacheFound &= serverDatabase.GetPlanetGeneratorCache(generatorName, chunkIndices, [&](Database::PlanetGeneratorCache&& planetGeneratorCache)
-					{
-						if (planetGeneratorCache.generatorHash != generatorHash)
-						{
-							cacheFound = false;
-							return;
-						}
-
-						if (planetGeneratorCache.chunkDataVersion != s_chunkVersion)
-						{
-							spdlog::error("unhandled version {} from planet generator cache", planetGeneratorCache.chunkDataVersion);
-							cacheFound = false;
-							return;
-						}
-
-						// Chunk data has decompressedSize first
-						Nz::UInt32 decompressedSize;
-						std::memcpy(&decompressedSize, &planetGeneratorCache.chunkData[0], sizeof(decompressedSize));
-						decompressedSize = Nz::LittleEndianToHost(decompressedSize);
-
-						std::vector<Nz::UInt8> decompressedData(decompressedSize);
-						std::optional compressedDataOpt = binaryCompressor.Decompress(planetGeneratorCache.chunkData.data() + sizeof(decompressedSize), planetGeneratorCache.chunkData.size() - sizeof(decompressedSize), decompressedData.data(), decompressedData.size());
-						if (!compressedDataOpt)
-						{
-							spdlog::error("planet generator cache: chunk decompression failed");
-							cacheFound = false;
-							return;
-						}
-
-						if (*compressedDataOpt != decompressedSize)
-						{
-							spdlog::error("planet generator cache: chunk decompression failed (corrupt size)");
-							cacheFound = false;
-							return;
-						}
-
-						Nz::ByteStream byteStream(decompressedData.data(), decompressedData.size());
-
-						ChunkWriteLock lock(chunk);
-						chunk->Deserialize(byteStream);
-					});
-
-					if (!cacheFound)
-						chunkLoadingData->planet->GenerateChunk(*chunk, chunkCount, generatorName, properties);
-				}
+					chunkLoadingData->planet->GenerateChunk(*chunk, chunkCount, generatorName, properties);
 
 				const auto& faceVisibilityMasks = chunk->GetFaceVisibilityMasks();
 
@@ -385,7 +340,7 @@ namespace tsom
 
 				std::unique_lock lock(chunkLoadingData->mutex);
 				chunkLoadingData->HandleChunkLoaded(chunk->GetIndices(), visibilityMask);
-				if (!chunkFound && !cacheFound)
+				if (!chunkFound && enableChunkCache)
 					chunkLoadingData->generatedChunks.insert(chunk->GetIndices());
 
 				if (--chunkLoadingData->chunkLoadingCount == 0 && chunkLoadingData->remainingChunks.empty())
@@ -394,12 +349,15 @@ namespace tsom
 		}
 		m_chunkLoadingData->remainingChunks.clear();
 
-		if (m_chunkLoadingData->chunkLoadingCount == 0 && !m_chunkLoadingData->generatedChunks.empty())
+		if (!m_dirtyChunks.empty())
 		{
-			spdlog::info("saving planet generator cache... (name: {}, hash: {})", m_generatorName, m_generatorHash);
-			SavePlanetGeneratorCache();
-			spdlog::info("planet generator cache for {} ({}) saved", m_generatorName, m_generatorHash);
+			for (const ChunkIndices& chunkIndices : m_chunkLoadingData->generatedChunks)
+				m_dirtyChunks.emplace(chunkIndices);
 		}
+		else
+			m_dirtyChunks = std::move(m_chunkLoadingData->generatedChunks);
+		
+		m_chunkLoadingData->generatedChunks.clear();
 	}
 
 	ServerAtmosphere* ServerPlanetEnvironment::GetFallbackAtmosphereAtPosition(const Nz::Vector3f& position)
@@ -473,52 +431,6 @@ namespace tsom
 
 			return true;
 		});
-	}
-
-	void ServerPlanetEnvironment::SavePlanetGeneratorCache()
-	{
-		ServerDatabase& serverDatabase = m_serverInstance.GetThreadServerDatabase();
-		serverDatabase.Transaction([this](ServerDatabase& database)
-		{
-			BinaryCompressor& binaryCompressor = BinaryCompressor::GetThreadCompressor();
-
-			Nz::ByteArray byteArray;
-			for (const ChunkIndices& chunkIndices : m_chunkLoadingData->generatedChunks)
-			{
-				Chunk* chunk = GetPlanet().GetChunk(chunkIndices);
-
-				Nz::ByteStream byteStream(&byteArray);
-				chunk->Serialize(byteStream);
-
-				Nz::UInt32 decompressedSize = Nz::SafeCaster(byteArray.GetSize());
-
-				std::optional compressedDataOpt = binaryCompressor.Compress(byteArray.GetBuffer(), byteArray.GetSize());
-				if NAZARA_UNLIKELY(!compressedDataOpt)
-					throw std::runtime_error("chunk compression failed");
-
-				std::span<Nz::UInt8>& compressedData = *compressedDataOpt;
-
-				// Reuse byteArray
-				byteArray.Clear();
-				byteArray.Resize(sizeof(Nz::UInt32) + compressedData.size());
-
-				decompressedSize = Nz::HostToLittleEndian(decompressedSize);
-				std::memcpy(&byteArray[0], &decompressedSize, sizeof(decompressedSize));
-				std::memcpy(&byteArray[sizeof(decompressedSize)], &compressedData[0], compressedData.size());
-
-				database.StorePlanetGeneratorCache(Database::PlanetGeneratorCache{
-					.generatorName = m_generatorName,
-					.generatorHash = m_generatorHash,
-					.chunkIndices = chunkIndices,
-					.chunkDataVersion = s_chunkVersion,
-					.chunkData = std::span(byteArray.GetBuffer(), byteArray.GetSize())
-				});
-			}
-
-			return true;
-		});
-
-		m_chunkLoadingData->generatedChunks.clear();
 	}
 
 	void ServerPlanetEnvironment::ChunkLoadingData::HandleChunkLoaded(const ChunkIndices& chunkIndices, DirectionMask visibilityMask)
