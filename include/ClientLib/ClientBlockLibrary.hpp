@@ -34,6 +34,8 @@ namespace tsom
 			inline const std::shared_ptr<Nz::GpuBuffer>& GetGlobalBlockBuffer() const;
 			inline const std::shared_ptr<Nz::TextureAsset>& GetPreviewTexture(BlockIndex blockIndex) const;
 
+			bool LoadFromString(std::string_view content, bool merge = false) override;
+
 		private:
 			std::shared_ptr<Nz::GpuBuffer> m_globalBlockBuffer;
 			std::vector<std::shared_ptr<Nz::TextureAsset>> m_previewTextures;
