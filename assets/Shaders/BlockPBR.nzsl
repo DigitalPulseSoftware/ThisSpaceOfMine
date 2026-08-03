@@ -300,7 +300,7 @@ fn ComputeLighting(input: VertOut) -> vec4[f32]
 	if (blockData.normalMapIndices.x >= 0)
 	{
 		// https://bgolus.medium.com/normal-mapping-for-a-triplanar-shader-10bf39dca05a
-		let blend = pow(abs(input.normal), (16.0).rrr);
+		let blend = pow(abs(input.triplanarNormal), (16.0).rrr);
 		blend /= dot(blend, (1.0).rrr);
 
 		// Apply tangent to world matrix and triblend
