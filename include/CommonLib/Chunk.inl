@@ -36,7 +36,10 @@ namespace tsom
 			layerOpt.reset();
 
 		m_blockTypeCount.clear();
-		m_blockTypeCount.shrink_to_fit();
+		m_blockTypeCount.resize(EmptyBlockIndex + 1);
+		m_directionHoleCount[Direction::Left] = m_directionHoleCount[Direction::Right] = m_size.y * m_size.z;
+		m_directionHoleCount[Direction::Front] = m_directionHoleCount[Direction::Back] = m_size.x * m_size.z;
+		m_directionHoleCount[Direction::Down] = m_directionHoleCount[Direction::Up] = m_size.x * m_size.y;
 
 		OnClear(this, activeLayerMask);
 
@@ -117,7 +120,7 @@ namespace tsom
 
 	inline BlockIndex Chunk::GetBlockContent(unsigned int blockIndex) const
 	{
-		return !m_blocks.empty() ? m_blocks[blockIndex] : EmptyBlockIndex;
+		return HasContent() ? m_blocks[blockIndex] : EmptyBlockIndex;
 	}
 
 	inline BlockIndex Chunk::GetBlockContent(const Nz::Vector3ui& indices) const
@@ -132,6 +135,9 @@ namespace tsom
 
 	inline Nz::UInt16 Chunk::GetBlockCount(std::size_t blockIndex) const
 	{
+		if (!HasContent())
+			return blockIndex == EmptyBlockIndex ? GetBlockCount() : 0;
+
 		if (blockIndex >= m_blockTypeCount.size())
 			return 0;
 

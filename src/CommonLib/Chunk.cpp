@@ -394,7 +394,7 @@ namespace tsom
 			}
 		}
 
-		// Unregister layer only after update to avoid triggering chunk update (OnBlockUpodated)
+		// Unregister layer only after update to avoid triggering chunk update (OnBlockUpdated)
 		assert(m_layers[oldBlockData.layerIndex]->blockCount > 0);
 		if (--m_layers[oldBlockData.layerIndex]->blockCount == 0)
 			UnregisterLayer(oldBlockData.layerIndex);
