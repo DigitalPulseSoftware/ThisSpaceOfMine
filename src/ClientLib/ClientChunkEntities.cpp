@@ -6,7 +6,6 @@
 #include <ClientLib/ClientAssetLibraryAppComponent.hpp>
 #include <ClientLib/ClientConfigs.hpp>
 #include <ClientLib/RenderConstants.hpp>
-#include <ClientLib/Components/VisualEntityComponent.hpp>
 #include <CommonLib/ChunkLock.hpp>
 #include <CommonLib/ConfigFile.hpp>
 #include <CommonLib/Components/EntityOwnerComponent.hpp>
@@ -274,30 +273,6 @@ namespace tsom
 				rigidBody.SetCollider(std::move(colliderUpdateJob.collider), false);
 			}
 
-			entt::handle visualEntity;
-			if (VisualEntityComponent* visualEntityComponent = chunkEntity.try_get<VisualEntityComponent>())
-				visualEntity = visualEntityComponent->visualEntity;
-			else if (colliderUpdateJob.mesh)
-			{
-				// First time, create visual entity
-
-				// Get root visual entity
-				auto& visualRootEntity = m_parentEntity.get<VisualEntityComponent>();
-
-				visualEntity = m_world.CreateEntity();
-
-				auto& visualNode = visualEntity.emplace<Nz::NodeComponent>();
-				visualNode.CopyLocalTransform(chunkEntity.get<Nz::NodeComponent>());
-				visualNode.SetParent(visualRootEntity.visualEntity);
-
-				// Register our visual entity
-				auto& chunkVisualEntity = chunkEntity.emplace<VisualEntityComponent>();
-				chunkVisualEntity.visualEntity = visualEntity;
-
-				auto& entityOwnerComp = chunkEntity.get_or_emplace<EntityOwnerComponent>();
-				entityOwnerComp.Register(visualEntity);
-			}
-
 			if (colliderUpdateJob.mesh)
 			{
 				if (!m_asyncTransfer)
@@ -308,9 +283,9 @@ namespace tsom
 
 				std::shared_ptr<Nz::GraphicalMesh> gfxMesh = Nz::GraphicalMesh::BuildFromMesh(*m_asyncTransfer, *colliderUpdateJob.mesh);
 
-				m_asyncTransfer->AddCompletionCallback([this, gfxMesh, visualEntity]() mutable
+				m_asyncTransfer->AddCompletionCallback([this, gfxMesh, chunkEntity]() mutable
 				{
-					auto& gfxComponent = visualEntity.get_or_emplace<Nz::GraphicsComponent>();
+					auto& gfxComponent = chunkEntity.get_or_emplace<Nz::GraphicsComponent>();
 					gfxComponent.Clear();
 
 					std::shared_ptr<Nz::Model> model = std::make_shared<Nz::Model>(std::move(gfxMesh));
@@ -320,10 +295,10 @@ namespace tsom
 					gfxComponent.AttachRenderable(std::move(model), tsom::Constants::RenderMask3D);
 				});
 			}
-			else if (visualEntity)
+			else
 			{
 				// Remove previous mesh
-				if (auto* gfxComponent = visualEntity.try_get<Nz::GraphicsComponent>())
+				if (auto* gfxComponent = chunkEntity.try_get<Nz::GraphicsComponent>())
 					gfxComponent->Clear();
 			}
 

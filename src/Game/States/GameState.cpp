@@ -13,7 +13,6 @@
 #include <ClientLib/Components/ClientEntityNetworkIndex.hpp>
 #include <ClientLib/Components/ClientInteractibleComponent.hpp>
 #include <ClientLib/Components/EnvironmentComponent.hpp>
-#include <ClientLib/Components/VisualEntityComponent.hpp>
 #include <ClientLib/Systems/AnimationSystem.hpp>
 #include <ClientLib/Systems/CameraFollowerSystem.hpp>
 #include <CommonLib/GameConstants.hpp>
@@ -236,11 +235,6 @@ namespace tsom
 
 			auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
 			cameraNode.SetRotation(cameraRotation);
-
-			// Update visual entity as well
-			auto& entityVisualComp = m_controlledEntity.get<VisualEntityComponent>();
-			auto& visualNode = entityVisualComp.visualEntity.get<Nz::NodeComponent>();
-			visualNode.CopyLocalTransform(characterNode);
 
 #if DEBUG_ROTATION
 			Nz::EulerAnglesf err = m_predictedCameraRotation - currentRotation;
@@ -643,8 +637,7 @@ namespace tsom
 
 					chunkEntitiesPtr->ForEachChunk([&](const ChunkIndices& chunkIndices, entt::handle chunkEntity)
 					{
-						auto& chunkVisual = chunkEntity.get<VisualEntityComponent>();
-						auto& chunkGfx = chunkVisual.visualEntity.get<Nz::GraphicsComponent>();
+						auto& chunkGfx = chunkEntity.get<Nz::GraphicsComponent>();
 						if (m_shipAABB.IsValid())
 							m_shipAABB.ExtendTo(chunkGfx.GetAABB());
 						else

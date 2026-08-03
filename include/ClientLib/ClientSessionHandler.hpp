@@ -121,7 +121,6 @@ namespace tsom
 			{
 				Nz::Bitset<Nz::UInt64> entities;
 				entt::handle rootEntity;
-				entt::handle visualRootEntity;
 				GravityController* gravityController;
 			};
 

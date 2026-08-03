@@ -14,11 +14,6 @@ namespace tsom
 	struct PhysicsInterpolationComponent
 	{
 	};
-
-	struct ReferencedPhysicsInterpolationComponent
-	{
-		entt::handle referenceEntity;
-	};
 }
 
 #endif // TSOM_CLIENTLIB_COMPONENTS_PHYSICSINTERPOLATIONCOMPONENT_HPP

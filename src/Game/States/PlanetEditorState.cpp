@@ -6,7 +6,6 @@
 #include <ClientLib/ClientChunkEntities.hpp>
 #include <ClientLib/EscapeMenu.hpp>
 #include <ClientLib/RenderConstants.hpp>
-#include <ClientLib/Components/VisualEntityComponent.hpp>
 #include <ClientLib/Entities/ClientChunkClassLibrary.hpp>
 #include <ClientLib/Entities/ClientEntityClassLibrary.hpp>
 #include <CommonLib/SurfaceNetsChunk.hpp>
@@ -190,7 +189,6 @@ namespace tsom
 
 		m_planetParentEntity = stateData.world->CreateEntity();
 		m_planetParentEntity.emplace<Nz::NodeComponent>();
-		m_planetParentEntity.emplace<VisualEntityComponent>().visualEntity = m_planetParentEntity;
 
 		m_planet = std::make_unique<RoundCubePlanet>(*stateData.app, 0.5f, 0, 16.f, 9.81f);
 		for (std::size_t layerIndex = 0; layerIndex < m_planetEntities.size(); ++layerIndex)
