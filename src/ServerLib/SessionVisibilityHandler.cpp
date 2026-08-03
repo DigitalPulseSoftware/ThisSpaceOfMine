@@ -236,6 +236,7 @@ namespace tsom
 		DispatchEntities(tickIndex);
 		DispatchEnvironments(tickIndex);
 		DispatchChunks(tickIndex);
+		DispatchEntitiesDistribution(tickIndex); //< connection references multiple entities so wait until they are created
 	}
 
 	void SessionVisibilityHandler::UpdateEntityEnvironment(ServerEnvironment& newEnvironment, entt::handle oldEntity, entt::handle newEntity)
@@ -495,7 +496,6 @@ namespace tsom
 		DispatchEntitiesRpcs(tickIndex);
 		DispatchEntitiesDeletion(tickIndex);
 		DispatchEntitiesCreation(tickIndex);
-		DispatchEntitiesDistribution(tickIndex); //< connection references multiple entities so wait until they are created
 		DispatchEntitiesStates(tickIndex);
 
 		if (m_pilotedShipUpdate)
