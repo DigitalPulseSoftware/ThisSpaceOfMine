@@ -1,4 +1,3 @@
-
 local ColorMt = CreateMetatable("color")
 ColorMt.__index = ColorMt
 

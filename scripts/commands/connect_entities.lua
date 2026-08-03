@@ -32,8 +32,7 @@ return function (opt)
 		assert(inputSlot < dest:GetInputCount())
 		assert(outputSlot < source:GetOutputCount())
 
-		source:ConnectOutput(outputSlot, destEntity, inputSlot)
-		dest:ConnectInput(inputSlot, sourceEntity, outputSlot)
+		Distribution.Connect(sourceEntity, destEntity, outputSlot, inputSlot)
 		print(string.format("connected input #%d of source entity to output #%d of destination entity", inputSlot, outputSlot))
 	else
 		error("op must be select1, select2 or connect")

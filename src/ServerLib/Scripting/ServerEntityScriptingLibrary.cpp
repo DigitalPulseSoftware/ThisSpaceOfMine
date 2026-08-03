@@ -28,32 +28,6 @@ namespace tsom
 			},
 			{
 				"atmosphere_monitor", SharedEntityScriptingLibrary::ComponentEntry::Default<AtmosphereMonitor>()
-			},
-			{
-				"distribution", SharedEntityScriptingLibrary::ComponentEntry{
-					.addComponent = [](sol::this_state L, entt::handle entity, sol::optional<sol::table> parameters)
-					{
-						if (!parameters)
-							throw std::runtime_error("missing parameters");
-
-						sol::table tableInputs = (*parameters)["inputs"];
-
-						std::size_t inputCount = tableInputs.size();
-						std::vector<DistributionType> inputs(inputCount);
-						for (std::size_t i = 0; i < inputCount; ++i)
-							inputs[i] = tableInputs[i + 1];
-
-						sol::table tableOutputs = (*parameters)["outputs"];
-
-						std::size_t outputCount = tableOutputs.size();
-						std::vector<DistributionType> outputs(outputCount);
-						for (std::size_t i = 0; i < outputCount; ++i)
-							outputs[i] = tableOutputs[i + 1];
-
-						return sol::make_object(L, &entity.emplace<DistributionComponent>(inputs, outputs));
-					},
-					.getComponent = SharedEntityScriptingLibrary::ComponentEntry::DefaultGet<DistributionComponent>()
-				}
 			}
 		});
 	}
@@ -227,37 +201,11 @@ namespace tsom
 			sol::no_constructor,
 			"Atmosphere", sol::readonly_property(&AtmosphereMonitor::atmosphere));
 
-		state.new_enum("DistributionType",
-			"Electrical", DistributionType::Electrical,
-			"Gas", DistributionType::Gas
-		);
-
-		state.new_usertype<ElectricalQuantity>("ElectricalQuantity",
-			sol::call_constructor, [](std::uint32_t energy) { return ElectricalQuantity{ energy }; },
-			"energy", &ElectricalQuantity::energy
-		);
-
-		state.new_usertype<GasQuantity>("GasQuantity",
-			sol::call_constructor, sol::constructors<GasQuantity()>(),
-			"Increment", &GasQuantity::Increment,
-			sol::meta_function::index, &GasQuantity::Get,
-			sol::meta_function::new_index, &GasQuantity::Set
-		);
-
-		state.new_usertype<DistributionComponent>("Distribution",
+		state.new_usertype<DistributionComponent>("DistributionComponent",
 			sol::no_constructor,
-			"ConnectInput", LuaFunction([&](DistributionComponent& component, std::size_t inputIndex, sol::table targetEntityTable, std::size_t outputIndex)
-			{
-				entt::handle targetEntity = AssertScriptEntity(targetEntityTable);
-				component.ConnectInput(inputIndex, targetEntity, outputIndex);
-			}),
-			"ConnectOutput", LuaFunction([&](DistributionComponent& component, std::size_t outputIndex, sol::table targetEntityTable, std::size_t inputIndex)
-			{
-				entt::handle targetEntity = AssertScriptEntity(targetEntityTable);
-				component.ConnectOutput(outputIndex, targetEntity, inputIndex);
-			}),
 			"GetConsumptionValue", LuaFunction(&DistributionComponent::GetConsumptionValue),
 			"GetDistributedValue", LuaFunction(&DistributionComponent::GetDistributedValue),
+			"GetProductionValue",  LuaFunction(&DistributionComponent::GetProductionValue),
 			"GetInputConnectedEntity", LuaFunction([&](DistributionComponent& component, std::size_t outputIndex, sol::this_state L)
 			{
 				sol::state_view state(L);

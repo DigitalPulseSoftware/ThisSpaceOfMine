@@ -61,6 +61,7 @@ namespace tsom
 			void HandlePacket(Packets::S_EntitiesCreation&& entitiesCreation);
 			void HandlePacket(Packets::S_EntitiesDelete&& entitiesDelete);
 			void HandlePacket(Packets::S_EntitiesStateUpdate&& stateUpdate);
+			void HandlePacket(Packets::S_EntityDistributionUpdate&& distributionUpdate);
 			void HandlePacket(Packets::S_EntityEnvironmentUpdate&& environmentUpdate);
 			void HandlePacket(Packets::S_EntityProcedureCall&& procedureCall);
 			void HandlePacket(Packets::S_EntityPropertiesUpdate&& propertyUpdate);

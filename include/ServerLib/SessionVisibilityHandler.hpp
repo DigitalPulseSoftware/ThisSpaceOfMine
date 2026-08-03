@@ -57,6 +57,7 @@ namespace tsom
 			inline void TriggerEntityRpc(entt::handle entity, Nz::UInt32 rpcIndex);
 
 			inline void UpdateControlledEntity(entt::handle entity, CharacterController* controller);
+			inline void UpdateEntityDistributionConnection(entt::handle entity, Nz::UInt8 outputIndex, entt::handle targetEntity, Nz::UInt8 inputIndex);
 			inline void UpdateEntityProperty(entt::handle entity, Nz::UInt32 propertyIndex, const EntityProperty& newValue);
 			void UpdateEntityEnvironment(ServerEnvironment& newEnvironment, entt::handle oldEntity, entt::handle newEntity);
 			inline void UpdateLastInputIndex(InputIndex inputIndex);
@@ -83,6 +84,7 @@ namespace tsom
 
 			void DispatchEntitiesCreation(Nz::UInt16 tickIndex);
 			void DispatchEntitiesDeletion(Nz::UInt16 tickIndex);
+			void DispatchEntitiesDistribution(Nz::UInt16 tickIndex);
 			void DispatchEntitiesEnvironmentUpdate(Nz::UInt16 tickIndex);
 			void DispatchEntitiesProperties(Nz::UInt16 tickIndex);
 			void DispatchEntitiesRpcs(Nz::UInt16 tickIndex);
@@ -129,9 +131,21 @@ namespace tsom
 				EnvironmentId envIndex;
 			};
 
+			struct EntityConnectionData
+			{
+				struct Connection
+				{
+					Nz::UInt8 outputIndex;
+					entt::handle targetEntity;
+					Nz::UInt8 inputIndex;
+				};
+
+				Nz::HybridVector<Connection, 1> connections;
+			};
+
 			struct EntityPropertyData
 			{
-				Nz::UInt32 propertiesMask;
+				Nz::UInt32 propertiesMask = 0;
 				Nz::HybridVector<EntityProperty, 3> values;
 			};
 
@@ -175,6 +189,7 @@ namespace tsom
 
 			tsl::hopscotch_map<entt::handle, EntityId, HandlerHasher> m_entityIndices;
 			tsl::hopscotch_map<entt::handle, CreateEntityData, HandlerHasher> m_createdEntities;
+			tsl::hopscotch_map<entt::handle, EntityConnectionData, HandlerHasher> m_connectionUpdatedEntities;
 			tsl::hopscotch_map<entt::handle, EntityPropertyData, HandlerHasher> m_propertyUpdatedEntities;
 			tsl::hopscotch_map<entt::handle, Nz::HybridVector<Nz::UInt32, 3>, HandlerHasher> m_triggeredEntitiesRpc;
 			tsl::hopscotch_map<entt::handle, ChunkNetworkMap, HandlerHasher> m_chunkNetworkMaps;

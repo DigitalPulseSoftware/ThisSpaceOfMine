@@ -26,6 +26,7 @@
 #include <CommonLib/PhysicsConstants.hpp>
 #include <CommonLib/Ship.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
+#include <CommonLib/Components/DistributionComponent.hpp>
 #include <CommonLib/Components/EntityOwnerComponent.hpp>
 #include <CommonLib/Components/PlanetComponent.hpp>
 #include <CommonLib/Components/ShipComponent.hpp>
@@ -306,6 +307,42 @@ namespace tsom
 
 		if (stateUpdate.controlledCharacter)
 			OnControlledEntityStateUpdate(stateUpdate.lastInputIndex, *stateUpdate.controlledCharacter);
+	}
+
+	void ClientSessionHandler::HandlePacket(Packets::S_EntityDistributionUpdate&& distributionUpdate)
+	{
+		NazaraAssert(distributionUpdate.sourceEntity < m_entities.size() && m_entities[distributionUpdate.sourceEntity]);
+		NazaraAssert(distributionUpdate.targetEntity < m_entities.size() && m_entities[distributionUpdate.targetEntity]);
+		EntityData& sourceEntityData = *m_entities[distributionUpdate.sourceEntity];
+		EntityData& targetEntityData = *m_entities[distributionUpdate.targetEntity];
+
+		auto* sourceEntityDistribution = sourceEntityData.entity.try_get<DistributionComponent>();
+		if (!sourceEntityDistribution)
+		{
+			spdlog::error("Received a connection update for entity {} which has no distribution component (is the entity correctly initialized?)", distributionUpdate.sourceEntity);
+			return;
+		}
+
+		if (distributionUpdate.sourceEntityPort >= sourceEntityDistribution->GetOutputCount())
+		{
+			spdlog::error("Received a connection update for entity {} on output port {} but it only got {} port(s) (is the entity correctly initialized?)", distributionUpdate.sourceEntity, distributionUpdate.sourceEntityPort, sourceEntityDistribution->GetOutputCount());
+			return;
+		}
+
+		auto* targetEntityDistribution = targetEntityData.entity.try_get<DistributionComponent>();
+		if (!targetEntityDistribution)
+		{
+			spdlog::error("Received a connection update targeting entity {} which has no distribution component (is the entity correctly initialized?)", distributionUpdate.targetEntity);
+			return;
+		}
+
+		if (distributionUpdate.targetEntityPort >= targetEntityDistribution->GetInputCount())
+		{
+			spdlog::error("Received a connection update targeting entity {} on input port {} but it only got {} port(s) (is the entity correctly initialized?)", distributionUpdate.targetEntity, distributionUpdate.targetEntityPort, sourceEntityDistribution->GetInputCount());
+			return;
+		}
+
+		DistributionComponent::Connect(sourceEntityData.entity, *sourceEntityDistribution, targetEntityData.entity, *targetEntityDistribution, distributionUpdate.sourceEntityPort, distributionUpdate.targetEntityPort);
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::S_EntityEnvironmentUpdate&& environmentUpdate)

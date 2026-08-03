@@ -5,6 +5,7 @@
 #include <ClientLib/Scripting/ClientEntityScriptingLibrary.hpp>
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Components/ClientInteractibleComponent.hpp>
+#include <CommonLib/Components/DistributionComponent.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
 #include <Nazara/Graphics/PointLight.hpp>
 #include <Nazara/Graphics/SpotLight.hpp>
@@ -115,6 +116,26 @@ namespace tsom
 				LuaFunction([](Nz::LightComponent& lightComponent) { lightComponent.Show(); }),
 				LuaFunction(&Nz::LightComponent::Show)
 			)
+		);
+
+		state.new_usertype<DistributionComponent>("DistributionComponent",
+			sol::no_constructor,
+			"GetInputConnectedEntity", LuaFunction([&](DistributionComponent& component, std::size_t outputIndex, sol::this_state L)
+			{
+				sol::state_view state(L);
+				return ToEntityTable(state, component.GetInputConnectedEntity(outputIndex));
+			}),
+			"GetInputConnectedPort", LuaFunction(&DistributionComponent::GetInputConnectedPort),
+			"GetInputCount", LuaFunction(&DistributionComponent::GetInputCount),
+			"GetOutputConnectedEntity", LuaFunction([&](DistributionComponent& component, std::size_t outputIndex, sol::this_state L)
+			{
+				sol::state_view state(L);
+				return ToEntityTable(state, component.GetOutputConnectedEntity(outputIndex));
+			}),
+			"GetOutputConnectedPort", LuaFunction(&DistributionComponent::GetOutputConnectedPort),
+			"GetOutputCount", LuaFunction(&DistributionComponent::GetOutputCount),
+			"IsInputConnected", LuaFunction(&DistributionComponent::IsInputConnected),
+			"IsOutputConnected", LuaFunction(&DistributionComponent::IsOutputConnected)
 		);
 	}
 

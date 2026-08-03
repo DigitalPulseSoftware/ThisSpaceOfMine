@@ -1,4 +1,4 @@
-Distribution = {}
+Distribution = Distribution or {} -- Distribution exists server-side but not client-side
 
 function Distribution.FromTickUnit(value)
     return value * Constants.DistributionTickRate / 1000

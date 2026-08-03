@@ -1,4 +1,3 @@
-
 local BoxMt = CreateMetatable("box")
 BoxMt.__index = BoxMt
 

@@ -15,9 +15,14 @@ classData:On("init", function (self)
 
 	self:AddComponent("rigidbody3d", physSettings)
 
+	self:AddComponent("distribution", {
+		inputs = { DistributionType.Electrical },
+		outputs = { DistributionType.Gas }
+	})
+	
 	if CLIENT then
 		self:SetInteractible(true)
-		self:SetInteractibleText("Sensor")
+		self:SetInteractibleText("Pump")
 
 		local model = AssetLibrary.GetModel("computer")
 
@@ -27,11 +32,6 @@ classData:On("init", function (self)
 
 	if SERVER then
 		self:AddComponent("atmosphere_monitor")
-
-		self:AddComponent("distribution", {
-			inputs = { DistributionType.Electrical },
-			outputs = { DistributionType.Gas }
-		})
 	end
 end)
 

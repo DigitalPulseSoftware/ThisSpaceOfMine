@@ -1,4 +1,3 @@
-
 local Vec3Mt = CreateMetatable("vec3")
 Vec3Mt.__index = Vec3Mt
 

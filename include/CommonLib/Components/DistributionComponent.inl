@@ -107,24 +107,6 @@ namespace tsom
 		m_distributionCallback = std::move(callback);
 	}
 
-	inline void DistributionComponent::ConnectInput(std::size_t inputIndex, entt::handle entity, std::size_t outputIndex)
-	{
-		NazaraAssert(inputIndex < m_inputs.size());
-		m_inputs[inputIndex].connectedEntity = entity;
-		m_inputs[inputIndex].connectedPort = outputIndex;
-
-		OnInputOutputChanged(this);
-	}
-
-	inline void DistributionComponent::ConnectOutput(std::size_t outputIndex, entt::handle entity, std::size_t inputIndex)
-	{
-		NazaraAssert(outputIndex < m_outputs.size());
-		m_outputs[outputIndex].connectedEntity = entity;
-		m_outputs[outputIndex].connectedPort = inputIndex;
-
-		OnInputOutputChanged(this);
-	}
-
 	inline const DistributionQuantity& DistributionComponent::GetConsumptionValue(std::size_t inputIndex) const
 	{
 		NazaraAssert(inputIndex < m_inputs.size());
@@ -210,6 +192,40 @@ namespace tsom
 	{
 		NazaraAssert(outputIndex < m_outputs.size());
 		m_outputs[outputIndex].productionValue = std::move(production);
+	}
+
+	inline void DistributionComponent::ConnectInput(std::size_t inputIndex, entt::handle entity, std::size_t outputIndex)
+	{
+		NazaraAssert(inputIndex < m_inputs.size());
+		m_inputs[inputIndex].connectedEntity = entity;
+		m_inputs[inputIndex].connectedPort = outputIndex;
+
+		OnInputChanged(this, inputIndex);
+	}
+
+	inline void DistributionComponent::ConnectOutput(std::size_t outputIndex, entt::handle entity, std::size_t inputIndex)
+	{
+		NazaraAssert(outputIndex < m_outputs.size());
+		m_outputs[outputIndex].connectedEntity = entity;
+		m_outputs[outputIndex].connectedPort = inputIndex;
+
+		OnOutputChanged(this, outputIndex);
+	}
+
+	inline void DistributionComponent::DisconnectInput(std::size_t inputIndex)
+	{
+		NazaraAssert(inputIndex < m_inputs.size());
+		m_inputs[inputIndex].connectedEntity = EntityReference{};
+
+		OnInputChanged(this, inputIndex);
+	}
+
+	inline void DistributionComponent::DisconnectOutput(std::size_t outputIndex)
+	{
+		NazaraAssert(outputIndex < m_outputs.size());
+		m_outputs[outputIndex].connectedEntity = EntityReference{};
+
+		OnOutputChanged(this, outputIndex);
 	}
 
 	void DistributionComponent::TriggerDistributionCallback(entt::handle entity)

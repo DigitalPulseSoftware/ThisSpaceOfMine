@@ -22,12 +22,12 @@ classData:On("init", function (self)
 
 	self:AddComponent("rigidbody3d", physSettings)
 
-	if SERVER then
-		self:AddComponent("distribution", {
-			inputs = { DistributionType.Gas },
-			outputs = { DistributionType.Gas }
-		})
-	elseif CLIENT then
+	self:AddComponent("distribution", {
+		inputs = { DistributionType.Gas },
+		outputs = { DistributionType.Gas }
+	})
+
+	if CLIENT then
 		self:SetInteractible(true)
 
 		local model = AssetLibrary.GetModel("battery"):Clone()

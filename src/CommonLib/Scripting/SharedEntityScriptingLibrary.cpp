@@ -9,6 +9,7 @@
 #include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/PhysicsConstants.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
+#include <CommonLib/Components/DistributionComponent.hpp>
 #include <CommonLib/Components/ScriptedEntityComponent.hpp>
 #include <CommonLib/Components/TickComponent.hpp>
 #include <CommonLib/Scripting/ScriptingProperties.hpp>
@@ -106,6 +107,32 @@ namespace tsom
 							throw std::runtime_error("invalid kind " + kind);
 					},
 					.getComponent = SharedEntityScriptingLibrary::ComponentEntry::DefaultGet<Nz::RigidBody3DComponent>()
+				}
+			},
+			{
+				"distribution", SharedEntityScriptingLibrary::ComponentEntry{
+					.addComponent = [](sol::this_state L, entt::handle entity, sol::optional<sol::table> parameters)
+					{
+						if (!parameters)
+							throw std::runtime_error("missing parameters");
+
+						sol::table tableInputs = (*parameters)["inputs"];
+
+						std::size_t inputCount = tableInputs.size();
+						std::vector<DistributionType> inputs(inputCount);
+						for (std::size_t i = 0; i < inputCount; ++i)
+							inputs[i] = tableInputs[i + 1];
+
+						sol::table tableOutputs = (*parameters)["outputs"];
+
+						std::size_t outputCount = tableOutputs.size();
+						std::vector<DistributionType> outputs(outputCount);
+						for (std::size_t i = 0; i < outputCount; ++i)
+							outputs[i] = tableOutputs[i + 1];
+
+						return sol::make_object(L, &entity.emplace<DistributionComponent>(inputs, outputs));
+					},
+					.getComponent = SharedEntityScriptingLibrary::ComponentEntry::DefaultGet<DistributionComponent>()
 				}
 			}
 		});
@@ -330,6 +357,23 @@ namespace tsom
 			"SetPosition", LuaFunction(&Nz::RigidBody3DComponent::SetPosition),
 			"SetRotation", LuaFunction(&Nz::RigidBody3DComponent::SetRotation),
 			"TeleportTo", LuaFunction(&Nz::RigidBody3DComponent::TeleportTo)
+		);
+		
+		state.new_enum("DistributionType",
+			"Electrical", DistributionType::Electrical,
+			"Gas", DistributionType::Gas
+		);
+
+		state.new_usertype<ElectricalQuantity>("ElectricalQuantity",
+			sol::call_constructor, [](std::uint32_t energy) { return ElectricalQuantity{ energy }; },
+			"energy", &ElectricalQuantity::energy
+		);
+
+		state.new_usertype<GasQuantity>("GasQuantity",
+			sol::call_constructor, sol::constructors<GasQuantity()>(),
+			"Increment", &GasQuantity::Increment,
+			sol::meta_function::index, &GasQuantity::Get,
+			sol::meta_function::new_index, &GasQuantity::Set
 		);
 	}
 

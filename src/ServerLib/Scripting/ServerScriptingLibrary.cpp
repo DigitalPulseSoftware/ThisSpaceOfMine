@@ -6,6 +6,7 @@
 #include <CommonLib/CharacterController.hpp>
 #include <CommonLib/Planet.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
+#include <CommonLib/Components/DistributionComponent.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
 #include <ServerLib/ServerAtmosphere.hpp>
 #include <ServerLib/ServerInstance.hpp>
@@ -36,6 +37,7 @@ namespace tsom
 
 		RegisterAtmosphere(state);
 		RegisterDebugDraw(state);
+		RegisterDistribution(state);
 		RegisterServerDatabase(state);
 		RegisterEnvironment(state);
 		RegisterPlayer(state);
@@ -85,6 +87,16 @@ namespace tsom
 				debugDraw->DrawLines(hash, duration, points, color);
 			})
 		);
+	}
+
+	void ServerScriptingLibrary::RegisterDistribution(sol::state& state)
+	{
+		sol::table distribution = state.create_named_table("Distribution");
+
+		distribution["Connect"] = LuaFunction([](sol::table sourceEntity, sol::table targetEntity, std::size_t sourceOutputPort, std::size_t targetInputPort)
+		{
+			return DistributionComponent::Connect(AssertScriptEntity(sourceEntity), AssertScriptEntity(targetEntity), sourceOutputPort, targetInputPort);
+		});
 	}
 
 	void ServerScriptingLibrary::RegisterEnvironment(sol::state& state)
