@@ -15,11 +15,12 @@ classData:On("init", function (self)
 
 	self:AddComponent("rigidbody3d", physSettings)
 
+	local distribution = self:AddComponent("distribution", {
+		inputs = {}, 
+		outputs = { DistributionType.Electrical }
+	})
+
 	if SERVER then
-		local distribution = self:AddComponent("distribution", {
-			inputs = {}, 
-			outputs = { DistributionType.Electrical }
-		})
 		distribution:UpdateProductionValue(0, ElectricalQuantity(100))
 	elseif CLIENT then
 		self:SetInteractible(true)

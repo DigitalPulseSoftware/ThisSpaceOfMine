@@ -79,9 +79,6 @@ namespace tsom
 
 			inline void BindDistributionCallback(DistributionCallback&& callback);
 
-			inline void ConnectInput(std::size_t inputIndex, entt::handle entity, std::size_t outputIndex);
-			inline void ConnectOutput(std::size_t outputIndex, entt::handle entity, std::size_t inputIndex);
-
 			inline const DistributionQuantity& GetConsumptionValue(std::size_t inputIndex) const;
 
 			inline const DistributionQuantity& GetDistributedValue(DistributionType type) const;
@@ -107,10 +104,21 @@ namespace tsom
 			DistributionComponent& operator=(const DistributionComponent&) = delete;
 			DistributionComponent& operator=(DistributionComponent&&) noexcept = default;
 
-			NazaraSignal(OnInputOutputChanged, DistributionComponent*);
+			NazaraSignal(OnInputChanged, DistributionComponent*, std::size_t /*inputIndex*/);
+			NazaraSignal(OnOutputChanged, DistributionComponent*, std::size_t /*outputIndex*/);
+
+			static void Connect(entt::handle sourceEntity, entt::handle targetEntity, std::size_t sourceOutputPort, std::size_t targetInputPort);
+			static void Connect(entt::handle sourceEntity, DistributionComponent& sourceEntityDistribution, entt::handle targetEntity, DistributionComponent& targetEntityDistribution, std::size_t sourceOutputPort, std::size_t targetInputPort);
 
 		private:
 			void ClearDistributedValues();
+
+			inline void ConnectInput(std::size_t inputIndex, entt::handle entity, std::size_t outputIndex);
+			inline void ConnectOutput(std::size_t outputIndex, entt::handle entity, std::size_t inputIndex);
+
+			inline void DisconnectInput(std::size_t inputIndex);
+			inline void DisconnectOutput(std::size_t outputIndex);
+
 			void IncrementDistributedValue(DistributionType type, const DistributionQuantity& value);
 			inline void TriggerDistributionCallback(entt::handle entity);
 

@@ -37,28 +37,29 @@
 namespace tsom
 {
 	constexpr SessionHandler::SendAttributeTable s_packetAttributes = SessionHandler::BuildAttributeTable({
-		{ PacketIndex<Packets::S_ChatMessage>,             { .channel = 0, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::S_ChunkCreate>,             { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::S_ChunkDestroy>,            { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::S_ChunkReset>,              { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::S_ChunkUpdate>,             { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::S_ConsoleOutput>,           { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::S_DebugDrawLineList>,       { .channel = 0, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::S_EntitiesCreation>,        { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::S_EntitiesDelete>,          { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::S_EntitiesStateUpdate>,     { .channel = 1, .flags = Nz::ENetPacketFlag_Unreliable } },
-		{ PacketIndex<Packets::S_EntityEnvironmentUpdate>, { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::S_EntityProcedureCall>,     { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::S_EntityPropertiesUpdate>,  { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::S_EnvironmentCreate>,       { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::S_EnvironmentDestroy>,      { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::S_EnvironmentsUpdateOwner>, { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::S_GameData>,                { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::S_PilotShip>,               { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::S_PilotShipFinish>,         { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::S_PlayerJoin>,              { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::S_PlayerLeave>,             { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
-		{ PacketIndex<Packets::S_PlayerNameUpdate>,        { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::S_ChatMessage>,              { .channel = 0, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::S_ChunkCreate>,              { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::S_ChunkDestroy>,             { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::S_ChunkReset>,               { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::S_ChunkUpdate>,              { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::S_ConsoleOutput>,            { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::S_DebugDrawLineList>,        { .channel = 0, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::S_EntitiesCreation>,         { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::S_EntitiesDelete>,           { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::S_EntitiesStateUpdate>,      { .channel = 1, .flags = Nz::ENetPacketFlag_Unreliable } },
+		{ PacketIndex<Packets::S_EntityEnvironmentUpdate>,  { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::S_EntityDistributionUpdate>, { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::S_EntityProcedureCall>,      { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::S_EntityPropertiesUpdate>,   { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::S_EnvironmentCreate>,        { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::S_EnvironmentDestroy>,       { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::S_EnvironmentsUpdateOwner>,  { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::S_GameData>,                 { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::S_PilotShip>,                { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::S_PilotShipFinish>,          { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::S_PlayerJoin>,               { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::S_PlayerLeave>,              { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
+		{ PacketIndex<Packets::S_PlayerNameUpdate>,         { .channel = 1, .flags = Nz::ENetPacketFlag::Reliable } },
 	});
 
 	PlayerSessionHandler::PlayerSessionHandler(NetworkSession* session, ServerPlayer* player) :
@@ -82,25 +83,45 @@ namespace tsom
 
 		entt::handle sourceEntity;
 		if (!m_player->GetVisibilityHandler().GetEntityByNetworkId(connectEntities.sourceEntityId, &sourceEntity))
+		{
+			spdlog::error("Player {} tried to connect unkown entity {}", m_player->GetNickname(), connectEntities.sourceEntityId);
 			return;
+		}
 
 		entt::handle targetEntity;
 		if (!m_player->GetVisibilityHandler().GetEntityByNetworkId(connectEntities.targetEntityId, &targetEntity))
+		{
+			spdlog::error("Player {} tried to connect unkown entity {}", m_player->GetNickname(), connectEntities.targetEntityId);
 			return;
+		}
 
 		DistributionComponent* sourceDistribution = sourceEntity.try_get<DistributionComponent>();
 		DistributionComponent* targetDistribution = targetEntity.try_get<DistributionComponent>();
-		if (!sourceDistribution || !targetDistribution)
+		if (!sourceDistribution)
+		{
+			spdlog::error("Player {} tried to connect entity {} which has no distribution component", m_player->GetNickname(), connectEntities.sourceEntityId);
 			return;
+		}
 
-		if (connectEntities.sourceEntitySlot >= sourceDistribution->GetOutputCount())
+		if (!targetDistribution)
+		{
+			spdlog::error("Player {} tried to connect entity {} which has no distribution component", m_player->GetNickname(), connectEntities.targetEntityId);
 			return;
+		}
 
-		if (connectEntities.targetEntitySlot >= targetDistribution->GetInputCount())
+		if (connectEntities.sourceEntityPort >= sourceDistribution->GetOutputCount())
+		{
+			spdlog::error("Player {} tried to connect entity {} on output port {} but it only has {} ports", m_player->GetNickname(), connectEntities.sourceEntityId, connectEntities.sourceEntityPort, sourceDistribution->GetOutputCount());
 			return;
+		}
 
-		sourceDistribution->ConnectOutput(connectEntities.sourceEntitySlot, targetEntity, connectEntities.targetEntitySlot);
-		targetDistribution->ConnectInput(connectEntities.targetEntitySlot, sourceEntity, connectEntities.sourceEntitySlot);
+		if (connectEntities.targetEntityPort >= targetDistribution->GetInputCount())
+		{
+			spdlog::error("Player {} tried to connect entity {} on input port {} but it only has {} ports", m_player->GetNickname(), connectEntities.targetEntityId, connectEntities.targetEntityPort, targetDistribution->GetOutputCount());
+			return;
+		}
+
+		DistributionComponent::Connect(sourceEntity, *sourceDistribution, targetEntity, *targetDistribution, connectEntities.sourceEntityPort, connectEntities.targetEntityPort);
 	}
 
 	void PlayerSessionHandler::HandlePacket(Packets::C_ExitShipControl&& exitShipControl)

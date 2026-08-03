@@ -121,8 +121,8 @@ namespace tsom
 		{
 			Helper::EntityId sourceEntityId;
 			Helper::EntityId targetEntityId;
-			Nz::UInt8 sourceEntitySlot;
-			Nz::UInt8 targetEntitySlot;
+			Nz::UInt8 sourceEntityPort;
+			Nz::UInt8 targetEntityPort;
 		};
 
 		struct C_ExitShipControl
@@ -264,6 +264,15 @@ namespace tsom
 		{
 			Nz::UInt16 tickIndex;
 			std::vector<Helper::EntityId> entities;
+		};
+
+		struct S_EntityDistributionUpdate
+		{
+			Nz::UInt16 tickIndex;
+			Helper::EntityId sourceEntity;
+			Helper::EntityId targetEntity;
+			Nz::UInt8 sourceEntityPort;
+			Nz::UInt8 targetEntityPort;
 		};
 
 		struct S_EntitiesStateUpdate
@@ -413,6 +422,7 @@ namespace tsom
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_EntitiesCreation& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_EntitiesDelete& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_EntitiesStateUpdate& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_EntityDistributionUpdate& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_EntityEnvironmentUpdate& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_EntityProcedureCall& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_EntityPropertiesUpdate& data);

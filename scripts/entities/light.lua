@@ -17,11 +17,12 @@ classData:On("init", function (self)
 
 	self:AddComponent("rigidbody3d", physSettings)
 
+	local distribution = self:AddComponent("distribution", {
+		inputs = { DistributionType.Electrical },
+		outputs = {}
+	})
+
 	if SERVER then
-		local distribution = self:AddComponent("distribution", {
-			inputs = { DistributionType.Electrical },
-			outputs = {}
-		})
 		distribution:UpdateConsumptionValue(0, ElectricalQuantity(lightConsumption))
 	elseif CLIENT then
 		self:SetInteractible(true)
@@ -51,7 +52,7 @@ else
 		local light = self:GetComponent("light")
 		light:Show(isEnabled)
 
-		self.LightMat:UpdateValueProperty("EmissiveColor", isEnabled and Color.White or Color.Black)
+		self.LightMat:SetValueProperty("EmissiveColor", isEnabled and Color.White or Color.Black)
 	end)
 end
 EntityRegistry.RegisterClass("light", classData)

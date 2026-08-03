@@ -19,12 +19,12 @@ classData:On("init", function (self)
 
 	self:SetInteractible(true)
 
-	if SERVER then
-		local distribution = self:AddComponent("distribution", {
-			inputs = { DistributionType.Electrical },
-			outputs = {}
-		})
+	self:AddComponent("distribution", {
+		inputs = { DistributionType.Electrical },
+		outputs = {}
+	})
 
+	if SERVER then
 		self:SetTickInterval(500)
 		self.UsingPlayer = nil
 	else

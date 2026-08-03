@@ -152,8 +152,8 @@ namespace tsom
 		{
 			serializer &= data.sourceEntityId;
 			serializer &= data.targetEntityId;
-			serializer &= data.sourceEntitySlot;
-			serializer &= data.targetEntitySlot;
+			serializer &= data.sourceEntityPort;
+			serializer &= data.targetEntityPort;
 		}
 
 		void Serialize(PacketSerializer& serializer, C_ExitShipControl& data)
@@ -365,6 +365,15 @@ namespace tsom
 			}
 		}
 
+		void Serialize(PacketSerializer& serializer, S_EntityDistributionUpdate& data)
+		{
+			serializer &= data.tickIndex;
+			serializer &= data.sourceEntity;
+			serializer &= data.targetEntity;
+			serializer &= data.sourceEntityPort;
+			serializer &= data.targetEntityPort;
+		}
+
 		void Serialize(PacketSerializer& serializer, S_EntityEnvironmentUpdate& data)
 		{
 			serializer &= data.tickIndex;
@@ -379,7 +388,7 @@ namespace tsom
 			serializer &= data.rpcIndex;
 		}
 
-		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_EntityPropertiesUpdate& data)
+		void Serialize(PacketSerializer& serializer, S_EntityPropertiesUpdate& data)
 		{
 			serializer &= data.tickIndex;
 			serializer &= data.entity;

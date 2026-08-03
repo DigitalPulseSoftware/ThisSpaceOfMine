@@ -21,7 +21,7 @@ namespace tsom
 			DistributionComponent& distributionComponent = m_registry.get<DistributionComponent>(entity);
 
 			auto& entityData = m_distributionObserver.Get(entity);
-			entityData.onInputOutputChangedSlot.Connect(distributionComponent.OnInputOutputChanged, [this, entity](DistributionComponent* distributionComponent)
+			entityData.onOutputChangedSlot.Connect(distributionComponent.OnOutputChanged, [this, entity](DistributionComponent* distributionComponent, std::size_t /*outputIndex*/)
 			{
 				HandleDistributionEntity(entity, *distributionComponent);
 			});

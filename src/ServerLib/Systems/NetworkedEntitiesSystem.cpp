@@ -100,6 +100,23 @@ namespace tsom
 				});
 			}
 
+			if (DistributionComponent* entityDistribution = m_registry.try_get<DistributionComponent>(entity))
+			{
+				entityData.onOutputChanged.Connect(entityDistribution->OnOutputChanged, [this, entity](DistributionComponent* distribution, std::size_t outputIndex)
+				{
+					entt::handle handle(m_registry, entity);
+					Nz::UInt8 outputIndex8 = Nz::SafeCaster(outputIndex);
+					Nz::UInt8 inputIndex8 = Nz::SafeCaster(distribution->GetOutputConnectedPort(outputIndex));
+					entt::handle connectedEntity = distribution->GetOutputConnectedEntity(outputIndex);
+
+					ForEachVisibility([&](SessionVisibilityHandler& visibility)
+					{
+						visibility.UpdateEntityDistributionConnection(handle, outputIndex8, connectedEntity, inputIndex8);
+					});
+				});
+			}
+
+
 			if (PlanetComponent* planetComponent = m_registry.try_get<PlanetComponent>(entity))
 			{
 				// FIXME: Deduplicate code (maybe by merging components)
@@ -218,6 +235,20 @@ namespace tsom
 	{
 		entt::handle handle(m_registry, entity);
 		visibility.CreateEntity(handle, createData);
+
+		// Connections are sent afterward to handle entity dependency issues
+		if (DistributionComponent* entityDistribution = m_registry.try_get<DistributionComponent>(entity))
+		{
+			for (std::size_t outputIndex = 0; outputIndex < entityDistribution->GetOutputCount(); ++outputIndex)
+			{
+				Nz::UInt8 outputIndex8 = Nz::SafeCaster(outputIndex);
+				Nz::UInt8 inputIndex8 = Nz::SafeCaster(entityDistribution->GetOutputConnectedPort(outputIndex));
+				entt::handle connectedEntity = entityDistribution->GetOutputConnectedEntity(outputIndex);
+
+				if (connectedEntity)
+					visibility.UpdateEntityDistributionConnection(handle, outputIndex8, connectedEntity, inputIndex8);
+			}
+		}
 
 		if (PlanetComponent* planetComponent = handle.try_get<PlanetComponent>())
 		{

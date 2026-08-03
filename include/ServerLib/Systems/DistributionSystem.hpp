@@ -45,7 +45,7 @@ namespace tsom
 
 			struct EntityData
 			{
-				NazaraSlot(DistributionComponent, OnInputOutputChanged, onInputOutputChangedSlot);
+				NazaraSlot(DistributionComponent, OnOutputChanged, onOutputChangedSlot);
 			};
 
 			entt::storage<void> m_producers;

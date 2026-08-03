@@ -495,6 +495,7 @@ namespace tsom
 		DispatchEntitiesRpcs(tickIndex);
 		DispatchEntitiesDeletion(tickIndex);
 		DispatchEntitiesCreation(tickIndex);
+		DispatchEntitiesDistribution(tickIndex); //< connection references multiple entities so wait until they are created
 		DispatchEntitiesStates(tickIndex);
 
 		if (m_pilotedShipUpdate)
@@ -520,144 +521,167 @@ namespace tsom
 
 	void SessionVisibilityHandler::DispatchEntitiesCreation(Nz::UInt16 tickIndex)
 	{
-		if (!m_createdEntities.empty())
-		{
-			Packets::S_EntitiesCreation creationPacket;
-			creationPacket.tickIndex = tickIndex;
+		if (m_createdEntities.empty())
+			return;
 
-			for (auto it = m_createdEntities.begin(); it != m_createdEntities.end(); ++it)
-				HandleEntityCreation(creationPacket.entities, it.key(), std::move(it.value()));
-			m_createdEntities.clear();
+		Packets::S_EntitiesCreation creationPacket;
+		creationPacket.tickIndex = tickIndex;
 
-			m_networkSession->SendPacket(creationPacket);
-		}
+		for (auto it = m_createdEntities.begin(); it != m_createdEntities.end(); ++it)
+			HandleEntityCreation(creationPacket.entities, it.key(), std::move(it.value()));
+		m_createdEntities.clear();
+
+		m_networkSession->SendPacket(creationPacket);
 	}
 
 	void SessionVisibilityHandler::DispatchEntitiesDeletion(Nz::UInt16 tickIndex)
 	{
-		if (!m_deletedEntities.empty())
+		if (m_deletedEntities.empty())
+			return;
+
+		Packets::S_EntitiesDelete deletePacket;
+		deletePacket.tickIndex = tickIndex;
+
+		for (const entt::handle& handle : m_deletedEntities)
 		{
-			Packets::S_EntitiesDelete deletePacket;
-			deletePacket.tickIndex = tickIndex;
+			Nz::UInt32 entityId = Nz::Retrieve(m_entityIndices, handle);
+			deletePacket.entities.push_back(entityId);
 
-			for (const entt::handle& handle : m_deletedEntities)
+			auto& entityEnv = m_environments[m_visibleEntities[entityId].envIndex];
+			entityEnv.entities.Reset(entityId);
+
+			m_freeEntityIds.Set(entityId, true);
+			m_visibleEntities[entityId].entity = entt::handle{};
+			m_visibleEntities[entityId].envIndex = Nz::MaxValue();
+
+			m_entityIndices.erase(handle);
+
+			auto it = std::find_if(m_environmentUpdates.begin(), m_environmentUpdates.end(), [&](const EnvironmentUpdate& environmentUpdate)
 			{
-				Nz::UInt32 entityId = Nz::Retrieve(m_entityIndices, handle);
-				deletePacket.entities.push_back(entityId);
+				return environmentUpdate.newEntity == handle;
+			});
+			if (it != m_environmentUpdates.end())
+				m_environmentUpdates.erase(it);
 
-				auto& entityEnv = m_environments[m_visibleEntities[entityId].envIndex];
-				entityEnv.entities.Reset(entityId);
-
-				m_freeEntityIds.Set(entityId, true);
-				m_visibleEntities[entityId].entity = entt::handle{};
-				m_visibleEntities[entityId].envIndex = Nz::MaxValue();
-
-				m_entityIndices.erase(handle);
-
-				auto it = std::find_if(m_environmentUpdates.begin(), m_environmentUpdates.end(), [&](const EnvironmentUpdate& environmentUpdate)
-				{
-					return environmentUpdate.newEntity == handle;
-				});
-				if (it != m_environmentUpdates.end())
-					m_environmentUpdates.erase(it);
-
-				HandleEntityDestruction(handle);
-			}
-
-			m_networkSession->SendPacket(deletePacket);
-			m_deletedEntities.clear();
+			HandleEntityDestruction(handle);
 		}
+
+		m_networkSession->SendPacket(deletePacket);
+		m_deletedEntities.clear();
+	}
+
+	void SessionVisibilityHandler::DispatchEntitiesDistribution(Nz::UInt16 tickIndex)
+	{
+		if (m_connectionUpdatedEntities.empty())
+			return;
+
+		Packets::S_EntityDistributionUpdate distributionUpdatePacket;
+		distributionUpdatePacket.tickIndex = tickIndex;
+
+		for (auto&& [entity, connectionData] : m_connectionUpdatedEntities)
+		{
+			EntityId outputEntityIndex = Nz::Retrieve(m_entityIndices, entity);
+			for (const auto& connection : connectionData.connections)
+			{
+				EntityId inputEntityIndex = Nz::Retrieve(m_entityIndices, connection.targetEntity);
+
+				distributionUpdatePacket.sourceEntity = outputEntityIndex;
+				distributionUpdatePacket.sourceEntityPort = connection.outputIndex;
+				distributionUpdatePacket.targetEntity = inputEntityIndex;
+				distributionUpdatePacket.targetEntityPort = connection.inputIndex;
+
+				m_networkSession->SendPacket(distributionUpdatePacket);
+			}
+		}
+		m_connectionUpdatedEntities.clear();
 	}
 
 	void SessionVisibilityHandler::DispatchEntitiesEnvironmentUpdate(Nz::UInt16 tickIndex)
 	{
-		if (!m_environmentUpdates.empty())
+		for (auto it = m_environmentUpdates.begin(); it != m_environmentUpdates.end();)
 		{
-			for (auto it = m_environmentUpdates.begin(); it != m_environmentUpdates.end();)
+			const EnvironmentUpdate& envUpdate = *it;
+
+			EnvironmentId envIndex = Nz::Retrieve(m_environmentIndices, envUpdate.newEnvironment);
+
+			// Environment may not exist yet client-side, defer packet sending
+			// TODO: Defer to the end of the network tick instead of the next network tick
+			if (!m_environments[envIndex].isVisible)
 			{
-				const EnvironmentUpdate& envUpdate = *it;
-
-				EnvironmentId envIndex = Nz::Retrieve(m_environmentIndices, envUpdate.newEnvironment);
-
-				// Environment may not exist yet client-side, defer packet sending
-				// TODO: Defer to the end of the network tick instead of the next network tick
-				if (!m_environments[envIndex].isVisible)
-				{
-					++it;
-					continue;
-				}
-
-				EntityId entityIndex = Nz::Retrieve(m_entityIndices, envUpdate.newEntity);
-
-				Packets::S_EntityEnvironmentUpdate envUpdatePacket;
-				envUpdatePacket.tickIndex = tickIndex;
-				envUpdatePacket.entity = entityIndex;
-				envUpdatePacket.newEnvironmentId = envIndex;
-
-				m_networkSession->SendPacket(envUpdatePacket);
-
-				it = m_environmentUpdates.erase(it);
+				++it;
+				continue;
 			}
+
+			EntityId entityIndex = Nz::Retrieve(m_entityIndices, envUpdate.newEntity);
+
+			Packets::S_EntityEnvironmentUpdate envUpdatePacket;
+			envUpdatePacket.tickIndex = tickIndex;
+			envUpdatePacket.entity = entityIndex;
+			envUpdatePacket.newEnvironmentId = envIndex;
+
+			m_networkSession->SendPacket(envUpdatePacket);
+
+			it = m_environmentUpdates.erase(it);
 		}
 	}
 
 	void SessionVisibilityHandler::DispatchEntitiesProperties(Nz::UInt16 tickIndex)
 	{
-		if (!m_propertyUpdatedEntities.empty())
+		if (m_propertyUpdatedEntities.empty())
+			return;
+		
+		for (auto it = m_propertyUpdatedEntities.begin(); it != m_propertyUpdatedEntities.end(); ++it)
 		{
-			for (auto it = m_propertyUpdatedEntities.begin(); it != m_propertyUpdatedEntities.end(); ++it)
+			EntityId entityIndex = Nz::Retrieve(m_entityIndices, it.key());
+
+			auto& propertyData = it.value();
+
+			Nz::UInt32 propertyBits = propertyData.propertiesMask;
+
+			Packets::S_EntityPropertiesUpdate propertyUpdatePacket;
+			propertyUpdatePacket.entity = entityIndex;
+			propertyUpdatePacket.tickIndex = tickIndex;
+			propertyUpdatePacket.properties.reserve(Nz::CountBits(propertyBits));
+
+			std::size_t valueIndex = 0;
+			while (Nz::UInt32 propertyIndex = Nz::FindFirstBit(propertyBits))
 			{
-				EntityId entityIndex = Nz::Retrieve(m_entityIndices, it.key());
+				propertyIndex--; //< FFB returns 0 if no bit was found
 
-				auto& propertyData = it.value();
+				auto& packetPropertyData = propertyUpdatePacket.properties.emplace_back();
+				packetPropertyData.index = propertyIndex;
+				packetPropertyData.value = std::move(propertyData.values[valueIndex]);
 
-				Nz::UInt32 propertyBits = propertyData.propertiesMask;
-
-				Packets::S_EntityPropertiesUpdate propertyUpdatePacket;
-				propertyUpdatePacket.entity = entityIndex;
-				propertyUpdatePacket.tickIndex = tickIndex;
-				propertyUpdatePacket.properties.reserve(Nz::CountBits(propertyBits));
-
-				std::size_t valueIndex = 0;
-				while (Nz::UInt32 propertyIndex = Nz::FindFirstBit(propertyBits))
-				{
-					propertyIndex--; //< FFB returns 0 if no bit was found
-
-					auto& packetPropertyData = propertyUpdatePacket.properties.emplace_back();
-					packetPropertyData.index = propertyIndex;
-					packetPropertyData.value = std::move(propertyData.values[valueIndex]);
-
-					propertyBits = Nz::ClearBit(propertyBits, propertyIndex);
-					valueIndex++;
-				}
-
-				m_networkSession->SendPacket(propertyUpdatePacket);
+				propertyBits = Nz::ClearBit(propertyBits, propertyIndex);
+				valueIndex++;
 			}
-			m_propertyUpdatedEntities.clear();
+
+			m_networkSession->SendPacket(propertyUpdatePacket);
 		}
+		m_propertyUpdatedEntities.clear();
 	}
 
 	void SessionVisibilityHandler::DispatchEntitiesRpcs(Nz::UInt16 tickIndex)
 	{
-		if (!m_triggeredEntitiesRpc.empty())
+		if (m_triggeredEntitiesRpc.empty())
+			return;
+		
+		for (auto&& [entity, rpcIndices] : m_triggeredEntitiesRpc)
 		{
-			for (auto&& [entity, rpcIndices] : m_triggeredEntitiesRpc)
+			EntityId entityIndex = Nz::Retrieve(m_entityIndices, entity);
+
+			for (Nz::UInt32 rpcIndex : rpcIndices)
 			{
-				EntityId entityIndex = Nz::Retrieve(m_entityIndices, entity);
+				Packets::S_EntityProcedureCall procedureCallPacket;
+				procedureCallPacket.entity = entityIndex;
+				procedureCallPacket.rpcIndex = rpcIndex;
+				procedureCallPacket.tickIndex = tickIndex;
 
-				for (Nz::UInt32 rpcIndex : rpcIndices)
-				{
-					Packets::S_EntityProcedureCall procedureCallPacket;
-					procedureCallPacket.entity = entityIndex;
-					procedureCallPacket.rpcIndex = rpcIndex;
-					procedureCallPacket.tickIndex = tickIndex;
-
-					m_networkSession->SendPacket(procedureCallPacket);
-				}
+				m_networkSession->SendPacket(procedureCallPacket);
 			}
-
-			m_triggeredEntitiesRpc.clear();
 		}
+
+		m_triggeredEntitiesRpc.clear();
 	}
 
 	void SessionVisibilityHandler::DispatchEntitiesStates(Nz::UInt16 tickIndex)

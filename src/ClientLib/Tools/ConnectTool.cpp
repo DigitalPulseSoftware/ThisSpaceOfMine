@@ -6,6 +6,7 @@
 #include <ClientLib/Components/ClientEntityNetworkIndex.hpp>
 #include <ClientLib/Components/VisualEntityComponent.hpp>
 #include <CommonLib/NetworkSession.hpp>
+#include <CommonLib/Components/DistributionComponent.hpp>
 #include <CommonLib/Protocol/Packets.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Graphics/Components/GraphicsComponent.hpp>
@@ -30,8 +31,8 @@ namespace tsom
 			Packets::C_ConnectEntities connectEntities;
 			connectEntities.sourceEntityId = m_selectedSourceEntity.get<const ClientEntityNetworkIndex>().networkIndex;
 			connectEntities.targetEntityId = m_hoveredEntity.get<const ClientEntityNetworkIndex>().networkIndex;
-			connectEntities.sourceEntitySlot = 0;
-			connectEntities.targetEntitySlot = 0;
+			connectEntities.sourceEntityPort = 0;
+			connectEntities.targetEntityPort = 0;
 
 			m_gameInterface.GetNetworkSession()->SendPacket(connectEntities);
 
@@ -43,6 +44,8 @@ namespace tsom
 
 	void ConnectTool::Update(Nz::Time /*elapsedTime*/, const GameInterface::RaycastResult* previewRaycast)
 	{
+		Nz::DebugDrawer* debugDrawer = m_gameInterface.GetDebugDrawer();
+
 		if (m_selectedSourceEntity)
 		{
 			DrawEntityAABB(m_selectedSourceEntity, Nz::Color::Magenta());
@@ -51,7 +54,6 @@ namespace tsom
 			{
 				Nz::NodeComponent& entityNode = m_selectedSourceEntity.get<Nz::NodeComponent>();
 
-				Nz::DebugDrawer* debugDrawer = m_gameInterface.GetDebugDrawer();
 				debugDrawer->DrawLine(entityNode.GetGlobalPosition(), previewRaycast->hitPos, Nz::Color::Blue());
 			}
 		}
@@ -60,11 +62,38 @@ namespace tsom
 		if (!previewRaycast || !previewRaycast->hitEntity)
 			return;
 
-		if (!previewRaycast->hitEntity.all_of<ClientEntityNetworkIndex>())
+		if (!previewRaycast->hitEntity.all_of<ClientEntityNetworkIndex, DistributionComponent>())
 			return;
 
 		m_hoveredEntity = previewRaycast->hitEntity;
 		DrawEntityAABB(m_hoveredEntity, Nz::Color::Green());
+
+		Nz::NodeComponent& entityNode = m_hoveredEntity.get<Nz::NodeComponent>();
+
+		DistributionComponent& hoveredDistribution = m_hoveredEntity.get<DistributionComponent>();
+		for (std::size_t inputIndex = 0; inputIndex < hoveredDistribution.GetInputCount(); ++inputIndex)
+		{
+			entt::handle inputEntity = hoveredDistribution.GetInputConnectedEntity(inputIndex);
+			if (!inputEntity)
+				continue;
+
+			Nz::NodeComponent& inputEntityNode = inputEntity.get<Nz::NodeComponent>();
+
+			DrawEntityAABB(inputEntity, Nz::Color::Red());
+			debugDrawer->DrawLine(inputEntityNode.GetGlobalPosition(), entityNode.GetGlobalPosition(), Nz::Color::Red(), Nz::Color::Green());
+		}
+
+		for (std::size_t outputIndex = 0; outputIndex < hoveredDistribution.GetOutputCount(); ++outputIndex)
+		{
+			entt::handle outputEntity = hoveredDistribution.GetOutputConnectedEntity(outputIndex);
+			if (!outputEntity)
+				continue;
+
+			Nz::NodeComponent& outputEntityNode = outputEntity.get<Nz::NodeComponent>();
+
+			DrawEntityAABB(outputEntity, Nz::Color::Yellow());
+			debugDrawer->DrawLine(entityNode.GetGlobalPosition(), outputEntityNode.GetGlobalPosition(), Nz::Color::Green(), Nz::Color::Yellow());
+		}
 	}
 
 	void ConnectTool::DrawEntityAABB(entt::handle entity, Nz::Color color)

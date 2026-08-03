@@ -1,4 +1,3 @@
-
 local EulerAnglesMt = CreateMetatable("eulerangles")
 EulerAnglesMt.__index = EulerAnglesMt
 

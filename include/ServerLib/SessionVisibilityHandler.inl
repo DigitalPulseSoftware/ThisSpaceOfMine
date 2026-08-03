@@ -75,6 +75,27 @@ namespace tsom
 		m_movingEntities.erase(m_controlledEntity);
 	}
 
+	inline void SessionVisibilityHandler::UpdateEntityDistributionConnection(entt::handle entity, Nz::UInt8 outputIndex, entt::handle targetEntity, Nz::UInt8 inputIndex)
+	{
+		auto& connectionUpdateData = m_connectionUpdatedEntities[entity];
+
+		auto it = std::find_if(connectionUpdateData.connections.begin(), connectionUpdateData.connections.end(), [&](const auto& connection) { return connection.outputIndex == outputIndex; });
+		if (it != connectionUpdateData.connections.end())
+		{
+			auto& connection = *it;
+			connection.inputIndex = inputIndex;
+			connection.outputIndex = outputIndex;
+			connection.targetEntity = targetEntity;
+		}
+		else
+		{
+			auto& connection = connectionUpdateData.connections.emplace_back();
+			connection.inputIndex = inputIndex;
+			connection.outputIndex = outputIndex;
+			connection.targetEntity = targetEntity;
+		}
+	}
+
 	inline void SessionVisibilityHandler::UpdateEntityProperty(entt::handle entity, Nz::UInt32 propertyIndex, const EntityProperty& newValue)
 	{
 		Nz::UInt32 propertyMask = 1u << propertyIndex;

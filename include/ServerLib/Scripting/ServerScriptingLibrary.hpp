@@ -32,6 +32,7 @@ namespace tsom
 		private:
 			void RegisterAtmosphere(sol::state& state);
 			void RegisterDebugDraw(sol::state& state);
+			void RegisterDistribution(sol::state& state);
 			void RegisterEnvironment(sol::state& state);
 			void RegisterPlayer(sol::state& state);
 			void RegisterServer(sol::state& state);

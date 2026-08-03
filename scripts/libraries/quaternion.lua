@@ -1,4 +1,3 @@
-
 local QuaternionMt = CreateMetatable("quaternion")
 QuaternionMt.__index = QuaternionMt
 
