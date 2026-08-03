@@ -32,9 +32,12 @@ classData:On("init", function (self)
 		self.LightMat = model:GetMaterial(0):Clone()
 		model:SetMaterial(0, self.LightMat)
 
+		local isEnabled = self:GetProperty("light_enabled")
+		self.LightMat:SetValueProperty("EmissiveColor", isEnabled and Color.White or Color.Black)
+
 		local light = self:AddComponent("light")
 		light:AddPointLight({ Color = Color.White })
-		light:Show(self:GetProperty("light_enabled"))
+		light:Show(isEnabled)
 
 		local gfx = self:AddComponent("graphics")
 		gfx:AttachRenderable(model, Constants.RenderMask3D)
