@@ -1057,21 +1057,6 @@ namespace tsom
 					Nz::Vector3f localPos = chunkNode.ToLocalPosition(raycastHit->hitPos);
 					Nz::Vector3f localNormal = chunkNode.ToLocalDirection(raycastHit->hitNormal);
 
-					constexpr Nz::EnumArray<Direction, std::array<Nz::BoxCorner, 4>> directionToCorners = {
-						// Back
-						std::array{ Nz::BoxCorner::LeftBottomNear, Nz::BoxCorner::LeftBottomFar, Nz::BoxCorner::LeftTopFar, Nz::BoxCorner::LeftTopNear },
-						// Down
-						std::array{ Nz::BoxCorner::LeftBottomFar, Nz::BoxCorner::RightBottomFar, Nz::BoxCorner::RightTopFar, Nz::BoxCorner::LeftTopFar },
-						// Front
-						std::array{ Nz::BoxCorner::RightBottomFar, Nz::BoxCorner::RightBottomNear, Nz::BoxCorner::RightTopNear, Nz::BoxCorner::RightTopFar },
-						// Left
-						std::array{ Nz::BoxCorner::LeftBottomNear, Nz::BoxCorner::RightBottomNear, Nz::BoxCorner::RightBottomFar, Nz::BoxCorner::LeftBottomFar },
-						// Right
-						std::array{ Nz::BoxCorner::RightTopNear, Nz::BoxCorner::LeftTopNear, Nz::BoxCorner::LeftTopFar, Nz::BoxCorner::RightTopFar },
-						// Up
-						std::array{ Nz::BoxCorner::RightBottomNear, Nz::BoxCorner::LeftBottomNear, Nz::BoxCorner::LeftTopNear, Nz::BoxCorner::RightTopNear },
-					};
-
 					auto hitCoordinates = hitChunk.ComputeHitCoordinates(localPos, localNormal, *chunkRigidBody.GetCollider(), raycastHit->subShapeID);
 					if (hitCoordinates && hitChunk.HasContent()) //< It's possible for a chunk without content to have physics while physics update
 					{
@@ -1099,6 +1084,21 @@ namespace tsom
 						for (Nz::Vector3f& pos : cornerPos)
 							pos = chunkNode.ToGlobalPosition(pos) + raycastHit->hitNormal * 0.02f;
 
+						constexpr Nz::EnumArray<Direction, std::array<Nz::BoxCorner, 4>> directionToCorners = {
+							// Back
+							std::array{ Nz::BoxCorner::LeftBottomNear, Nz::BoxCorner::LeftBottomFar, Nz::BoxCorner::LeftTopFar, Nz::BoxCorner::LeftTopNear },
+							// Down
+							std::array{ Nz::BoxCorner::LeftBottomFar, Nz::BoxCorner::RightBottomFar, Nz::BoxCorner::RightTopFar, Nz::BoxCorner::LeftTopFar },
+							// Front
+							std::array{ Nz::BoxCorner::RightBottomFar, Nz::BoxCorner::RightBottomNear, Nz::BoxCorner::RightTopNear, Nz::BoxCorner::RightTopFar },
+							// Left
+							std::array{ Nz::BoxCorner::LeftBottomNear, Nz::BoxCorner::RightBottomNear, Nz::BoxCorner::RightBottomFar, Nz::BoxCorner::LeftBottomFar },
+							// Right
+							std::array{ Nz::BoxCorner::RightTopNear, Nz::BoxCorner::LeftTopNear, Nz::BoxCorner::LeftTopFar, Nz::BoxCorner::RightTopFar },
+							// Up
+							std::array{ Nz::BoxCorner::RightBottomNear, Nz::BoxCorner::LeftBottomNear, Nz::BoxCorner::LeftTopNear, Nz::BoxCorner::RightTopNear },
+						};
+
 						auto& corners = directionToCorners[hitCoordinates->direction];
 
 						debugDrawer->DrawLine(cornerPos[corners[0]], cornerPos[corners[1]], Nz::Color::Green());
@@ -1106,33 +1106,6 @@ namespace tsom
 						debugDrawer->DrawLine(cornerPos[corners[2]], cornerPos[corners[3]], Nz::Color::Green());
 						debugDrawer->DrawLine(cornerPos[corners[3]], cornerPos[corners[0]], Nz::Color::Green());
 					}
-
-					#if 0
-					Nz::Vector3f chunkSize = Nz::Vector3f(hitChunk.GetSize()) * hitChunk.GetBlockSize();
-					Nz::Boxf chunkBoundingBox(chunkNode.GetGlobalPosition() - chunkSize * 0.5f, chunkSize);
-					debugDrawer->DrawBox(chunkBoundingBox, Nz::Color::Cyan());
-
-					auto faceVisibilityMasks = hitChunk.GetFaceVisibilityMasks();
-
-					auto chunkCorners = chunkBoundingBox.GetCorners();
-
-					auto GetDirectionMiddlePoint = [&](Direction dir)
-					{
-						auto& cornerIndices = directionToCorners[dir];
-						return (chunkCorners[cornerIndices[0]] + chunkCorners[cornerIndices[1]] + chunkCorners[cornerIndices[2]] + chunkCorners[cornerIndices[3]]) * 0.25f;
-					};
-
-					for (auto&& [fromDir, dirMask] : faceVisibilityMasks.iter_kv())
-					{
-						for (Direction toDir : dirMask)
-						{
-							if (fromDir == toDir)
-								continue;
-
-							debugDrawer->DrawLine(GetDirectionMiddlePoint(fromDir), GetDirectionMiddlePoint(toDir), Nz::Color::Red());
-						}
-					}
-					#endif
 				}
 				else if (auto* interactible = raycastHit->hitEntity.try_get<ClientInteractibleComponent>(); interactible && interactible->isEnabled)
 				{

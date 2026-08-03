@@ -2,7 +2,8 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
-#include <cassert>
+#include <NazaraUtils/Assert.hpp>
+#include <NazaraUtils/CallOnExit.hpp>
 
 namespace tsom
 {
@@ -12,8 +13,15 @@ namespace tsom
 	m_blockLibrary(blockLibrary),
 	m_owner(owner),
 	m_hasPerFaceCollision(false),
+	m_isBatchUpdating(false),
 	m_blockSize(cellSize)
 	{
+	}
+
+	inline void Chunk::BeginBatchUpdate()
+	{
+		NazaraAssertMsg(!m_isBatchUpdating, "already in a batch update");
+		m_isBatchUpdating = true;
 	}
 
 	inline void Chunk::ClearContent()
@@ -30,14 +38,36 @@ namespace tsom
 		m_blockTypeCount.clear();
 		m_blockTypeCount.shrink_to_fit();
 
-		m_faceVisibilityMasks.fill(DirectionMask_All);
-
 		OnClear(this, activeLayerMask);
+
+		if (m_visibilityMask != DirectionMask_All)
+		{
+			DirectionMask previousVisibilityMask = m_visibilityMask;
+			m_visibilityMask = DirectionMask_All;
+			OnVisibilityMaskUpdated(this, previousVisibilityMask, m_visibilityMask);
+		}
 	}
 
 	inline void Chunk::ClearFlags(ChunkFlags flags)
 	{
 		m_flags.Clear(flags);
+	}
+
+	inline void Chunk::EndBatchUpdate()
+	{
+		NazaraAssertMsg(m_isBatchUpdating, "not in a batch update");
+		NAZARA_DEFER({ m_isBatchUpdating = false; });
+
+		if (!HasContent())
+			return;
+
+		if (GetBlockCount(EmptyBlockIndex) == GetBlockCount())
+		{
+			ClearContent();
+			return;
+		}
+
+		RebuildVisibilityMask();
 	}
 
 	inline std::span<const std::size_t> Chunk::GetActiveLayers() const
@@ -87,8 +117,7 @@ namespace tsom
 
 	inline BlockIndex Chunk::GetBlockContent(unsigned int blockIndex) const
 	{
-		NazaraAssertMsg(!m_blocks.empty(), "chunk has not been reset");
-		return m_blocks[blockIndex];
+		return !m_blocks.empty() ? m_blocks[blockIndex] : EmptyBlockIndex;
 	}
 
 	inline BlockIndex Chunk::GetBlockContent(const Nz::Vector3ui& indices) const
@@ -130,11 +159,6 @@ namespace tsom
 		return m_blocks.data();
 	}
 
-	inline auto Chunk::GetFaceVisibilityMasks() const -> FaceVisibilityMasks
-	{
-		return m_faceVisibilityMasks;
-	}
-
 	inline ChunkFlags Chunk::GetFlags() const
 	{
 		return m_flags;
@@ -148,6 +172,11 @@ namespace tsom
 	inline const Nz::Vector3ui& Chunk::GetSize() const
 	{
 		return m_size;
+	}
+
+	inline DirectionMask Chunk::GetVisibilityMask() const
+	{
+		return m_visibilityMask;
 	}
 
 	inline bool Chunk::HasContent() const

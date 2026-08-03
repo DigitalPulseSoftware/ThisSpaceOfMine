@@ -332,7 +332,7 @@ namespace tsom
 		m_blockTypeCount[newBlock]++;
 
 		// Check if the chunk is made of only empty blocks and reclaim its memory
-		if (GetBlockCount(EmptyBlockIndex) == GetBlockCount())
+		if (!m_isBatchUpdating && GetBlockCount(EmptyBlockIndex) == GetBlockCount())
 		{
 			ClearContent();
 			return;
@@ -340,9 +340,59 @@ namespace tsom
 
 		OnBlockUpdated(this, indices, oldBlock, newBlock, oldBlockData.layerIndex, newBlockData.layerIndex);
 
-		// Update visibility mask
-		if (oldBlockData.isTransparent != newBlockData.isTransparent)
-			UpdateFaceVisibilityMasks();
+		if (!m_isBatchUpdating)
+		{
+			// Update visibility mask
+			DirectionMask directionMask;
+			if (indices.x == 0)
+				directionMask |= Direction::Left;
+			else if (indices.x == m_size.x - 1)
+				directionMask |= Direction::Right;
+
+			if (indices.y == 0)
+				directionMask |= Direction::Front;
+			else if (indices.y == m_size.y - 1)
+				directionMask |= Direction::Back;
+
+			if (indices.z == 0)
+				directionMask |= Direction::Down;
+			else if (indices.z == m_size.z - 1)
+				directionMask |= Direction::Up;
+
+			if (directionMask != 0)
+			{
+				auto& previousBlockData = m_blockLibrary.GetBlockData(oldBlock);
+				auto& newBlockData = m_blockLibrary.GetBlockData(newBlock);
+
+				if (previousBlockData.isTransparent != newBlockData.isTransparent)
+				{
+					DirectionMask oldVisibilityMask = m_visibilityMask;
+
+					if (previousBlockData.isTransparent)
+					{
+						// We're putting an opaque block on a transparent one
+						for (Direction direction : directionMask)
+						{
+							NazaraAssert(m_directionHoleCount[direction] > 0);
+							if (--m_directionHoleCount[direction] == 0)
+								m_visibilityMask.Clear(direction);
+						}
+					}
+					else
+					{
+						// Replacing an opaque block by a transparent one
+						for (Direction direction : directionMask)
+						{
+							m_directionHoleCount[direction]++;
+							m_visibilityMask |= direction;
+						}
+					}
+
+					if (oldVisibilityMask != m_visibilityMask)
+						OnVisibilityMaskUpdated(this, oldVisibilityMask, m_visibilityMask);
+				}
+			}
+		}
 
 		// Unregister layer only after update to avoid triggering chunk update (OnBlockUpodated)
 		assert(m_layers[oldBlockData.layerIndex]->blockCount > 0);
@@ -383,104 +433,79 @@ namespace tsom
 			return;
 		}
 
-		UpdateFaceVisibilityMasks();
-
 		OnReset(this);
+
+		RebuildVisibilityMask();
 	}
 
-	void Chunk::UpdateFaceVisibilityMask(Direction direction)
+	void Chunk::RebuildVisibilityMask()
 	{
-		const Nz::Bitset<Nz::UInt64>& collisionMasks = GetCollisionCellMask(0);
+		m_directionHoleCount.fill(0);
 
-		NazaraAssert(m_size.x <= 32 && m_size.y <= 32 && m_size.z <= 32);
-		m_faceVisibilityMasks[direction].Clear();
-
-		Nz::FixedBitset<Nz::UInt64, 32 * 32 * 32> visited(m_size.x * m_size.y * m_size.z, false);
-		std::vector<Nz::UInt32> remaining;
-
-		auto Push = [&](const Nz::Vector3ui& indices)
-		{
-			unsigned int index = GetBlockLocalIndex(indices);
-			if (!visited[index] && !collisionMasks[index])
-			{
-				visited[index] = true;
-				remaining.push_back(index);
-			}
-		};
-
+		// Left / right
 		for (unsigned int z = 0; z < m_size.z; ++z)
 		{
 			for (unsigned int y = 0; y < m_size.y; ++y)
 			{
-				for (unsigned int x = 0; x < m_size.x; ++x)
-				{
-					bool isOnEdge =
-						(direction == Direction::Left && x == 0) ||
-						(direction == Direction::Right && x == m_size.x - 1) ||
-						(direction == Direction::Front && y == 0) ||
-						(direction == Direction::Back && y == m_size.y - 1) ||
-						(direction == Direction::Down && z == 0) ||
-						(direction == Direction::Up && z == m_size.z - 1);
+				BlockIndex leftBlockIndex = GetBlockContent({ 0, y, z });
+				BlockIndex rightBlockIndex = GetBlockContent({ m_size.x - 1, y, z });
 
-					if (isOnEdge)
-						Push({ x, y, z });
-				}
+				auto& leftBlockData = m_blockLibrary.GetBlockData(leftBlockIndex);
+				if (leftBlockData.isTransparent)
+					m_directionHoleCount[Direction::Left]++;
+
+				auto& rightBlockData = m_blockLibrary.GetBlockData(rightBlockIndex);
+				if (rightBlockData.isTransparent)
+					m_directionHoleCount[Direction::Right]++;
 			}
 		}
 
-		DirectionMask directionMask;
-		while (!remaining.empty())
+		// Front / back
+		for (unsigned int z = 0; z < m_size.z; ++z)
 		{
-			Nz::UInt32 blockIndex = remaining.back();
-			remaining.pop_back();
-
-			Nz::Vector3ui indices = GetBlockLocalIndices(blockIndex);
-
-			if (indices.x == 0)
-				directionMask |= Direction::Left;
-			if (indices.x == m_size.x - 1)
-				directionMask |= Direction::Right;
-			if (indices.y == 0)
-				directionMask |= Direction::Front;
-			if (indices.y == m_size.y - 1)
-				directionMask |= Direction::Back;
-			if (indices.z == 0)
-				directionMask |= Direction::Down;
-			if (indices.z == m_size.y - 1)
-				directionMask |= Direction::Up;
-
-			if (directionMask == DirectionMask_All)
+			for (unsigned int x = 0; x < m_size.x; ++x)
 			{
-				m_faceVisibilityMasks[direction] = directionMask;
-				return;
-			}
+				BlockIndex frontBlockIndex = GetBlockContent({ x, 0, z });
+				BlockIndex backBlockIndex = GetBlockContent({ x, m_size.y - 1, z });
 
-			for (auto&& [dir, offset] : s_blockDirOffset.iter_kv())
-			{
-				Nz::Vector3i sIndices(indices);
-				sIndices += offset;
+				auto& frontBlockData = m_blockLibrary.GetBlockData(frontBlockIndex);
+				if (frontBlockData.isTransparent)
+					m_directionHoleCount[Direction::Front]++;
 
-				if (sIndices.x < 0 || static_cast<unsigned int>(sIndices.x) >= m_size.x ||
-					sIndices.y < 0 || static_cast<unsigned int>(sIndices.y) >= m_size.y ||
-					sIndices.z < 0 || static_cast<unsigned int>(sIndices.z) >= m_size.z)
-				{
-					continue;
-				}
-
-				Push(Nz::Vector3ui(sIndices));
+				auto& backBlockData = m_blockLibrary.GetBlockData(backBlockIndex);
+				if (backBlockData.isTransparent)
+					m_directionHoleCount[Direction::Back]++;
 			}
 		}
 
-		m_faceVisibilityMasks[direction] = directionMask;
-	}
+		// Down / up
+		for (unsigned int y = 0; y < m_size.y; ++y)
+		{
+			for (unsigned int x = 0; x < m_size.x; ++x)
+			{
+				BlockIndex downBlockIndex = GetBlockContent({ x, y, 0 });
+				BlockIndex upBlockIndex = GetBlockContent({ x, y, m_size.z - 1 });
 
-	void Chunk::UpdateFaceVisibilityMasks()
-	{
-		UpdateFaceVisibilityMask(Direction::Back);
-		UpdateFaceVisibilityMask(Direction::Down);
-		UpdateFaceVisibilityMask(Direction::Front);
-		UpdateFaceVisibilityMask(Direction::Left);
-		UpdateFaceVisibilityMask(Direction::Right);
-		UpdateFaceVisibilityMask(Direction::Up);
+				auto& downBlockData = m_blockLibrary.GetBlockData(downBlockIndex);
+				if (downBlockData.isTransparent)
+					m_directionHoleCount[Direction::Down]++;
+
+				auto& upBlockData = m_blockLibrary.GetBlockData(upBlockIndex);
+				if (upBlockData.isTransparent)
+					m_directionHoleCount[Direction::Up]++;
+			}
+		}
+
+		DirectionMask oldVisibilityMask = m_visibilityMask;
+		m_visibilityMask.Clear();
+
+		for (auto&& [direction, holeCount] : m_directionHoleCount.iter_kv())
+		{
+			if (holeCount > 0)
+				m_visibilityMask |= direction;
+		}
+
+		if (m_visibilityMask != oldVisibilityMask)
+			OnVisibilityMaskUpdated(this, oldVisibilityMask, m_visibilityMask);
 	}
 }

@@ -66,8 +66,8 @@ namespace tsom
 				std::mutex mutex;
 				std::shared_ptr<Planet> planet;
 				tsl::hopscotch_map<ChunkIndices, bool> visitedChunks;
-				tsl::ordered_map<ChunkIndices, DirectionMask> remainingChunks;
 				std::unordered_set<ChunkIndices /*chunkIndex*/> generatedChunks;
+				std::vector<ChunkIndices> remainingChunks;
 
 				void HandleChunkLoaded(const ChunkIndices& chunkIndices, DirectionMask visibilityMask);
 			};

@@ -48,6 +48,7 @@ namespace tsom
 	{
 		state.new_usertype<Chunk>("Chunk",
 			sol::no_constructor,
+			"BeginBatchUpdate", LuaFunction(&Chunk::BeginBatchUpdate),
 			"ComputeHitCoordinates", LuaFunction([](const Chunk& chunk, const Nz::Vector3f& hitPos, const Nz::Vector3f& hitNormal, const Nz::Collider3D& collider, std::uint32_t hitSubshapeId, sol::this_state L) -> sol::optional<sol::table>
 			{
 				auto hitBlock = chunk.ComputeHitCoordinates(hitPos, hitNormal, collider, hitSubshapeId);
@@ -60,6 +61,7 @@ namespace tsom
 					"blockIndices", hitBlock->blockIndices
 				);
 			}),
+			"EndBatchUpdate", LuaFunction(&Chunk::EndBatchUpdate),
 			"GetBlockCenterPosition", LuaFunction([](const Chunk& chunk, const Nz::Vector3ui& blockIndices)
 			{
 				Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> corners = chunk.ComputeBlockCorners(blockIndices);

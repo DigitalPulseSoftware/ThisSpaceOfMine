@@ -119,7 +119,7 @@ namespace tsom
 			for (int x = 0; x < m_chunkCount.x; ++x)
 			{
 				ChunkIndices chunkIndices = ChunkIndices(-int(m_chunkCount.x / 2) + x, -int(m_chunkCount.y / 2) + m_chunkCount.y - 1, -int(m_chunkCount.z / 2) + z);
-				m_chunkLoadingData->remainingChunks[chunkIndices] |= (x % 2) == (z % 2) ? Direction::Up : Direction::Down;
+				m_chunkLoadingData->remainingChunks.emplace_back(chunkIndices);
 				m_chunkLoadingData->visitedChunks.emplace(chunkIndices, true);
 			}
 		}
@@ -280,9 +280,9 @@ namespace tsom
 	{
 		std::unique_lock lock(m_chunkLoadingData->mutex);
 
-		for (auto&& [indices, originDir] : m_chunkLoadingData->remainingChunks)
+		for (ChunkIndices indices : m_chunkLoadingData->remainingChunks)
 		{
-			spdlog::debug("loading chunk {};{};{} from {} ({} remaining)", indices.x, indices.y, indices.z, originDir, m_chunkLoadingData->remainingChunks.size());
+			spdlog::debug("loading chunk {};{};{} ({} remaining)", indices.x, indices.y, indices.z, m_chunkLoadingData->remainingChunks.size());
 
 			Chunk* chunk = GetPlanet().GetChunk(indices);
 			if (!chunk)
@@ -292,7 +292,7 @@ namespace tsom
 			bool enableChunkCache = m_serverInstance.GetConfig().enableChunkCache;
 
 			m_chunkLoadingData->chunkLoadingCount++;
-			taskScheduler.AddTask([chunk, enableChunkCache, serverInstance = &m_serverInstance, databaseId = m_databaseId, chunkLoadingData = m_chunkLoadingData, chunkCount = m_chunkCount, generatorName = m_generatorName, generatorHash = m_generatorHash, originDir = originDir, properties = m_planetProperties]
+			taskScheduler.AddTask([chunk, enableChunkCache, serverInstance = &m_serverInstance, databaseId = m_databaseId, chunkLoadingData = m_chunkLoadingData, chunkCount = m_chunkCount, generatorName = m_generatorName, generatorHash = m_generatorHash, properties = m_planetProperties]
 			{
 				ServerDatabase& serverDatabase = serverInstance->GetThreadServerDatabase();
 				BinaryCompressor& binaryCompressor = BinaryCompressor::GetThreadCompressor();
@@ -332,11 +332,7 @@ namespace tsom
 				if (!chunkFound)
 					chunkLoadingData->planet->GenerateChunk(*chunk, chunkCount, generatorName, properties);
 
-				const auto& faceVisibilityMasks = chunk->GetFaceVisibilityMasks();
-
-				DirectionMask visibilityMask;
-				for (Direction dir : originDir)
-					visibilityMask |= faceVisibilityMasks[s_oppositeDirections[dir]];
+				DirectionMask visibilityMask = chunk->GetVisibilityMask();
 
 				std::unique_lock lock(chunkLoadingData->mutex);
 				chunkLoadingData->HandleChunkLoaded(chunk->GetIndices(), visibilityMask);
@@ -461,7 +457,7 @@ namespace tsom
 			}
 
 			visitedChunks.emplace(neighborIndices, isNeighborPrimaryChunk);
-			remainingChunks[neighborIndices] |= direction;
+			remainingChunks.push_back(neighborIndices);
 		}
 	}
 }

@@ -199,6 +199,7 @@ namespace tsom
 
 		ChunkWriteLock lock(&chunk);
 		chunk.ClearContent();
+		chunk.BeginBatchUpdate();
 
 		for (unsigned int z = 0; z < height; ++z)
 		{
@@ -218,6 +219,8 @@ namespace tsom
 				}
 			}
 		}
+
+		chunk.EndBatchUpdate();
 	}
 
 	void Ship::RemoveChunk(const ChunkIndices& indices)
