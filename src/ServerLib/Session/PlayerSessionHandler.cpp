@@ -309,6 +309,7 @@ namespace tsom
 		entity.emplace<Nz::NodeComponent>(entityPos, entityRot);
 		entity.emplace<NetworkedComponent>();
 		entity.emplace<ClassInstanceComponent>(entityClass);
+		entity.emplace<DatabaseComponent>();
 
 		entityClass->InitAndActivateEntity(entity);
 	}
