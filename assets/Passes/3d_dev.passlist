@@ -52,29 +52,29 @@ passlist "Forward Passlist"
         output "Output" "AtmosphereOutput"
     }
 
-    attachment "Gamma corrected"
+    attachment "ToneMapped"
     {
         format "RGBA8"
     }
 
-    pass "Gamma correction"
+    pass "Tone mapping"
     {
         impl "PostProcess"
         {
-            Shader "PostProcess.GammaCorrection"
+            Shader "TSOM.ToneMapping"
         }
 
         input "Input0" "AtmosphereOutput"
-        output "Output0" "Gamma corrected"
+        output "Output0" "ToneMapped"
     }
 
-    attachmentproxy "Debug draw output" "Gamma corrected"
+    attachmentproxy "Debug draw output" "ToneMapped"
     attachmentproxy "DebugDraw depth output" "DepthBuffer"
 
     pass "Debug Draw"
     {
         impl "DebugDraw"
-        input "Input" "Gamma corrected"
+        input "Input" "ToneMapped"
         output "Output" "Debug draw output"
         depthstencilinput "DepthBuffer"
         depthstenciloutput "DebugDraw depth output"

@@ -120,6 +120,11 @@
             "method": "Shader"
         },
         {
+            "input": "Shaders/ToneMapping.nzsl",
+            "output": "Shaders/ToneMapping.nzslb",
+            "method": "Shader"
+        },
+        {
             "input": "logo.png",
             "output": "Textures/Logo.dds",
             "method": "Texture",

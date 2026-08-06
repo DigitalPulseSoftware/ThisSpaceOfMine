@@ -1,0 +1,121 @@
+[nzsl_version("1.1")]
+module TSOM.ToneMapping;
+
+import VertOut, VertexShader from Engine.FullscreenVertex;
+import LinearTosRGB from Math.Color;
+
+external
+{
+	[binding(0)] colorTexture: sampler2D[f32]
+}
+
+struct FragOut
+{
+	[location(0)] color: vec4[f32]
+}
+
+// Narkowicz 2015, "ACES Filmic Tone Mapping Curve"
+fn aces(x: vec3[f32]) -> vec3[f32]
+{
+  const a = (2.51).rrr;
+  const b = (0.03).rrr;
+  const c = (2.43).rrr;
+  const d = (0.59).rrr;
+  const e = (0.14).rrr;
+  return clamp((x * (a * x + b)) / (x * (c * x + d) + e), (0.0).xxx, (1.0).xxx);
+}
+
+// Filmic Tonemapping Operators http://filmicworlds.com/blog/filmic-tonemapping-operators/
+fn filmic(x: vec3[f32]) -> vec3[f32]
+{
+  let X = max((0.0).rrr, x - (0.004).rrr);
+  let result = (X * (6.2 * X + (0.5).rrr)) / (X * (6.2 * X + (1.7).rrr) + (0.06).rrr);
+  return pow(result, (2.2).rrr);
+}
+
+// Lottes 2016, "Advanced Techniques and Optimization of HDR Color Pipelines"
+fn lottes(x: vec3[f32]) -> vec3[f32]
+{
+  const a = (1.6).rrr;
+  const d = (0.977).rrr;
+  const hdrMax = (8.0).rrr;
+  const midIn = (0.18).rrr;
+  const midOut = (0.267).rrr;
+
+  let b =
+      (-pow(midIn, a) + pow(hdrMax, a) * midOut) /
+      ((pow(hdrMax, a * d) - pow(midIn, a * d)) * midOut);
+  let c =
+      (pow(hdrMax, a * d) * pow(midIn, a) - pow(hdrMax, a) * pow(midIn, a * d) * midOut) /
+      ((pow(hdrMax, a * d) - pow(midIn, a * d)) * midOut);
+
+  return pow(x, a) / (pow(x, a * d) * b + c);
+}
+
+// Khronos PBR Neutral Tone Mapper
+// https://github.com/KhronosGroup/ToneMapping/tree/main/PBR_Neutral
+
+// Input color is non-negative and resides in the Linear Rec. 709 color space.
+// Output color is also Linear Rec. 709, but in the [0, 1] range.
+fn neutral(color: vec3[f32]) -> vec3[f32]
+{
+	const startCompression: f32 = 0.8 - 0.04;
+	const desaturation: f32 = 0.15;
+
+	let x = min(color.r, min(color.g, color.b));
+	let offset = select(x < 0.08, x - 6.25 * x * x, 0.04);
+	color -= offset.rrr;
+
+	let peak = max(color.r, max(color.g, color.b));
+	if (peak < startCompression) 
+		return color;
+
+	const d: f32 = 1.0 - startCompression;
+	let newPeak = 1.0 - d * d / (peak + d - startCompression);
+	color *= newPeak / peak;
+
+	let g = 1.0 - 1.0 / (desaturation * (peak - newPeak) + 1.0);
+	return lerp(color, (newPeak).rrr, g.rrr);
+}
+
+fn none(color: vec3[f32]) -> vec3[f32]
+{
+	return color;
+}
+
+fn uncharted2Tonemap(x: vec3[f32]) -> vec3[f32]
+{
+	const A = 0.15;
+	const B = 0.50;
+	const C = 0.10;
+	const D = 0.20;
+	const E = 0.02;
+	const F = 0.30;
+	const W = 11.2;
+	return ((x * (A * x + (C * B).rrr) + (D * E).rrr) / (x * (A * x + B.rrr) + (D * F).rrr)) - E.rrr / F;
+}
+
+fn uncharted2(color: vec3[f32]) -> vec3[f32]
+{
+	const W = 11.2;
+	let exposureBias = 3.0;
+	let curr = uncharted2Tonemap(exposureBias * color);
+	let whiteScale = 1.0 / uncharted2Tonemap(W.rrr);
+	return curr * whiteScale;
+}
+
+fn simple(color: vec3[f32]) -> vec3[f32]
+{
+	const exposure = 2.0;
+	return (1.0).rrr - exp(-color * exposure);
+}
+
+[entry(frag)]
+fn main(input: VertOut) -> FragOut
+{
+    let color = colorTexture.Sample(input.uv);
+
+	let output: FragOut;
+	output.color = vec4[f32](LinearTosRGB(neutral(color.rgb)), color.a);
+	return output;
+}
