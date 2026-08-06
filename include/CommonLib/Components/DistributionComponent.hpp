@@ -8,63 +8,15 @@
 #define TSOM_COMMONLIB_COMPONENTS_DISTRIBUTIONCOMPONENT_HPP
 
 #include <CommonLib/Export.hpp>
+#include <CommonLib/Distribution.hpp>
 #include <CommonLib/EntityReference.hpp>
-#include <CommonLib/GasType.hpp>
-#include <NazaraUtils/EnumArray.hpp>
-#include <NazaraUtils/FixedVector.hpp>
 #include <NazaraUtils/Signal.hpp>
 #include <entt/entt.hpp>
 #include <functional>
 #include <span>
-#include <variant>
 
 namespace tsom
 {
-	enum class DistributionType
-	{
-		Electrical,
-		Gas,
-
-		Max = Gas
-	};
-
-	struct ElectricalQuantity
-	{
-		inline void Clear();
-		inline void ComputeMin(const ElectricalQuantity& val1, const ElectricalQuantity& val2);
-
-		inline ElectricalQuantity& operator+=(const ElectricalQuantity& quantity);
-
-		Nz::UInt32 energy = 0; //< kWh
-	};
-
-	struct GasQuantity
-	{
-		inline void Clear();
-		inline void ComputeMin(const GasQuantity& val1, const GasQuantity& val2);
-
-		inline Nz::UInt32 Get(GasType type) const;
-		inline Nz::UInt32 Increment(GasType type, Nz::UInt32 quantity);
-		inline void Set(GasType type, Nz::UInt32 quantity);
-
-		inline GasQuantity& operator+=(const GasQuantity& quantity);
-
-		struct Entry
-		{
-			GasType type;
-			Nz::UInt32 quantity = 0; //< liter
-		};
-
-		Nz::HybridVector<Entry, 3> gases;
-	};
-
-	using DistributionQuantity = std::variant<ElectricalQuantity, GasQuantity>;
-
-	constexpr Nz::EnumArray<DistributionType, DistributionQuantity(*)()> s_defaultDistributionQuantityBuilder = {
-		[]() -> DistributionQuantity { return ElectricalQuantity{ 0 }; }, // DistributionType::Electrical
-		[]() -> DistributionQuantity { return GasQuantity{}; },           // DistributionType::Gas
-	};
-
 	class TSOM_COMMONLIB_API DistributionComponent
 	{
 		friend class DistributionSystem;
@@ -109,6 +61,9 @@ namespace tsom
 
 			static void Connect(entt::handle sourceEntity, entt::handle targetEntity, std::size_t sourceOutputPort, std::size_t targetInputPort);
 			static void Connect(entt::handle sourceEntity, DistributionComponent& sourceEntityDistribution, entt::handle targetEntity, DistributionComponent& targetEntityDistribution, std::size_t sourceOutputPort, std::size_t targetInputPort);
+
+			static void DisconnectInput(entt::handle entity, std::size_t inputPort);
+			static void DisconnectOutput(entt::handle entity, std::size_t outputPort);
 
 		private:
 			void ClearDistributedValues();

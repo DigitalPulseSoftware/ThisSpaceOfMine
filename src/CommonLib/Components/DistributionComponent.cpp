@@ -33,14 +33,21 @@ namespace tsom
 		if (sourceOutputPort >= sourceEntityDistribution.GetOutputCount())
 		{
 			// TODO: Log entities ID
-			spdlog::error("Received a connection update for entity on output port {} but it only got {} port(s) (is the entity correctly initialized?)", sourceOutputPort, sourceEntityDistribution.GetOutputCount());
+			spdlog::error("Tried to connect entity on output port {} but it only got {} port(s) (is the entity correctly initialized?)", sourceOutputPort, sourceEntityDistribution.GetOutputCount());
 			return;
 		}
 
 		if (targetInputPort >= targetEntityDistribution.GetInputCount())
 		{
 			// TODO: Log entities ID
-			spdlog::error("Received a connection update targeting entity on input port {} but it only got {} port(s) (is the entity correctly initialized?)", targetInputPort, targetEntityDistribution.GetInputCount());
+			spdlog::error("Tried to connect to entity on input port {} but it only got {} port(s) (is the entity correctly initialized?)", targetInputPort, targetEntityDistribution.GetInputCount());
+			return;
+		}
+
+		if (sourceEntityDistribution.GetOutputType(sourceOutputPort) != targetEntityDistribution.GetInputType(targetInputPort))
+		{
+			// TODO: Log entities ID and type
+			spdlog::error("Tried to connect entity on output port {} to entity on input port {} which has incompatible type", sourceOutputPort, targetInputPort);
 			return;
 		}
 
@@ -54,12 +61,64 @@ namespace tsom
 		if (entt::handle connectedEntity = targetEntityDistribution.GetInputConnectedEntity(targetInputPort))
 		{
 			auto& connectedDistribution = connectedEntity.get<DistributionComponent>();
-			connectedDistribution.DisconnectOutput(sourceEntityDistribution.GetInputConnectedPort(targetInputPort));
+			connectedDistribution.DisconnectOutput(targetEntityDistribution.GetInputConnectedPort(targetInputPort));
 		}
 
 		// Register the connection
 		sourceEntityDistribution.ConnectOutput(sourceOutputPort, targetEntity, targetInputPort);
 		targetEntityDistribution.ConnectInput(targetInputPort, sourceEntity, sourceOutputPort);
+	}
+
+	void DistributionComponent::DisconnectInput(entt::handle entity, std::size_t inputPort)
+	{
+		auto* entityDistribution = entity.try_get<DistributionComponent>();
+		if (!entityDistribution)
+		{
+			// TODO: Log entities ID
+			spdlog::error("Tried to connect entity which has no distribution component (is the entity correctly initialized?)");
+			return;
+		}
+
+		if (inputPort >= entityDistribution->GetInputCount())
+		{
+			// TODO: Log entities ID
+			spdlog::error("Tried to connect entity on output port {} but it only got {} port(s) (is the entity correctly initialized?)", inputPort, entityDistribution->GetInputCount());
+			return;
+		}
+
+		if (entt::handle connectedEntity = entityDistribution->GetInputConnectedEntity(inputPort))
+		{
+			auto& connectedDistribution = connectedEntity.get<DistributionComponent>();
+			connectedDistribution.DisconnectOutput(entityDistribution->GetInputConnectedPort(inputPort));
+		}
+
+		entityDistribution->DisconnectInput(inputPort);
+	}
+
+	void DistributionComponent::DisconnectOutput(entt::handle entity, std::size_t outputPort)
+	{
+		auto* entityDistribution = entity.try_get<DistributionComponent>();
+		if (!entityDistribution)
+		{
+			// TODO: Log entities ID
+			spdlog::error("Tried to connect entity which has no distribution component (is the entity correctly initialized?)");
+			return;
+		}
+
+		if (outputPort >= entityDistribution->GetOutputCount())
+		{
+			// TODO: Log entities ID
+			spdlog::error("Tried to connect entity on output port {} but it only got {} port(s) (is the entity correctly initialized?)", outputPort, entityDistribution->GetOutputCount());
+			return;
+		}
+
+		if (entt::handle connectedEntity = entityDistribution->GetOutputConnectedEntity(outputPort))
+		{
+			auto& connectedDistribution = connectedEntity.get<DistributionComponent>();
+			connectedDistribution.DisconnectInput(entityDistribution->GetOutputConnectedPort(outputPort));
+		}
+
+		entityDistribution->DisconnectOutput(outputPort);
 	}
 
 	void DistributionComponent::ClearDistributedValues()

@@ -54,6 +54,7 @@ namespace tsom
 			~GameState();
 
 			BlockSelectionBar* GetBlockSelectionBar() const override;
+			Nz::Canvas* GetCanvas() override;
 			Nz::DebugDrawer* GetDebugDrawer() override;
 			const EntityRegistry& GetEntityRegistry() const override;
 			NetworkSession* GetNetworkSession() override;

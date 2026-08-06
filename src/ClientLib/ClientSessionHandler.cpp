@@ -312,9 +312,7 @@ namespace tsom
 	void ClientSessionHandler::HandlePacket(Packets::S_EntityDistributionUpdate&& distributionUpdate)
 	{
 		NazaraAssert(distributionUpdate.sourceEntity < m_entities.size() && m_entities[distributionUpdate.sourceEntity]);
-		NazaraAssert(distributionUpdate.targetEntity < m_entities.size() && m_entities[distributionUpdate.targetEntity]);
 		EntityData& sourceEntityData = *m_entities[distributionUpdate.sourceEntity];
-		EntityData& targetEntityData = *m_entities[distributionUpdate.targetEntity];
 
 		auto* sourceEntityDistribution = sourceEntityData.entity.try_get<DistributionComponent>();
 		if (!sourceEntityDistribution)
@@ -329,20 +327,28 @@ namespace tsom
 			return;
 		}
 
-		auto* targetEntityDistribution = targetEntityData.entity.try_get<DistributionComponent>();
-		if (!targetEntityDistribution)
+		if (distributionUpdate.targetEntity != Nz::MaxValue<Packets::Helper::EntityId>())
 		{
-			spdlog::error("Received a connection update targeting entity {} which has no distribution component (is the entity correctly initialized?)", distributionUpdate.targetEntity);
-			return;
-		}
+			NazaraAssert(distributionUpdate.targetEntity < m_entities.size() && m_entities[distributionUpdate.targetEntity]);
+			EntityData& targetEntityData = *m_entities[distributionUpdate.targetEntity];
 
-		if (distributionUpdate.targetEntityPort >= targetEntityDistribution->GetInputCount())
-		{
-			spdlog::error("Received a connection update targeting entity {} on input port {} but it only got {} port(s) (is the entity correctly initialized?)", distributionUpdate.targetEntity, distributionUpdate.targetEntityPort, sourceEntityDistribution->GetInputCount());
-			return;
-		}
+			auto* targetEntityDistribution = targetEntityData.entity.try_get<DistributionComponent>();
+			if (!targetEntityDistribution)
+			{
+				spdlog::error("Received a connection update targeting entity {} which has no distribution component (is the entity correctly initialized?)", distributionUpdate.targetEntity);
+				return;
+			}
 
-		DistributionComponent::Connect(sourceEntityData.entity, *sourceEntityDistribution, targetEntityData.entity, *targetEntityDistribution, distributionUpdate.sourceEntityPort, distributionUpdate.targetEntityPort);
+			if (distributionUpdate.targetEntityPort >= targetEntityDistribution->GetInputCount())
+			{
+				spdlog::error("Received a connection update targeting entity {} on input port {} but it only got {} port(s) (is the entity correctly initialized?)", distributionUpdate.targetEntity, distributionUpdate.targetEntityPort, sourceEntityDistribution->GetInputCount());
+				return;
+			}
+
+			DistributionComponent::Connect(sourceEntityData.entity, *sourceEntityDistribution, targetEntityData.entity, *targetEntityDistribution, distributionUpdate.sourceEntityPort, distributionUpdate.targetEntityPort);
+		}
+		else
+			DistributionComponent::DisconnectOutput(sourceEntityData.entity, distributionUpdate.sourceEntityPort);
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::S_EntityEnvironmentUpdate&& environmentUpdate)

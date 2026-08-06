@@ -407,7 +407,7 @@ namespace tsom
 					m_toolIndex++;
 					if (m_toolIndex >= m_tools.size())
 						m_toolIndex = 0;
-				
+		
 					m_tools[m_toolIndex]->OnActivate();
 					spdlog::info("New tool: {}", m_tools[m_toolIndex]->GetName());
 
@@ -712,6 +712,11 @@ namespace tsom
 
 	GameState::~GameState()
 	{
+	}
+
+	Nz::Canvas* GameState::GetCanvas()
+	{
+		return GetStateData().canvas;
 	}
 
 	Nz::DebugDrawer* GameState::GetDebugDrawer()

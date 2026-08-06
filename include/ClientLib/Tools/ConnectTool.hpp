@@ -9,8 +9,14 @@
 
 #include <ClientLib/Tools/ToolBase.hpp>
 #include <Nazara/Core/Color.hpp>
+#include <Nazara/TextRenderer/RichTextDrawer.hpp>
 #include <NazaraUtils/Prerequisites.hpp>
 #include <entt/entt.hpp>
+
+namespace Nz
+{
+	class LabelWidget;
+}
 
 namespace tsom
 {
@@ -18,16 +24,25 @@ namespace tsom
 	{
 		public:
 			inline ConnectTool(GameInterface& gameInterface);
-		
+
+			void OnActivate() override;
+			void OnDeactivate() override;
+
 			void OnTrigger(bool primary) override;
+			void OnWheel(float delta) override;
 
 			void Update(Nz::Time elapsedTime, const GameInterface::RaycastResult* previewRaycast) override;
 
 		private:
 			void DrawEntityAABB(entt::handle entity, Nz::Color color);
+			void UpdateText();
 
 			entt::handle m_hoveredEntity;
 			entt::handle m_selectedSourceEntity;
+			Nz::LabelWidget* m_labelWidget;
+			Nz::RichTextDrawer m_textDrawer;
+			std::size_t m_hoveredEntityPort;
+			std::size_t m_sourceEntityPort;
 	};
 }
 
