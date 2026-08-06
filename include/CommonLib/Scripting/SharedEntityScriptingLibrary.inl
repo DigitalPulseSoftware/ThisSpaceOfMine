@@ -23,7 +23,7 @@ namespace tsom
 	{
 		return [](sol::this_state L, entt::handle entity)
 		{
-			return sol::make_object(L, &entity.get<T>());
+			return sol::make_object(L, entity.try_get<T>());
 		};
 	}
 
