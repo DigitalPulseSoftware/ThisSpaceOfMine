@@ -3,6 +3,7 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <Game/GameAppComponent.hpp>
+#include <ClientLib/ClientConfigs.hpp>
 #include <ClientLib/ClientFramePipeline.hpp>
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Rendering/AtmosphereScatteringPipelinePass.hpp>
@@ -172,7 +173,9 @@ namespace tsom
 			std::string_view fpsParam;
 			if (commandLineParams.GetParameter("fps-limit", &fpsParam))
 			{
-				if (std::from_chars(fpsParam.data(), fpsParam.data() + fpsParam.size(), m_fpsLimit).ec != std::errc{})
+				if (std::from_chars(fpsParam.data(), fpsParam.data() + fpsParam.size(), m_fpsLimit).ec == std::errc{})
+					stateData->config->SetIntegerValue(Config::Graphics_FPSLimit, m_fpsLimit);
+				else
 					spdlog::error("failed to parse fps-limit parameter (expected an integer, got \"{}\")", fpsParam);
 			}
 
@@ -349,7 +352,7 @@ namespace tsom
 				m_blockLibrary->LoadFromString(std::string_view(reinterpret_cast<const char*>(ptr), Nz::SafeCast<std::size_t>(size)));
 				return true;
 			};
-		
+
 			if (!filesystem.GetFileContent("CookedAssets/BlockData.json", callback))
 			{
 				spdlog::critical("failed to load block data (missing assets)");
