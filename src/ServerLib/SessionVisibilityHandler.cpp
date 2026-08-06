@@ -85,7 +85,7 @@ namespace tsom
 	{
 		if (auto it = std::find(m_destroyedEnvironments.begin(), m_destroyedEnvironments.end(), &environment); it != m_destroyedEnvironments.end())
 		{
-			// Environment exists but its owner may have changed
+			// Environment exists, resurrect it and check if its owner has changed
 			EnvironmentId envId = Nz::Retrieve(m_environmentIndices, &environment);
 			EnvironmentData& envData = m_environments[envId];
 			if (envData.owner != environmentOwner)
@@ -233,10 +233,11 @@ namespace tsom
 
 	void SessionVisibilityHandler::Dispatch(Nz::UInt16 tickIndex)
 	{
-		DispatchEntities(tickIndex);
+		DispatchEntitiesDeletion(tickIndex);
+		DispatchEntitiesCreation(tickIndex);
 		DispatchEnvironments(tickIndex);
+		DispatchEntitiesUpdate(tickIndex);
 		DispatchChunks(tickIndex);
-		DispatchEntitiesDistribution(tickIndex); //< connection references multiple entities so wait until they are created
 	}
 
 	void SessionVisibilityHandler::UpdateEntityEnvironment(ServerEnvironment& newEnvironment, entt::handle oldEntity, entt::handle newEntity)
@@ -489,36 +490,6 @@ namespace tsom
 		m_resetChunk.Clear();
 	}
 
-	void SessionVisibilityHandler::DispatchEntities(Nz::UInt16 tickIndex)
-	{
-		DispatchEntitiesEnvironmentUpdate(tickIndex);
-		DispatchEntitiesProperties(tickIndex);
-		DispatchEntitiesRpcs(tickIndex);
-		DispatchEntitiesDeletion(tickIndex);
-		DispatchEntitiesCreation(tickIndex);
-		DispatchEntitiesStates(tickIndex);
-
-		if (m_pilotedShipUpdate)
-		{
-			if (m_pilotedShipUpdate->shipEntity)
-			{
-				if (!m_pilotedShipUpdate->shipExteriorEntity)
-					m_pilotedShipUpdate->shipExteriorEntity = m_pilotedShipUpdate->shipEntity;
-
-				Packets::S_PilotShip pilotShip;
-				pilotShip.referenceRotation = m_pilotedShipUpdate->referenceRotation;
-				pilotShip.shipEntity = Nz::Retrieve(m_entityIndices, m_pilotedShipUpdate->shipEntity);
-				pilotShip.shipExteriorEntity = Nz::Retrieve(m_entityIndices, m_pilotedShipUpdate->shipExteriorEntity);
-
-				m_networkSession->SendPacket(pilotShip);
-			}
-			else
-				m_networkSession->SendPacket(Packets::S_PilotShipFinish{});
-
-			m_pilotedShipUpdate = std::nullopt;
-		}
-	}
-
 	void SessionVisibilityHandler::DispatchEntitiesCreation(Nz::UInt16 tickIndex)
 	{
 		if (m_createdEntities.empty())
@@ -583,7 +554,7 @@ namespace tsom
 			EntityId outputEntityIndex = Nz::Retrieve(m_entityIndices, entity);
 			for (const auto& connection : connectionData.connections)
 			{
-				EntityId inputEntityIndex = Nz::Retrieve(m_entityIndices, connection.targetEntity);
+				EntityId inputEntityIndex = (connection.targetEntity) ? Nz::Retrieve(m_entityIndices, connection.targetEntity) : Nz::MaxValue();
 
 				distributionUpdatePacket.sourceEntity = outputEntityIndex;
 				distributionUpdatePacket.sourceEntityPort = connection.outputIndex;
@@ -629,7 +600,7 @@ namespace tsom
 	{
 		if (m_propertyUpdatedEntities.empty())
 			return;
-		
+
 		for (auto it = m_propertyUpdatedEntities.begin(); it != m_propertyUpdatedEntities.end(); ++it)
 		{
 			EntityId entityIndex = Nz::Retrieve(m_entityIndices, it.key());
@@ -665,7 +636,7 @@ namespace tsom
 	{
 		if (m_triggeredEntitiesRpc.empty())
 			return;
-		
+
 		for (auto&& [entity, rpcIndices] : m_triggeredEntitiesRpc)
 		{
 			EntityId entityIndex = Nz::Retrieve(m_entityIndices, entity);
@@ -715,6 +686,35 @@ namespace tsom
 
 		if (!stateUpdate.entities.empty() || stateUpdate.controlledCharacter.has_value())
 			m_networkSession->SendPacket(stateUpdate);
+	}
+
+	void SessionVisibilityHandler::DispatchEntitiesUpdate(Nz::UInt16 tickIndex)
+	{
+		DispatchEntitiesEnvironmentUpdate(tickIndex);
+		DispatchEntitiesProperties(tickIndex);
+		DispatchEntitiesRpcs(tickIndex);
+		DispatchEntitiesDistribution(tickIndex); //< may reference multiple entities
+		DispatchEntitiesStates(tickIndex);
+
+		if (m_pilotedShipUpdate)
+		{
+			if (m_pilotedShipUpdate->shipEntity)
+			{
+				if (!m_pilotedShipUpdate->shipExteriorEntity)
+					m_pilotedShipUpdate->shipExteriorEntity = m_pilotedShipUpdate->shipEntity;
+
+				Packets::S_PilotShip pilotShip;
+				pilotShip.referenceRotation = m_pilotedShipUpdate->referenceRotation;
+				pilotShip.shipEntity = Nz::Retrieve(m_entityIndices, m_pilotedShipUpdate->shipEntity);
+				pilotShip.shipExteriorEntity = Nz::Retrieve(m_entityIndices, m_pilotedShipUpdate->shipExteriorEntity);
+
+				m_networkSession->SendPacket(pilotShip);
+			}
+			else
+				m_networkSession->SendPacket(Packets::S_PilotShipFinish{});
+
+			m_pilotedShipUpdate = std::nullopt;
+		}
 	}
 
 	void SessionVisibilityHandler::DispatchEnvironments(Nz::UInt16 tickIndex)

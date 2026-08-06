@@ -80,7 +80,6 @@ namespace tsom
 			void DispatchChunks(Nz::UInt16 tickIndex);
 			void DispatchChunkCreation(Nz::UInt16 tickIndex);
 			void DispatchChunkReset(Nz::UInt16 tickIndex);
-			void DispatchEntities(Nz::UInt16 tickIndex);
 
 			void DispatchEntitiesCreation(Nz::UInt16 tickIndex);
 			void DispatchEntitiesDeletion(Nz::UInt16 tickIndex);
@@ -89,6 +88,7 @@ namespace tsom
 			void DispatchEntitiesProperties(Nz::UInt16 tickIndex);
 			void DispatchEntitiesRpcs(Nz::UInt16 tickIndex);
 			void DispatchEntitiesStates(Nz::UInt16 tickIndex);
+			void DispatchEntitiesUpdate(Nz::UInt16 tickIndex);
 			void DispatchEnvironments(Nz::UInt16 tickIndex);
 
 			void HandleEntityCreation(std::vector<Packets::Helper::EntityData>& entities, entt::handle entity, CreateEntityData&& createEntityData);
