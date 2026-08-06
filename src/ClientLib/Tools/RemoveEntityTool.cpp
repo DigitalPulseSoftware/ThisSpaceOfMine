@@ -4,7 +4,6 @@
 
 #include <ClientLib/Tools/RemoveEntityTool.hpp>
 #include <ClientLib/Components/ClientEntityNetworkIndex.hpp>
-#include <ClientLib/Components/VisualEntityComponent.hpp>
 #include <CommonLib/NetworkSession.hpp>
 #include <CommonLib/Protocol/Packets.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
@@ -37,13 +36,9 @@ namespace tsom
 		if (!previewRaycast->hitEntity.all_of<ClientEntityNetworkIndex>())
 			return;
 
-		entt::handle visualEntity = previewRaycast->hitEntity;
-		if (VisualEntityComponent* visualComponent = visualEntity.try_get<VisualEntityComponent>())
-			visualEntity = visualComponent->visualEntity;
-
-		if (Nz::GraphicsComponent* gfxComponent = visualEntity.try_get<Nz::GraphicsComponent>())
+		if (Nz::GraphicsComponent* gfxComponent = previewRaycast->hitEntity.try_get<Nz::GraphicsComponent>())
 		{
-			Nz::NodeComponent& visualNode = visualEntity.get<Nz::NodeComponent>();
+			Nz::NodeComponent& visualNode = previewRaycast->hitEntity.get<Nz::NodeComponent>();
 
 			Nz::Boxf aabb = gfxComponent->GetAABB();
 			aabb.ScaleAroundCenter(1.05f);

@@ -4,7 +4,6 @@
 
 #include <ClientLib/Tools/ConnectTool.hpp>
 #include <ClientLib/Components/ClientEntityNetworkIndex.hpp>
-#include <ClientLib/Components/VisualEntityComponent.hpp>
 #include <CommonLib/EntityClass.hpp>
 #include <CommonLib/NetworkSession.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
@@ -161,13 +160,9 @@ namespace tsom
 
 	void ConnectTool::DrawEntityAABB(entt::handle entity, Nz::Color color)
 	{
-		entt::handle visualEntity = entity;
-		if (VisualEntityComponent* visualComponent = visualEntity.try_get<VisualEntityComponent>())
-			visualEntity = visualComponent->visualEntity;
-
-		if (Nz::GraphicsComponent* gfxComponent = visualEntity.try_get<Nz::GraphicsComponent>())
+		if (Nz::GraphicsComponent* gfxComponent = entity.try_get<Nz::GraphicsComponent>())
 		{
-			Nz::NodeComponent& entityNode = visualEntity.get<Nz::NodeComponent>();
+			Nz::NodeComponent& entityNode = entity.get<Nz::NodeComponent>();
 
 			Nz::Boxf aabb = gfxComponent->GetAABB();
 			aabb.ScaleAroundCenter(1.05f);
