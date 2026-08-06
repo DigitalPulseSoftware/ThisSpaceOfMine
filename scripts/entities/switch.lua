@@ -18,15 +18,13 @@ classData:On("init", function (self)
 	self:AddComponent("rigidbody3d", physSettings)
 	self:SetInteractible(true)
 
-	local distribution = self:AddComponent("distribution", {
+	self:AddComponent("distribution", {
 		inputs = { DistributionType.Electrical },
 		outputs = { DistributionType.Electrical }
 	})
 
-	if SERVER then
-		distribution:UpdateConsumptionValue(0, ElectricalQuantity(maxOutputValue))
-	elseif CLIENT then
-		self:SetInteractibleText("Switch (enabled)")
+	if CLIENT then
+		self:SetInteractibleText("Switch" .. (self:GetProperty("enabled") and " (enabled)" or " (disabled)"))
 
 		local model = AssetLibrary.GetModel("switch")
 
@@ -53,15 +51,15 @@ if SERVER then
 
 		local distribution = self:GetComponent("distribution")
 
-		local electricity = distribution:GetDistributedValue(DistributionType.Electrical)
-		distribution:UpdateProductionValue(0, electricity)
+		local electricity = distribution:GetDistributedValue(DistributionType.Electrical).energy
+		distribution:UpdateProductionValue(0, ElectricalQuantity(math.min(electricity, maxOutputValue)))
 
 		local outputEntity = distribution:GetOutputConnectedEntity(0)
 		if outputEntity then
 			local outputDistribution = outputEntity:GetComponent("distribution")
 			distribution:UpdateConsumptionValue(0, outputDistribution:GetConsumptionValue(0))
 		else
-			distribution:UpdateConsumptionValue(0, electricity)
+			distribution:UpdateConsumptionValue(0, ElectricalQuantity(0))
 		end
 	end)
 else

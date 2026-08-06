@@ -358,7 +358,7 @@ namespace tsom
 			"SetRotation", LuaFunction(&Nz::RigidBody3DComponent::SetRotation),
 			"TeleportTo", LuaFunction(&Nz::RigidBody3DComponent::TeleportTo)
 		);
-		
+
 		state.new_enum("DistributionType",
 			"Electrical", DistributionType::Electrical,
 			"Gas", DistributionType::Gas
@@ -366,12 +366,14 @@ namespace tsom
 
 		state.new_usertype<ElectricalQuantity>("ElectricalQuantity",
 			sol::call_constructor, [](std::uint32_t energy) { return ElectricalQuantity{ energy }; },
+			"Minimize", &ElectricalQuantity::Minimize,
 			"energy", &ElectricalQuantity::energy
 		);
 
 		state.new_usertype<GasQuantity>("GasQuantity",
 			sol::call_constructor, sol::constructors<GasQuantity()>(),
 			"Increment", &GasQuantity::Increment,
+			"Minimize", &GasQuantity::Minimize,
 			sol::meta_function::index, &GasQuantity::Get,
 			sol::meta_function::new_index, &GasQuantity::Set
 		);

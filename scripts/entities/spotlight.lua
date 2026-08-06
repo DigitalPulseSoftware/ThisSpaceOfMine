@@ -22,9 +22,7 @@ classData:On("init", function (self)
 		outputs = {}
 	})
 
-	if SERVER then
-		distribution:UpdateConsumptionValue(0, ElectricalQuantity(lightConsumption))
-	elseif CLIENT then
+	if CLIENT then
 		self:SetInteractible(true)
 		self:SetInteractibleText("Light")
 
@@ -48,6 +46,8 @@ if SERVER then
 	classData:On("distribution", function (self)
 		local distribution = self:GetComponent("distribution")
 		local electricity = distribution:GetDistributedValue(DistributionType.Electrical)
+		distribution:UpdateConsumptionValue(0, ElectricalQuantity(math.min(electricity.energy, lightConsumption)))
+
 		self:UpdateProperty("light_enabled", electricity.energy >= lightConsumption)
 	end)
 else

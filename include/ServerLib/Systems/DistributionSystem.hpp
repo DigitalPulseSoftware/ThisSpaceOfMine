@@ -50,7 +50,6 @@ namespace tsom
 
 			entt::storage<void> m_producers;
 			Nz::EnttObserver<Nz::TypeList<DistributionComponent>, Nz::TypeList<Nz::DisabledComponent>, EntityData> m_distributionObserver;
-			Nz::EnumArray<DistributionType, DistributionQuantity> m_cachedValues;
 			Nz::Time m_tickAccumulator;
 			entt::registry& m_registry;
 	};
