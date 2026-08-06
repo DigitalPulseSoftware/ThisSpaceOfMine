@@ -1,3 +1,4 @@
+local maxInput = Distribution.ToTickUnit(200)
 local maxOutput = Distribution.ToTickUnit(200)
 
 local classData = EntityRegistry.ClassBuilder()
@@ -55,18 +56,19 @@ if SERVER then
 		local consumedGas
 		if outputEntity then
 			local outputDistribution = outputEntity:GetComponent("distribution")
-			consumedGas = outputDistribution:GetDistributedValue(DistributionType.Gas)
+			consumedGas = outputDistribution:GetConsumptionValue(distribution:GetOutputConnectedPort(0))
 		else
 			consumedGas = GasQuantity()
 		end
 
 		local consumptionValues = GasQuantity()
 		for gasType, gasName in pairs(gases) do
+			local incomingGas = math.min(incomingGases[gasType], maxInput)
 			local outputValue = math.min(consumedGas[gasType], maxOutput)
-			local storage = math.min(self:GetProperty("storage_" .. gasName) + incomingGases[gasType] - outputValue, capacity)
+			local storage = math.clamp(self:GetProperty("storage_" .. gasName) + incomingGas - outputValue, 0, capacity)
 			self:UpdateProperty("storage_" .. gasName, storage)
 
-			consumptionValues:Increment(gasType, math.min(capacity - storage, maxOutput))
+			consumptionValues:Increment(gasType, math.min(capacity - storage, incomingGas))
 		end
 
 		distribution:UpdateConsumptionValue(0, consumptionValues)

@@ -45,12 +45,13 @@ if SERVER then
 			return
 		end
 
-		local consumptionValue = distribution:GetConsumptionValue(0) -- Get consumption value to handle update delay
-		distribution:UpdateConsumptionValue(0, ElectricalQuantity(computerConsumption))
+		local electricity = distribution:GetDistributedValue(DistributionType.Electrical).energy
 
-		local electricity = distribution:GetDistributedValue(DistributionType.Electrical)
+		if electricity >= computerConsumption then
+			distribution:UpdateConsumptionValue(0, ElectricalQuantity(computerConsumption))
+		else
+			distribution:UpdateConsumptionValue(0, ElectricalQuantity(0))
 
-		if electricity < consumptionValue then
 			-- Not enough electricity, eject pilot
 			local shipEnv = self:GetEnvironment()
 			local shipEntity = shipEnv:GetExteriorShipEntity()

@@ -1,3 +1,4 @@
+local maxInput = Distribution.ToTickUnit(200)
 local maxOutput = Distribution.ToTickUnit(200)
 
 local classData = EntityRegistry.ClassBuilder()
@@ -33,7 +34,7 @@ classData:On("init", function (self)
 		local charge = self:GetProperty("charge")
 
 		local chargeFactor = charge / capacity
-		self:SetInteractibleText(string.format("Battery (%d Wh - %d %%)", Distribution.FromTickUnit(charge), math.floor(chargeFactor * 100 + 0.5)))
+		self:SetInteractibleText(string.format("Battery (%d Wh - %d %%)", Distribution.FromStorageUnit(charge), math.floor(chargeFactor * 100 + 0.5)))
 
 		local model = AssetLibrary.GetModel("battery"):Clone()
 		self.ChargeMaterial = model:GetMaterial(6):Clone()
@@ -53,21 +54,21 @@ if SERVER then
 
 		local capacity = self:GetProperty("capacity")
 
-		local incomingElectricity = distribution:GetDistributedValue(DistributionType.Electrical).energy
+		local incomingElectricity = math.min(distribution:GetDistributedValue(DistributionType.Electrical).energy, maxInput)
 
 		local outputEntity = distribution:GetOutputConnectedEntity(0)
 		local outputValue = 0
 		if outputEntity then
 			local outputDistribution = outputEntity:GetComponent("distribution")
-			local consumedValue = outputDistribution:GetDistributedValue(DistributionType.Electrical).energy
+			local consumedValue = outputDistribution:GetConsumptionValue(distribution:GetOutputConnectedPort(0)).energy
 			outputValue = math.min(maxOutput, consumedValue)
 		end
 
-		local charge = math.min(self:GetProperty("charge") + incomingElectricity - outputValue, capacity)
+		local charge = math.clamp(self:GetProperty("charge") + incomingElectricity - outputValue, 0, capacity)
 		self:UpdateProperty("charge", charge)
 
 		local outputValue = math.min(charge, maxOutput)
-		distribution:UpdateConsumptionValue(0, ElectricalQuantity(math.min(capacity - charge, maxOutput)))
+		distribution:UpdateConsumptionValue(0, ElectricalQuantity(math.min(capacity - charge, incomingElectricity)))
 		distribution:UpdateProductionValue(0, ElectricalQuantity(outputValue))
 	end)
 else

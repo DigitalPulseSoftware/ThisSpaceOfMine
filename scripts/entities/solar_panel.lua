@@ -21,7 +21,7 @@ classData:On("init", function (self)
 	})
 
 	if SERVER then
-		distribution:UpdateProductionValue(0, ElectricalQuantity(100))
+		distribution:UpdateProductionValue(0, ElectricalQuantity(0))
 	elseif CLIENT then
 		self:SetInteractible(true)
 		self:SetInteractibleText(string.format("Solar panel (%d %%)", math.floor(self:GetProperty("power_factor") * 100 + 0.5)))
