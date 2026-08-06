@@ -17,7 +17,7 @@ namespace tsom
 	m_database(database),
 	m_databaseId(databaseId)
 	{
-		m_databaseObserver.OnEntityAdded.Connect([&](entt::entity entity)
+		m_databaseObserver.OnEntityAdded.Connect([this](entt::entity entity)
 		{
 			DatabaseComponent& entityDatabase = m_registry.get<DatabaseComponent>(entity);
 			if (entityDatabase.planetDatabaseId)
@@ -38,14 +38,14 @@ namespace tsom
 			}
 		});
 
-		m_databaseObserver.OnEntityRemove.Connect([&](entt::entity entity)
+		m_databaseObserver.OnEntityRemove.Connect([this](entt::entity entity)
 		{
 			DatabaseComponent& entityDatabase = m_registry.get<DatabaseComponent>(entity);
 			if (entityDatabase.planetDatabaseId)
 			{
 				m_pendingUpdates.push_back({
 					.operation = DatabaseOperation::Destroy,
-					.databaseId = databaseId
+					.databaseId = *entityDatabase.planetDatabaseId
 				});
 			}
 		});
