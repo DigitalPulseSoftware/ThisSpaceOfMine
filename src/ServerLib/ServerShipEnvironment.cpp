@@ -360,22 +360,25 @@ namespace tsom
 				{
 					NAZARA_DEFER({ entityConnectionIndex++; });
 
-					Nz::Uuid sourceEntity = Nz::Uuid::FromString(connectionDoc["source_entity"]);
-					Nz::Uuid targetEntity = Nz::Uuid::FromString(connectionDoc["target_entity"]);
+					const std::string& sourceEntity = connectionDoc["source_entity"];
+					const std::string& targetEntity = connectionDoc["target_entity"];
+
+					Nz::Uuid sourceEntityUuid = Nz::Uuid::FromString(sourceEntity);
+					Nz::Uuid targetEntityUuid = Nz::Uuid::FromString(targetEntity);
 					std::size_t sourceOutputIndex = connectionDoc["source_port"];
 					std::size_t targetInputIndex = connectionDoc["target_port"];
 
-					auto sourceEntityIt = entityByUuid.find(sourceEntity);
+					auto sourceEntityIt = entityByUuid.find(sourceEntityUuid);
 					if (sourceEntityIt == entityByUuid.end())
 					{
-						spdlog::error("Database entity connection #{} has unknown source entity {}", entityConnectionIndex, sourceEntity.ToString());
+						spdlog::error("Database entity connection #{} has unknown source entity {}", entityConnectionIndex, sourceEntity);
 						continue;
 					}
 
-					auto targetEntityIt = entityByUuid.find(targetEntity);
+					auto targetEntityIt = entityByUuid.find(targetEntityUuid);
 					if (targetEntityIt == entityByUuid.end())
 					{
-						spdlog::error("Database entity connection #{} has unknown target entity {}", entityConnectionIndex, targetEntity.ToString());
+						spdlog::error("Database entity connection #{} has unknown target entity {}", entityConnectionIndex, targetEntity);
 						continue;
 					}
 

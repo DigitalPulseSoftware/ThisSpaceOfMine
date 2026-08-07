@@ -107,16 +107,6 @@ namespace tsom
 		}
 	}
 
-	inline EntityRegistry& ClientSessionHandler::GetEntityRegistry()
-	{
-		return m_entityRegistry;
-	}
-
-	inline const EntityRegistry& ClientSessionHandler::GetEntityRegistry() const
-	{
-		return m_entityRegistry;
-	}
-
 	const Nz::Node* ClientSessionHandler::GetEnvironmentNode(std::size_t environmentIndex) const
 	{
 		if (environmentIndex > m_environments.size() || !m_environments[environmentIndex])
