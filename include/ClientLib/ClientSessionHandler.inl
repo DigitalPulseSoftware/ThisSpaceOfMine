@@ -11,6 +11,16 @@ namespace tsom
 		return m_playerControlledEntity;
 	}
 
+	inline EntityRegistry& ClientSessionHandler::GetEntityRegistry()
+	{
+		return m_entityRegistry;
+	}
+
+	inline const EntityRegistry& ClientSessionHandler::GetEntityRegistry() const
+	{
+		return m_entityRegistry;
+	}
+
 	inline const GravityController* ClientSessionHandler::GetGravityController(std::size_t environmentIndex) const
 	{
 		if (environmentIndex > m_environments.size() || !m_environments[environmentIndex])
