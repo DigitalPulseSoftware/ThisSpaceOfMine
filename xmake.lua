@@ -70,7 +70,7 @@ add_requireconfs("fmt", { debug = is_mode("debug") })
 -- temporary use commits because those versions aren't released yet
 add_requireconfs("nazarautils", "**.nazarautils", { version = "d20136d17d15f9351046b3b9338940f4a81954b9", override = true })
 add_requireconfs("nzsl", "**.nzsl", { version = "4f0cd74d426a40708edf4c4126157c3a53b1ec7f", override = true })
-add_requireconfs("nazaraengine", "**.nazaraengine", { version = "7c156cc7fedca46aaa7723113d3304abed71466e", override = true })
+add_requireconfs("nazaraengine", "**.nazaraengine", { version = "71843bc2f2ebdcc40caef29040796a25ece71103", override = true })
 
 -- Don't link with system-installed libs on CI
 if os.getenv("CI") then
