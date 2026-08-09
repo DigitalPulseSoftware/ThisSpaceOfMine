@@ -17,18 +17,22 @@ end)
 
 local mat2 = MaterialInstance.Instantiate(MaterialType.PhysicallyBased)
 mat2:SetTextureProperty("BaseColorMap", Texture.Load("CookedAssets/Models/Battery/Textures/lambert3SG_baseColor.dds"))
+mat2:SetTextureProperty("MetallicRoughnessMap", Texture.Load("CookedAssets/Models/Battery/Textures/lambert3SG_metallicRoughness.dds"))
 mat2:SetTextureProperty("NormalMap", Texture.Load("CookedAssets/Models/Battery/Textures/lambert3SG_normal.dds"))
 
 local mat3 = MaterialInstance.Instantiate(MaterialType.PhysicallyBased)
 mat3:SetTextureProperty("BaseColorMap", Texture.Load("CookedAssets/Models/Battery/Textures/lambert4SG_baseColor.dds"))
+mat3:SetTextureProperty("MetallicRoughnessMap", Texture.Load("CookedAssets/Models/Battery/Textures/lambert4SG_metallicRoughness.dds"))
 
 local mat4 = MaterialInstance.Instantiate(MaterialType.PhysicallyBased)
 mat4:SetTextureProperty("BaseColorMap", Texture.Load("CookedAssets/Models/Battery/Textures/lambert5SG_baseColor.dds"))
 mat4:SetTextureProperty("NormalMap", Texture.Load("CookedAssets/Models/Battery/Textures/lambert5SG_normal.dds"))
+mat4:SetTextureProperty("MetallicRoughnessMap", Texture.Load("CookedAssets/Models/Battery/Textures/lambert5SG_metallicRoughness.dds"))
 
 local mat5 = MaterialInstance.Instantiate(MaterialType.PhysicallyBased)
 mat5:SetTextureProperty("BaseColorMap", Texture.Load("CookedAssets/Models/Battery/Textures/lambert6SG_baseColor.dds"))
 mat5:SetTextureProperty("NormalMap", Texture.Load("CookedAssets/Models/Battery/Textures/lambert6SG_normal.dds"))
+mat5:SetTextureProperty("MetallicRoughnessMap", Texture.Load("CookedAssets/Models/Battery/Textures/lambert6SG_metallicRoughness.dds"))
 
 local mat6 = MaterialInstance.Instantiate(MaterialType.PhysicallyBased)
 mat6:SetValueProperty("BaseColor", Color(0.0377317034, 0.0312860906, 0.0312860906))

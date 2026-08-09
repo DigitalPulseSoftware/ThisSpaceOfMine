@@ -1,14 +1,20 @@
-local primitive = Primitive.Box(Vec3(0.5, 0.5, 0.5))
+local params = {
+	mesh = {
+		center = true
+	},
+	loadMaterials = false
+}
 
-local mesh = Mesh.CreateStatic()
-mesh:BuildSubMesh(primitive)
-mesh:SetMaterialCount(1)
+local lightSource = Model.Load("CookedAssets/Models/LightSource/LightSource.obj", params)
 
-local model = Model.BuildFromMesh(mesh)
+local material = MaterialInstance.Instantiate(MaterialType.PhysicallyBased)
+material:SetTextureProperty("BaseColorMap", Texture.Load("CookedAssets/Models/LightSource/Textures/BaseColor.dds"))
+material:SetTextureProperty("AmbientOcclusionMap", Texture.Load("CookedAssets/Models/LightSource/Textures/AmbientOcclusion.dds"))
+material:SetTextureProperty("EmissiveMap", Texture.Load("CookedAssets/Models/LightSource/Textures/Emissive.dds"))
+material:SetTextureProperty("MetallicRoughnessMap", Texture.Load("CookedAssets/Models/LightSource/Textures/MetallicRoughness.dds"))
+material:SetTextureProperty("NormalMap", Texture.Load("CookedAssets/Models/LightSource/Textures/Normal.dds"))
 
-local lightMat = MaterialInstance.Instantiate(MaterialType.PhysicallyBased)
-lightMat:SetTextureProperty("BaseColorMap", Texture.Load("CookedAssets/Textures/Dev/grey.dds"))
+lightSource:SetMaterial(0, material)
+lightSource:SetMaterial(1, material)
 
-model:SetMaterial(0, lightMat)
-
-AssetLibrary.RegisterModel("light", model)
+AssetLibrary.RegisterModel("light", lightSource)

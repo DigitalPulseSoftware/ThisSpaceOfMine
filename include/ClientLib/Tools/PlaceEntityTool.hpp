@@ -44,6 +44,8 @@ namespace tsom
 				entt::handle entity;
 				Nz::UInt8 rotationMultiplier = 0; // * 45°
 				Nz::Vector3f collider;
+				Nz::Vector3f rotationOffset;
+				bool keepUpright = false;
 			};
 
 			std::optional<PreviewData> m_preview;

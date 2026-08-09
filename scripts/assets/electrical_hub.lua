@@ -1,14 +1,21 @@
-local primitive = Primitive.Box(Vec3(0.5, 0.2, 0.5))
+local params = {
+	mesh = {
+		center = true,
+		--texCoordScale = Vec2(-1.0, 1.0),
+		vertexRotation = EulerAngles(-90, 90, 90),
+		vertexScale = Vec3(1.0 / 4.0)
+	},
+	loadMaterials = false
+}
 
-local mesh = Mesh.CreateStatic()
-mesh:BuildSubMesh(primitive)
-mesh:SetMaterialCount(1)
+local controlPanel = Model.Load("CookedAssets/Models/ControlPanel/ControlPanel.obj", params)
 
-local model = Model.BuildFromMesh(mesh)
+local material = MaterialInstance.Instantiate(MaterialType.PhysicallyBased)
+material:SetTextureProperty("BaseColorMap", Texture.Load("CookedAssets/Models/ControlPanel/Textures/BaseColor.dds"))
+material:SetTextureProperty("AmbientOcclusionMap", Texture.Load("CookedAssets/Models/ControlPanel/Textures/AmbientOcclusion.dds"))
+material:SetTextureProperty("MetallicRoughnessMap", Texture.Load("CookedAssets/Models/ControlPanel/Textures/MetallicRoughness.dds"))
+material:SetTextureProperty("NormalMap", Texture.Load("CookedAssets/Models/ControlPanel/Textures/Normal.dds"))
 
-local lightMat = MaterialInstance.Instantiate(MaterialType.PhysicallyBased)
-lightMat:SetTextureProperty("BaseColorMap", Texture.Load("CookedAssets/Textures/Dev/grey.dds"))
+controlPanel:SetMaterial(0, material)
 
-model:SetMaterial(0, lightMat)
-
-AssetLibrary.RegisterModel("electrical_hub", model)
+AssetLibrary.RegisterModel("electrical_hub", controlPanel)

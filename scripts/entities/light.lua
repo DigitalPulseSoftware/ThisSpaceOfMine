@@ -3,7 +3,8 @@ local lightConsumption = Distribution.ToTickUnit(25)
 local classData = EntityRegistry.ClassBuilder()
 classData:Set("spawnable", true)
 classData:Set("spawnable_model", "light")
-classData:Set("spawnable_collider", Vec3(0.5))
+classData:Set("spawnable_collider", Vec3(0.4, 1.05, 0.4))
+classData:Set("spawnable_keepupright", true)
 
 classData:AddProperty("light_enabled", { type = "bool", default = false, isNetworked = true })
 
@@ -11,7 +12,7 @@ classData:On("init", function (self)
 	local physSettings = {
 		kind = "static",
 		mass = 0.0,
-		collider = BoxCollider3D.new(Vec3(0.5)),
+		collider = BoxCollider3D.new(Vec3(0.4, 1.05, 0.4)),
 		objectLayer = Constants.ObjectLayerStatic
 	}
 
@@ -27,8 +28,8 @@ classData:On("init", function (self)
 		self:SetInteractibleText("Light")
 
 		local model = AssetLibrary.GetModel("light"):Clone()
-		self.LightMat = model:GetMaterial(0):Clone()
-		model:SetMaterial(0, self.LightMat)
+		self.LightMat = model:GetMaterial(1):Clone()
+		model:SetMaterial(1, self.LightMat)
 
 		local isEnabled = self:GetProperty("light_enabled")
 		self.LightMat:SetValueProperty("EmissiveColor", isEnabled and Color.White or Color.Black)

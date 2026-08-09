@@ -164,6 +164,12 @@ namespace tsom
 								m_preview->collider.x = static_cast<float>(metadata.GetDoubleParameter("spawnable_collider.x").GetValueOr(1.0));
 								m_preview->collider.y = static_cast<float>(metadata.GetDoubleParameter("spawnable_collider.y").GetValueOr(1.0));
 								m_preview->collider.z = static_cast<float>(metadata.GetDoubleParameter("spawnable_collider.z").GetValueOr(1.0));
+
+								m_preview->rotationOffset.x = static_cast<float>(metadata.GetDoubleParameter("spawnable_rotation.x").GetValueOr(1.0));
+								m_preview->rotationOffset.y = static_cast<float>(metadata.GetDoubleParameter("spawnable_rotation.y").GetValueOr(1.0));
+								m_preview->rotationOffset.z = static_cast<float>(metadata.GetDoubleParameter("spawnable_rotation.z").GetValueOr(1.0));
+
+								m_preview->keepUpright = metadata.GetBooleanParameter("spawnable_keepupright").GetValueOr(false);
 							}
 						}
 					}
@@ -178,8 +184,20 @@ namespace tsom
 						Nz::Vector3f faceCenter = std::accumulate(cornerGlobalPos.begin(), cornerGlobalPos.end(), Nz::Vector3f::Zero()) / corners.size();
 
 						auto& previewNode = m_preview->entity.get<Nz::NodeComponent>();
-						Nz::Vector3f entityPos = faceCenter + previewRaycast->hitNormal * m_preview->collider.y * 0.5f;
-						Nz::Quaternionf entityRot = chunkNode.ToGlobalRotation(Nz::Quaternionf::RotationBetween(Nz::Vector3f::Up(), s_dirNormals[hitCoordinates->direction]) * Nz::Quaternionf(Nz::DegreeAnglef(45.f) * m_preview->rotationMultiplier, Nz::Vector3f::Up()));
+
+						Nz::Vector3f entityPos = faceCenter;
+						Nz::Quaternionf surfaceRotation = Nz::Quaternionf::Identity();
+						Nz::Vector3f normal = s_dirNormals[hitCoordinates->direction];
+
+						if (m_preview->keepUpright)
+							entityPos += normal * m_preview->collider * 0.5f;
+						else
+						{
+							entityPos += normal * m_preview->collider.y * 0.5f;
+							surfaceRotation = Nz::Quaternionf::RotationBetween(Nz::Vector3f::Up(), normal);
+						}
+
+						Nz::Quaternionf entityRot = chunkNode.ToGlobalRotation(surfaceRotation * Nz::Quaternionf(Nz::DegreeAnglef(45.f) * m_preview->rotationMultiplier, Nz::Vector3f::Up()) * Nz::Quaternionf(Nz::EulerAnglesf(m_preview->rotationOffset.x, m_preview->rotationOffset.y, m_preview->rotationOffset.z)));
 						previewNode.SetTransform(entityPos, entityRot);
 
 						struct IgnoreTrigger : Nz::PhysObjectLayerFilter3D
