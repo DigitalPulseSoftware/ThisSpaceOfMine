@@ -190,9 +190,24 @@ namespace tsom
 				});
 			}),
 
-			"Instantiate", LuaFunction([this](Nz::MaterialType matType, std::optional<Nz::MaterialInstancePresetFlags> presetFlags)
+			"Instantiate", LuaFunction([this](Nz::MaterialType matType, std::optional<Nz::MaterialInstancePresetFlags> presetFlagsOpt)
 			{
-				return Nz::MaterialInstance::Instantiate(matType, presetFlags.value_or(Nz::MaterialInstancePresetFlags{}) | Nz::MaterialInstancePreset::ReverseZ);
+				// Force ReverseZ
+				Nz::MaterialInstancePresetFlags presetFlags = presetFlagsOpt.value_or(Nz::MaterialInstancePresetFlags{}) | Nz::MaterialInstancePreset::ReverseZ;
+
+				// Override PBR material
+				if (matType == Nz::MaterialType::PhysicallyBased)
+				{
+					auto& clientAsset = m_app.GetComponent<ClientAssetLibraryAppComponent>();
+					const auto& pbrMat = clientAsset.GetMaterial("PBRMaterial");
+
+					auto matInstance = pbrMat->Instantiate();
+					matInstance->ApplyPreset(presetFlags);
+
+					return matInstance;
+				}
+				else
+					return Nz::MaterialInstance::Instantiate(matType, presetFlags);
 			})
 		);
 	}
@@ -202,7 +217,7 @@ namespace tsom
 		state.new_usertype<nzsl::ShaderStageTypeFlags>("ShaderStageType",
 			sol::no_constructor,
 
-			"Compute", sol::var(nzsl::ShaderStageTypeFlags(nzsl::ShaderStageType::Compute)),
+			"Compute",  sol::var(nzsl::ShaderStageTypeFlags(nzsl::ShaderStageType::Compute)),
 			"Fragment", sol::var(nzsl::ShaderStageTypeFlags(nzsl::ShaderStageType::Fragment)),
 			"Vertex",   sol::var(nzsl::ShaderStageTypeFlags(nzsl::ShaderStageType::Vertex)),
 

@@ -9,6 +9,7 @@
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Components/AnimationComponent.hpp>
 #include <ClientLib/Components/CameraFollowerComponent.hpp>
+#include <ClientLib/ClientAssetLibraryAppComponent.hpp>
 #include <ClientLib/Components/ChunkNetworkMapComponent.hpp>
 #include <ClientLib/Components/ClientEntityNetworkIndex.hpp>
 #include <ClientLib/Components/EnvironmentComponent.hpp>
@@ -46,7 +47,6 @@
 #include <Nazara/Graphics/TextSprite.hpp>
 #include <Nazara/Graphics/TextureAsset.hpp>
 #include <Nazara/Graphics/Components/GraphicsComponent.hpp>
-#include <Nazara/Graphics/PropertyHandler/TexturePropertyHandler.hpp>
 #include <Nazara/Physics3D/Collider3D.hpp>
 #include <Nazara/Physics3D/Components/PhysCharacter3DComponent.hpp>
 #include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
@@ -673,6 +673,7 @@ namespace tsom
 			m_playerModel.emplace();
 
 			auto& fs = m_app.GetComponent<Nz::FilesystemAppComponent>();
+			auto& assetLibrary = m_app.GetComponent<ClientAssetLibraryAppComponent>();
 
 			m_playerAnimAssets = std::make_shared<PlayerAnimationAssets>();
 
@@ -704,49 +705,7 @@ namespace tsom
 				animParams.jointRotation = params.mesh.vertexRotation;
 				animParams.jointScale = params.mesh.vertexScale;
 
-				Nz::MaterialSettings settings;
-				Nz::PredefinedMaterials::AddBasicSettings(settings);
-				Nz::PredefinedMaterials::AddPbrSettings(settings);
-				settings.AddTextureProperty("AmbientOcclusionMap", Nz::ImageType::E2D);
-				settings.AddTextureProperty("MetalnessSmoothnessMap", Nz::ImageType::E2D);
-				settings.AddPropertyHandler(std::make_unique<Nz::TexturePropertyHandler>("AmbientOcclusionMap", "HasAmbientOcclusionTexture"));
-				settings.AddPropertyHandler(std::make_unique<Nz::TexturePropertyHandler>("MetalnessSmoothnessMap", "HasMetalnessSmoothnessTexture"));
-
-				auto& renderQueueRegistry = Nz::Graphics::Instance()->GetRenderQueueRegistry();
-				std::size_t depthQueue = renderQueueRegistry.GetIndex("DepthOpaque");
-				std::size_t forwardOpaqueQueue = renderQueueRegistry.GetIndex("ForwardOpaque");
-				std::size_t forwardTransparentQueue = renderQueueRegistry.GetIndex("ForwardTransparent");
-				std::size_t shadowQueue = renderQueueRegistry.GetIndex("Shadow");
-
-				Nz::MaterialPass forwardPass;
-				forwardPass.renderQueue = forwardOpaqueQueue;
-				forwardPass.states.depthBuffer = true;
-				forwardPass.states.depthCompare = Nz::RendererComparison::GreaterOrEqual;
-				forwardPass.shaders.push_back(std::make_shared<Nz::UberShader>(nzsl::ShaderStageType::Fragment | nzsl::ShaderStageType::Vertex, "TSOM.PlayerPBR"));
-				settings.AddPass("ForwardPass", forwardPass);
-
-				Nz::MaterialPass depthPass = forwardPass;
-				depthPass.renderQueue = depthQueue;
-				depthPass.options[nzsl::Ast::HashOption("DepthPass")] = true;
-				settings.AddPass("DepthPass", depthPass);
-
-				Nz::MaterialPass shadowPass = depthPass;
-				shadowPass.renderQueue = shadowQueue;
-				shadowPass.options[nzsl::Ast::HashOption("ShadowPass")] = true;
-				shadowPass.states.depthCompare = Nz::RendererComparison::LessOrEqual; //< TODO: Reverse depth for shadow pass?
-				shadowPass.states.frontFace = Nz::FrontFace::Clockwise;
-				shadowPass.states.depthClamp = Nz::Graphics::Instance()->GetGpuDevice()->GetEnabledFeatures().depthClamping;
-				settings.AddPass("ShadowPass", shadowPass);
-
-				auto playerMaterial = std::make_shared<Nz::Material>(std::move(settings), "TSOM.PlayerPBR");
-
-				std::shared_ptr<Nz::MaterialInstance> playerMat = playerMaterial->Instantiate();
-				playerMat->SetTextureProperty("BaseColorMap", fs.Open<Nz::TextureAsset>("CookedAssets/Models/Player/Textures/Soldier_AlbedoTransparency.dds", { .sRGB = true }));
-				playerMat->SetTextureProperty("AmbientOcclusionMap", fs.Open<Nz::TextureAsset>("CookedAssets/Models/Player/Textures/Soldier_AO.dds"));
-				playerMat->SetTextureProperty("MetalnessSmoothnessMap", fs.Open<Nz::TextureAsset>("CookedAssets/Models/Player/Textures/Soldier_MetallicSmoothness.dds"));
-				playerMat->SetTextureProperty("NormalMap", fs.Open<Nz::TextureAsset>("CookedAssets/Models/Player/Textures/Soldier_Normal.dds"));
-
-				m_playerModel->model->SetMaterial(0, std::move(playerMat));
+				m_playerModel->model->SetMaterial(0, assetLibrary.GetMaterialInstance("PlayerMaterial"));
 
 				m_playerAnimAssets->idleAnimation = fs.Load<Nz::Animation>("CookedAssets/Models/Player/Idle.fbx", animParams);
 				m_playerAnimAssets->runningAnimation = fs.Load<Nz::Animation>("CookedAssets/Models/Player/Running.fbx", animParams);
