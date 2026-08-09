@@ -236,7 +236,7 @@ namespace tsom
 			if (elapsed < targetDuration)
 			{
 				Nz::Time sleepTime = targetDuration - elapsed;
-				std::this_thread::sleep_for(std::chrono::microseconds(sleepTime.AsMicroseconds()));
+				std::this_thread::sleep_for(sleepTime.AsDuration<std::chrono::milliseconds>());
 			}
 		}
 		m_frameClock.Restart();
