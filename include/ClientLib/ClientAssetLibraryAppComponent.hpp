@@ -25,10 +25,12 @@ namespace tsom
 	class TSOM_CLIENTLIB_API ClientAssetLibraryAppComponent : public Nz::ApplicationComponent
 	{
 		public:
-			using ApplicationComponent::ApplicationComponent;
+			ClientAssetLibraryAppComponent(Nz::ApplicationBase& app);
 			ClientAssetLibraryAppComponent(const ClientAssetLibraryAppComponent&) = delete;
 			ClientAssetLibraryAppComponent(ClientAssetLibraryAppComponent&&) = delete;
 			~ClientAssetLibraryAppComponent() = default;
+
+			bool CheckAssets();
 
 			inline std::shared_ptr<Nz::Font> GetFont(std::string_view name) const;
 			inline std::shared_ptr<Nz::Material> GetMaterial(std::string_view name) const;
@@ -52,6 +54,8 @@ namespace tsom
 			ClientAssetLibraryAppComponent& operator=(ClientAssetLibraryAppComponent&&) = delete;
 
 		private:
+			void RegisterPBRMaterial();
+
 			Nz::ObjectLibrary<Nz::Font> m_fontLibrary;
 			Nz::ObjectLibrary<Nz::Material> m_materialLibrary;
 			Nz::ObjectLibrary<Nz::MaterialInstance> m_materialInstanceLibrary;

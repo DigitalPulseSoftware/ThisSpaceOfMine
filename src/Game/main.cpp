@@ -38,7 +38,7 @@ int GameMain(int argc, char* argv[])
 	app.AddComponent<Nz::WindowingAppComponent>();
 
 	// Game setup
-	app.AddComponent<tsom::ClientAssetLibraryAppComponent>();
+	auto& assets = app.AddComponent<tsom::ClientAssetLibraryAppComponent>();
 	auto& gameConfig = app.AddComponent<tsom::GameConfigAppComponent>();
 
 	// Create GameAppComponent before WebService for destruction order
@@ -53,6 +53,9 @@ int GameMain(int argc, char* argv[])
 	{
 		spdlog::error("failed to enable web services (login and update will be disabled): {0}!", e.what());
 	}
+
+	if (!assets.CheckAssets())
+		return EXIT_FAILURE;
 
 	game.Start();
 

@@ -12,11 +12,7 @@
 #include <ClientLib/Systems/NetworkMovementInterpolationSystem.hpp>
 #include <ClientLib/Systems/PhysicsInterpolationSystem.hpp>
 #include <ClientLib/Systems/TransformCopySystem.hpp>
-#include <CommonLib/DownloadManager.hpp>
-#include <CommonLib/GameConstants.hpp>
 #include <CommonLib/InternalConstants.hpp>
-#include <CommonLib/UpdaterAppComponent.hpp>
-#include <CommonLib/Utils.hpp>
 #include <CommonLib/Physics/PhysicsSettings.hpp>
 #include <CommonLib/Systems/PlanetSystem.hpp>
 #include <CommonLib/Systems/ShipSystem.hpp>
@@ -222,7 +218,10 @@ namespace tsom
 #endif
 
 		if (!m_stateMachine.Update(elapsedTime))
+		{
 			GetApp().Quit();
+			return;
+		}
 
 #ifdef TSOM_DEV_TOOLS
 		if (m_imguiRuntime)
@@ -246,105 +245,7 @@ namespace tsom
 	bool GameAppComponent::CheckAssets()
 	{
 		auto& app = GetApp();
-
-		std::filesystem::path assetPath = Nz::Utf8Path("CookedAssets");
-		if (!std::filesystem::is_directory(assetPath))
-		{
-			spdlog::error("assets are missing!");
-
-			if (auto* updater = app.TryGetComponent<UpdaterAppComponent>())
-			{
-				Nz::MessageBox requestBox(Nz::MessageBoxType::Info, "Missing assets folder", "The assets folder was not found.\nDownload assets?");
-				requestBox.AddButton(0, Nz::MessageBoxStandardButton::No);
-				requestBox.AddButton(1, Nz::MessageBoxStandardButton::Yes);
-				if (auto result = requestBox.Show(); !result)
-				{
-					spdlog::error("failed to open the prompt message box: {0}!", result.GetError());
-					app.Quit();
-					return false;
-				}
-				else if (result.GetValue() != 1)
-				{
-					app.Quit();
-					return false;
-				}
-
-				updater->FetchLastVersion(false, [updater](Nz::Result<UpdateInfo, std::string>&& result)
-				{
-					if (!result)
-					{
-						Nz::MessageBox errorBox(Nz::MessageBoxType::Error, "Asset download failed", "Failed to fetch asset info: " + result.GetError());
-						errorBox.AddButton(0, Nz::MessageBoxStandardButton::Close);
-
-						if (auto result = errorBox.Show(); !result)
-							spdlog::error("failed to open the error message box: {0}!", result.GetError());
-
-						Nz::ApplicationBase::Instance()->Quit();
-						return;
-					}
-
-					updater->OnUpdateFailed.Connect([]
-					{
-						Nz::MessageBox errorBox(Nz::MessageBoxType::Error, "Asset download failed", "Failed to download assets");
-						errorBox.AddButton(0, Nz::MessageBoxStandardButton::Close);
-
-						if (auto result = errorBox.Show(); !result)
-							spdlog::error("failed to open the error message box: {0}!", result.GetError());
-
-						Nz::ApplicationBase::Instance()->Quit();
-					});
-
-					updater->OnDownloadProgress.Connect([lastPrint = Nz::MillisecondClock()](std::size_t activeDownloadCount, Nz::UInt64 downloaded, Nz::UInt64 total) mutable
-					{
-						if (lastPrint.RestartIfOver(Nz::Time::Second()))
-							spdlog::info("downloading {} file(s) ({}/{}) - {}%", activeDownloadCount, ByteToString(downloaded), ByteToString(total), 100 * downloaded / total);
-					});
-
-					updater->OnUpdateStarting.Connect([]
-					{
-						spdlog::info("update is starting...");
-					});
-
-					updater->DownloadAndUpdate(result.GetValue(), true, false, true, true);
-				});
-			}
-			else
-			{
-				Nz::MessageBox errorBox(Nz::MessageBoxType::Error, "Missing assets folder", "The assets folder was not found, it should be located next to the executable.");
-				errorBox.AddButton(0, Nz::MessageBoxStandardButton::Close);
-
-				if (auto result = errorBox.Show(); !result)
-					spdlog::error("failed to open the error message box: {0}!", result.GetError());
-
-				app.Quit();
-			}
-
-			return false;
-		}
-
-		std::filesystem::path scriptPath = Nz::Utf8Path("scripts");
-		if (!std::filesystem::is_directory(scriptPath))
-		{
-			spdlog::critical("scripts are missing!");
-			app.Quit();
-			return false;
-		}
-
 		auto& filesystem = app.GetComponent<Nz::FilesystemAppComponent>();
-		filesystem.Mount("CookedAssets", Nz::Utf8Path("CookedAssets"));
-		filesystem.Mount("scripts", scriptPath);
-
-		Nz::Graphics* graphics = Nz::Graphics::Instance();
-		graphics->GetShaderModuleResolver()->RegisterDirectory(Nz::Utf8Path("CookedAssets/Shaders"), true);
-
-		auto& commandLineParams = GetApp().GetCommandLineParameters();
-		if (commandLineParams.HasFlag("dev-assets"))
-		{
-			filesystem.Mount("CookedAssets/Passes", Nz::Utf8Path("assets/Passes"));
-			filesystem.Mount("CookedAssets/Shaders", Nz::Utf8Path("assets/Shaders"));
-
-			graphics->GetShaderModuleResolver()->RegisterDirectory(Nz::Utf8Path("assets/Shaders"), true);
-		}
 
 		m_blockLibrary.emplace(app);
 		{

@@ -14,7 +14,6 @@ import Math.Color;
 
 // Pass-specific options
 option DepthPass: bool = false;
-option DistanceDepth: bool = false;
 option ShadowPass: bool = false;
 
 // Basic material options
@@ -117,8 +116,7 @@ import Pi from Math.Constants;
 
 struct FragOut
 {
-	[location(0)] RenderTarget0: vec4[f32],
-	[builtin(frag_depth), cond(DistanceDepth)] fragdepth: f32,
+	[location(0)] color: vec4[f32],
 }
 
 fn SampleBlock(uv: vec2[f32], texIndices: vec2[i32]) -> vec4[f32]
@@ -205,12 +203,7 @@ fn ComputeColor(input: VertOut) -> vec4[f32]
 		let uvZ = input.triplanarPos.xy;
 
 		color = TriplanarSample(input.triplanarNormal, uvX, uvY, uvZ, blockData.baseColorMapIndices);
-	}
-
-	const if (AlphaTest)
-	{
-		if (color.w < Material.settings.AlphaThreshold)
-			discard;
+		color.rgb = Color.sRGBToLinear(color.rgb);
 	}
 
 	return color;
@@ -243,7 +236,7 @@ fn sdRoundBox(pos: vec3[f32], dims: vec3[f32], cornerRadius: f32) -> f32
 }
 
 [export]
-fn ComputeLighting(input: VertOut) -> vec4[f32]
+fn ComputeLighting(color: vec4[f32], input: VertOut) -> vec4[f32]
 {
 	let blockData = Material.globalBlockData.blocks[input.blockIndex];
 
@@ -282,19 +275,6 @@ fn ComputeLighting(input: VertOut) -> vec4[f32]
 		uvY = ParallaxMapping(uvY, blockData.heightMapIndex, tbnY * viewDirWS);
 		uvZ = ParallaxMapping(uvZ, blockData.heightMapIndex, tbnZ * viewDirWS);
 	}*/
-
-	let color = blockData.baseColorFallback;
-	if (blockData.baseColorMapIndices.x >= 0)
-	{
-		color = TriplanarSample(input.triplanarNormal, uvX, uvY, uvZ, blockData.baseColorMapIndices);
-		color.rgb = Color.sRGBToLinear(color.rgb);
-	}
-
-	const if (AlphaTest)
-	{
-		if (color.w < Material.settings.AlphaThreshold)
-			discard;
-	}
 
 	let normal: vec3[f32];
 	if (blockData.normalMapIndices.x >= 0)
@@ -396,40 +376,30 @@ fn ComputeLighting(input: VertOut) -> vec4[f32]
 [export, entry(frag), cond(!DepthPass)]
 fn FragMain(input: VertOut) -> FragOut
 {
-	let color = ComputeLighting(input);
+	let color = ComputeColor(input);
+	const if (AlphaTest)
+	{
+		if (color.w < Material.settings.AlphaThreshold)
+			discard;
+	}
+
+	color = ComputeLighting(color, input);
 
 	let output: FragOut;
-	output.RenderTarget0 = color;
+	output.color = color;
 	return output;
 }
 
 // Shadow passes entries
-[entry(frag), cond(DepthPass && DistanceDepth)]
-[depth_write(replace)]
-fn FragDepthDist(input: VertOut) -> FragOut
+[entry(frag), cond(DepthPass && AlphaTest)]
+fn FragDepth(input: VertOut)
 {
 	let color = ComputeColor(input);
-
-	let output: FragOut;
-	output.RenderTarget0 = color;
-
-	let dist = distance(Viewer.viewerData.eyePosition, input.worldPos);
-	output.fragdepth = dist / Viewer.viewerData.farPlane;
-
-	return output;
+	if (color.w < Material.settings.AlphaThreshold)
+		discard;
 }
 
-[entry(frag), cond(DepthPass && AlphaTest && !DistanceDepth)]
-fn FragDepth(input: VertOut) -> FragOut
-{
-	let color = ComputeColor(input);
-
-	let output: FragOut;
-	output.RenderTarget0 = color;
-	return output;
-}
-
-[entry(frag), cond(DepthPass && !AlphaTest && !DistanceDepth)]
+[entry(frag), cond(DepthPass && !AlphaTest)]
 fn dummy() {} //< dummy
 
 // Vertex stage

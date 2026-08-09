@@ -67,11 +67,11 @@
         },
         {
             "input": "Player/Textures/Soldier_MetallicSmoothness.png",
-            "output": "Models/Player/Textures/Soldier_MetallicSmoothness.dds",
+            "output": "Models/Player/Textures/Soldier_MetallicRoughness.dds",
             "method": "Texture",
             "type": "BiGreyscale",
             "channel0": "Red",
-            "channel1": "Alpha"
+            "channel1": "InvAlpha"
         },
         {
             "input": "Player/Textures/Soldier_Normal.png",
@@ -110,8 +110,8 @@
             "method": "Shader"
         },
         {
-            "input": "Shaders/PlayerPBR.nzsl",
-            "output": "Shaders/PlayerPBR.nzslb",
+            "input": "Shaders/PhysicallyBasedMaterial.nzsl",
+            "output": "Shaders/PhysicallyBasedMaterial.nzslb",
             "method": "Shader"
         },
         {
