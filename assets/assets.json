@@ -229,6 +229,117 @@
             "output": "Models/Battery/Textures/lambert6SG_normal.dds",
             "method": "Texture",
             "type": "Normal"
+        },
+        {
+            "input": "sci-fi-control-panel/DistributionBoard.obj",
+            "output": "Models/ControlPanel/ControlPanel.obj",
+            "method": "Copy"
+        },
+        {
+            "input": "sci-fi-control-panel/textures/DistributionBoard_DistributionBoard_BaseColor.png",
+            "output": "Models/ControlPanel/Textures/BaseColor.dds",
+            "method": "Texture"
+        },
+        {
+            "input": "sci-fi-control-panel/textures/DistributionBoard_DistributionBoard_Normal.png",
+            "output": "Models/ControlPanel/Textures/Normal.dds",
+            "method": "Texture",
+            "type": "Normal"
+        },
+        {
+            "input": "sci-fi-control-panel/textures/DistributionBoard_DistributionBoard_AO.png",
+            "output": "Models/ControlPanel/Textures/AmbientOcclusion.dds",
+            "method": "Texture",
+            "type": "Greyscale"
+        },
+        {
+            "inputs": [
+                "sci-fi-control-panel/textures/DistributionBoard_DistributionBoard_Metallic.png",
+                "sci-fi-control-panel/textures/DistributionBoard_DistributionBoard_Roughness.png"
+            ],
+            "output": "Models/ControlPanel/Textures/MetallicRoughness.dds",
+            "method": "Texture",
+            "type": "BiGreyscale",
+            "channel0": "Red",
+            "channel1": "Red",
+            "channelSourceTexture0": 0,
+            "channelSourceTexture1": 1
+        },
+        {
+            "input": "sci-fi-light-source/LightSource_GGJ_NoHandle.obj",
+            "output": "Models/LightSource/LightSource.obj",
+            "method": "Copy"
+        },
+        {
+            "input": "sci-fi-light-source/textures/LightSource_Albedo.png",
+            "output": "Models/LightSource/Textures/BaseColor.dds",
+            "method": "Texture"
+        },
+        {
+            "input": "sci-fi-light-source/textures/LightSource_Normal.png",
+            "output": "Models/LightSource/Textures/Normal.dds",
+            "method": "Texture",
+            "type": "Normal"
+        },
+        {
+            "input": "sci-fi-light-source/textures/LightSource_AO.png",
+            "output": "Models/LightSource/Textures/AmbientOcclusion.dds",
+            "method": "Texture",
+            "type": "Greyscale"
+        },
+        {
+            "input": "sci-fi-light-source/textures/LightSource_Emission.png",
+            "output": "Models/LightSource/Textures/Emissive.dds",
+            "method": "Texture",
+            "type": "Greyscale"
+        },
+        {
+            "inputs": [
+                "sci-fi-light-source/textures/LightSource_Metalness.png",
+                "sci-fi-light-source/textures/LightSource_Roughness.png"
+            ],
+            "output": "Models/LightSource/Textures/MetallicRoughness.dds",
+            "method": "Texture",
+            "type": "BiGreyscale",
+            "channel0": "Red",
+            "channel1": "Red",
+            "channelSourceTexture0": 0,
+            "channelSourceTexture1": 1
+        },
+        {
+            "input": "sci-fi-lamps/lamp1x1.obj",
+            "output": "Models/WallLights/WallLight1x1.obj",
+            "method": "Copy"
+        },
+        {
+            "input": "sci-fi-lamps/textures/metal_diffuse.png",
+            "output": "Models/WallLights/Textures/BaseColor.dds",
+            "method": "Texture"
+        },
+        {
+            "input": "sci-fi-lamps/textures/metal_normalmap.png",
+            "output": "Models/WallLights/Textures/Normal.dds",
+            "method": "Texture",
+            "type": "Normal"
+        },
+        {
+            "input": "sci-fi-lamps/textures/lamps_ao.png",
+            "output": "Models/WallLights/Textures/AmbientOcclusion.dds",
+            "method": "Texture",
+            "type": "Greyscale"
+        },
+        {
+            "inputs": [
+                "sci-fi-lamps/textures/metal_metalness.png",
+                "sci-fi-lamps/textures/metal_gloss.png"
+            ],
+            "output": "Models/WallLights/Textures/MetallicRoughness.dds",
+            "method": "Texture",
+            "type": "BiGreyscale",
+            "channel0": "Red",
+            "channel1": "InvRed",
+            "channelSourceTexture0": 0,
+            "channelSourceTexture1": 1
         }
     ]
 }

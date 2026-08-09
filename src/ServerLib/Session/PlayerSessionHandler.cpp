@@ -276,11 +276,17 @@ namespace tsom
 		auto colliderXResult = metadata.GetDoubleParameter("spawnable_collider.x");
 		auto colliderYResult = metadata.GetDoubleParameter("spawnable_collider.y");
 		auto colliderZResult = metadata.GetDoubleParameter("spawnable_collider.z");
+		bool keepUpright = metadata.GetBooleanParameter("spawnable_keepupright").GetValueOr(false);
 
 		Nz::Vector3f collider;
 		collider.x = static_cast<float>(colliderXResult.GetValueOr(1.0));
 		collider.y = static_cast<float>(colliderYResult.GetValueOr(1.0));
 		collider.z = static_cast<float>(colliderZResult.GetValueOr(1.0));
+
+		Nz::EulerAnglesf rotationOffset;
+		rotationOffset.pitch = static_cast<float>(metadata.GetDoubleParameter("spawnable_rotation.x").GetValueOr(0.0));
+		rotationOffset.yaw = static_cast<float>(metadata.GetDoubleParameter("spawnable_rotation.y").GetValueOr(0.0));
+		rotationOffset.roll = static_cast<float>(metadata.GetDoubleParameter("spawnable_rotation.z").GetValueOr(0.0));
 
 		Nz::Vector3ui blockIndices(placeEntity.voxelLoc.x, placeEntity.voxelLoc.y, placeEntity.voxelLoc.z);
 		if (!CheckCanPlaceEntity(chunkEnvironment, chunk, blockIndices, placeEntity.topFace, collider, placeEntity.entityRotation))
@@ -299,11 +305,19 @@ namespace tsom
 		Nz::Vector3f faceCenter = std::accumulate(cornerGlobalPos.begin(), cornerGlobalPos.end(), Nz::Vector3f::Zero()) / corners.size();
 
 		Nz::Vector3f normal = s_dirNormals[placeEntity.topFace];
-		Nz::Vector3f deformedNormal = s_dirNormals[placeEntity.topFace];
-		//chunk->DeformNormals(&deformedNormal, normal, &faceCenter, 1);
 
-		Nz::Vector3f entityPos = faceCenter + deformedNormal * collider.y * 0.5f;
-		Nz::Quaternionf entityRot = Nz::Quaternionf::RotationBetween(Nz::Vector3f::Up(), deformedNormal) * Nz::Quaternionf(Nz::DegreeAnglef(placeEntity.entityRotation * 45.f), Nz::Vector3f::Up());
+		Nz::Quaternionf surfaceRotation = Nz::Quaternionf::Identity();
+		Nz::Vector3f entityPos = faceCenter;
+
+		if (keepUpright)
+			entityPos += normal * collider * 0.5f;
+		else
+		{
+			entityPos += normal * collider.y * 0.5f;
+			surfaceRotation = Nz::Quaternionf::RotationBetween(Nz::Vector3f::Up(), normal);
+		}
+
+		Nz::Quaternionf entityRot = surfaceRotation * Nz::Quaternionf(Nz::DegreeAnglef(placeEntity.entityRotation * 45.f), Nz::Vector3f::Up()) * Nz::Quaternionf(rotationOffset);
 
 		entt::handle entity = chunkEnvironment->CreateEntity();
 		entity.emplace<Nz::NodeComponent>(entityPos, entityRot);
