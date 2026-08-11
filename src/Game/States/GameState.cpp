@@ -16,6 +16,7 @@
 #include <ClientLib/Components/EnvironmentComponent.hpp>
 #include <ClientLib/Systems/AnimationSystem.hpp>
 #include <ClientLib/Systems/CameraFollowerSystem.hpp>
+#include <ClientLib/ToolsMenu.hpp>
 #include <ClientLib/Tools/BlockTool.hpp>
 #include <ClientLib/Tools/ConnectTool.hpp>
 #include <ClientLib/Tools/GrabEntityTool.hpp>
@@ -317,6 +318,12 @@ namespace tsom
 			UpdateMouseLock();
 		});
 
+		m_toolsMenu = CreateWidget<ToolsMenu>(filesystem, m_toolIndex);
+		m_toolsMenu->OnWidgetVisibilityUpdated.Connect([&](const Nz::BaseWidget* /*widget*/, bool /*isVisible*/)
+		{
+			UpdateMouseLock();
+		});
+
 		m_chatBox = CreateWidget<Chatbox>();
 		m_chatBox->OnChatMessage.Connect([&](const std::string& message)
 		{
@@ -402,19 +409,13 @@ namespace tsom
 
 				case Nz::Keyboard::Scancode::Tab:
 				{
-					m_tools[m_toolIndex]->OnDeactivate();
+					if (!m_toolsMenu->IsVisible() && !m_escapeMenu->IsVisible())
+					{
+						Nz::Mouse::SetPosition(static_cast<Nz::Vector2f>(stateData.renderTarget->GetSize()) / 2.f, *stateData.window);
+						m_toolsMenu->Show();
+						UpdateMouseLock();
+					}
 
-					m_toolIndex++;
-					if (m_toolIndex >= m_tools.size())
-						m_toolIndex = 0;
-		
-					m_tools[m_toolIndex]->OnActivate();
-					spdlog::info("New tool: {}", m_tools[m_toolIndex]->GetName());
-
-					UpdateMouseLock();
-
-					m_blockSelectionBar->Show(m_toolIndex == 1 /*BlockTool*/ && !m_pilotedShip.has_value());
-					LayoutWidgets(Nz::Vector2f(GetStateData().renderTarget->GetSize()));
 					break;
 				}
 
@@ -431,7 +432,12 @@ namespace tsom
 					else if (m_pilotedShip)
 						stateData.networkSession->SendPacket(Packets::C_ExitShipControl{});
 					else
+					{
+						if (m_toolsMenu->IsVisible())
+							m_toolsMenu->Hide();
+
 						m_escapeMenu->Show();
+					}
 
 					UpdateMouseLock();
 					break;
@@ -552,6 +558,41 @@ namespace tsom
 						cameraComponent.UpdateRenderMask(tsom::Constants::RenderMask3D);
 					else
 						cameraComponent.UpdateRenderMask(tsom::Constants::RenderMask3D & ~tsom::Constants::RenderMaskLocalPlayer);
+					break;
+				}
+
+				default:
+					break;
+			}
+		});
+
+		m_onUnhandledKeyReleased.Connect(stateData.canvas->OnUnhandledKeyReleased, [this](const Nz::WindowEventHandler*, const Nz::WindowEvent::KeyEvent& event)
+		{
+			auto& stateData = GetStateData();
+
+			switch (event.scancode)
+			{
+				case Nz::Keyboard::Scancode::Tab:
+				{
+					if (m_toolsMenu->IsVisible())
+					{
+						m_toolsMenu->Hide();
+
+						m_tools[m_toolIndex]->OnDeactivate();
+
+						size_t newTool = static_cast<size_t>(m_toolsMenu->GetHoveredTool());
+						if (newTool != m_toolIndex)
+						{
+							m_toolIndex = newTool;
+							m_tools[m_toolIndex]->OnActivate();
+							spdlog::info("New tool: {}", m_tools[m_toolIndex]->GetName());
+
+							UpdateMouseLock();
+
+							m_blockSelectionBar->Show(m_toolIndex == 1 /*BlockTool*/ && !m_pilotedShip.has_value());
+							LayoutWidgets(Nz::Vector2f(stateData.renderTarget->GetSize()));
+						}
+					}
 					break;
 				}
 
@@ -780,7 +821,7 @@ namespace tsom
 
 	void GameState::UpdateMouseLock()
 	{
-		m_isMouseLocked = !m_chatBox->IsTyping() && !m_escapeMenu->IsVisible() && !m_localConsole->IsVisible() && !m_remoteConsole->IsVisible() && !m_tools[m_toolIndex]->IsCursorUnlocked();
+		m_isMouseLocked = !m_chatBox->IsTyping() && !m_escapeMenu->IsVisible() && !m_toolsMenu->IsVisible() && !m_localConsole->IsVisible() && !m_remoteConsole->IsVisible() && !m_tools[m_toolIndex]->IsCursorUnlocked();
 		m_chatBox->EnableMouseInput(!m_isMouseLocked);
 		m_localConsole->EnableMouseInput(!m_isMouseLocked);
 		m_remoteConsole->EnableMouseInput(!m_isMouseLocked);
@@ -799,6 +840,7 @@ namespace tsom
 
 		m_chatBox->Close();
 		m_escapeMenu->Hide();
+		m_toolsMenu->Hide();
 		m_localConsole->Hide();
 		m_remoteConsole->Hide();
 
@@ -814,16 +856,23 @@ namespace tsom
 		float mouseSensitivity = config.GetFloatValue<float>(Config::Input_MouseSensitivity);
 		m_mouseMovedSlot.Connect(stateData.canvas->OnUnhandledMouseMoved, [&, mouseSensitivity](const Nz::WindowEventHandler*, const Nz::WindowEvent::MouseMoveEvent& event)
 		{
-			if (!m_isMouseLocked)
-				return;
-
 			auto& stateData = GetStateData();
 
-			float pitchMod = -event.deltaY * mouseSensitivity;
-			float yawMod = -event.deltaX * mouseSensitivity;
+			if (m_isMouseLocked)
+			{
+				float pitchMod = -event.deltaY * mouseSensitivity;
+				float yawMod = -event.deltaX * mouseSensitivity;
 
-			m_incomingCameraRotation.pitch += pitchMod;
-			m_incomingCameraRotation.yaw += yawMod;
+				m_incomingCameraRotation.pitch += pitchMod;
+				m_incomingCameraRotation.yaw += yawMod;
+			}
+			else
+			{
+				if (m_toolsMenu->IsVisible())
+				{
+					m_toolsMenu->HandleMouseMoved(event.x, event.y, m_toolIndex);
+				}
+			}
 		});
 
 		m_mouseButtonReleasedSlot.Connect(stateData.canvas->OnUnhandledMouseButtonReleased, [&](const Nz::WindowEventHandler*, const Nz::WindowEvent::MouseButtonEvent& event)
@@ -1255,6 +1304,7 @@ namespace tsom
 		m_healthOxygen.entity.get<Nz::NodeComponent>().SetPosition({ newSize.x * 0.5f - m_healthOxygen.entity.get<Nz::GraphicsComponent>().GetAABB().x / 2.f, hudNextHeight });
 
 		m_escapeMenu->Center();
+		m_toolsMenu->Center();
 	}
 
 	Nz::Vector3f GameState::RaycastCamera(const Nz::Vector3f& from, const Nz::Vector3f& to)

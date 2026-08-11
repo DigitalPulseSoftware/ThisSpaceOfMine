@@ -340,6 +340,36 @@
             "channel1": "InvRed",
             "channelSourceTexture0": 0,
             "channelSourceTexture1": 1
+        },
+        {
+            "input": "UI/ToolsMenu/ToolsMenu_Tool0.png",
+            "output": "UI/ToolsMenu/ToolsMenu_Tool0.dds",
+            "method": "Texture"
+        },
+        {
+            "input": "UI/ToolsMenu/ToolsMenu_Tool1.png",
+            "output": "UI/ToolsMenu/ToolsMenu_Tool1.dds",
+            "method": "Texture"
+        },
+        {
+            "input": "UI/ToolsMenu/ToolsMenu_Tool2.png",
+            "output": "UI/ToolsMenu/ToolsMenu_Tool2.dds",
+            "method": "Texture"
+        },
+        {
+            "input": "UI/ToolsMenu/ToolsMenu_Tool3.png",
+            "output": "UI/ToolsMenu/ToolsMenu_Tool3.dds",
+            "method": "Texture"
+        },
+        {
+            "input": "UI/ToolsMenu/ToolsMenu_Tool4.png",
+            "output": "UI/ToolsMenu/ToolsMenu_Tool4.dds",
+            "method": "Texture"
+        }, 
+        {
+            "input": "UI/ToolsMenu/ToolsMenu_Tool5.png",
+            "output": "UI/ToolsMenu/ToolsMenu_Tool5.dds",
+            "method": "Texture"
         }
     ]
 }
