@@ -843,6 +843,7 @@ namespace tsom
 		m_toolsMenu->Hide();
 		m_localConsole->Hide();
 		m_remoteConsole->Hide();
+		m_blockSelectionBar->Show(m_toolIndex == 1 /*BlockTool*/ && !m_pilotedShip.has_value());
 
 		auto& stateData = GetStateData();
 		LayoutWidgets(Nz::Vector2f(stateData.renderTarget->GetSize()));
