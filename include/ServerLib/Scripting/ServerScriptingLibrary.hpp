@@ -8,7 +8,7 @@
 #define TSOM_SERVERLIB_SCRIPTING_SERVERSCRIPTINGLIBRARY_HPP
 
 #include <ServerLib/Export.hpp>
-#include <CommonLib/Scripting/ScriptingLibrary.hpp>
+#include <CommonLib/Scripting/SharedScriptingLibrary.hpp>
 #include <memory>
 
 namespace tsom
@@ -16,10 +16,10 @@ namespace tsom
 	class ServerEntityScriptingLibrary;
 	class ServerInstance;
 
-	class TSOM_SERVERLIB_API ServerScriptingLibrary : public ScriptingLibrary
+	class TSOM_SERVERLIB_API ServerScriptingLibrary : public SharedScriptingLibrary
 	{
 		public:
-			inline ServerScriptingLibrary(ServerInstance& serverInstance, ServerEntityScriptingLibrary& entityScriptingLibrary);
+			ServerScriptingLibrary(ServerInstance& serverInstance, ServerEntityScriptingLibrary& entityScriptingLibrary);
 			ServerScriptingLibrary(const ServerScriptingLibrary&) = delete;
 			ServerScriptingLibrary(ServerScriptingLibrary&&) = delete;
 			inline ~ServerScriptingLibrary();

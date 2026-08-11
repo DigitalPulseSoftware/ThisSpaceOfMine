@@ -8,7 +8,7 @@
 #define TSOM_CLIENTLIB_SCRIPTING_CLIENTSCRIPTINGLIBRARY_HPP
 
 #include <ClientLib/Export.hpp>
-#include <CommonLib/Scripting/ScriptingLibrary.hpp>
+#include <CommonLib/Scripting/SharedScriptingLibrary.hpp>
 
 namespace Nz
 {
@@ -17,13 +17,14 @@ namespace Nz
 
 namespace tsom
 {
+	class ClientEntityScriptingLibrary;
 	class ClientSessionHandler;
 	class ConfigFile;
 
-	class TSOM_CLIENTLIB_API ClientScriptingLibrary final : public ScriptingLibrary
+	class TSOM_CLIENTLIB_API ClientScriptingLibrary final : public SharedScriptingLibrary
 	{
 		public:
-			inline ClientScriptingLibrary(Nz::ApplicationBase& app, ConfigFile& configFile, ClientSessionHandler& sessionHandler);
+			ClientScriptingLibrary(Nz::ApplicationBase& app, ConfigFile& configFile, ClientSessionHandler& sessionHandler, ClientEntityScriptingLibrary& entityScriptingLibrary);
 			ClientScriptingLibrary(const ClientScriptingLibrary&) = delete;
 			ClientScriptingLibrary(ClientScriptingLibrary&&) = delete;
 			~ClientScriptingLibrary() = default;

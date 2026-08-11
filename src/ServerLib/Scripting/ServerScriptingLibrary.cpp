@@ -30,8 +30,18 @@ SOL_DERIVED_CLASSES(tsom::ServerEnvironment, tsom::ServerPlanetEnvironment, tsom
 
 namespace tsom
 {
+	inline ServerScriptingLibrary::ServerScriptingLibrary(ServerInstance& serverInstance, ServerEntityScriptingLibrary& entityScriptingLibrary) :
+	SharedScriptingLibrary(entityScriptingLibrary),
+	m_entityScriptingLibrary(entityScriptingLibrary),
+	m_serverInstance(serverInstance)
+	{
+		m_aliveSignal = std::make_shared<bool>(true);
+	}
+
 	void ServerScriptingLibrary::Register(sol::state& state)
 	{
+		SharedScriptingLibrary::Register(state);
+
 		state["CLIENT"] = false;
 		state["SERVER"] = true;
 
@@ -47,12 +57,6 @@ namespace tsom
 
 	void ServerScriptingLibrary::RegisterAtmosphere(sol::state& state)
 	{
-		state.new_enum("GasType",
-			"CarbonDioxyde", GasType::CarbonDioxyde,
-			"Nitrogen", GasType::Nitrogen,
-			"Oxygen", GasType::Oxygen
-		);
-
 		state.new_usertype<ServerAtmosphere>("Atmosphere",
 			sol::no_constructor,
 			"Exchange", LuaFunction([](ServerAtmosphere& serverAtmosphere, sol::stack_table exchangeGas)

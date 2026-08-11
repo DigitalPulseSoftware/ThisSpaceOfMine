@@ -142,7 +142,6 @@ namespace tsom
 			m_console->scriptingContext.RegisterLibrary<MathScriptingLibrary>();
 			m_console->scriptingContext.RegisterLibrary<ChunkScriptingLibrary>();
 			ServerEntityScriptingLibrary& entityScriptingLibrary = m_console->scriptingContext.RegisterLibrary<ServerEntityScriptingLibrary>(m_serverInstance.GetEntityRegistry());
-			m_console->scriptingContext.RegisterLibrary<SharedScriptingLibrary>(entityScriptingLibrary);
 			m_console->scriptingContext.RegisterLibrary<ServerScriptingLibrary>(m_serverInstance, entityScriptingLibrary);
 
 			m_console->scriptingContext.LoadDirectory("scripts/libraries");

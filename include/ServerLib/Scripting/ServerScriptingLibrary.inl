@@ -4,13 +4,6 @@
 
 namespace tsom
 {
-	inline ServerScriptingLibrary::ServerScriptingLibrary(ServerInstance& serverInstance, ServerEntityScriptingLibrary& entityScriptingLibrary) :
-	m_entityScriptingLibrary(entityScriptingLibrary),
-	m_serverInstance(serverInstance)
-	{
-		m_aliveSignal = std::make_shared<bool>(true);
-	}
-
 	inline ServerScriptingLibrary::~ServerScriptingLibrary()
 	{
 		*m_aliveSignal = false;

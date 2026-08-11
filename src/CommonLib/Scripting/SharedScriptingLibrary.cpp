@@ -4,6 +4,7 @@
 
 #include <CommonLib/Scripting/SharedScriptingLibrary.hpp>
 #include <CommonLib/CharacterController.hpp>
+#include <CommonLib/GasType.hpp>
 #include <CommonLib/PhysicsConstants.hpp>
 #include <CommonLib/ShipController.hpp>
 #include <CommonLib/Components/ChunkComponent.hpp>
@@ -16,8 +17,18 @@ namespace tsom
 {
 	void SharedScriptingLibrary::Register(sol::state& state)
 	{
+		RegisterAtmosphere(state);
 		RegisterMovementControllers(state);
 		RegisterPhysWorld(state);
+	}
+
+	void SharedScriptingLibrary::RegisterAtmosphere(sol::state& state)
+	{
+		state.new_enum("GasType",
+			"CarbonDioxyde", GasType::CarbonDioxyde,
+			"Nitrogen", GasType::Nitrogen,
+			"Oxygen", GasType::Oxygen
+		);
 	}
 
 	void SharedScriptingLibrary::RegisterMovementControllers(sol::state& state)

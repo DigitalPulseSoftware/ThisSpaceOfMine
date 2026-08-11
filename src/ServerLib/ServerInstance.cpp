@@ -48,7 +48,6 @@ namespace tsom
 		m_scriptingContext.RegisterLibrary<BaseScriptingLibrary>();
 		m_scriptingContext.RegisterLibrary<MathScriptingLibrary>();
 		auto& entityScriptingLibrary = m_scriptingContext.RegisterLibrary<ServerEntityScriptingLibrary>(m_entityRegistry);
-		m_scriptingContext.RegisterLibrary<SharedScriptingLibrary>(entityScriptingLibrary);
 		m_scriptingContext.RegisterLibrary<ServerScriptingLibrary>(*this, entityScriptingLibrary);
 
 		LoadScripts();

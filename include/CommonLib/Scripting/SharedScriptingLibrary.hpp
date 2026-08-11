@@ -36,6 +36,7 @@ namespace tsom
 			SharedScriptingLibrary& operator=(SharedScriptingLibrary&&) = delete;
 
 		private:
+			void RegisterAtmosphere(sol::state& state);
 			void RegisterMovementControllers(sol::state& state);
 			void RegisterPhysWorld(sol::state& state);
 
