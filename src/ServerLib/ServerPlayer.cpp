@@ -297,6 +297,7 @@ namespace tsom
 				if (m_respawnTimer <= Nz::Time::Zero())
 				{
 					const auto& spawnpoint = m_serverInstance.GetDefaultSpawnpoint();
+					UpdateRootEnvironment(spawnpoint.env);
 					Respawn(spawnpoint.env, spawnpoint.position, spawnpoint.rotation);
 				}
 			}
