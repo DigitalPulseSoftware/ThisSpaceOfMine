@@ -407,7 +407,7 @@ namespace tsom
 					m_toolIndex++;
 					if (m_toolIndex >= m_tools.size())
 						m_toolIndex = 0;
-		
+
 					m_tools[m_toolIndex]->OnActivate();
 					spdlog::info("New tool: {}", m_tools[m_toolIndex]->GetName());
 
@@ -886,6 +886,13 @@ namespace tsom
 			}
 
 			const Nz::Node* rootNode = stateData.sessionHandler->GetEnvironmentNode(debugDrawLines.environmentId);
+			if (!rootNode)
+			{
+				// Environment not received yet
+				++it;
+				continue;
+			}
+
 			if (rootNode->GetGlobalPosition().ApproxEqual(Nz::Vector3f::Zero()) && rootNode->GetGlobalRotation().ApproxEqual(Nz::Quaternionf::Identity()) && rootNode->GetGlobalScale().ApproxEqual(Nz::Vector3f::Unit()))
 			{
 				// Fast path, environment node has no transformation (root environment)
