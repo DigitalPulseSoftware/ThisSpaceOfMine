@@ -140,8 +140,11 @@ namespace tsom
 	{
 		state.new_usertype<Nz::SubMesh>("SubMesh",
 			sol::no_constructor,
-			"GetMaterialIndex", LuaFunction(&Nz::SubMesh::GetMaterialIndex),
-			"SetMaterialIndex", LuaFunction(&Nz::SubMesh::SetMaterialIndex)
+			"GenerateNormals",            LuaFunction(&Nz::SubMesh::GenerateNormals),
+			"GenerateNormalsAndTangents", LuaFunction(&Nz::SubMesh::GenerateNormalsAndTangents),
+			"GenerateTangents",           LuaFunction(&Nz::SubMesh::GenerateTangents),
+			"GetMaterialIndex",           LuaFunction(&Nz::SubMesh::GetMaterialIndex),
+			"SetMaterialIndex",           LuaFunction(&Nz::SubMesh::SetMaterialIndex)
 		);
 
 		state.new_usertype<Nz::SkeletalMesh>("SkeletalMesh",

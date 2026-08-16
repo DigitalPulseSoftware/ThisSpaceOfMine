@@ -2,7 +2,7 @@ local QuaternionMt = CreateMetatable("quaternion")
 QuaternionMt.__index = QuaternionMt
 
 function QuaternionMt:GetConjugate()
-    return Quaternion(-self.x, -self.y, -self.z, self.w)
+    return Quaternion(self.w, -self.x, -self.y, -self.z)
 end
 
 function QuaternionMt:ToDirection()
@@ -30,6 +30,10 @@ function QuaternionMt:__mul(quat)
     end
 end
 
-function Quaternion(x, y, z, w)
-    return setmetatable({x = x, y = y, z = z, w = w}, QuaternionMt)
+function QuaternionMt:__tostring()
+    return string.format("Quaternion(%f | %f, %f, %f)", self.w, self.x, self.y, self.z)
+end
+
+function Quaternion(w, x, y, z)
+    return setmetatable({w = w, x = x, y = y, z = z}, QuaternionMt)
 end

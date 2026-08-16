@@ -304,9 +304,37 @@ namespace tsom
 			"GetForward", LuaFunction(&Nz::Node::GetForward),
 			"GetRight", LuaFunction(&Nz::Node::GetRight),
 			"GetUp", LuaFunction(&Nz::Node::GetUp),
-			"Scale", LuaFunction([](Nz::NodeComponent& nodeComponent, const Nz::Vector3f& scale)
+			"Scale", sol::overload(
+				LuaFunction([](Nz::NodeComponent& nodeComponent, float scale)
+				{
+					return nodeComponent.Scale(scale);
+				}),
+				LuaFunction([](Nz::NodeComponent& nodeComponent, const Nz::Vector3f& scale)
+				{
+					return nodeComponent.Scale(scale);
+				})
+			),
+			"SetPosition", LuaFunction([](Nz::NodeComponent& nodeComponent, const Nz::Vector3f& position)
 			{
-				return nodeComponent.Scale(scale);
+				return nodeComponent.SetPosition(position);
+			}),
+			"SetRotation", LuaFunction([](Nz::NodeComponent& nodeComponent, const Nz::Quaternionf& rotation)
+			{
+				return nodeComponent.SetRotation(rotation);
+			}),
+			"SetScale", sol::overload(
+				LuaFunction([](Nz::NodeComponent& nodeComponent, float scale)
+				{
+					return nodeComponent.SetScale(scale);
+				}),
+				LuaFunction([](Nz::NodeComponent& nodeComponent, const Nz::Vector3f& position)
+				{
+					return nodeComponent.SetPosition(position);
+				})
+			),
+			"SetTransform", LuaFunction([](Nz::NodeComponent& nodeComponent, const Nz::Vector3f& position, const Nz::Quaternionf& rotation, const Nz::Vector3f& scale)
+			{
+				return nodeComponent.SetTransform(position, rotation, scale);
 			}),
 			"ToGlobalDirection", LuaFunction(&Nz::NodeComponent::ToGlobalDirection),
 			"ToGlobalPosition", LuaFunction(&Nz::NodeComponent::ToGlobalPosition),
@@ -614,6 +642,15 @@ namespace tsom
 		state.new_usertype<Nz::BoxCollider3D>("BoxCollider3D",
 			sol::base_classes, sol::bases<Nz::Collider3D>(),
 			sol::meta_function::construct, sol::factories(LuaFunction([](const Nz::Vector3f& lengths) { return std::make_shared<Nz::BoxCollider3D>(lengths); }))
+		);
+
+		state.new_usertype<Nz::TranslatedRotatedCollider3D>("TranslatedRotatedCollider3D",
+			sol::base_classes, sol::bases<Nz::Collider3D>(),
+			sol::meta_function::construct, sol::factories(
+				LuaFunction([](std::shared_ptr<Nz::Collider3D> collider, const Nz::Vector3f& translation) { return std::make_shared<Nz::TranslatedRotatedCollider3D>(std::move(collider), translation); }),
+				LuaFunction([](std::shared_ptr<Nz::Collider3D> collider, const Nz::Quaternionf& rotation) { return std::make_shared<Nz::TranslatedRotatedCollider3D>(std::move(collider), rotation); }),
+				LuaFunction([](std::shared_ptr<Nz::Collider3D> collider, const Nz::Vector3f& translation, const Nz::Quaternionf& rotation) { return std::make_shared<Nz::TranslatedRotatedCollider3D>(std::move(collider), translation, rotation); })
+			)
 		);
 	}
 }

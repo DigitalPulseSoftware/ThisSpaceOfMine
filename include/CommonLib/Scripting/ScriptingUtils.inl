@@ -355,7 +355,7 @@ namespace sol
 		boxTable["z"] = box.z;
 		boxTable["width"] = box.width;
 		boxTable["height"] = box.height;
-		boxTable["depth"] = box.height;
+		boxTable["depth"] = box.depth;
 
 		return 1;
 	}

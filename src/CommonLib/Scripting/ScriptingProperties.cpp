@@ -3,6 +3,7 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/Scripting/ScriptingProperties.hpp>
+#include <CommonLib/Scripting/ScriptingUtils.hpp>
 #include <sol/sol.hpp>
 
 namespace tsom

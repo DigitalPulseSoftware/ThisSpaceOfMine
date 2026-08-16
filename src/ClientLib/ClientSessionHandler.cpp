@@ -3,13 +3,13 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ClientLib/ClientSessionHandler.hpp>
+#include <ClientLib/ClientAssetLibraryAppComponent.hpp>
 #include <ClientLib/ClientBlockLibrary.hpp>
 #include <ClientLib/ClientChunkEntities.hpp>
 #include <ClientLib/PlayerAnimationController.hpp>
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Components/AnimationComponent.hpp>
 #include <ClientLib/Components/CameraFollowerComponent.hpp>
-#include <ClientLib/ClientAssetLibraryAppComponent.hpp>
 #include <ClientLib/Components/ChunkNetworkMapComponent.hpp>
 #include <ClientLib/Components/ClientEntityNetworkIndex.hpp>
 #include <ClientLib/Components/EnvironmentComponent.hpp>
@@ -92,8 +92,8 @@ namespace tsom
 		m_entityRegistry.RegisterClassLibrary<ClientChunkClassLibrary>(m_app, config, m_blockLibrary);
 		m_entityRegistry.RegisterClassLibrary<ClientEntityClassLibrary>(m_app);
 
-		m_scriptingContext.RegisterLibrary<ClientEntityScriptingLibrary>(m_entityRegistry);
-		m_scriptingContext.RegisterLibrary<ClientScriptingLibrary>(m_app, config, *this);
+		auto& entityScriptingLibrary = m_scriptingContext.RegisterLibrary<ClientEntityScriptingLibrary>(m_entityRegistry);
+		m_scriptingContext.RegisterLibrary<ClientScriptingLibrary>(m_app, config, *this, entityScriptingLibrary);
 
 		LoadScripts();
 	}

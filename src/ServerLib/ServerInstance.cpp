@@ -6,6 +6,7 @@
 #include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/Entities/ChunkClassLibrary.hpp>
 #include <CommonLib/Scripting/BaseScriptingLibrary.hpp>
+#include <CommonLib/Scripting/ChunkScriptingLibrary.hpp>
 #include <CommonLib/Scripting/MathScriptingLibrary.hpp>
 #include <CommonLib/Scripting/SharedScriptingLibrary.hpp>
 #include <ServerLib/ServerConfig.hpp>
@@ -47,6 +48,7 @@ namespace tsom
 
 		m_scriptingContext.RegisterLibrary<BaseScriptingLibrary>();
 		m_scriptingContext.RegisterLibrary<MathScriptingLibrary>();
+		m_scriptingContext.RegisterLibrary<ChunkScriptingLibrary>();
 		auto& entityScriptingLibrary = m_scriptingContext.RegisterLibrary<ServerEntityScriptingLibrary>(m_entityRegistry);
 		m_scriptingContext.RegisterLibrary<ServerScriptingLibrary>(*this, entityScriptingLibrary);
 

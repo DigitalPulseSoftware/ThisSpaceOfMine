@@ -26,6 +26,10 @@ function Vec2Mt:Minimize(vec)
     return Vec2(math.min(self.x, vec.x), math.min(self.y, vec.y))
 end
 
+function Vec2Mt:__eq(vec)
+    return self.x == vec.x and self.y == vec.y
+end
+
 function Vec2Mt:__add(vec)
     return Vec2(self.x + vec.x, self.y + vec.y)
 end

@@ -100,6 +100,22 @@ namespace tsom
 			"Phong", Nz::MaterialType::Phong,
 			"PhysicallyBased", Nz::MaterialType::PhysicallyBased
 		);
+		
+		state.new_enum("SamplerFilter",
+			"Linear", Nz::SamplerFilter::Linear,
+			"Nearest", Nz::SamplerFilter::Nearest
+		);
+		
+		state.new_enum("SamplerMipmapMode",
+			"Linear", Nz::SamplerMipmapMode::Linear,
+			"Nearest", Nz::SamplerMipmapMode::Nearest
+		);
+		
+		state.new_enum("SamplerWrap",
+			"Clamp", Nz::SamplerWrap::Clamp,
+			"MirroredRepeat", Nz::SamplerWrap::MirroredRepeat,
+			"Repeat", Nz::SamplerWrap::Repeat
+		);
 
 		state.new_usertype<Nz::MaterialInstancePresetFlags>("MaterialInstancePresetFlags",
 			sol::no_constructor,
@@ -145,6 +161,21 @@ namespace tsom
 			}),
 
 			"SetTextureProperty", LuaFunction(Nz::Overload<std::string_view, std::shared_ptr<Nz::TextureAsset>>(&Nz::MaterialInstance::SetTextureProperty)),
+			"SetTextureSamplerProperty", LuaFunction([](Nz::MaterialInstance& matInstance, std::string_view propertyName, sol::stack_table samplerParams)
+			{
+				Nz::TextureSamplerInfo samplerInfo;
+				samplerInfo.anisotropyLevel = samplerParams.get_or("anisotropyLevel", samplerInfo.anisotropyLevel);
+				samplerInfo.magFilter = samplerParams.get_or("magFilter", samplerInfo.magFilter);
+				samplerInfo.minFilter = samplerParams.get_or("minFilter", samplerInfo.minFilter);
+				samplerInfo.mipmapMode = samplerParams.get_or("mipmapMode", samplerInfo.mipmapMode);
+				samplerInfo.wrapModeU = samplerParams.get_or("wrapModeU", samplerInfo.wrapModeU);
+				samplerInfo.wrapModeV = samplerParams.get_or("wrapModeV", samplerInfo.wrapModeV);
+				samplerInfo.wrapModeW = samplerParams.get_or("wrapModeW", samplerInfo.wrapModeW);
+				samplerInfo.depthCompare = samplerParams.get_or("depthCompare", samplerInfo.depthCompare);
+				samplerInfo.depthComparison = samplerParams.get_or("depthComparison", samplerInfo.depthComparison);
+
+				matInstance.SetTextureSamplerProperty(propertyName, samplerInfo);
+			}),
 			"SetValueProperty", sol::overload(
 				LuaFunction([](Nz::MaterialInstance& matInstance, std::string_view propertyName, bool propertyValue)
 				{
@@ -269,20 +300,7 @@ namespace tsom
 		state.new_usertype<Nz::Model>("Model",
 			sol::no_constructor,
 			sol::base_classes, sol::bases<Nz::InstancedRenderable>(),
-			"BuildFromMesh", LuaFunction([](const Nz::Mesh& mesh)
-			{
-				std::shared_ptr<Nz::Model> model = Nz::Model::BuildFromMesh(mesh);
-
-				// Fix reverse-depth
-				std::size_t materialCount = model->GetMaterialCount();
-				for (std::size_t i = 0; i < materialCount; ++i)
-				{
-					const auto& matPtr = model->GetMaterial(i);
-					matPtr->ApplyPreset(Nz::MaterialInstancePreset::ReverseZ);
-				}
-
-				return model;
-			}),
+			"BuildFromMesh", LuaFunction(&Nz::Model::BuildFromMesh),
 			"Clone", LuaFunction(&Nz::Model::Clone),
 			"SetMaterial", LuaFunction(&Nz::Model::SetMaterial),
 			"UpdateRenderLayer", LuaFunction(&Nz::Model::UpdateRenderLayer),

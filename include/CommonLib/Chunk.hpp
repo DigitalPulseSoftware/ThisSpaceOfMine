@@ -74,6 +74,7 @@ namespace tsom
 			inline void ClearFlags(ChunkFlags flags);
 
 			virtual Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> ComputeBlockCorners(const Nz::Vector3ui& indices) const;
+			virtual std::optional<Nz::Vector3ui> ComputeCoordinates(const Nz::Vector3f& position) const = 0;
 			virtual std::optional<HitBlock> ComputeHitCoordinates(const Nz::Vector3f& hitPos, const Nz::Vector3f& hitNormal, const Nz::Collider3D& collider, std::uint32_t hitSubshapeId) const = 0;
 
 			virtual void Deserialize(Nz::ByteStream& byteStream);
