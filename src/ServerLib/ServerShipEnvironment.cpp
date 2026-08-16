@@ -142,7 +142,15 @@ namespace tsom
 			for (entt::entity entity : switchView)
 			{
 				auto& envSwitch = switchView.get<ServerEnvironmentSwitchComponent>(entity);
-				envSwitch.Switch(entt::handle(registry, entity), this, m_exteriorEnvironment, outsideTransform);
+				entt::handle newEntity = envSwitch.Switch(entt::handle(registry, entity), this, m_exteriorEnvironment, outsideTransform);
+
+				if (Nz::PhysCharacter3DComponent* controlledCharacter = newEntity.try_get<Nz::PhysCharacter3DComponent>())
+					controlledCharacter->AddLinearVelocity(outsideVelocity);
+				else if (Nz::RigidBody3DComponent* controlledRigidbody = newEntity.try_get<Nz::RigidBody3DComponent>())
+				{
+					if (controlledRigidbody->IsDynamic())
+						controlledRigidbody->AddLinearVelocity(outsideVelocity);
+				}
 			}
 		}
 
@@ -581,7 +589,10 @@ namespace tsom
 				if (Nz::PhysCharacter3DComponent* controlledCharacter = newEntity.try_get<Nz::PhysCharacter3DComponent>())
 					controlledCharacter->AddLinearVelocity(shipLinearVelocity);
 				else if (Nz::RigidBody3DComponent* controlledRigidbody = newEntity.try_get<Nz::RigidBody3DComponent>())
-					controlledRigidbody->AddLinearVelocity(shipLinearVelocity);
+				{
+					if (controlledRigidbody->IsDynamic())
+						controlledRigidbody->AddLinearVelocity(shipLinearVelocity);
+				}
 			}
 		}
 	}
