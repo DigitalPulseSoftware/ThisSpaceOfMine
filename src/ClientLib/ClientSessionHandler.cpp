@@ -148,9 +148,9 @@ namespace tsom
 
 		Chunk* chunk;
 		if (PlanetComponent* planetComponent = entity.try_get<PlanetComponent>())
-			chunk = &planetComponent->planet->AddChunk(m_blockLibrary, indices);
+			chunk = &planetComponent->planet->AddChunk(indices);
 		else if (ShipComponent* shipComponent = entity.try_get<ShipComponent>())
-			chunk = &shipComponent->ship->AddChunk(m_blockLibrary, indices);
+			chunk = &shipComponent->ship->AddChunk(indices);
 
 		auto& chunkNetworkMap = entity.get<ChunkNetworkMapComponent>();
 		chunkNetworkMap.chunkByNetworkIndex.emplace(chunkCreate.chunkId, chunk);

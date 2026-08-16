@@ -20,9 +20,9 @@
 #include <Nazara/Core/ByteArray.hpp>
 #include <Nazara/Core/ByteStream.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
-#include <Nazara/Core/Hash/SHA256.hpp>
 #include <Nazara/Core/TaskSchedulerAppComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
+#include <Nazara/Core/Hash/SHA256.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <nlohmann/json.hpp>
 
@@ -286,7 +286,7 @@ namespace tsom
 
 			Chunk* chunk = GetPlanet().GetChunk(indices);
 			if (!chunk)
-				chunk = &GetPlanet().AddChunk(m_serverInstance.GetBlockLibrary(), indices);
+				chunk = &GetPlanet().AddChunk(indices);
 
 			auto& taskScheduler = m_serverInstance.GetApplication().GetComponent<Nz::TaskSchedulerAppComponent>();
 			bool enableChunkCache = m_serverInstance.GetConfig().enableChunkCache;
@@ -352,7 +352,7 @@ namespace tsom
 		}
 		else
 			m_dirtyChunks = std::move(m_chunkLoadingData->generatedChunks);
-		
+
 		m_chunkLoadingData->generatedChunks.clear();
 	}
 
@@ -372,7 +372,6 @@ namespace tsom
 		ServerDatabase& serverDatabase = m_serverInstance.GetThreadServerDatabase();
 
 		BinaryCompressor& binaryCompressor = BinaryCompressor::GetThreadCompressor();
-		auto& blockLibrary = m_serverInstance.GetBlockLibrary();
 		Planet& planet = GetPlanet();
 
 		serverDatabase.GetAllPlanetChunks(*m_databaseId, [&](Database::PlanetChunk&& planetChunk)
@@ -396,7 +395,7 @@ namespace tsom
 			Nz::ByteStream byteStream(decompressedData.data(), decompressedData.size());
 			Chunk* chunk = planet.GetChunk(planetChunk.position);
 			if (!chunk)
-				chunk = &planet.AddChunk(blockLibrary, planetChunk.position);
+				chunk = &planet.AddChunk(planetChunk.position);
 
 			ChunkWriteLock lock(chunk);
 			chunk->Deserialize(byteStream);

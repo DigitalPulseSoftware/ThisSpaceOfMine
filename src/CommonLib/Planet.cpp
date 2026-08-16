@@ -20,17 +20,17 @@
 
 namespace tsom
 {
-	Planet::Planet(Nz::ApplicationBase& app, float tileSize) :
-	ChunkContainer(tileSize),
+	Planet::Planet(Nz::ApplicationBase& app, const BlockLibrary& blockLibrary, float tileSize) :
+	ChunkContainer(blockLibrary, tileSize),
 	m_app(app)
 	{
 	}
 
-	Chunk& Planet::AddChunk(const BlockLibrary& blockLibrary, const ChunkIndices& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback)
+	Chunk& Planet::AddChunk(const ChunkIndices& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback)
 	{
 		assert(!m_chunks.contains(indices));
 		ChunkData chunkData;
-		chunkData.chunk = std::make_unique<SurfaceNetsChunk>(blockLibrary, *this, indices, Nz::Vector3ui{ ChunkSize }, m_tileSize);
+		chunkData.chunk = std::make_unique<SurfaceNetsChunk>(*this, indices, Nz::Vector3ui{ ChunkSize }, m_tileSize);
 
 		chunkData.onLayerRegistered.Connect(chunkData.chunk->OnLayerRegistered, [this](Chunk* chunk, std::size_t layerIndex)
 		{
@@ -45,22 +45,22 @@ namespace tsom
 			std::lock_guard lock(m_chunkLayerRemovedSignalMutex);
 			OnChunkLayerRemove(this, chunk, layerIndex);
 		});
-	
-		chunkData.onClear.Connect(chunkData.chunk->OnClear, [this, &blockLibrary](Chunk* chunk, Nz::UInt32 previousActiveLayerMask)
+
+		chunkData.onClear.Connect(chunkData.chunk->OnClear, [this](Chunk* chunk, Nz::UInt32 previousActiveLayerMask)
 		{
 			// FIXME: Nz::Signal operator() is not thread-safe!
 			std::lock_guard lock(m_chunkUpdatedSignalMutex);
 			OnChunkUpdated(this, chunk, NeighborChunkMask_All, previousActiveLayerMask);
 		});
 
-		chunkData.onReset.Connect(chunkData.chunk->OnReset, [this, &blockLibrary](Chunk* chunk)
+		chunkData.onReset.Connect(chunkData.chunk->OnReset, [this](Chunk* chunk)
 		{
 			// FIXME: Nz::Signal operator() is not thread-safe!
 			std::lock_guard lock(m_chunkUpdatedSignalMutex);
 			OnChunkUpdated(this, chunk, NeighborChunkMask_All, chunk->GetActiveLayerMask());
 		});
 
-		chunkData.onUpdated.Connect(chunkData.chunk->OnBlockUpdated, [this, &blockLibrary](Chunk* chunk, const Nz::Vector3ui& indices, BlockIndex /*oldBlock*/, BlockIndex newBlock, std::size_t oldLayerIndex, std::size_t newLayerIndex)
+		chunkData.onUpdated.Connect(chunkData.chunk->OnBlockUpdated, [this](Chunk* chunk, const Nz::Vector3ui& indices, BlockIndex /*oldBlock*/, BlockIndex newBlock, std::size_t oldLayerIndex, std::size_t newLayerIndex)
 		{
 			NeighborChunkMask neighborMask;
 
@@ -130,14 +130,14 @@ namespace tsom
 		return *it->second.chunk;
 	}
 
-	void Planet::AddChunks(const BlockLibrary& blockLibrary, const Nz::Vector3ui& chunkCount)
+	void Planet::AddChunks(const Nz::Vector3ui& chunkCount)
 	{
 		for (int chunkZ = 0; chunkZ < chunkCount.z; ++chunkZ)
 		{
 			for (int chunkY = 0; chunkY < chunkCount.y; ++chunkY)
 			{
 				for (int chunkX = 0; chunkX < chunkCount.x; ++chunkX)
-					AddChunk(blockLibrary, { chunkX - int(chunkCount.x / 2), chunkY - int(chunkCount.y / 2), chunkZ - int(chunkCount.z / 2) });
+					AddChunk({ chunkX - int(chunkCount.x / 2), chunkY - int(chunkCount.y / 2), chunkZ - int(chunkCount.z / 2) });
 			}
 		}
 	}
@@ -210,7 +210,7 @@ namespace tsom
 		});
 	}
 
-	void Planet::GeneratePlatform(const BlockLibrary& blockLibrary, Direction upDirection, const BlockIndices& platformCenter)
+	void Planet::GeneratePlatform(Direction upDirection, const BlockIndices& platformCenter)
 	{
 		constexpr int platformSize = 15;
 		constexpr unsigned int freeHeight = 10;
@@ -226,8 +226,8 @@ namespace tsom
 		int& zPos = coordinates[dirAxis.forwardAxis];
 		zPos += -dirAxis.forwardDir * platformSize / 2;
 
-		BlockIndex borderBlockIndex = blockLibrary.GetBlockIndex("copper_block");
-		BlockIndex interiorBlockIndex = blockLibrary.GetBlockIndex("stone_bricks");
+		BlockIndex borderBlockIndex = m_blockLibrary.GetBlockIndex("copper_block");
+		BlockIndex interiorBlockIndex = m_blockLibrary.GetBlockIndex("stone_bricks");
 
 		BlockIndices originalCoordinates = coordinates;
 		for (unsigned int y = 0; y < freeHeight; ++y)
@@ -266,7 +266,7 @@ namespace tsom
 		}
 
 		// Bottom
-		BlockIndex planksBlockIndex = blockLibrary.GetBlockIndex("planks");
+		BlockIndex planksBlockIndex = m_blockLibrary.GetBlockIndex("planks");
 
 		coordinates = originalCoordinates;
 		for (unsigned int y = 1; /*no cond*/; ++y)

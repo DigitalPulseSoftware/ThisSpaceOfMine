@@ -113,6 +113,7 @@ namespace tsom
 				return GetBlockContent(indices);
 		};
 
+		const auto& blockLibrary = m_owner.GetBlockLibrary();
 		for (unsigned int z = 0; z < m_size.z; ++z)
 		{
 			for (unsigned int y = 0; y < m_size.y; ++y)
@@ -125,7 +126,7 @@ namespace tsom
 					if (blockIndex == EmptyBlockIndex)
 						continue;
 
-					const auto& blockData = m_blockLibrary.GetBlockData(blockIndex);
+					const auto& blockData = blockLibrary.GetBlockData(blockIndex);
 					if (blockData.layerIndex != layerIndex)
 						continue;
 
@@ -140,7 +141,7 @@ namespace tsom
 						if (blockIndex == neighborBlockIndex)
 							return false;
 
-						const auto& neighborBlockData = m_blockLibrary.GetBlockData(neighborBlockIndex);
+						const auto& neighborBlockData = blockLibrary.GetBlockData(neighborBlockIndex);
 						return neighborBlockData.isTransparent;
 					};
 
@@ -205,6 +206,8 @@ namespace tsom
 
 	void Chunk::Deserialize(Nz::ByteStream& byteStream)
 	{
+		const auto& blockLibrary = m_owner.GetBlockLibrary();
+
 		Nz::UInt32 chunkBinaryVersion;
 		byteStream >> chunkBinaryVersion;
 
@@ -229,7 +232,7 @@ namespace tsom
 		{
 			byteStream >> blockName;
 
-			BlockIndex blockIndex = m_blockLibrary.GetBlockIndex(blockName);
+			BlockIndex blockIndex = blockLibrary.GetBlockIndex(blockName);
 			if (blockIndex == InvalidBlockIndex)
 				throw std::runtime_error("unknown block " + blockName);
 
@@ -264,6 +267,8 @@ namespace tsom
 
 	void Chunk::Serialize(Nz::ByteStream& byteStream) const
 	{
+		const auto& blockLibrary = m_owner.GetBlockLibrary();
+
 		byteStream << Constants::ChunkBinaryVersion;
 		byteStream << m_size;
 
@@ -284,7 +289,7 @@ namespace tsom
 			if (m_blockTypeCount[i] == 0)
 				continue;
 
-			byteStream << m_blockLibrary.GetBlockData(i).name;
+			byteStream << blockLibrary.GetBlockData(i).name;
 		}
 
 		// nextUniqueIndex is the number of bits required to store all the different block types used
@@ -310,11 +315,12 @@ namespace tsom
 			PrepareForContent();
 		}
 
-		const auto& newBlockData = m_blockLibrary.GetBlockData(newBlock);
+		const auto& blockLibrary = m_owner.GetBlockLibrary();
+		const auto& newBlockData = blockLibrary.GetBlockData(newBlock);
 
 		unsigned int blockIndex = GetBlockLocalIndex(indices);
 		BlockIndex oldBlock = m_blocks[blockIndex];
-		const auto& oldBlockData = m_blockLibrary.GetBlockData(oldBlock);
+		const auto& oldBlockData = blockLibrary.GetBlockData(oldBlock);
 		assert(IsLayerRegistered(oldBlockData.layerIndex));
 		m_blocks[blockIndex] = newBlock;
 
@@ -361,8 +367,8 @@ namespace tsom
 
 			if (directionMask != 0)
 			{
-				auto& previousBlockData = m_blockLibrary.GetBlockData(oldBlock);
-				auto& newBlockData = m_blockLibrary.GetBlockData(newBlock);
+				auto& previousBlockData = blockLibrary.GetBlockData(oldBlock);
+				auto& newBlockData = blockLibrary.GetBlockData(newBlock);
 
 				if (previousBlockData.isTransparent != newBlockData.isTransparent)
 				{
@@ -406,10 +412,12 @@ namespace tsom
 
 		std::fill(m_blockTypeCount.begin(), m_blockTypeCount.end(), 0);
 
+		const auto& blockLibrary = m_owner.GetBlockLibrary();
+
 		for (std::size_t blockIndex = 0; blockIndex < m_blocks.size(); ++blockIndex)
 		{
 			BlockIndex blockContent = m_blocks[blockIndex];
-			const auto& blockData = m_blockLibrary.GetBlockData(blockContent);
+			const auto& blockData = blockLibrary.GetBlockData(blockContent);
 
 			if NAZARA_UNLIKELY(!IsLayerRegistered(blockData.layerIndex))
 			{
@@ -442,6 +450,8 @@ namespace tsom
 	{
 		m_directionHoleCount.fill(0);
 
+		const auto& blockLibrary = m_owner.GetBlockLibrary();
+
 		// Left / right
 		for (unsigned int z = 0; z < m_size.z; ++z)
 		{
@@ -450,11 +460,11 @@ namespace tsom
 				BlockIndex leftBlockIndex = GetBlockContent({ 0, y, z });
 				BlockIndex rightBlockIndex = GetBlockContent({ m_size.x - 1, y, z });
 
-				auto& leftBlockData = m_blockLibrary.GetBlockData(leftBlockIndex);
+				auto& leftBlockData = blockLibrary.GetBlockData(leftBlockIndex);
 				if (leftBlockData.isTransparent)
 					m_directionHoleCount[Direction::Left]++;
 
-				auto& rightBlockData = m_blockLibrary.GetBlockData(rightBlockIndex);
+				auto& rightBlockData = blockLibrary.GetBlockData(rightBlockIndex);
 				if (rightBlockData.isTransparent)
 					m_directionHoleCount[Direction::Right]++;
 			}
@@ -468,11 +478,11 @@ namespace tsom
 				BlockIndex frontBlockIndex = GetBlockContent({ x, 0, z });
 				BlockIndex backBlockIndex = GetBlockContent({ x, m_size.y - 1, z });
 
-				auto& frontBlockData = m_blockLibrary.GetBlockData(frontBlockIndex);
+				auto& frontBlockData = blockLibrary.GetBlockData(frontBlockIndex);
 				if (frontBlockData.isTransparent)
 					m_directionHoleCount[Direction::Front]++;
 
-				auto& backBlockData = m_blockLibrary.GetBlockData(backBlockIndex);
+				auto& backBlockData = blockLibrary.GetBlockData(backBlockIndex);
 				if (backBlockData.isTransparent)
 					m_directionHoleCount[Direction::Back]++;
 			}
@@ -486,11 +496,11 @@ namespace tsom
 				BlockIndex downBlockIndex = GetBlockContent({ x, y, 0 });
 				BlockIndex upBlockIndex = GetBlockContent({ x, y, m_size.z - 1 });
 
-				auto& downBlockData = m_blockLibrary.GetBlockData(downBlockIndex);
+				auto& downBlockData = blockLibrary.GetBlockData(downBlockIndex);
 				if (downBlockData.isTransparent)
 					m_directionHoleCount[Direction::Down]++;
 
-				auto& upBlockData = m_blockLibrary.GetBlockData(upBlockIndex);
+				auto& upBlockData = blockLibrary.GetBlockData(upBlockIndex);
 				if (upBlockData.isTransparent)
 					m_directionHoleCount[Direction::Up]++;
 			}

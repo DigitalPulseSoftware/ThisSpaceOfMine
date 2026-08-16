@@ -277,8 +277,10 @@ namespace tsom
 		Nz::Vector3f blockPos = (Nz::Vector3f(indices) - Nz::Vector3f(m_size) * 0.5f) * m_blockSize + Nz::Vector3f(m_blockSize);
 		Nz::Vector3f blockOffset(blockPos.x, blockPos.z, blockPos.y);
 
+		const auto& blockLibrary = m_owner.GetBlockLibrary();
+
 		BlockIndex blockIndex = GetBlockContent(indices);
-		const auto& blockData = m_blockLibrary.GetBlockData(blockIndex);
+		const auto& blockData = blockLibrary.GetBlockData(blockIndex);
 
 		Nz::Boxf box(blockPos.x, blockPos.z, blockPos.y, m_blockSize, m_blockSize, m_blockSize);
 		auto corners = box.GetCorners();
@@ -309,8 +311,8 @@ namespace tsom
 						if (edge2 == InvalidBlockIndex)
 							edge2 = EmptyBlockIndex;
 
-						const auto& edge1BlockData = m_blockLibrary.GetBlockData(edge1);
-						const auto& edge2BlockData = m_blockLibrary.GetBlockData(edge2);
+						const auto& edge1BlockData = blockLibrary.GetBlockData(edge1);
+						const auto& edge2BlockData = blockLibrary.GetBlockData(edge2);
 
 						if (!edge2BlockData.isSmooth)
 						{
@@ -379,6 +381,8 @@ namespace tsom
 
 		chunkLock.Lock();
 
+		const auto& blockLibrary = m_owner.GetBlockLibrary();
+
 		Nz::HighPrecisionClock clock;
 
 		for (unsigned int z = 0; z < m_size.z; ++z)
@@ -393,7 +397,7 @@ namespace tsom
 					if (blockContent == EmptyBlockIndex)
 						continue;
 
-					const auto& blockData = m_blockLibrary.GetBlockData(blockContent);
+					const auto& blockData = blockLibrary.GetBlockData(blockContent);
 					if (blockData.layerIndex != layerIndex)
 						continue;
 
@@ -446,7 +450,7 @@ namespace tsom
 						if (blockContent == neighborBlockIndex)
 							return false;
 
-						const auto& neighborBlockData = m_blockLibrary.GetBlockData(neighborBlockIndex);
+						const auto& neighborBlockData = blockLibrary.GetBlockData(neighborBlockIndex);
 						return neighborBlockData.isTransparent;
 					};
 

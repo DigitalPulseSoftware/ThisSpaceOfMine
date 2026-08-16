@@ -7,10 +7,9 @@
 
 namespace tsom
 {
-	inline Chunk::Chunk(const BlockLibrary& blockLibrary, ChunkContainer& owner, const ChunkIndices& indices, const Nz::Vector3ui& size, float cellSize) :
+	inline Chunk::Chunk(ChunkContainer& owner, const ChunkIndices& indices, const Nz::Vector3ui& size, float cellSize) :
 	m_size(size),
 	m_indices(indices),
-	m_blockLibrary(blockLibrary),
 	m_owner(owner),
 	m_hasPerFaceCollision(false),
 	m_isBatchUpdating(false),
@@ -92,11 +91,6 @@ namespace tsom
 		NazaraAssertMsg(!m_blocks.empty(), "chunk has not been reset");
 		NazaraAssertMsg(m_layers[layerIndex].has_value(), "layer %zu is not active", layerIndex);
 		return m_layers[layerIndex]->collisionCellMasks;
-	}
-
-	inline const BlockLibrary& Chunk::GetBlockLibrary() const
-	{
-		return m_blockLibrary;
 	}
 
 	inline unsigned int Chunk::GetBlockLocalIndex(const Nz::Vector3ui& indices) const

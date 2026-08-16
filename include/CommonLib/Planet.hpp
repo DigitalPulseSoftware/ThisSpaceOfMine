@@ -30,13 +30,13 @@ namespace tsom
 	class TSOM_COMMONLIB_API Planet : public ChunkContainer, public GravityController
 	{
 		public:
-			Planet(Nz::ApplicationBase& app, float blockSize);
+			Planet(Nz::ApplicationBase& app, const BlockLibrary& blockLibrary, float blockSize);
 			Planet(const Planet&) = delete;
 			Planet(Planet&&) = delete;
 			~Planet() = default;
 
-			Chunk& AddChunk(const BlockLibrary& blockLibrary, const ChunkIndices& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback = nullptr);
-			void AddChunks(const BlockLibrary& blockLibrary, const Nz::Vector3ui& chunkCount);
+			Chunk& AddChunk(const ChunkIndices& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback = nullptr);
+			void AddChunks(const Nz::Vector3ui& chunkCount);
 
 			void ClearChunks() override;
 
@@ -45,7 +45,7 @@ namespace tsom
 
 			void GenerateChunk(Chunk& chunk, const Nz::Vector3ui& chunkCount, std::string_view scriptName, const std::unordered_map<std::string, EntityProperty>& properties);
 			void GenerateChunks(Nz::TaskScheduler& taskScheduler, const Nz::Vector3ui& chunkCount, std::string_view scriptName, const std::unordered_map<std::string, EntityProperty>& properties);
-			void GeneratePlatform(const BlockLibrary& blockLibrary, Direction upDirection, const BlockIndices& platformCenter);
+			void GeneratePlatform(Direction upDirection, const BlockIndices& platformCenter);
 
 			inline Nz::Vector3f GetCenter() const override;
 			inline Chunk* GetChunk(const ChunkIndices& chunkIndices) override;

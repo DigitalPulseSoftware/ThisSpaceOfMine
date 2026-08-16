@@ -4,8 +4,8 @@
 
 namespace tsom
 {
-	inline SurfaceNetsChunk::SurfaceNetsChunk(const BlockLibrary& blockLibrary, ChunkContainer& owner, const ChunkIndices& indices, const Nz::Vector3ui& size, float blockSize) :
-	Chunk(blockLibrary, owner, indices, size, blockSize)
+	inline SurfaceNetsChunk::SurfaceNetsChunk(ChunkContainer& owner, const ChunkIndices& indices, const Nz::Vector3ui& size, float blockSize) :
+	Chunk(owner, indices, size, blockSize)
 	{
 		SetPerFaceCollision();
 	}

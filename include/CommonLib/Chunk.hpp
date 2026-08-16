@@ -58,7 +58,7 @@ namespace tsom
 			struct HitBlock;
 			struct VertexAttributes;
 
-			inline Chunk(const BlockLibrary& blockLibrary, ChunkContainer& owner, const ChunkIndices& indices, const Nz::Vector3ui& size, float blockSize);
+			inline Chunk(ChunkContainer& owner, const ChunkIndices& indices, const Nz::Vector3ui& size, float blockSize);
 			Chunk(const Chunk&) = delete;
 			Chunk(Chunk&&) = delete;
 			virtual ~Chunk();
@@ -83,7 +83,6 @@ namespace tsom
 			inline std::span<const std::size_t> GetActiveLayers() const;
 			inline Nz::UInt32 GetActiveLayerMask() const;
 			inline const Nz::Bitset<Nz::UInt64>& GetCollisionCellMask(std::size_t layerIndex) const;
-			inline const BlockLibrary& GetBlockLibrary() const;
 			inline unsigned int GetBlockLocalIndex(const Nz::Vector3ui& indices) const;
 			inline Nz::Vector3ui GetBlockLocalIndices(unsigned int blockIndex) const;
 			inline BlockIndex GetBlockContent(unsigned int blockIndex) const;
@@ -169,7 +168,6 @@ namespace tsom
 			ChunkFlags m_flags;
 			ChunkIndices m_indices;
 			DirectionMask m_visibilityMask;
-			const BlockLibrary& m_blockLibrary;
 			ChunkContainer& m_owner;
 			bool m_hasPerFaceCollision;
 			bool m_isBatchUpdating;

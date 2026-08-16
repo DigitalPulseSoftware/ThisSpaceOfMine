@@ -11,17 +11,17 @@
 
 namespace tsom
 {
-	Ship::Ship(float tileSize) :
-	ChunkContainer(tileSize),
+	Ship::Ship(const BlockLibrary& blockLibrary, float tileSize) :
+	ChunkContainer(blockLibrary, tileSize),
 	m_upDirection(Nz::Vector3f::Up())
 	{
 	}
 
-	FlatChunk& Ship::AddChunk(const BlockLibrary& blockLibrary, const ChunkIndices& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback)
+	FlatChunk& Ship::AddChunk(const ChunkIndices& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback)
 	{
 		assert(!m_chunks.contains(indices));
 		ChunkData chunkData;
-		chunkData.chunk = std::make_shared<FlatChunk>(blockLibrary, *this, indices, Nz::Vector3ui{ ChunkSize }, m_tileSize);
+		chunkData.chunk = std::make_shared<FlatChunk>(*this, indices, Nz::Vector3ui{ ChunkSize }, m_tileSize);
 
 		chunkData.onLayerRegistered.Connect(chunkData.chunk->OnLayerRegistered, [this](Chunk* chunk, std::size_t layerIndex)
 		{
@@ -36,8 +36,8 @@ namespace tsom
 			std::lock_guard lock(m_chunkLayerRemovedSignalMutex);
 			OnChunkLayerRemove(this, chunk, layerIndex);
 		});
-		
-		chunkData.onClear.Connect(chunkData.chunk->OnClear, [this, &blockLibrary](Chunk* chunk, Nz::UInt32 previousActiveLayerMask)
+
+		chunkData.onClear.Connect(chunkData.chunk->OnClear, [this](Chunk* chunk, Nz::UInt32 previousActiveLayerMask)
 		{
 			// FIXME: Nz::Signal operator() is not thread-safe!
 			std::lock_guard lock(m_chunkUpdatedSignalMutex);
@@ -183,15 +183,15 @@ namespace tsom
 			callback(chunkIndices, *chunkData.chunk);
 	}
 
-	void Ship::Generate(const BlockLibrary& blockLibrary, bool small)
+	void Ship::Generate(bool small)
 	{
-		FlatChunk& chunk = AddChunk(blockLibrary, { 0, 0, 0 });
+		FlatChunk& chunk = AddChunk({ 0, 0, 0 });
 
-		BlockIndex hullIndex = blockLibrary.GetBlockIndex("hull");
+		BlockIndex hullIndex = m_blockLibrary.GetBlockIndex("hull");
 		if (hullIndex == InvalidBlockIndex)
 			return;
 
-		BlockIndex forcefieldIndex = blockLibrary.GetBlockIndex("forcefield");
+		BlockIndex forcefieldIndex = m_blockLibrary.GetBlockIndex("forcefield");
 
 		unsigned int boxSize = (small) ? 6 : 12;
 		unsigned int height = (small) ? 4 : 6;

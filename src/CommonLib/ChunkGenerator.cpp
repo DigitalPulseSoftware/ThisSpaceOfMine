@@ -5,6 +5,7 @@
 #include <CommonLib/ChunkGenerator.hpp>
 #include <CommonLib/BlockLibrary.hpp>
 #include <CommonLib/Chunk.hpp>
+#include <CommonLib/ChunkContainer.hpp>
 #include <CommonLib/Scripting/BaseScriptingLibrary.hpp>
 #include <CommonLib/Scripting/ChunkScriptingLibrary.hpp>
 #include <CommonLib/Scripting/MathScriptingLibrary.hpp>
@@ -59,7 +60,7 @@ namespace tsom
 		if (contentSize != blockCount)
 			spdlog::error("Chunk generator returned a table containing {} entries, {} expected", contentSize, blockCount);
 
-		auto& blockLibrary = chunk.GetBlockLibrary();
+		auto& blockLibrary = chunk.GetContainer().GetBlockLibrary();
 
 		std::vector<BlockIndex> blocks(blockCount, EmptyBlockIndex);
 		std::size_t maxEntries = std::min<std::size_t>(blockCount, contentSize);

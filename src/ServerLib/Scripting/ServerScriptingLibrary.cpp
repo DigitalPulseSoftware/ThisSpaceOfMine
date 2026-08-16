@@ -5,6 +5,7 @@
 #include <ServerLib/Scripting/ServerScriptingLibrary.hpp>
 #include <CommonLib/CharacterController.hpp>
 #include <CommonLib/Planet.hpp>
+#include <CommonLib/Ship.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Components/DistributionComponent.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
@@ -178,6 +179,7 @@ namespace tsom
 		state.new_usertype<ServerShipEnvironment>("ShipEnvironment",
 			sol::no_constructor,
 			sol::base_classes, sol::bases<ServerEnvironment>(),
+			"GetChunkContainer", LuaFunction([](ServerShipEnvironment& env) -> ChunkContainer* { return &env.GetShip(); }),
 			"GetExteriorShipEntity", LuaFunction([this](sol::this_state L, ServerShipEnvironment& shipEnvironment)
 			{
 				sol::state_view stateView(L);

@@ -180,10 +180,9 @@ namespace tsom
 
 	void ServerShipEnvironment::GenerateShip(bool small)
 	{
-		auto& blockLibrary = m_serverInstance.GetBlockLibrary();
 		auto& ship = GetShip();
 		ship.ClearChunks();
-		ship.Generate(blockLibrary, small);
+		ship.Generate(small);
 	}
 
 	ServerAtmosphere* ServerShipEnvironment::GetFallbackAtmosphereAtPosition(const Nz::Vector3f& position)
@@ -307,7 +306,7 @@ namespace tsom
 
 				Nz::ByteStream byteStream(decompressedData.data(), decompressedData.size());
 
-				Chunk& chunk = ship.AddChunk(blockLibrary, chunkIndices);
+				Chunk& chunk = ship.AddChunk(chunkIndices);
 				chunk.Deserialize(byteStream);
 			}
 
