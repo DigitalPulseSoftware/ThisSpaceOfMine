@@ -35,7 +35,7 @@ namespace tsom
 		private:
 			void FetchPlayerInfo(bool devMode);
 			void LayoutWidgets(const Nz::Vector2f& newSize) override;
-			void OnCreateOrConnectPressed(bool devMode);
+			void OnCreateOrConnectPressed();
 
 			std::optional<UpdateInfo> m_newVersionInfo;
 			std::shared_ptr<Nz::State> m_nextState;
