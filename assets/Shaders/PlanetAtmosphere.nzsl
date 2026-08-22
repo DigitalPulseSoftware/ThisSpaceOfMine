@@ -41,6 +41,7 @@ struct PassData
 	invViewMatrix: mat4[f32],
 	viewerPosition: vec3[f32],
 	zNear: f32,
+	sunDir: vec3[f32],
 
 	atmosphereCount: u32,
 	atmospheres: array[AtmosphereScatteringData, MaxAtmosphereCount]
@@ -108,8 +109,16 @@ fn main(input: VertOut) -> FragOut
 		}
 	}
 
+    let allowMie = isinf(linearDepth);
+	let sundir = passData.sunDir;
+    let mu = dot(viewVector, sundir);
+    let mumu = mu * mu;
+	let mieScattering = 0.999;
+	let gg = mieScattering * mieScattering;
+    let phaseMie = select(allowMie, 3.0 / (25.1327412287 /* (8 * pi) */) * ((1.0 - gg) * (mumu + 1.0)) / (pow(1.0 + gg - 2.0 * mu * mieScattering, 1.5) * (2.0 + gg)), 0.0);
+
 	let output: FragOut;
-	output.color = vec4[f32](color, 1.0);
+	output.color = vec4[f32](color + phaseMie.xxx, 1.0);
 
 	return output;
 }
@@ -169,7 +178,11 @@ fn ComputeRoundCubeScattering(
 
 	let skyColor = scatteredLight + phaseMie.xxx * totalMie;
 	let skyLuminance = ComputeLuminance(skyColor);
-	let sceneColorLuminance = ComputeLuminance(sceneColor) + clamp((maxDist - atmosphere.atmosphereMaxHeight * 2.0) / atmosphere.atmosphereMaxHeight, 0.0, 1.0);
+	let sceneColorLuminance = ComputeLuminance(sceneColor) + clamp(maxDist / atmosphere.atmosphereMaxHeight, 0.0, 1.0);
+
+	//return totalMie;
+	//let point = viewerPos + viewerDir * min(hitInfo.y, maxDist);
+	//return clamp((1.0 - (max(sdRoundBox(point, planetDims, planetCornerRadius), 0.0) / max(sdRoundBox(viewerPos + viewerDir * hitInfo.x, planetDims, planetCornerRadius), 0.0))), 0.0, 1.0).xxx;
 
 	let originalColorTransmittance = clamp(exp(-viewRayOpticalDepth) + (1.0 - skyLuminance), 0.0, 1.0);
 	return originalColorTransmittance * sceneColor + skyColor * sceneColorLuminance;

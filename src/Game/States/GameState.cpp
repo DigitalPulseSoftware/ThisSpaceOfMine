@@ -22,6 +22,7 @@
 #include <ClientLib/Tools/NoTool.hpp>
 #include <ClientLib/Tools/PlaceEntityTool.hpp>
 #include <ClientLib/Tools/RemoveEntityTool.hpp>
+#include <CommonLib/AtmosphereScattering.hpp>
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/NetworkSession.hpp>
@@ -145,8 +146,8 @@ namespace tsom
 		{
 			m_sunLightEntity.emplace<Nz::NodeComponent>(Nz::Vector3f::Zero(), Nz::EulerAnglesf(-30.f, 80.f, 0.f));
 
-			Nz::Vector3f sunLightForward = m_sunLightEntity.get<Nz::NodeComponent>().GetForward();
-			spdlog::info("sunLightForward: {};{};{}", sunLightForward.x, sunLightForward.y, sunLightForward.z);
+			auto& atmosphereScatteringCameraSettings = m_cameraEntity.get_or_emplace<AtmosphereScatteringCameraSettings>();
+			atmosphereScatteringCameraSettings.sunDir = m_sunLightEntity.get<Nz::NodeComponent>().GetBackward();
 
 			Nz::UInt32 shadowMapSize = stateData.config->GetIntegerValue<Nz::UInt32>(Config::Graphics_SunShadowMapSize);
 
