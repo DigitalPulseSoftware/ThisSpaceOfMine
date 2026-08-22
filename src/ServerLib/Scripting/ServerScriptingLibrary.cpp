@@ -31,7 +31,7 @@ SOL_DERIVED_CLASSES(tsom::ServerEnvironment, tsom::ServerPlanetEnvironment, tsom
 
 namespace tsom
 {
-	inline ServerScriptingLibrary::ServerScriptingLibrary(ServerInstance& serverInstance, ServerEntityScriptingLibrary& entityScriptingLibrary) :
+	ServerScriptingLibrary::ServerScriptingLibrary(ServerInstance& serverInstance, ServerEntityScriptingLibrary& entityScriptingLibrary) :
 	SharedScriptingLibrary(entityScriptingLibrary),
 	m_entityScriptingLibrary(entityScriptingLibrary),
 	m_serverInstance(serverInstance)
