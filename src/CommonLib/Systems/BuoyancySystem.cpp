@@ -114,7 +114,9 @@ namespace tsom
 	{
 		Nz::HybridVector<Nz::Vector3f, 32> debugLines;
 
-		auto playerView = m_registry.view<Nz::PhysCharacter3DComponent, BuoyancyComponent>(entt::exclude<Nz::DisabledComponent>);
+		// FIXME: For now player water detection is performed in ServerCharacterController
+
+		/*auto playerView = m_registry.view<Nz::PhysCharacter3DComponent, BuoyancyComponent>(entt::exclude<Nz::DisabledComponent>);
 		for (auto&& [entity, character, buoyancy] : playerView.each())
 		{
 			CharacterController& controller = Nz::SafeCast<CharacterController&>(*character.GetImpl());
@@ -137,7 +139,7 @@ namespace tsom
 				debugLines.push_back(fluidContact.contactPos);
 				debugLines.push_back(fluidContact.contactPos - gravity.direction);
 			}
-		}
+		}*/
 
 		auto view = m_registry.view<Nz::RigidBody3DComponent, BuoyancyComponent>(entt::exclude<Nz::DisabledComponent>);
 		for (auto&& [entity, rigidBody, buoyancy] : view.each())

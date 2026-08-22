@@ -38,6 +38,7 @@ namespace tsom
 			inline const Nz::Vector3f& GetCharacterPosition() const;
 			inline const Nz::Quaternionf& GetCharacterRotation() const;
 			Nz::Vector3f GetEyePosition() const;
+			inline const GravityController* GetGravityController() const;
 			inline const PlayerInputs& GetInputs() const;
 			inline const Nz::Quaternionf& GetReferenceRotation() const;
 			inline const std::shared_ptr<ShipController>& GetShipController() const;

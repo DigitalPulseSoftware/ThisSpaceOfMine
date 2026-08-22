@@ -33,6 +33,11 @@ namespace tsom
 		return m_characterRotation;
 	}
 
+	inline const GravityController* CharacterController::GetGravityController() const
+	{
+		return m_gravityController;
+	}
+
 	inline const PlayerInputs& CharacterController::GetInputs() const
 	{
 		return m_lastInputs;
