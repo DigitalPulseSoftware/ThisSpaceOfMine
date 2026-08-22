@@ -66,6 +66,10 @@ if SERVER then
 	classData:On("interact", function (self, player)
 		local computerNode = self:GetComponent("node")
 		local shipEnv = self:GetEnvironment()
+		if shipEnv:GetType() ~= EnvironmentType.Ship then
+			return
+		end
+
 		local shipEntity = shipEnv:GetExteriorShipEntity()
 
 		if player:PilotShip(shipEnv:GetShipEntity(), shipEnv:GetExteriorShipEntity(), computerNode:GetRotation()) then
@@ -79,6 +83,10 @@ if SERVER then
 
 	classData:On("tick", function (self)
 		local shipEnv = self:GetEnvironment()
+		if shipEnv:GetType() ~= EnvironmentType.Ship then
+			return
+		end
+
 		local shipEntity = shipEnv:GetExteriorShipEntity()
 
 		if self.UsingPlayer and (not self.UsingPlayer:IsValid() or self.UsingPlayer:GetControlledShipEntity() ~= shipEntity) then

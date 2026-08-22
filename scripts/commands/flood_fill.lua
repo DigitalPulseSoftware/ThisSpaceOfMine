@@ -43,9 +43,8 @@ return function ()
 		return
 	end
 
-	local water = result.hitChunk:GetBlockLibrary():GetBlockIndex("water")
-
 	local chunkContainer = result.hitChunk:GetContainer()
+	local water = chunkContainer:GetBlockLibrary():GetBlockIndex("water")
 
 	local blockIndices = chunkContainer:GetBlockIndices(result.hitChunk:GetIndices(), hitBlock.blockIndices)
 

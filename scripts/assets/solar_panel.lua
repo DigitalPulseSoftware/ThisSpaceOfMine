@@ -1,15 +1,31 @@
-local primitive = Primitive.Box(Vec3(2.0, 0.1, 2.0))
+local params = {
+	mesh = {
+		center = true,
+	},
+	loadMaterials = false
+}
 
-local mesh = Mesh.CreateStatic()
-mesh:BuildSubMesh(primitive)
-mesh:SetMaterialCount(1)
+local model = Model.Load("CookedAssets/Models/SolarPanel/SolarPanel.obj", params)
 
-local model = Model.BuildFromMesh(mesh)
+local material = MaterialInstance.Instantiate(MaterialType.PhysicallyBased)
+material:SetTextureProperty("AmbientOcclusionMap", Texture.Load("CookedAssets/Models/SolarPanel/Textures/AmbientOcclusion.dds"))
+material:SetTextureProperty("BaseColorMap", Texture.Load("CookedAssets/Models/SolarPanel/Textures/BaseColor.dds"))
+material:SetTextureProperty("MetallicRoughnessMap", Texture.Load("CookedAssets/Models/SolarPanel/Textures/MetallicRoughness.dds"))
+material:SetTextureProperty("NormalMap", Texture.Load("CookedAssets/Models/SolarPanel/Textures/Normal.dds"))
+material:SetValueProperty("ShadowMapNormalOffset", -0.02)
 
-local solarPanelMat = MaterialInstance.Instantiate(MaterialType.PhysicallyBased)
-solarPanelMat:SetTextureProperty("BaseColorMap", Texture.Load("CookedAssets/Textures/Dev/grey.dds"))
-solarPanelMat:SetValueProperty("BaseColor", Color(0.2, 0.2, 1.0))
+model:SetMaterial(0, material)
 
-model:SetMaterial(0, solarPanelMat)
+local metalMat = MaterialInstance.Instantiate(MaterialType.PhysicallyBased)
+metalMat:SetValueProperty("ShadowMapNormalOffset", -0.02)
+metalMat:SetValueProperty("MetallicFactor", 1.0)
+metalMat:SetValueProperty("RoughnessFactor", 0.2)
+
+model:SetMaterial(1, metalMat)
+model:SetMaterial(2, metalMat)
+
+local plasticMat = MaterialInstance.Instantiate(MaterialType.PhysicallyBased)
+plasticMat:SetValueProperty("BaseColor", Color.Black)
+model:SetMaterial(3, plasticMat)
 
 AssetLibrary.RegisterModel("solar_panel", model)

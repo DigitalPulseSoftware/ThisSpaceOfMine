@@ -246,13 +246,6 @@ namespace tsom
 		if (!BlockLibrary::LoadFromString(content, merge))
 			return false;
 
-		// Re-enable collisions on the client to allow clients to remove them (player collisions are only handled on the server for now)
-		// FIXME: Handle this with collisions layers
-		for (BlockData& blockData : m_blocks)
-			blockData.hasCollisions = true;
-
-		m_blocks[EmptyBlockIndex].hasCollisions = false; //< Except for the empty block
-
 		return true;
 	}
 }

@@ -19,6 +19,7 @@
 #include <Nazara/Physics3D/PhysFilter3D.hpp>
 #include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
+#include <Nazara/Renderer/DebugDrawer.hpp>
 #include <spdlog/spdlog.h>
 #include <numeric>
 
@@ -39,6 +40,9 @@ namespace tsom
 
 		m_preview.emplace();
 		m_preview->material = m_assetLibrary.GetMaterialInstance("preview_mat")->Clone();
+
+		// Refresh on activation for script reloading
+		RefreshEntityClasses();
 	}
 
 	void PlaceEntityTool::OnDeactivate()
@@ -165,9 +169,13 @@ namespace tsom
 								m_preview->collider.y = static_cast<float>(metadata.GetDoubleParameter("spawnable_collider.y").GetValueOr(1.0));
 								m_preview->collider.z = static_cast<float>(metadata.GetDoubleParameter("spawnable_collider.z").GetValueOr(1.0));
 
-								m_preview->rotationOffset.x = static_cast<float>(metadata.GetDoubleParameter("spawnable_rotation.x").GetValueOr(1.0));
-								m_preview->rotationOffset.y = static_cast<float>(metadata.GetDoubleParameter("spawnable_rotation.y").GetValueOr(1.0));
-								m_preview->rotationOffset.z = static_cast<float>(metadata.GetDoubleParameter("spawnable_rotation.z").GetValueOr(1.0));
+								m_preview->offset.x = static_cast<float>(metadata.GetDoubleParameter("spawnable_offset.x").GetValueOr(0.0));
+								m_preview->offset.y = static_cast<float>(metadata.GetDoubleParameter("spawnable_offset.y").GetValueOr(0.0));
+								m_preview->offset.z = static_cast<float>(metadata.GetDoubleParameter("spawnable_offset.z").GetValueOr(0.0));
+
+								m_preview->rotationAxis.x = static_cast<float>(metadata.GetDoubleParameter("spawnable_rotationaxis.x").GetValueOr(0.0));
+								m_preview->rotationAxis.y = static_cast<float>(metadata.GetDoubleParameter("spawnable_rotationaxis.y").GetValueOr(1.0));
+								m_preview->rotationAxis.z = static_cast<float>(metadata.GetDoubleParameter("spawnable_rotationaxis.z").GetValueOr(0.0));
 
 								m_preview->keepUpright = metadata.GetBooleanParameter("spawnable_keepupright").GetValueOr(false);
 							}
@@ -186,6 +194,7 @@ namespace tsom
 						auto& previewNode = m_preview->entity.get<Nz::NodeComponent>();
 
 						Nz::Vector3f entityPos = faceCenter;
+						Nz::Quaternionf localRotation = Nz::Quaternionf(Nz::DegreeAnglef(45.f) * m_preview->rotationMultiplier, m_preview->rotationAxis);
 						Nz::Quaternionf surfaceRotation = Nz::Quaternionf::Identity();
 						Nz::Vector3f normal = s_dirNormals[hitCoordinates->direction];
 
@@ -194,11 +203,15 @@ namespace tsom
 						else
 						{
 							entityPos += normal * m_preview->collider.y * 0.5f;
-							surfaceRotation = Nz::Quaternionf::RotationBetween(Nz::Vector3f::Up(), normal);
+
+							Nz::Quaternionf correctionRotation = Nz::Quaternionf::RotationBetween(Nz::Vector3f::Up(), Nz::Vector3f::Forward());
+							surfaceRotation = Nz::Quaternionf::CombineRotations(correctionRotation, Nz::Quaternionf::RotationBetween(Nz::Vector3f::Forward(), normal));
 						}
 
-						Nz::Quaternionf entityRot = chunkNode.ToGlobalRotation(surfaceRotation * Nz::Quaternionf(Nz::DegreeAnglef(45.f) * m_preview->rotationMultiplier, Nz::Vector3f::Up()) * Nz::Quaternionf(Nz::EulerAnglesf(m_preview->rotationOffset.x, m_preview->rotationOffset.y, m_preview->rotationOffset.z)));
-						previewNode.SetTransform(entityPos, entityRot);
+						Nz::Quaternionf entityRotation = chunkNode.ToGlobalRotation(Nz::Quaternionf::CombineRotations(localRotation, surfaceRotation));
+						previewNode.SetTransform(entityPos - entityRotation * m_preview->offset, entityRotation);
+
+						Nz::Matrix4f physicsMatrix = Nz::Matrix4f::Transform(entityPos, entityRotation);
 
 						struct IgnoreTrigger : Nz::PhysObjectLayerFilter3D
 						{
@@ -210,10 +223,15 @@ namespace tsom
 
 						IgnoreTrigger physObjectLayerFilter;
 
+						Nz::OrientedBoxf obb(Nz::Boxf(m_preview->collider * -0.5f, m_preview->collider));
+						obb.Update(physicsMatrix);
+
+						m_gameInterface.GetDebugDrawer()->DrawBoxCorners(obb.GetCorners(), Nz::Color::Cyan());
+
 						Nz::BoxCollider3D collider(m_preview->collider * 0.9f);
 
 						auto& physSystem = m_gameInterface.GetWorld().GetSystem<Nz::Physics3DSystem>();
-						bool doesCollide = physSystem.CollisionQuery(collider, previewNode.GetTransformMatrix(), [](const Nz::Physics3DSystem::ShapeCollisionInfo& hitInfo) -> std::optional<float>
+						bool doesCollide = physSystem.CollisionQuery(collider, physicsMatrix, [](const Nz::Physics3DSystem::ShapeCollisionInfo& hitInfo) -> std::optional<float>
 						{
 							return hitInfo.penetrationDepth;
 						});
@@ -231,13 +249,8 @@ namespace tsom
 			{
 				ImGui::Text("Select the entity you wish to use");
 
-				const EntityRegistry& entityRegistry = m_gameInterface.GetEntityRegistry();
-				entityRegistry.ForEachClass([&](std::string_view className, const EntityClass& entityClass)
+				for (std::string_view className : m_spawnableClasses)
 				{
-					const Nz::ParameterList& metadata = entityClass.GetMetadata();
-					if (auto result = metadata.GetBooleanParameter("spawnable"); !result || !*result)
-						return; //< not spawnable
-
 					if (ImGui::Button(className.data()))
 					{
 						m_selectedEntityClass = className;
@@ -250,11 +263,28 @@ namespace tsom
 						if (m_preview->entity)
 							m_preview->entity.destroy();
 					}
-				});
+				}
 			}
 
 			ImGui::End();
 		}
 #endif
+	}
+
+	void PlaceEntityTool::RefreshEntityClasses()
+	{
+		m_spawnableClasses.clear();
+
+		const EntityRegistry& entityRegistry = m_gameInterface.GetEntityRegistry();
+		entityRegistry.ForEachClass([&](std::string_view className, const EntityClass& entityClass)
+		{
+			const Nz::ParameterList& metadata = entityClass.GetMetadata();
+			if (auto result = metadata.GetBooleanParameter("spawnable"); !result || !*result)
+				return; //< not spawnable
+
+			m_spawnableClasses.push_back(className);
+		});
+
+		std::sort(m_spawnableClasses.begin(), m_spawnableClasses.end());
 	}
 }

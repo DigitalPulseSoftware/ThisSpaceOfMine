@@ -42,6 +42,8 @@ namespace tsom
 
 			virtual void RemoveChunk(const ChunkIndices& indices) = 0;
 
+			void UpdateBlockInBoundingBox(const Nz::Boxf& box, std::string_view blockName);
+
 			ChunkContainer& operator=(const ChunkContainer&) = delete;
 			ChunkContainer& operator=(ChunkContainer&&) noexcept = default;
 

@@ -1,23 +1,29 @@
-local maxInput = Distribution.ToTickUnit(200)
 local maxOutput = Distribution.ToTickUnit(200)
+local modelSize = Vec3(1.0, 1.58, 1.0)
 
 local classData = EntityRegistry.ClassBuilder()
 classData:Set("spawnable", true)
-classData:Set("spawnable_model", "battery")
-classData:Set("spawnable_collider", Vec3(0.5, 1.1, 0.5))
+classData:Set("spawnable_model", "canister")
+classData:Set("spawnable_collider", modelSize)
 
 classData:AddProperty("capacity", { type = "integer", default = Distribution.ToStorageUnit(10000), isNetworked = true })
 
+local orderedGasTypes = {}
+for gasName, gasType in pairs(GasType) do
+    table.insert(orderedGasTypes, gasName)
+end
+table.sort(orderedGasTypes)
+
 -- TODO: Replace by RPC
-classData:AddProperty("storage_o2", { type = "integer", default = 0, isNetworked = true })
-classData:AddProperty("storage_co2", { type = "integer", default = 0, isNetworked = true })
-classData:AddProperty("storage_n2", { type = "integer", default = 0, isNetworked = true })
+for _, gasName in pairs(orderedGasTypes) do
+	classData:AddProperty("storage_" .. gasName, { type = "integer", default = 0, isNetworked = true })
+end
 
 classData:On("init", function (self)
 	local physSettings = {
 		kind = "static",
 		mass = 0.0,
-		collider = BoxCollider3D.new(Vec3(0.5, 1.1, 0.5)),
+		collider = BoxCollider3D.new(modelSize),
 		objectLayer = Constants.ObjectLayerStatic
 	}
 
@@ -31,12 +37,7 @@ classData:On("init", function (self)
 	if CLIENT then
 		self:SetInteractible(true)
 
-		local model = AssetLibrary.GetModel("battery"):Clone()
-		self.ChargeMaterial = model:GetMaterial(6):Clone()
-		self.ChargeColor = Color(1.0, 0.0, 0.0)
-		self.ChargeMaterial:SetValueProperty("EmissiveColor", self.ChargeColor * math.easeInCubic(0.0))
-
-		model:SetMaterial(6, self.ChargeMaterial)
+		local model = AssetLibrary.GetModel("canister")
 
 		local gfx = self:AddComponent("graphics")
 		gfx:AttachRenderable(model, Constants.RenderMask3D)
@@ -44,7 +45,6 @@ classData:On("init", function (self)
 end)
 
 if SERVER then
-	local gases = {[GasType.Oxygen] = "o2", [GasType.CarbonDioxyde] = "co2", [GasType.Nitrogen] = "n2"}
 	classData:On("distribution", function (self)
 		local distribution = self:GetComponent("distribution")
 
@@ -53,47 +53,64 @@ if SERVER then
 		local incomingGases = distribution:GetDistributedValue(DistributionType.Gas)
 
 		local outputEntity = distribution:GetOutputConnectedEntity(0)
-		local consumedGas
+		local consumedGases
 		if outputEntity then
 			local outputDistribution = outputEntity:GetComponent("distribution")
-			consumedGas = outputDistribution:GetConsumptionValue(distribution:GetOutputConnectedPort(0))
+			consumedGases = outputDistribution:GetConsumptionValue(distribution:GetOutputConnectedPort(0))
 		else
-			consumedGas = GasQuantity()
+			consumedGases = GasQuantity()
+		end
+
+		local totalIncomingGas = 0
+		local totalStoredGas = 0
+		for gasName, gasType in pairs(GasType) do -- TODO: Iterate on GasQuantity
+			totalIncomingGas = totalIncomingGas + incomingGases[gasType]
+			totalStoredGas = totalStoredGas + self:GetProperty("storage_" .. gasName)
+		end
+
+		local remainingCapacity = self:GetProperty("capacity") - totalStoredGas
+		if totalIncomingGas > remainingCapacity then
+			for gasName, gasType in pairs(GasType) do -- TODO: Iterate on GasQuantity
+				local incomingGas = incomingGases[gasType]
+				incomingGases[gasType] = math.min(incomingGas, incomingGas / totalIncomingGas * remainingCapacity)
+			end
 		end
 
 		local consumptionValues = GasQuantity()
-		for gasType, gasName in pairs(gases) do
-			local incomingGas = math.min(incomingGases[gasType], maxInput)
-			local outputValue = math.min(consumedGas[gasType], maxOutput)
-			local storage = math.clamp(self:GetProperty("storage_" .. gasName) + incomingGas - outputValue, 0, capacity)
+		for gasName, gasType in pairs(GasType) do
+			local incomingGas = incomingGases[gasType]
+			local outputValue = 0--math.min(consumedGases[gasType], maxOutput)
+			local storage = math.max(self:GetProperty("storage_" .. gasName) + incomingGas - outputValue, 0)
 			self:UpdateProperty("storage_" .. gasName, storage)
 
-			consumptionValues:Increment(gasType, math.min(capacity - storage, incomingGas))
+			consumptionValues[gasType] = incomingGas
 		end
 
 		distribution:UpdateConsumptionValue(0, consumptionValues)
 	end)
 else
 	local function onStorageUpdate(self)
-		local o2 = Distribution.FromStorageUnit(self:GetProperty("storage_o2"))
-		local co2 = Distribution.FromStorageUnit(self:GetProperty("storage_co2"))
-		local n2 = Distribution.FromStorageUnit(self:GetProperty("storage_n2"))
+		local sum = 0
+		for gasName, gasType in pairs(GasType) do
+			sum = sum + Distribution.FromStorageUnit(self:GetProperty("storage_" .. gasName))
+		end
 
-		local sum = math.max(o2 + co2 + n2, 1) -- avoid division by zero
-		local o2_pct = math.floor(o2 * 100 / sum)
-		local co2_pct = math.floor(co2 * 100 / sum)
-		local n2_pct = math.floor(n2 * 100 / sum)
+		local capacity = Distribution.FromStorageUnit(self:GetProperty("capacity"))
 
-		self:SetInteractibleText(string.format("Gas storage\nOxygen: %.2fL (%d%%)\nCarbon dioxyde: %.2fL (%d%%)\nNitrogen: %.2fL (%d%%)\n", o2 / 1000, o2_pct, co2 / 1000, co2_pct, n2 / 1000, n2_pct))
+		local text = {string.format("Gas storage (%.2f/%.2fg)", sum / 1000, capacity / 1000)}
+		for _, gasName in pairs(orderedGasTypes) do
+			local quantity = Distribution.FromStorageUnit(self:GetProperty("storage_" .. gasName))
+			if quantity > 0 then
+				table.insert(text, string.format("%s: %.2fg (%d%%)", gasName, quantity / 1000, quantity / sum * 100))
+			end
+		end
 
-		local capacity = self:GetProperty("capacity")
-		local chargeFactor = sum / (capacity * 3)
-		self.ChargeMaterial:SetValueProperty("EmissiveColor", self.ChargeColor * math.easeInCubic(chargeFactor))
+		self:SetInteractibleText(table.concat(text, "\n"))
 	end
 
-	classData:OnPropertyUpdate("storage_o2", onStorageUpdate)
-	classData:OnPropertyUpdate("storage_co2", onStorageUpdate)
-	classData:OnPropertyUpdate("storage_n2", onStorageUpdate)
+	for gasName, gasType in pairs(GasType) do
+		classData:OnPropertyUpdate("storage_" .. gasName, onStorageUpdate)
+	end
 end
 
 EntityRegistry.RegisterClass("gas_storage", classData)

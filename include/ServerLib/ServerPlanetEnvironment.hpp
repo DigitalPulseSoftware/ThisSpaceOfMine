@@ -41,6 +41,8 @@ namespace tsom
 			void ForEachAtmosphere(Nz::FunctionRef<void(ServerAtmosphere*)> callback) override;
 			void ForEachAtmosphere(Nz::FunctionRef<void(const ServerAtmosphere*)> callback) const override;
 
+			ChunkContainer& GetChunkContainer() override;
+			const ChunkContainer& GetChunkContainer() const override;
 			inline std::optional<Nz::UInt32> GetDatabaseId() const;
 			const GravityController* GetGravityController() const override;
 			Planet& GetPlanet();

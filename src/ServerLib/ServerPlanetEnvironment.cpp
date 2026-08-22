@@ -197,6 +197,16 @@ namespace tsom
 		callback(&m_atmosphere);
 	}
 
+	ChunkContainer& ServerPlanetEnvironment::GetChunkContainer()
+	{
+		return GetPlanet();
+	}
+
+	const ChunkContainer& ServerPlanetEnvironment::GetChunkContainer() const
+	{
+		return GetPlanet();
+	}
+
 	const GravityController* ServerPlanetEnvironment::GetGravityController() const
 	{
 		return m_planetEntity.get<PlanetComponent>().planet.get();

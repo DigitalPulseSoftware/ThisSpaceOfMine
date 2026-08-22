@@ -1,10 +1,11 @@
 local maxInput = Distribution.ToTickUnit(200)
 local maxOutput = Distribution.ToTickUnit(200)
+local modelSize = Vec3(3.69, 5.56, 3.37) * 0.2
 
 local classData = EntityRegistry.ClassBuilder()
 classData:Set("spawnable", true)
 classData:Set("spawnable_model", "battery")
-classData:Set("spawnable_collider", Vec3(0.5, 1.1, 0.5))
+classData:Set("spawnable_collider", modelSize)
 
 classData:AddProperty("capacity", { type = "integer", default = Distribution.ToStorageUnit(10000), isNetworked = true })
 classData:AddProperty("charge", { type = "integer", default = 0, isNetworked = true })
@@ -13,7 +14,7 @@ classData:On("init", function (self)
 	local physSettings = {
 		kind = "static",
 		mass = 0.0,
-		collider = BoxCollider3D.new(Vec3(0.5, 1.1, 0.5)),
+		collider = BoxCollider3D.new(modelSize),
 		objectLayer = Constants.ObjectLayerStatic
 	}
 

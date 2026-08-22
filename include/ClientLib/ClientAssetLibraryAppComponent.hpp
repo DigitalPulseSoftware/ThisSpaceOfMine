@@ -54,6 +54,7 @@ namespace tsom
 			ClientAssetLibraryAppComponent& operator=(ClientAssetLibraryAppComponent&&) = delete;
 
 		private:
+			void RegisterLeafPBRMaterial();
 			void RegisterPBRMaterial();
 
 			Nz::ObjectLibrary<Nz::Font> m_fontLibrary;

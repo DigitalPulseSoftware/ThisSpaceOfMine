@@ -1,10 +1,11 @@
+local modelSize = Vec3(0.5, 0.083333, 0.5)
+
 local lightConsumption = Distribution.ToTickUnit(25)
 
 local classData = EntityRegistry.ClassBuilder()
 classData:Set("spawnable", true)
 classData:Set("spawnable_model", "wall_light")
-classData:Set("spawnable_collider", Vec3(0.5, 0.1, 0.5))
-classData:Set("spawnable_rotation", Vec3(90, 0, 0))
+classData:Set("spawnable_collider", modelSize)
 
 classData:AddProperty("light_enabled", { type = "bool", default = false, isNetworked = true })
 
@@ -12,7 +13,7 @@ classData:On("init", function (self)
 	local physSettings = {
 		kind = "static",
 		mass = 0.0,
-		collider = BoxCollider3D.new(Vec3(0.5, 0.1, 0.5)),
+		collider = BoxCollider3D.new(modelSize),
 		objectLayer = Constants.ObjectLayerStatic
 	}
 

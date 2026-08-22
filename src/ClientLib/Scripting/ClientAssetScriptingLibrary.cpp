@@ -100,17 +100,17 @@ namespace tsom
 			"Phong", Nz::MaterialType::Phong,
 			"PhysicallyBased", Nz::MaterialType::PhysicallyBased
 		);
-		
+
 		state.new_enum("SamplerFilter",
 			"Linear", Nz::SamplerFilter::Linear,
 			"Nearest", Nz::SamplerFilter::Nearest
 		);
-		
+
 		state.new_enum("SamplerMipmapMode",
 			"Linear", Nz::SamplerMipmapMode::Linear,
 			"Nearest", Nz::SamplerMipmapMode::Nearest
 		);
-		
+
 		state.new_enum("SamplerWrap",
 			"Clamp", Nz::SamplerWrap::Clamp,
 			"MirroredRepeat", Nz::SamplerWrap::MirroredRepeat,

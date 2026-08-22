@@ -118,6 +118,7 @@ namespace tsom
 			newHandleOwner.handleData->entity = newEntity;
 		}
 
+		// Don't call destroy event here
 		oldEntity.destroy();
 
 		return newEntity;

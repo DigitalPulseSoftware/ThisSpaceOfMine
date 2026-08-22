@@ -1,15 +1,16 @@
 local maxConsumption = Distribution.ToTickUnit(1000)
+local modelSize = Vec3(0.816, 0.5, 1.8) * 0.25
 
 local classData = EntityRegistry.ClassBuilder()
 classData:Set("spawnable", true)
 classData:Set("spawnable_model", "electrical_hub")
-classData:Set("spawnable_collider", Vec3(0.5, 0.2, 0.5))
+classData:Set("spawnable_collider", modelSize)
 
 classData:On("init", function (self)
 	local physSettings = {
 		kind = "static",
 		mass = 0.0,
-		collider = BoxCollider3D.new(Vec3(0.5, 0.2, 0.5)),
+		collider = BoxCollider3D.new(modelSize),
 		objectLayer = Constants.ObjectLayerStatic
 	}
 

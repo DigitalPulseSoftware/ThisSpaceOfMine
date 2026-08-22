@@ -35,6 +35,7 @@ namespace tsom
 			~EntityClass() = default;
 
 			void ActivateEntity(entt::handle entity) const;
+			void DestroyEntity(entt::handle entity) const;
 
 			inline Nz::UInt32 FindClientRpc(std::string_view propertyName) const;
 			inline Nz::UInt32 FindProperty(std::string_view propertyName) const;
@@ -63,6 +64,7 @@ namespace tsom
 			{
 				std::function<void(entt::handle)> onActivate;
 				std::function<void(entt::handle)> onInit;
+				std::function<void(entt::handle)> onDestroy;
 			};
 
 			struct Property

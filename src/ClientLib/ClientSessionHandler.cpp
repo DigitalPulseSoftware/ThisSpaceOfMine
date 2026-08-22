@@ -105,7 +105,10 @@ namespace tsom
 		for (auto& entityDataOpt : m_entities)
 		{
 			if (entityDataOpt)
+			{
+				ClassInstanceComponent::TriggerDestructionCallback(entityDataOpt->entity);
 				entityDataOpt->entity.destroy();
+			}
 		}
 	}
 
@@ -265,6 +268,7 @@ namespace tsom
 			if (m_playerControlledEntity == entityData.entity)
 				OnControlledEntityChanged({});
 
+			ClassInstanceComponent::TriggerDestructionCallback(entityData.entity);
 			entityData.entity.destroy();
 			m_entities[entityId].reset();
 			spdlog::info("Deleted entity {} from environment {}", entityId, environmentIndex);
@@ -423,6 +427,7 @@ namespace tsom
 		{
 			assert(m_entities[entityIndex]);
 			EntityData& entityData = *m_entities[entityIndex];
+			ClassInstanceComponent::TriggerDestructionCallback(entityData.entity);
 			entityData.entity.destroy();
 
 			m_entities[entityIndex].reset();

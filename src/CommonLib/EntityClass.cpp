@@ -44,6 +44,13 @@ namespace tsom
 			m_callbacks.onActivate(entity);
 	}
 
+	void EntityClass::DestroyEntity(entt::handle entity) const
+	{
+		NazaraAssert(entity.get<ClassInstanceComponent>().GetClass().get() == this);
+		if (m_callbacks.onDestroy)
+			m_callbacks.onDestroy(entity);
+	}
+
 	void EntityClass::InitAndActivateEntity(entt::handle entity) const
 	{
 		NazaraAssert(entity.get<ClassInstanceComponent>().GetClass().get() == this);

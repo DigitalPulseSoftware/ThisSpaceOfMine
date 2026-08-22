@@ -18,6 +18,11 @@
             "isTransparent": true,
             "permeability": 1.0
         },
+        "area_blocker": {
+            "hasCollisions": false,
+            "isTransparent": true,
+            "permeability": 1.0
+        },
         "debug": {
             "basePath": "blocks/debug_up"
         },
@@ -43,11 +48,6 @@
         "stone_mossy": {
             "basePath": "blocks/mossy_cobblestone",
             "isSmooth": true
-        },
-        "forcefield": {
-            "basePath": "blocks/forcefield",
-            "hasCollisions": false,
-            "isTransparent": true
         },
         "planks": {
             "basePath": "blocks/planks"

@@ -14,6 +14,7 @@
 #include <memory>
 #include <optional>
 #include <string_view>
+#include <vector>
 
 namespace Nz
 {
@@ -38,18 +39,22 @@ namespace tsom
 			void Update(Nz::Time elapsedTime, const GameInterface::RaycastResult* previewRaycast) override;
 
 		private:
+			void RefreshEntityClasses();
+
 			struct PreviewData
 			{
 				std::shared_ptr<Nz::MaterialInstance> material;
 				entt::handle entity;
 				Nz::UInt8 rotationMultiplier = 0; // * 45°
 				Nz::Vector3f collider;
-				Nz::Vector3f rotationOffset;
+				Nz::Vector3f rotationAxis;
+				Nz::Vector3f offset;
 				bool keepUpright = false;
 			};
 
 			std::optional<PreviewData> m_preview;
 			std::string_view m_selectedEntityClass;
+			std::vector<std::string_view> m_spawnableClasses;
 			ClientAssetLibraryAppComponent& m_assetLibrary;
 			bool m_isSelectingEntities;
 

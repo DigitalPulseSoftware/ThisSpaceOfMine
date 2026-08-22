@@ -155,7 +155,10 @@ namespace tsom
 		}
 
 		if (m_exteriorEntity)
+		{
+			ClassInstanceComponent::TriggerDestructionCallback(m_exteriorEntity);
 			m_exteriorEntity.destroy();
+		}
 
 		ClearEntities();
 
@@ -191,6 +194,16 @@ namespace tsom
 		auto& ship = GetShip();
 		ship.ClearChunks();
 		ship.Generate(small);
+	}
+
+	ChunkContainer& ServerShipEnvironment::GetChunkContainer()
+	{
+		return GetShip();
+	}
+
+	const ChunkContainer& ServerShipEnvironment::GetChunkContainer() const
+	{
+		return GetShip();
 	}
 
 	ServerAtmosphere* ServerShipEnvironment::GetFallbackAtmosphereAtPosition(const Nz::Vector3f& position)

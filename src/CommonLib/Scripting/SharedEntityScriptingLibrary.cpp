@@ -465,6 +465,8 @@ namespace tsom
 					entityBuilder.classMetatable["_Init"] = std::move(callback);
 				else if (eventName == "activate")
 					entityBuilder.classMetatable["_Activate"] = std::move(callback);
+				else if (eventName == "destroy")
+					entityBuilder.classMetatable["_Destroy"] = std::move(callback);
 				else if (eventName == "tick")
 					entityBuilder.classMetatable["_Tick"] = std::move(callback);
 				else
@@ -564,6 +566,21 @@ namespace tsom
 					{
 						sol::error err = res;
 						spdlog::error("entity activate event failed: {}", err.what());
+					}
+				};
+			}
+	
+			if (sol::optional<sol::protected_function> destroyCallback = entityBuilder.classMetatable["_Destroy"])
+			{
+				entityBuilder.callbacks.onDestroy = [this, callback = std::move(destroyCallback)](entt::handle entity) mutable
+				{
+					auto& entityScripted = entity.get<ScriptedEntityComponent>();
+
+					auto res = (*callback)(entityScripted.entityTable);
+					if (!res.valid())
+					{
+						sol::error err = res;
+						spdlog::error("entity destroy event failed: {}", err.what());
 					}
 				};
 			}

@@ -1,7 +1,9 @@
+local modelSize = Vec3(2.0, 0.1, 2.0)
+
 local classData = EntityRegistry.ClassBuilder()
 classData:Set("spawnable", true)
 classData:Set("spawnable_model", "solar_panel")
-classData:Set("spawnable_collider", Vec3(2.0, 0.1, 2.0))
+classData:Set("spawnable_collider", modelSize)
 
 classData:AddProperty("power_factor", { type = "float", default = 0.0, isNetworked = true })
 
@@ -9,7 +11,7 @@ classData:On("init", function (self)
 	local physSettings = {
 		kind = "static",
 		mass = 0.0,
-		collider = BoxCollider3D.new(Vec3(2.0, 0.1, 2.0)),
+		collider = BoxCollider3D.new(modelSize),
 		objectLayer = Constants.ObjectLayerStatic
 	}
 

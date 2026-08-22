@@ -3,18 +3,18 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ClientLib/ClientAssetLibraryAppComponent.hpp>
+#include <CommonLib/DownloadManager.hpp>
+#include <CommonLib/GameConstants.hpp>
+#include <CommonLib/UpdaterAppComponent.hpp>
+#include <CommonLib/Utils.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
-#include <Nazara/Platform/MessageBox.hpp>
 #include <Nazara/Graphics/Graphics.hpp>
 #include <Nazara/Graphics/Material.hpp>
 #include <Nazara/Graphics/MaterialSettings.hpp>
 #include <Nazara/Graphics/PredefinedMaterials.hpp>
 #include <Nazara/Graphics/PropertyHandler/TexturePropertyHandler.hpp>
-#include <CommonLib/Utils.hpp>
-#include <CommonLib/UpdaterAppComponent.hpp>
-#include <CommonLib/DownloadManager.hpp>
-#include <CommonLib/GameConstants.hpp>
+#include <Nazara/Platform/MessageBox.hpp>
 #include <spdlog/spdlog.h>
 
 namespace tsom
@@ -127,31 +127,27 @@ namespace tsom
 			graphics->GetShaderModuleResolver()->RegisterDirectory(Nz::Utf8Path("assets/Shaders"), true);
 		}
 
+		RegisterLeafPBRMaterial();
 		RegisterPBRMaterial();
 		return true;
 	}
 
-	void ClientAssetLibraryAppComponent::RegisterPBRMaterial()
+	void ClientAssetLibraryAppComponent::RegisterLeafPBRMaterial()
 	{
 		Nz::MaterialSettings settings;
 		Nz::PredefinedMaterials::AddBasicSettings(settings);
 		Nz::PredefinedMaterials::AddPbrSettings(settings);
-		settings.AddTextureProperty("AmbientOcclusionMap", Nz::ImageType::E2D);
-		settings.AddTextureProperty("MetallicRoughnessMap", Nz::ImageType::E2D);
-		settings.AddPropertyHandler(std::make_unique<Nz::TexturePropertyHandler>("AmbientOcclusionMap", "HasAmbientOcclusionTexture"));
-		settings.AddPropertyHandler(std::make_unique<Nz::TexturePropertyHandler>("MetallicRoughnessMap", "MetallicMap", "HasMetallicRoughnessTexture"));
 
 		auto& renderQueueRegistry = Nz::Graphics::Instance()->GetRenderQueueRegistry();
 		std::size_t depthQueue = renderQueueRegistry.GetIndex("DepthOpaque");
 		std::size_t forwardOpaqueQueue = renderQueueRegistry.GetIndex("ForwardOpaque");
-		std::size_t forwardTransparentQueue = renderQueueRegistry.GetIndex("ForwardTransparent");
 		std::size_t shadowQueue = renderQueueRegistry.GetIndex("Shadow");
 
 		Nz::MaterialPass forwardPass;
 		forwardPass.renderQueue = forwardOpaqueQueue;
 		forwardPass.states.depthBuffer = true;
 		forwardPass.states.depthCompare = Nz::RendererComparison::GreaterOrEqual;
-		forwardPass.shaders.push_back(std::make_shared<Nz::UberShader>(nzsl::ShaderStageType::Fragment | nzsl::ShaderStageType::Vertex, "TSOM.PhysicallyBased"));
+		forwardPass.shaders.push_back(std::make_shared<Nz::UberShader>(nzsl::ShaderStageType::Fragment | nzsl::ShaderStageType::Vertex, "TSOM.LeafPBRMaterial"));
 		settings.AddPass("ForwardPass", forwardPass);
 
 		Nz::MaterialPass depthPass = forwardPass;
@@ -167,6 +163,44 @@ namespace tsom
 		shadowPass.states.depthClamp = Nz::Graphics::Instance()->GetGpuDevice()->GetEnabledFeatures().depthClamping;
 		settings.AddPass("ShadowPass", shadowPass);
 
-		RegisterMaterial("PBRMaterial", std::make_shared<Nz::Material>(std::move(settings), "TSOM.PhysicallyBased"));
+		RegisterMaterial("LeafPBRMaterial", std::make_shared<Nz::Material>(std::move(settings), "TSOM.LeafPBRMaterial"));
+	}
+
+	void ClientAssetLibraryAppComponent::RegisterPBRMaterial()
+	{
+		Nz::MaterialSettings settings;
+		Nz::PredefinedMaterials::AddBasicSettings(settings);
+		Nz::PredefinedMaterials::AddPbrSettings(settings);
+		settings.AddTextureProperty("AmbientOcclusionMap", Nz::ImageType::E2D);
+		settings.AddTextureProperty("MetallicRoughnessMap", Nz::ImageType::E2D);
+		settings.AddPropertyHandler(std::make_unique<Nz::TexturePropertyHandler>("AmbientOcclusionMap", "HasAmbientOcclusionTexture"));
+		settings.AddPropertyHandler(std::make_unique<Nz::TexturePropertyHandler>("MetallicRoughnessMap", "MetallicMap", "HasMetallicRoughnessTexture"));
+
+		auto& renderQueueRegistry = Nz::Graphics::Instance()->GetRenderQueueRegistry();
+		std::size_t depthQueue = renderQueueRegistry.GetIndex("DepthOpaque");
+		std::size_t forwardOpaqueQueue = renderQueueRegistry.GetIndex("ForwardOpaque");
+		std::size_t shadowQueue = renderQueueRegistry.GetIndex("Shadow");
+
+		Nz::MaterialPass forwardPass;
+		forwardPass.renderQueue = forwardOpaqueQueue;
+		forwardPass.states.depthBuffer = true;
+		forwardPass.states.depthCompare = Nz::RendererComparison::GreaterOrEqual;
+		forwardPass.shaders.push_back(std::make_shared<Nz::UberShader>(nzsl::ShaderStageType::Fragment | nzsl::ShaderStageType::Vertex, "TSOM.PhysicallyBasedMaterial"));
+		settings.AddPass("ForwardPass", forwardPass);
+
+		Nz::MaterialPass depthPass = forwardPass;
+		depthPass.renderQueue = depthQueue;
+		depthPass.options[nzsl::Ast::HashOption("DepthPass")] = true;
+		settings.AddPass("DepthPass", depthPass);
+
+		Nz::MaterialPass shadowPass = depthPass;
+		shadowPass.renderQueue = shadowQueue;
+		shadowPass.options[nzsl::Ast::HashOption("ShadowPass")] = true;
+		shadowPass.states.depthCompare = Nz::RendererComparison::LessOrEqual; //< TODO: Reverse depth for shadow pass?
+		shadowPass.states.frontFace = Nz::FrontFace::Clockwise;
+		shadowPass.states.depthClamp = Nz::Graphics::Instance()->GetGpuDevice()->GetEnabledFeatures().depthClamping;
+		settings.AddPass("ShadowPass", shadowPass);
+
+		RegisterMaterial("PBRMaterial", std::make_shared<Nz::Material>(std::move(settings), "TSOM.PhysicallyBasedMaterial"));
 	}
 }

@@ -1,15 +1,16 @@
-local maxOutput = 100 -- Per gas
+local maxOutput = 1000
+local modelSize = Vec3(1.09, 1.64, 1.92) * 0.5
 
 local classData = EntityRegistry.ClassBuilder()
 classData:Set("spawnable", true)
-classData:Set("spawnable_model", "computer")
-classData:Set("spawnable_collider", Vec3(0.75))
+classData:Set("spawnable_model", "gas_pump")
+classData:Set("spawnable_collider", modelSize)
 
 classData:On("init", function (self)
 	local physSettings = {
 		kind = "static",
 		mass = 0.0,
-		collider = BoxCollider3D.new(Vec3(0.75)),
+		collider = BoxCollider3D.new(modelSize),
 		objectLayer = Constants.ObjectLayerDynamic
 	}
 
@@ -24,7 +25,7 @@ classData:On("init", function (self)
 		self:SetInteractible(true)
 		self:SetInteractibleText("Pump")
 
-		local model = AssetLibrary.GetModel("computer")
+		local model = AssetLibrary.GetModel("gas_pump")
 
 		local gfx = self:AddComponent("graphics")
 		gfx:AttachRenderable(model, Constants.RenderMask3D)
@@ -36,32 +37,58 @@ classData:On("init", function (self)
 end)
 
 if SERVER then
-	local allGases = {GasType.Oxygen, GasType.CarbonDioxyde, GasType.Nitrogen}
 	classData:On("distribution", function (self)
 		local distribution = self:GetComponent("distribution")
 
-		local output = GasQuantity()
-
 		local monitor = self:GetComponent("atmosphere_monitor")
 		if not monitor.Atmosphere then
-			distribution:UpdateProductionValue(0, output)
+			distribution:UpdateProductionValue(0, GasQuantity())
 			return
 		end
 
-		local gases = {}
-		for _, gasType in ipairs(allGases) do
-			gases[gasType] = -math.min(monitor.Atmosphere:GetGasAmount(gasType), maxOutput)
-		end
-
-		if not monitor.Atmosphere:Exchange(gases) then
-			distribution:UpdateProductionValue(0, output)
+		local outputEntity = distribution:GetOutputConnectedEntity(0)
+		if not outputEntity then
 			return
 		end
 
-		for gasType, quantity in pairs(gases) do
-			output:Increment(gasType, Distribution.ToTickUnit(quantity))
+		local outputDistribution = outputEntity:GetComponent("distribution")
+		local consumedGases = outputDistribution:GetConsumptionValue(distribution:GetOutputConnectedPort(0))
+
+		local producedGases = GasQuantity()
+		local gasTotalAmount = 0
+
+		local exchangedGases = {}
+		for gasName, gasType in pairs(GasType) do -- TODO: Iterate on GasQuantity
+			local consumedQuantity = Distribution.FromTickUnit(consumedGases[gasType])
+			local atmosphereQuantity = monitor.Atmosphere:GetGasAmount(gasType)
+			if consumedQuantity > 0 then
+				exchangedGases[gasType] = -math.min(atmosphereQuantity, consumedQuantity)
+
+				-- Take new value into account for production
+				atmosphereQuantity = math.max(atmosphereQuantity - consumedQuantity, 0)
+			end
+
+			producedGases[gasType] = atmosphereQuantity
+			gasTotalAmount = gasTotalAmount + atmosphereQuantity
 		end
-		distribution:UpdateProductionValue(0, output)
+
+		if not monitor.Atmosphere:Exchange(exchangedGases) then
+			-- Shouldn't happen as we checked gas amount before exchanging
+			error("failed to exchange gases")
+		end
+
+		-- Take % into account
+		if gasTotalAmount > maxOutput then
+			for gasName, gasType in pairs(GasType) do -- TODO: Iterate on GasQuantity
+				producedGases[gasType] = Distribution.ToTickUnit(producedGases[gasType] * maxOutput / gasTotalAmount)
+			end
+		else
+			for gasName, gasType in pairs(GasType) do -- TODO: Iterate on GasQuantity
+				producedGases[gasType] = Distribution.ToTickUnit(producedGases[gasType])
+			end
+		end
+
+		distribution:UpdateProductionValue(0, producedGases)
 	end)
 end
 

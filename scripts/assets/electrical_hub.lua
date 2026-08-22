@@ -2,7 +2,7 @@ local params = {
 	mesh = {
 		center = true,
 		--texCoordScale = Vec2(-1.0, 1.0),
-		vertexRotation = EulerAngles(-90, 90, 90),
+		vertexRotation = EulerAngles(90, 0, 90),
 		vertexScale = Vec3(1.0 / 4.0)
 	},
 	loadMaterials = false

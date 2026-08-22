@@ -39,6 +39,8 @@ namespace tsom
 
 			void GenerateShip(bool small);
 
+			ChunkContainer& GetChunkContainer();
+			const ChunkContainer& GetChunkContainer() const;
 			ServerAtmosphere* GetFallbackAtmosphereAtPosition(const Nz::Vector3f& position) override;
 			const GravityController* GetGravityController() const override;
 			inline entt::handle GetExteriorShipEntity() const;

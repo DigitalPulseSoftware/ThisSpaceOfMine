@@ -1,9 +1,10 @@
 local maxOutputValue = Distribution.ToTickUnit(1000)
+local modelSize = Vec3(0.433, 0.228, 0.557) / 2
 
 local classData = EntityRegistry.ClassBuilder()
 classData:Set("spawnable", true)
 classData:Set("spawnable_model", "switch")
-classData:Set("spawnable_collider", Vec3(0.25))
+classData:Set("spawnable_collider", modelSize)
 
 classData:AddProperty("enabled", { type = "bool", default = true, isNetworked = true })
 
@@ -11,7 +12,7 @@ classData:On("init", function (self)
 	local physSettings = {
 		kind = "static",
 		mass = 0.0,
-		collider = BoxCollider3D.new(Vec3(0.25)),
+		collider = BoxCollider3D.new(modelSize),
 		objectLayer = Constants.ObjectLayerStatic
 	}
 
