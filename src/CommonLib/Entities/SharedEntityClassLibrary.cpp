@@ -22,8 +22,9 @@ namespace tsom
 	{
 		m_playerClass = registry.RegisterClass(EntityClass("player",
 		{
-			EntityClass::Property { .name = "health", .type = EntityPropertyType::Integer, .defaultValue = EntityPropertySingleValue<EntityPropertyType::Integer>(100), .isArray = false, .isNetworked = true },
-			EntityClass::Property { .name = "oxygen", .type = EntityPropertyType::Integer, .defaultValue = EntityPropertySingleValue<EntityPropertyType::Integer>(100), .isArray = false, .isNetworked = true },
+			EntityClass::Property { .name = "health",     .type = EntityPropertyType::Integer, .defaultValue = EntityPropertySingleValue<EntityPropertyType::Integer>(100), .isNetworked = true },
+			EntityClass::Property { .name = "oxygen",     .type = EntityPropertyType::Integer, .defaultValue = EntityPropertySingleValue<EntityPropertyType::Integer>(100), .isNetworked = true },
+			EntityClass::Property { .name = "flashlight", .type = EntityPropertyType::Bool,    .defaultValue = EntityPropertySingleValue<EntityPropertyType::Bool>(false),  .isNetworked = true },
 		},
 		{
 			.onActivate = [this](entt::handle entity)
@@ -44,6 +45,8 @@ namespace tsom
 				},
 				.name = "death"
 			}
+		},
+		{
 		}));
 
 		m_shipExteriorClass = registry.RegisterClass(EntityClass("ship_exterior", {},
@@ -56,6 +59,8 @@ namespace tsom
 			{
 				OnShipExteriorInit(entity);
 			}
+		},
+		{
 		},
 		{
 		}));

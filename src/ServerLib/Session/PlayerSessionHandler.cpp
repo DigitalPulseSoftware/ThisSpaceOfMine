@@ -124,6 +124,35 @@ namespace tsom
 		DistributionComponent::Connect(sourceEntity, *sourceDistribution, targetEntity, *targetDistribution, connectEntities.sourceEntityPort, connectEntities.targetEntityPort);
 	}
 
+	void PlayerSessionHandler::HandlePacket(Packets::C_EntityProcedureCall&& entityProcedureCall)
+	{
+		entt::handle playerEntity = m_player->GetControlledEntityReference();
+		if (!playerEntity)
+			return; //< player is either dead or not spawned yet
+
+		entt::handle entity;
+		if (!m_player->GetVisibilityHandler().GetEntityByNetworkId(entityProcedureCall.entity, &entity))
+		{
+			spdlog::warn("received RPC call on non-existent entity {}", entityProcedureCall.entity);
+			return;
+		}
+
+		ClassInstanceComponent* classInstanceComponent = entity.try_get<ClassInstanceComponent>();
+		if (!classInstanceComponent)
+		{
+			spdlog::warn("blocked RPC request on entity {} from player {}", entityProcedureCall.entity, m_player->GetNickname());
+			return;
+		}
+
+		if (entityProcedureCall.rpcIndex >= classInstanceComponent->GetClass()->GetServerRpcCount())
+		{
+			spdlog::warn("blocked RPC request on entity {} from player {} (invalid rpc #{})", entityProcedureCall.entity, m_player->GetNickname(), *entityProcedureCall.rpcIndex);
+			return;
+		}
+
+		// TODO
+	}
+
 	void PlayerSessionHandler::HandlePacket(Packets::C_ExitShipControl&& exitShipControl)
 	{
 		m_player->ExitPiloting();
@@ -988,6 +1017,24 @@ namespace tsom
 			return;
 
 		m_player->ExecuteConsoleCommand(consoleCommand.command);
+	}
+
+	void PlayerSessionHandler::HandlePacket(Packets::C_ToggleFlashlight&& playerInputs)
+	{
+		entt::handle playerEntity = m_player->GetControlledEntityReference();
+		if (!playerEntity)
+			return; //< player is either dead or not spawned yet
+
+		using BoolProperty = EntityPropertySingleValue<EntityPropertyType::Bool>;
+
+		//if (std::get<BoolProperty>(entityInstance.GetProperty(flashlightProperty)).value)
+
+		ClassInstanceComponent& playerInstance = playerEntity.get<ClassInstanceComponent>();
+		Nz::UInt32 flashlightProperty = playerInstance.FindPropertyIndex("flashlight");
+		NazaraAssert(flashlightProperty != playerInstance.InvalidIndex);
+
+		bool isFlashlightEnabled = std::get<BoolProperty>(playerInstance.GetProperty(flashlightProperty)).value;
+		playerInstance.UpdateProperty(flashlightProperty, BoolProperty(!isFlashlightEnabled));
 	}
 
 	void PlayerSessionHandler::HandlePacket(Packets::C_UpdatePlayerInputs&& playerInputs)

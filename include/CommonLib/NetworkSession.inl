@@ -48,8 +48,11 @@ namespace tsom
 		Nz::ByteStream byteStream(&byteArray, Nz::OpenMode::Write);
 		byteStream << Nz::UInt8(PacketIndex<T>);
 
-		PacketSerializer serializer(byteStream, true, m_protocolVersion);
-		Packets::Serialize(serializer, const_cast<T&>(packet));
+		if constexpr (!std::is_empty_v<T>)
+		{
+			PacketSerializer serializer(byteStream, true, m_protocolVersion);
+			Packets::Serialize(serializer, const_cast<T&>(packet));
+		}
 
 		byteStream.FlushBits();
 

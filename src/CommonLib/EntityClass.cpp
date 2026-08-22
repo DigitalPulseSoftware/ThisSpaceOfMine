@@ -12,10 +12,11 @@
 
 namespace tsom
 {
-	EntityClass::EntityClass(std::string name, std::vector<Property> properties, Callbacks callbacks, std::vector<RemoteProcedureCall> clientRpcs, Nz::ParameterList metadata) :
+	EntityClass::EntityClass(std::string name, std::vector<Property> properties, Callbacks callbacks, std::vector<RemoteProcedureCall> clientRpcs, std::vector<RemoteProcedureCall> serverRpcs, Nz::ParameterList metadata) :
 	m_name(std::move(name)),
 	m_properties(std::move(properties)),
 	m_clientRpcs(std::move(clientRpcs)),
+	m_serverRpcs(std::move(serverRpcs)),
 	m_metadata(std::move(metadata)),
 	m_callbacks(std::move(callbacks))
 	{

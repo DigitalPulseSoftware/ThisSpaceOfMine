@@ -125,6 +125,12 @@ namespace tsom
 			Nz::UInt8 targetEntityPort;
 		};
 
+		struct C_EntityProcedureCall
+		{
+			Helper::EntityId entity;
+			CompressedUnsigned<Nz::UInt32> rpcIndex;
+		};
+
 		struct C_ExitShipControl
 		{
 		};
@@ -173,6 +179,10 @@ namespace tsom
 		struct C_SendConsoleCommand
 		{
 			SecuredString<Constants::ConsoleMaxCommandLength> command;
+		};
+
+		struct C_ToggleFlashlight
+		{
 		};
 
 		struct C_UpdatePlayerInputs
@@ -400,8 +410,7 @@ namespace tsom
 
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_AuthRequest& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_ConnectEntities& data);
-		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_ExitShipControl& data);
-		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_GrabEntity& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_EntityProcedureCall& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_Interact& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_MineBlock& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_PlaceBlock& data);
@@ -432,7 +441,6 @@ namespace tsom
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_GameData& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_NetworkStrings& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_PilotShip& data);
-		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_PilotShipFinish& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_PlayerJoin& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_PlayerLeave& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_PlayerNameUpdate& data);

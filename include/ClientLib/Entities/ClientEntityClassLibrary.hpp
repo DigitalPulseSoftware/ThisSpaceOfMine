@@ -29,6 +29,7 @@ namespace tsom
 
 		private:
 			void OnPlayerActivate(entt::handle entity) override;
+			void OnPlayerFlashLightEnabled(entt::handle entity, bool isEnabled);
 			void OnPlayerRpc_Death(entt::handle entity) override;
 	};
 }

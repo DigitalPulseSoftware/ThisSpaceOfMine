@@ -525,19 +525,7 @@ namespace tsom
 
 				case Nz::Keyboard::Scancode::F4:
 				{
-					auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
-
-					if (Nz::LightComponent* cameraLights = m_cameraEntity.try_get<Nz::LightComponent>())
-						cameraLights->Show(!cameraLights->IsVisible());
-					else
-					{
-						auto& cameraLight = m_cameraEntity.emplace<Nz::LightComponent>();
-
-						auto& spotLight = cameraLight.AddLight<Nz::SpotLight>();
-						//spotLight.EnableShadowCasting(true);
-						//spotLight.UpdateShadowMapSize(512);
-					}
-
+					GetStateData().networkSession->SendPacket(Packets::C_ToggleFlashlight{});
 					break;
 				}
 

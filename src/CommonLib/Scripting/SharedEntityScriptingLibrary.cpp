@@ -40,6 +40,7 @@ namespace tsom
 		{
 			sol::table classMetatable;
 			std::vector<EntityClass::RemoteProcedureCall> clientRpcs;
+			std::vector<EntityClass::RemoteProcedureCall> serverRpcs;
 			std::vector<EntityClass::Property> properties;
 			std::vector<sol::protected_function> propertyUpdateCallbacks;
 			Nz::ParameterList metadata;
@@ -627,7 +628,7 @@ namespace tsom
 
 			// TODO: In case of script reloading, we must update the classMetatable for existing entities as well
 
-			m_entityRegistry.RegisterClass(EntityClass{ std::move(name), std::move(entityBuilder.properties), std::move(entityBuilder.callbacks), std::move(entityBuilder.clientRpcs), std::move(entityBuilder.metadata) });
+			m_entityRegistry.RegisterClass(EntityClass{ std::move(name), std::move(entityBuilder.properties), std::move(entityBuilder.callbacks), std::move(entityBuilder.clientRpcs), std::move(entityBuilder.serverRpcs), std::move(entityBuilder.metadata) });
 		});
 	}
 

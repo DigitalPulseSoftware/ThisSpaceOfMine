@@ -47,7 +47,7 @@ namespace tsom
 				InitializePlanetEntity(entity, std::make_shared<RoundCubePlanet>(m_app, m_blockLibrary, blockSize, Nz::SafeCaster(seed), gravity, cornerRadius));
 			}
 		},
-		{}));
+		{}, {}));
 
 		registry.RegisterClass(EntityClass("torus_planet", {
 			{
@@ -80,7 +80,7 @@ namespace tsom
 				InitializePlanetEntity(entity, std::make_shared<TorusPlanet>(m_app, m_blockLibrary, blockSize, Nz::SafeCaster(seed), gravity, radius, thickness));
 			}
 		},
-		{}));
+		{}, {}));
 
 		registry.RegisterClass(EntityClass("ship", {
 			{
@@ -97,7 +97,7 @@ namespace tsom
 				InitializeShipEntity(entity, std::make_unique<Ship>(m_blockLibrary, cellSize));
 			}
 		},
-		{}));
+		{}, {}));
 	}
 
 	PlanetComponent& ChunkClassLibrary::InitializePlanetEntity(entt::handle entity, std::shared_ptr<Planet>&& planet)

@@ -21,6 +21,7 @@ namespace tsom
 			~PlayerSessionHandler();
 
 			void HandlePacket(Packets::C_ConnectEntities&& connectEntities);
+			void HandlePacket(Packets::C_EntityProcedureCall&& entityProcedureCall);
 			void HandlePacket(Packets::C_ExitShipControl&& exitShipControl);
 			void HandlePacket(Packets::C_GrabEntity&& grab);
 			void HandlePacket(Packets::C_Interact&& interact);
@@ -30,6 +31,7 @@ namespace tsom
 			void HandlePacket(Packets::C_RemoveEntity&& removeEntity);
 			void HandlePacket(Packets::C_SendChatMessage&& chatMessage);
 			void HandlePacket(Packets::C_SendConsoleCommand&& consoleCommand);
+			void HandlePacket(Packets::C_ToggleFlashlight&& playerInputs);
 			void HandlePacket(Packets::C_UpdatePlayerInputs&& playerInputs);
 
 			void OnDeserializationError(std::size_t packetIndex) override;

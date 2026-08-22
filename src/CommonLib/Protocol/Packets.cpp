@@ -156,17 +156,15 @@ namespace tsom
 			serializer &= data.targetEntityPort;
 		}
 
-		void Serialize(PacketSerializer& serializer, C_ExitShipControl& data)
+		void Serialize(PacketSerializer& serializer, C_EntityProcedureCall& data)
 		{
+			serializer &= data.entity;
+			serializer &= data.rpcIndex;
 		}
 
 		void Serialize(PacketSerializer& serializer, C_Interact& data)
 		{
 			serializer &= data.entityId;
-		}
-
-		void Serialize(PacketSerializer& serializer, C_GrabEntity& data)
-		{
 		}
 
 		void Serialize(PacketSerializer& serializer, C_MineBlock& data)
@@ -474,10 +472,6 @@ namespace tsom
 			serializer &= data.referenceRotation;
 			serializer &= data.shipEntity;
 			serializer &= data.shipExteriorEntity;
-		}
-
-		void Serialize(PacketSerializer& serializer, S_PilotShipFinish& data)
-		{
 		}
 	}
 }
