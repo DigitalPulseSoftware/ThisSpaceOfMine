@@ -112,7 +112,7 @@ namespace tsom
 				auto& outsideNode = m_exteriorEntity.get<Nz::NodeComponent>();
 				Nz::Vector3f outsidePosition = outsideNode.GetPosition();
 
-				ServerAtmosphere* outsideAtmosphere = m_exteriorEnvironment->GetAtmosphereAtPosition(outsidePosition);
+				/*ServerAtmosphere* outsideAtmosphere = m_exteriorEnvironment->GetAtmosphereAtPosition(outsidePosition);
 				if (outsideAtmosphere)
 				{
 					for (auto&& [chunkIndices, chunkData] : m_chunkData)
@@ -123,7 +123,7 @@ namespace tsom
 								outsideAtmosphere->IncreaseGasAmount(gasType, amount);
 						}
 					}
-				}
+				}*/
 			}
 
 			// Move every switchable entity out of the ship before destroying it (otherwise the entities will be destroyed)
@@ -669,8 +669,8 @@ namespace tsom
 
 							Nz::UInt64 oxygenAmount = Constants::SecondsToEmptyOxygenBlock * Nz::UInt64(Constants::PlayerOxygenConsumption) * occupiedBlockCount;
 							Nz::UInt64 nitrogenAmount = oxygenAmount * (100 - Constants::OxygenAtmospherePct) / Constants::OxygenAtmospherePct;
-							outsideAtmosphere->DecreaseGasAmount(GasType::Oxygen, oxygenAmount);
-							outsideAtmosphere->DecreaseGasAmount(GasType::Nitrogen, nitrogenAmount);
+							//outsideAtmosphere->DecreaseGasAmount(GasType::Oxygen, oxygenAmount);
+							//outsideAtmosphere->DecreaseGasAmount(GasType::Nitrogen, nitrogenAmount);
 							newAtmosphere.IncreaseGasAmount(GasType::Oxygen, oxygenAmount);
 							newAtmosphere.IncreaseGasAmount(GasType::Nitrogen, nitrogenAmount);
 						}
