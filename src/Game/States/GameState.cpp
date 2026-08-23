@@ -869,10 +869,26 @@ namespace tsom
 			if (!m_isMouseLocked)
 				return;
 
-			auto& stateData = GetStateData();
+			if (m_pilotedShip)
+				return;
 
-			if (!m_pilotedShip)
-				m_tools[m_toolIndex]->OnTrigger(event.button == Nz::Mouse::Left);
+			switch (event.button)
+			{
+				case Nz::Mouse::Left:
+					m_tools[m_toolIndex]->OnTrigger(ToolBase::TriggerType::Primary);
+					break;
+
+				case Nz::Mouse::Middle:
+					m_tools[m_toolIndex]->OnTrigger(ToolBase::TriggerType::Tertiary);
+					break;
+
+				case Nz::Mouse::Right:
+					m_tools[m_toolIndex]->OnTrigger(ToolBase::TriggerType::Secondary);
+					break;
+
+				default:
+					break;
+			}
 		});
 
 		UpdateMouseLock();

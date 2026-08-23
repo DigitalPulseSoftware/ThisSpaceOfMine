@@ -12,8 +12,11 @@
 
 namespace tsom
 {
-	void RemoveEntityTool::OnTrigger(bool primary)
+	void RemoveEntityTool::OnTrigger(TriggerType triggerType)
 	{
+		if (triggerType != TriggerType::Primary)
+			return;
+
 		if (!m_targetEntity)
 			return;
 

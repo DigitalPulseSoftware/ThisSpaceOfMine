@@ -56,8 +56,11 @@ namespace tsom
 		}
 	}
 
-	void PlaceEntityTool::OnTrigger(bool primary)
+	void PlaceEntityTool::OnTrigger(TriggerType triggerType)
 	{
+		if (triggerType != TriggerType::Primary && triggerType != TriggerType::Tertiary)
+			return;
+
 		auto raycastHit = m_gameInterface.RaycastQuery();
 		if (!raycastHit)
 			return;
@@ -80,7 +83,7 @@ namespace tsom
 		if (!hitCoordinates)
 			return;
 
-		if (primary)
+		if (triggerType == TriggerType::Primary)
 		{
 			NetworkSession* networkSession = m_gameInterface.GetNetworkSession();
 

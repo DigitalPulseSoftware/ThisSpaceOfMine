@@ -45,8 +45,8 @@ namespace tsom
 			inline BlockIndex GetSelectedBlock() const;
 
 			void SelectNext();
+			void SelectPickedBlock(BlockIndex pickedBlockIndex);
 			void SelectPrevious();
-			void SelectPickedBlock(tsom::BlockIndex pickedBlockIndex);
 
 			BlockSelectionBar& operator=(const BlockSelectionBar&) = delete;
 			BlockSelectionBar& operator=(BlockSelectionBar&&) = delete;

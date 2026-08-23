@@ -17,9 +17,7 @@ namespace tsom
 		public:
 			inline NoTool(GameInterface& gameInterface);
 
-			void OnTrigger(bool primary) override;
-
-		private:
+			void OnTrigger(TriggerType triggerType) override;
 	};
 }
 

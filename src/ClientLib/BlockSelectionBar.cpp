@@ -50,20 +50,7 @@ namespace tsom
 		m_selectedBlockIndex = m_blockLibrary.GetBlockIndex(s_selectableBlocks[m_selectedIndex]);
 	}
 
-	void BlockSelectionBar::SelectPrevious()
-	{
-		m_inventorySprites[m_selectedIndex]->SetColor(Nz::Color::sRGBToLinear(Nz::Color::Gray()));
-
-		if (m_selectedIndex > 0)
-			m_selectedIndex--;
-		else
-			m_selectedIndex = s_selectableBlocks.size() - 1;
-
-		m_inventorySprites[m_selectedIndex]->SetColor(Nz::Color::White());
-		m_selectedBlockIndex = m_blockLibrary.GetBlockIndex(s_selectableBlocks[m_selectedIndex]);
-	}
-
-	void BlockSelectionBar::SelectPickedBlock(tsom::BlockIndex pickedBlockIndex)
+	void BlockSelectionBar::SelectPickedBlock(BlockIndex pickedBlockIndex)
 	{
 		if (!m_blockLibrary.IsValidBlock(pickedBlockIndex))
 			return;
@@ -76,6 +63,19 @@ namespace tsom
 		m_selectedIndex = std::distance(s_selectableBlocks.begin(), it);
 		m_inventorySprites[m_selectedIndex]->SetColor(Nz::Color::White());
 		m_selectedBlockIndex = pickedBlockIndex;
+	}
+
+	void BlockSelectionBar::SelectPrevious()
+	{
+		m_inventorySprites[m_selectedIndex]->SetColor(Nz::Color::sRGBToLinear(Nz::Color::Gray()));
+
+		if (m_selectedIndex > 0)
+			m_selectedIndex--;
+		else
+			m_selectedIndex = s_selectableBlocks.size() - 1;
+
+		m_inventorySprites[m_selectedIndex]->SetColor(Nz::Color::White());
+		m_selectedBlockIndex = m_blockLibrary.GetBlockIndex(s_selectableBlocks[m_selectedIndex]);
 	}
 
 	void BlockSelectionBar::Layout()

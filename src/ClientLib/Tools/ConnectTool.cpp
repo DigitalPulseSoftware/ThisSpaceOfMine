@@ -29,14 +29,17 @@ namespace tsom
 		m_labelWidget = nullptr;
 	}
 
-	void ConnectTool::OnTrigger(bool primary)
+	void ConnectTool::OnTrigger(TriggerType triggerType)
 	{
-		if (!primary)
+		if (triggerType == TriggerType::Secondary)
 		{
 			m_selectedSourceEntity = {};
 			UpdateText();
 			return;
 		}
+
+		if (triggerType != TriggerType::Primary)
+			return;
 
 		if (!m_hoveredEntity)
 			return;

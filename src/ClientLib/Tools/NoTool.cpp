@@ -6,7 +6,7 @@
 
 namespace tsom
 {
-	void NoTool::OnTrigger(bool /*primary*/)
+	void NoTool::OnTrigger(TriggerType /*triggerType*/)
 	{
 	}
 }

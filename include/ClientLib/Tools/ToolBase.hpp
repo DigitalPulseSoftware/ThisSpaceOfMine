@@ -18,6 +18,13 @@ namespace tsom
 	class TSOM_CLIENTLIB_API ToolBase
 	{
 		public:
+			enum class TriggerType
+			{
+				Primary,
+				Secondary,
+				Tertiary
+			};
+
 			inline ToolBase(GameInterface& gameInterface, std::string toolName);
 			ToolBase(const ToolBase&) = delete;
 			ToolBase(ToolBase&&) = delete;
@@ -30,7 +37,7 @@ namespace tsom
 			virtual void OnActivate();
 			virtual void OnDeactivate();
 
-			virtual void OnTrigger(bool primary) = 0;
+			virtual void OnTrigger(TriggerType triggerType) = 0;
 			virtual void OnWheel(float delta);
 
 			virtual void Update(Nz::Time elapsedTime, const GameInterface::RaycastResult* previewRaycast);

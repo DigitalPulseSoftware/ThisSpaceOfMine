@@ -15,7 +15,7 @@
 
 namespace tsom
 {
-	void BlockTool::OnTrigger(bool primary)
+	void BlockTool::OnTrigger(TriggerType triggerType)
 	{
 		auto raycastHit = m_gameInterface.RaycastQuery();
 		if (!raycastHit)
@@ -39,7 +39,7 @@ namespace tsom
 		if (!hitCoordinates)
 			return;
 
-		if (primary)
+		if (triggerType == TriggerType::Primary)
 		{
 			// Mine
 			Packets::C_MineBlock mineBlock;
@@ -50,7 +50,7 @@ namespace tsom
 
 			m_gameInterface.GetNetworkSession()->SendPacket(mineBlock);
 		}
-		else
+		else if (triggerType == TriggerType::Secondary)
 		{
 			BlockIndices blockIndices = chunkContainer.GetBlockIndices(hitChunk.GetIndices(), hitCoordinates->blockIndices);
 
@@ -72,6 +72,12 @@ namespace tsom
 			placeBlock.newContent = Nz::SafeCast<Nz::UInt8>(m_gameInterface.GetBlockSelectionBar()->GetSelectedBlock());
 
 			m_gameInterface.GetNetworkSession()->SendPacket(placeBlock);
+		}
+		else if (triggerType == ToolBase::TriggerType::Tertiary)
+		{
+			// Pick block
+			BlockIndex pickedBlockIndex = chunkComponent->chunk.Get()->GetBlockContent(hitCoordinates->blockIndices);
+			m_gameInterface.GetBlockSelectionBar()->SelectPickedBlock(pickedBlockIndex);
 		}
 	}
 

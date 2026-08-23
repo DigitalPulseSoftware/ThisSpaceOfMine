@@ -18,7 +18,7 @@ namespace tsom
 		public:
 			inline RemoveEntityTool(GameInterface& gameInterface);
 
-			void OnTrigger(bool primary) override;
+			void OnTrigger(TriggerType triggerType) override;
 
 			void Update(Nz::Time elapsedTime, const GameInterface::RaycastResult* previewRaycast) override;
 

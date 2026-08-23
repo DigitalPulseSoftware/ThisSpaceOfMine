@@ -13,9 +13,9 @@
 
 namespace tsom
 {
-	void GrabEntityTool::OnTrigger(bool primary)
+	void GrabEntityTool::OnTrigger(TriggerType triggerType)
 	{
-		if (!primary)
+		if (triggerType != TriggerType::Primary)
 			return;
 
 		auto raycastHit = m_gameInterface.RaycastQuery();
