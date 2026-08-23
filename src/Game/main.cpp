@@ -54,11 +54,9 @@ int GameMain(int argc, char* argv[])
 		spdlog::error("failed to enable web services (login and update will be disabled): {0}!", e.what());
 	}
 
-	if (!assets.CheckAssets())
-		return EXIT_FAILURE;
-
-	game.Start();
-
+	if (assets.CheckAssets())
+		game.Start();
+	
 	return app.Run();
 }
 
