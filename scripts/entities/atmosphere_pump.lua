@@ -2,7 +2,7 @@ local maxOutput = 1000
 local modelSize = Vec3(1.09, 1.64, 1.92) * 0.5
 
 local classData = EntityRegistry.ClassBuilder()
-classData:Set("spawnable", true)
+classData:Set("spawnable", false)
 classData:Set("spawnable_model", "gas_pump")
 classData:Set("spawnable_collider", modelSize)
 

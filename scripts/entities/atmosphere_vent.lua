@@ -1,7 +1,7 @@
 local modelSize = Vec3(1.72, 0.69, 1.72) / 4.0
 
 local classData = EntityRegistry.ClassBuilder()
-classData:Set("spawnable", true)
+classData:Set("spawnable", false)
 classData:Set("spawnable_model", "gas_vent")
 classData:Set("spawnable_collider", modelSize)
 

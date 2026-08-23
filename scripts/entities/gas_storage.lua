@@ -2,7 +2,7 @@ local maxOutput = Distribution.ToTickUnit(200)
 local modelSize = Vec3(1.0, 1.58, 1.0)
 
 local classData = EntityRegistry.ClassBuilder()
-classData:Set("spawnable", true)
+classData:Set("spawnable", false)
 classData:Set("spawnable_model", "canister")
 classData:Set("spawnable_collider", modelSize)
 
