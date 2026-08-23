@@ -27,9 +27,11 @@ return {
         perlin:reseed(seed)
         cavePerlin:reseed(seed * seed)
 
+        local planet = chunk:GetContainer()
+        local blockLibrary = planet:GetBlockLibrary()
+
         local blockSize = chunk:GetBlockSize()
 
-        local blockLibrary = chunk:GetBlockLibrary()
         local blockCount = chunk:GetBlockCount()
 
         local emptyBlock = blockLibrary:GetBlockIndex("empty")
@@ -40,7 +42,6 @@ return {
         local snowBlock = blockLibrary:GetBlockIndex("snow")
         local stoneBlock = blockLibrary:GetBlockIndex("stone")
         local stoneMossyBlock = blockLibrary:GetBlockIndex("stone_mossy")
-        local forcefieldBlock = blockLibrary:GetBlockIndex("forcefield")
         local planksBlock = blockLibrary:GetBlockIndex("planks")
         local stoneBricksBlock = blockLibrary:GetBlockIndex("stone_bricks")
         local goldBlock = blockLibrary:GetBlockIndex("gold")
@@ -50,7 +51,6 @@ return {
         local barkBlock = blockLibrary:GetBlockIndex("bark")
         local cliffRock = blockLibrary:GetBlockIndex("cliff_rocks")
 
-        local planet = chunk:GetContainer()
         local chunkIndices = chunk:GetIndices()
 
         local maxHeight = (chunksize * chunkDims.x)/2 * blockSize

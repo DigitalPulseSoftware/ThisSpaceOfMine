@@ -38,7 +38,8 @@ return {
         --perlin:reseed(seed)
         --math.randomseed(seed)
 
-        local blockLibrary = chunk:GetBlockLibrary()
+        local planet = chunk:GetContainer()
+        local blockLibrary = planet:GetBlockLibrary()
         local blockCount = chunk:GetBlockCount()
 
         local empty = blockLibrary:GetBlockIndex("empty")
@@ -48,7 +49,6 @@ return {
         local stone = blockLibrary:GetBlockIndex("stone")
         local stoneMossy = blockLibrary:GetBlockIndex("stone_mossy")
 
-        local planet = chunk:GetContainer()
         local chunkIndices = chunk:GetIndices()
 
         --local maxHeight = (Vec3(chunkcount.x, chunkcount.y, chunkcount.z) + Vec3(1)) / 2

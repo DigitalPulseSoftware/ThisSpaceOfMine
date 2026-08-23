@@ -10,7 +10,9 @@ return function (chunk, seed, chunkDims)
 
     local blockSize = chunk:GetBlockSize()
 
-    local blockLibrary = chunk:GetBlockLibrary()
+    local planet = chunk:GetContainer()
+    local blockLibrary = planet:GetBlockLibrary()
+
     local blockCount = chunk:GetBlockCount()
 
     local emptyBlock = blockLibrary:GetBlockIndex("empty")
@@ -21,7 +23,6 @@ return function (chunk, seed, chunkDims)
     local snowBlock = blockLibrary:GetBlockIndex("snow")
     local stoneBlock = blockLibrary:GetBlockIndex("stone")
     local stoneMossyBlock = blockLibrary:GetBlockIndex("stone_mossy")
-    local forcefieldBlock = blockLibrary:GetBlockIndex("forcefield")
     local planksBlock = blockLibrary:GetBlockIndex("planks")
     local stoneBricksBlock = blockLibrary:GetBlockIndex("stone_bricks")
     local copperBlock = blockLibrary:GetBlockIndex("copper_block")
@@ -29,7 +30,7 @@ return function (chunk, seed, chunkDims)
 
     local planet = chunk:GetContainer()
     local chunkIndices = chunk:GetIndices()
-    
+
     local maxHeight = (chunksize * chunkDims.x)/2 * blockSize;
     local maxGenerationHeight = maxHeight - minGrenerationFreeHeight
     local baseHeight = maxHeight - baseFreeHeight -- Only works for planets with the same number of chunks in all the directions
