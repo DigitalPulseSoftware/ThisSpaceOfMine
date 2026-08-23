@@ -8,7 +8,7 @@ option("commonlib_static", { default = false, defines = "TSOM_COMMONLIB_STATIC"}
 option("clientlib_static", { default = false, defines = "TSOM_CLIENTLIB_STATIC"})
 option("serverlib_static", { default = false, defines = "TSOM_SERVERLIB_STATIC"})
 option("serveronly", { default = false })
-option("dev_tools", { default = false, defines = "TSOM_DEV_TOOLS" })
+option("dev_tools", { default = true, defines = "TSOM_DEV_TOOLS" })
 
 -- Simple rule to make targets inherit their version from CommonLib version (which is extracted from git in on_config callback)
 rule("inherit_version", function ()
