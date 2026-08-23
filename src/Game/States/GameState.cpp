@@ -478,36 +478,6 @@ namespace tsom
 					break;
 				}
 
-				case Nz::Keyboard::Scancode::F2:
-				{
-					auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
-
-					auto primitive = Nz::Primitive::IcoSphere(1.f, 2);
-
-					auto collider = Nz::Collider3D::Build(primitive);
-
-					Nz::RigidBody3D::DynamicSettings dynSettings(collider, 10.f);
-					dynSettings.allowSleeping = false;
-
-					entt::handle debugEntity = stateData.world->CreateEntity();
-					//debugEntity.emplace<PlanetComponent>().planet = m_planet.get();
-					debugEntity.emplace<Nz::NodeComponent>(cameraNode.GetPosition());
-					debugEntity.emplace<Nz::RigidBody3DComponent>(dynSettings);
-
-					std::shared_ptr<Nz::MaterialInstance> colliderMat = Nz::MaterialInstance::Instantiate(Nz::MaterialType::PhysicallyBased);
-
-					std::shared_ptr<Nz::Mesh> colliderMesh = Nz::Mesh::Build(primitive);
-					std::shared_ptr<Nz::GraphicalMesh> colliderGraphicalMesh = Nz::GraphicalMesh::BuildFromMesh(*colliderMesh);
-
-					auto colliderModel = std::make_shared<Nz::Model>(colliderGraphicalMesh);
-					for (std::size_t i = 0; i < colliderModel->GetSubMeshCount(); ++i)
-						colliderModel->SetMaterial(i, colliderMat);
-
-					auto& gfxComponent = debugEntity.get_or_emplace<Nz::GraphicsComponent>();
-					gfxComponent.AttachRenderable(std::move(colliderModel), tsom::Constants::RenderMask3D);
-					break;
-				}
-
 				case Nz::Keyboard::Scancode::F3:
 				{
 					if (!m_debugOverlay)
