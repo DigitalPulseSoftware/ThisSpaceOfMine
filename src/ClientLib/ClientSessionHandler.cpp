@@ -513,9 +513,10 @@ namespace tsom
 		}
 
 		OnPlayerLeave(*m_players[playerLeave.index]);
-		OnPlayerListUpdated();
 
 		m_players[playerLeave.index].reset();
+
+		OnPlayerListUpdated();
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::S_PlayerNameUpdate&& playerNameUpdate)
