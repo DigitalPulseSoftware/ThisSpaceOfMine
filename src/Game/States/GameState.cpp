@@ -370,7 +370,6 @@ namespace tsom
 		m_interactionLabel = CreateWidget<Nz::SimpleLabelWidget>();
 		m_playerListWidget = CreateWidget<Nz::LabelWidget>();
 		RefreshPlayerListWidget();
-		m_playerListWidget->Hide();
 
 		m_onUnhandledKeyPressed.Connect(stateData.canvas->OnUnhandledKeyPressed, [this](const Nz::WindowEventHandler*, const Nz::WindowEvent::KeyEvent& event)
 		{
@@ -851,6 +850,7 @@ namespace tsom
 		m_toolsMenu->Hide();
 		m_localConsole->Hide();
 		m_remoteConsole->Hide();
+		m_playerListWidget->Hide();
 		m_blockSelectionBar->Show(m_toolIndex == 1 /*BlockTool*/ && !m_pilotedShip.has_value());
 
 		auto& stateData = GetStateData();
