@@ -6,7 +6,8 @@
 
 namespace tsom
 {
-	inline ChunkContainer::ChunkContainer(float tileSize) :
+	inline ChunkContainer::ChunkContainer(const BlockLibrary& blockLibrary, float tileSize) :
+	m_blockLibrary(blockLibrary),
 	m_tileSize(tileSize)
 	{
 	}
@@ -14,6 +15,11 @@ namespace tsom
 	inline BlockIndices ChunkContainer::GetBlockIndices(const ChunkIndices& chunkIndices, const Nz::Vector3ui& indices) const
 	{
 		return chunkIndices * Nz::Int32(ChunkSize) + BlockIndices(indices.x, indices.z, indices.y) - BlockIndices(Nz::Int32(ChunkSize)) / 2;
+	}
+
+	inline const BlockLibrary& ChunkContainer::GetBlockLibrary() const
+	{
+		return m_blockLibrary;
 	}
 
 	inline ChunkIndices ChunkContainer::GetChunkIndicesByBlockIndices(const BlockIndices& indices, Nz::Vector3ui* localIndices) const

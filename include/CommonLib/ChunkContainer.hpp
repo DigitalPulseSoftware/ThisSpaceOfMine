@@ -9,6 +9,7 @@
 
 #include <CommonLib/Export.hpp>
 #include <CommonLib/Chunk.hpp>
+#include <Nazara/Math/Box.hpp>
 #include <Nazara/Math/Vector3.hpp>
 #include <NazaraUtils/FunctionRef.hpp>
 #include <NazaraUtils/Signal.hpp>
@@ -18,7 +19,7 @@ namespace tsom
 	class TSOM_COMMONLIB_API ChunkContainer
 	{
 		public:
-			inline ChunkContainer(float tileSize);
+			inline ChunkContainer(const BlockLibrary& blockLibrary, float tileSize);
 			ChunkContainer(const ChunkContainer&) = delete;
 			ChunkContainer(ChunkContainer&&) noexcept = default;
 			virtual ~ChunkContainer();
@@ -29,6 +30,7 @@ namespace tsom
 			virtual void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, const Chunk& chunk)> callback) const = 0;
 
 			inline BlockIndices GetBlockIndices(const ChunkIndices& chunkIndices, const Nz::Vector3ui& indices) const;
+			inline const BlockLibrary& GetBlockLibrary() const;
 			virtual Nz::Vector3f GetCenter() const = 0;
 			virtual Chunk* GetChunk(const ChunkIndices& chunkIndices) = 0;
 			virtual const Chunk* GetChunk(const ChunkIndices& chunkIndex) const = 0;
@@ -39,6 +41,8 @@ namespace tsom
 			inline float GetTileSize() const;
 
 			virtual void RemoveChunk(const ChunkIndices& indices) = 0;
+
+			void UpdateBlockInBoundingBox(const Nz::Boxf& box, std::string_view blockName);
 
 			ChunkContainer& operator=(const ChunkContainer&) = delete;
 			ChunkContainer& operator=(ChunkContainer&&) noexcept = default;
@@ -52,6 +56,7 @@ namespace tsom
 			NazaraSignal(OnChunkUpdated, ChunkContainer* /*planet*/, Chunk* /*chunk*/, NeighborChunkMask /*neighborMask*/, Nz::UInt32 /*layerMask*/);
 
 		protected:
+			const BlockLibrary& m_blockLibrary;
 			float m_tileSize;
 	};
 }

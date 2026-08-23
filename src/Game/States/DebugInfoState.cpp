@@ -3,6 +3,8 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <Game/States/DebugInfoState.hpp>
+#include <ClientLib/ClientConfigs.hpp>
+#include <CommonLib/ConfigFile.hpp>
 #include <CommonLib/Version.hpp>
 #include <Nazara/TextRenderer/RichTextBuilder.hpp>
 #include <Nazara/TextRenderer/SimpleTextDrawer.hpp>
@@ -36,6 +38,8 @@ namespace tsom
 
 		if (m_updateClock.RestartIfOver(Nz::Time::Second()))
 		{
+			auto& stateData = GetStateData();
+
 			m_textDrawer.Clear();
 
 			Nz::RichTextBuilder textBuilder(m_textDrawer);
@@ -50,9 +54,13 @@ namespace tsom
 
 			textBuilder << std::to_string(m_fpsCounter);
 
+			Nz::Int16 fpsLimit = stateData.config->GetIntegerValue<Nz::Int16>(Config::Graphics_FPSLimit);
+			if (fpsLimit > 0)
+				textBuilder << Nz::Color::White() << " (Limit: " << std::to_string(fpsLimit) << ")";
+
 			m_fpsEntity->UpdateText(m_textDrawer);
 
-			LayoutWidgets(GetStateData().canvas->GetSize());
+			LayoutWidgets(stateData.canvas->GetSize());
 
 			m_fpsCounter = 0;
 		}

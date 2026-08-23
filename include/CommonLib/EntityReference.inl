@@ -55,6 +55,11 @@ namespace tsom
 		return &m_handleData->entity;
 	}
 
+	inline bool EntityReference::operator==(const EntityReference& other) const
+	{
+		return m_handleData == other.m_handleData;
+	}
+
 	inline EntityReference& EntityReference::operator=(EntityReference&& reference) noexcept
 	{
 		m_handleData = std::move(reference.m_handleData);

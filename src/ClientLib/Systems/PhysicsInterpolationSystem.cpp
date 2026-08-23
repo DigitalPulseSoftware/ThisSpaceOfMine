@@ -38,21 +38,5 @@ namespace tsom
 
 			entityNode.SetTransform(position, rotation);
 		}
-
-		auto referencedView = m_registry.view<Nz::NodeComponent, ReferencedPhysicsInterpolationComponent>(entt::exclude<Nz::DisabledComponent>);
-		for (auto&& [entity, entityNode, referenced] : referencedView.each())
-		{
-			Nz::Vector3f currentPos = entityNode.GetPosition();
-			Nz::Quaternionf currentRot = entityNode.GetRotation();
-
-			auto& targetNode = referenced.referenceEntity.get<Nz::NodeComponent>();
-			Nz::Vector3f targetPos = targetNode.GetPosition();
-			Nz::Quaternionf targetRot = targetNode.GetRotation();
-
-			Nz::Vector3f position = Nz::Vector3f::Lerp(currentPos, targetPos, interpFactor);
-			Nz::Quaternionf rotation = Nz::Quaternionf::Slerp(currentRot, targetRot, interpFactor);
-
-			entityNode.SetTransform(position, rotation);
-		}
 	}
 }

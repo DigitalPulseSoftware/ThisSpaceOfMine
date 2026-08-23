@@ -46,6 +46,8 @@ namespace tsom
 			template<typename F> void ForEachPlayer(F&& callback) const;
 
 			inline entt::handle GetControlledEntity() const;
+			inline EntityRegistry& GetEntityRegistry();
+			inline const EntityRegistry& GetEntityRegistry() const;
 			const Nz::Node* GetEnvironmentNode(std::size_t environmentIndex) const;
 			inline const GravityController* GetGravityController(std::size_t environmentIndex) const;
 			inline ScriptingContext& GetScriptingContext();
@@ -61,6 +63,7 @@ namespace tsom
 			void HandlePacket(Packets::S_EntitiesCreation&& entitiesCreation);
 			void HandlePacket(Packets::S_EntitiesDelete&& entitiesDelete);
 			void HandlePacket(Packets::S_EntitiesStateUpdate&& stateUpdate);
+			void HandlePacket(Packets::S_EntityDistributionUpdate&& distributionUpdate);
 			void HandlePacket(Packets::S_EntityEnvironmentUpdate&& environmentUpdate);
 			void HandlePacket(Packets::S_EntityProcedureCall&& procedureCall);
 			void HandlePacket(Packets::S_EntityPropertiesUpdate&& propertyUpdate);
@@ -124,7 +127,6 @@ namespace tsom
 			{
 				Nz::Bitset<Nz::UInt64> entities;
 				entt::handle rootEntity;
-				entt::handle visualRootEntity;
 				GravityController* gravityController;
 			};
 

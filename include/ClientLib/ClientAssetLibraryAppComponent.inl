@@ -14,6 +14,11 @@ namespace tsom
 		return m_materialLibrary.Get(name);
 	}
 
+	inline std::shared_ptr<Nz::MaterialInstance> ClientAssetLibraryAppComponent::GetMaterialInstance(std::string_view name) const
+	{
+		return m_materialInstanceLibrary.Get(name);
+	}
+
 	inline std::shared_ptr<Nz::Model> ClientAssetLibraryAppComponent::GetModel(std::string_view name) const
 	{
 		return m_modelLibrary.Get(name);
@@ -34,6 +39,11 @@ namespace tsom
 		return m_materialLibrary.Query(name);
 	}
 
+	inline std::shared_ptr<Nz::MaterialInstance> ClientAssetLibraryAppComponent::QueryMaterialInstance(std::string_view name) const
+	{
+		return m_materialInstanceLibrary.Query(name);
+	}
+
 	inline std::shared_ptr<Nz::Model> ClientAssetLibraryAppComponent::QueryModel(std::string_view name) const
 	{
 		return m_modelLibrary.Query(name);
@@ -52,6 +62,11 @@ namespace tsom
 	inline void ClientAssetLibraryAppComponent::RegisterMaterial(std::string name, std::shared_ptr<Nz::Material> material)
 	{
 		m_materialLibrary.Register(std::move(name), std::move(material));
+	}
+
+	inline void ClientAssetLibraryAppComponent::RegisterMaterialInstance(std::string name, std::shared_ptr<Nz::MaterialInstance> material)
+	{
+		m_materialInstanceLibrary.Register(std::move(name), std::move(material));
 	}
 
 	inline void ClientAssetLibraryAppComponent::RegisterModel(std::string name, std::shared_ptr<Nz::Model> model)

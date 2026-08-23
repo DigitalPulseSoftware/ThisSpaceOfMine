@@ -1,5 +1,10 @@
 [nzsl_version("1.1")]
-module TSOM.PlayerPBR;
+module TSOM.PhysicallyBasedMaterial;
+
+// Modified version of Nazara Material.PhysicallyBased
+// - Adds support for ambient occlusion textures
+// - Adds support for metallic+roughness textures
+// - Changed the way ambient is computed
 
 import InstanceBuffer from Engine.InstanceData;
 import SkeletalData from Engine.SkeletalData;
@@ -8,11 +13,17 @@ import ViewerData from Engine.ViewerData;
 import Lighting.LightData;
 import Lighting.PhysicallyBased;
 import Lighting.Shadow;
+import Pi from Math.Constants;
 import SkinLinearPosition, SkinLinearPositionNormal from Engine.SkinningLinear;
+
+import GBufferOutput from DeferredShading.PhysicallyBasedGBuffer;
+import EncodeNormal from DeferredShading.NormalEncoding;
+
+import Math.Color;
 
 // Pass-specific options
 option DepthPass: bool = false;
-option DistanceDepth: bool = false;
+option ForwardPass: bool = true;
 option ShadowPass: bool = false;
 
 // Basic material options
@@ -24,18 +35,18 @@ option AlphaTest: bool = false;
 option HasAmbientOcclusionTexture: bool = false;
 option HasEmissiveTexture: bool = false;
 option HasHeightTexture: bool = false;
-option HasMetalnessSmoothnessTexture: bool = false;
+option HasMetallicRoughnessTexture: bool = false;
 option HasMetallicTexture: bool = false;
 option HasNormalTexture: bool = false;
 option HasRoughnessTexture: bool = false;
 option HasSpecularTexture: bool = false;
 
-const InvalidLoc = u32.Max;
-
 // Billboard related options
 option Billboard: bool = false;
 
 // Vertex declaration related options
+const InvalidLoc = u32.Max;
+
 option VertexColorLoc: u32 = InvalidLoc;
 option VertexNormalLoc: u32 = InvalidLoc;
 option VertexPositionLoc: u32 = InvalidLoc;
@@ -46,7 +57,7 @@ option VertexUvLoc: u32 = InvalidLoc;
 option VertexJointIndicesLoc: u32 = InvalidLoc;
 option VertexJointWeightsLoc: u32 = InvalidLoc;
 
-option MaxLightCount: u32 = 3;
+option EnableShadowMapping: bool = true;
 
 const HasNormal = (VertexNormalLoc != InvalidLoc);
 const HasVertexColor = (VertexColorLoc != InvalidLoc);
@@ -56,6 +67,7 @@ const HasVertexUV = (VertexUvLoc != InvalidLoc);
 const HasUV = (HasVertexUV);
 const HasNormalMapping = HasNormalTexture && HasNormal && HasTangent && !DepthPass;
 const HasSkinning = (VertexJointIndicesLoc != InvalidLoc && VertexJointWeightsLoc != InvalidLoc);
+const HasLighting = HasNormal && !DepthPass;
 
 [layout(std140)]
 struct MaterialSettings
@@ -72,12 +84,17 @@ struct MaterialSettings
 
 	[tag("BaseColor")]
 	BaseColor: vec4[f32],
-}
 
-// TODO: Add enums
-const DirectionalLight = 0;
-const PointLight = 1;
-const SpotLight = 2;
+	// PBR settings
+	[tag("EmissiveColor")]
+	EmissiveColor: vec4[f32], //< TODO: Switch to vec3[f32]
+
+	[tag("MetallicFactor")]
+	MetallicFactor: f32,
+
+	[tag("RoughnessFactor")]
+	RoughnessFactor: f32
+}
 
 [tag("Scene")]
 [set(0), auto_binding]
@@ -112,10 +129,10 @@ external Material
 	[tag("EmissiveMap")] emissiveMap: sampler2D[f32],
 	[tag("HeightMap")] heightMap: sampler2D[f32],
 	[tag("MetallicMap")] metallicMap: sampler2D[f32],
-	[tag("MetalnessSmoothnessMap")] metalnessSmoothness: sampler2D[f32],
 	[tag("NormalMap")] normalMap: sampler2D[f32],
 	[tag("RoughnessMap")] roughnessMap: sampler2D[f32],
-	[tag("SpecularMap")] specularMap: sampler2D[f32],
+	
+	[tag("TextAtlas")] textAtlas: sampler2D[f32],
 }
 
 // TODO: Replace by a skinning pass
@@ -134,50 +151,42 @@ struct VertOut
 	[location(2), cond(HasColor)] color: vec4[f32],
 	[location(3), cond(HasNormal)] normal: vec3[f32],
 	[location(4), cond(HasNormalMapping)] tangent: vec3[f32],
-	[builtin(position)] position: vec4[f32],
+	[builtin(position)] position: vec4[f32]
 }
 
 // Fragment stage
-import Math.CookTorrancePBR;
-import Pi from Math.Constants;
-
+[cond(ForwardPass)]
 struct FragOut
 {
-	[location(0)] RenderTarget0: vec4[f32],
-	[builtin(frag_depth), cond(DistanceDepth)] fragdepth: f32,
+	[location(0)] color: vec4[f32],
 }
+
+[cond(!ForwardPass)]
+alias FragOut = GBufferOutput;
 
 [export]
 fn ComputeColor(input: VertOut) -> vec4[f32]
 {
 	let color = Material.settings.BaseColor;
 
+	const if (HasUV)
+		color *= Material.textAtlas.Sample(input.uv).x;
+
 	const if (HasColor)
 		color *= input.color;
 
-	const if (HasBaseColorTexture)
+	const if (HasUV && HasBaseColorTexture)
 		color *= Material.baseColorMap.Sample(input.uv);
 
-	const if (HasAlphaTexture)
+	const if (HasUV && HasAlphaTexture)
 		color.w *= Material.alphaMap.Sample(input.uv).x;
-
-	const if (AlphaTest)
-	{
-		if (color.w < Material.settings.AlphaThreshold)
-			discard;
-	}
 
 	return color;
 }
 
-[export, cond(HasNormal)]
-fn ComputeLighting(color: vec3[f32], input: VertOut) -> vec3[f32]
+[cond(HasLighting)]
+fn ComputeNormal(input: VertOut) -> vec3[f32]
 {
-	let lightRadiance = vec3[f32](0.0, 0.0, 0.0);
-
-	let eyeVec = normalize(Viewer.viewerData.eyePosition - input.worldPos);
-
-	let normal: vec3[f32];
 	const if (HasNormalMapping)
 	{
 		let N = normalize(input.normal);
@@ -185,60 +194,105 @@ fn ComputeLighting(color: vec3[f32], input: VertOut) -> vec3[f32]
 		let B = cross(N, T);
 		let tbnMatrix = mat3[f32](T, B, N);
 
-		normal = vec3[f32](Material.normalMap.Sample(input.uv).xy * 2.0 - (1.0).rr, 0.0);
+		let normal = vec3[f32](Material.normalMap.Sample(input.uv).xy * 2.0 - (1.0).rr, 0.0);
 		normal.z = sqrt(1.0 - normal.x - normal.y);
 		normal = normalize(tbnMatrix * normal);
+
+		return normal;
 	}
 	else
-		normal = normalize(input.normal);
+		return normalize(input.normal);
+}
 
-	let albedo = color.xyz;
-	let metallic = 0.0;
-	let roughness = 0.3;
+[export, cond(HasLighting)]
+fn ComputeMetallicRoughness(input: VertOut) -> vec2[f32]
+{
+	let metallicRoughness = vec2[f32](Material.settings.MetallicFactor, Material.settings.RoughnessFactor);
 
-	const if (HasMetalnessSmoothnessTexture)
+	const if (HasMetallicRoughnessTexture)
 	{
-		let ms = Material.metalnessSmoothness.Sample(input.uv).xyza;
-		metallic = ms.x;
-		roughness = (1.0 - ms.y);
+		metallicRoughness *= Material.metallicMap.Sample(input.uv).xy;
+	}
+	else
+	{
+		const if (HasMetallicTexture)
+			metallicRoughness.x *= Material.metallicMap.Sample(input.uv).x;
+
+		const if (HasRoughnessTexture)
+			metallicRoughness.y *= Material.roughnessMap.Sample(input.uv).x;
 	}
 
-	const if (HasMetallicTexture)
-		metallic = Material.metallicMap.Sample(input.uv).x;
+	return metallicRoughness;
+}
 
-	const if (HasRoughnessTexture)
-		roughness = Material.roughnessMap.Sample(input.uv).x;
+fn sdRoundBox(pos: vec3[f32], dims: vec3[f32], cornerRadius: f32) -> f32
+{
+	let q = abs(pos) - dims + cornerRadius.xxx;
+	return length(max(q, (0.0).xxx)) + min(max(q.x, max(q.y, q.z)), 0.0) - cornerRadius;
+}
+
+[export]
+struct PBRInput
+{
+	baseColor: vec3[f32],
+	normal: vec3[f32],
+	emissive: vec3[f32],
+	worldPos: vec3[f32],
+	ambientOcclusion: f32,
+	metallic: f32,
+	roughness: f32
+}
+
+[export, cond(HasLighting)]
+fn ComputeLighting(input: PBRInput) -> vec3[f32]
+{
+	let lightRadiance = vec3[f32](0.0, 0.0, 0.0);
+
+	let eyeVec = normalize(Viewer.viewerData.eyePosition - input.worldPos);
+
+	let albedo = input.baseColor;
 
 	let F0 = vec3[f32](0.04, 0.04, 0.04);
-	F0 = lerp(F0, albedo, metallic.rrr);
+	F0 = lerp(F0, albedo, input.metallic.xxx);
 
 	let albedoFactor = albedo / Pi;
+	let lightAmbient = 0.01;
 
 	for lightIndex in 0 -> Scene.directionalLights.lightCount
 	{
 		let light = Scene.directionalLights.lights[lightIndex];
-		let result = PhysicallyBased.ComputeDirectionalLight(light, eyeVec, albedoFactor, F0, normal, metallic, roughness);
+		let result = PhysicallyBased.ComputeDirectionalLight(light, eyeVec, albedoFactor, F0, input.normal, input.metallic, input.roughness);
+
+		let ambient = 0.06 * clamp(0.6 + dot(normalize(input.worldPos), -light.direction), 0.0, 1.0);
+		ambient *= clamp(sdRoundBox(input.worldPos, (32.0).xxx, 16.0) / 64.0, 0.0, 1.0);
 
 		let shadowFactor = 1.0;
-		if (light.shadowIndex != u32.Max)
+		const if (EnableShadowMapping)
 		{
-			let shadowAtlasEntry = Scene.directionalShadowAtlasMapping.shadowMappings[light.shadowIndex];
-			shadowFactor = Shadow.ComputeDirectionalLightShadow(Scene.shadowAtlas, light, shadowAtlasEntry, input.worldPos);
+			if (light.shadowIndex != u32.Max)
+			{
+				let shadowAtlasEntry: Shadow.DirectionalShadowAtlasEntry = Scene.directionalShadowAtlasMapping.shadowMappings[light.shadowIndex];
+				shadowFactor = Shadow.ComputeDirectionalLightShadow(Scene.shadowAtlas, light, shadowAtlasEntry, input.worldPos);
+			}
 		}
 
+		lightAmbient = max(lightAmbient, ambient);
 		lightRadiance += shadowFactor * result.radiance;
 	}
 
 	for lightIndex in 0 -> Scene.pointLights.lightCount
 	{
 		let light = Scene.pointLights.lights[lightIndex];
-		let result = PhysicallyBased.ComputePointLight(light, eyeVec, albedoFactor, F0, normal, metallic, roughness, input.worldPos);
+		let result = PhysicallyBased.ComputePointLight(light, eyeVec, albedoFactor, F0, input.normal, input.metallic, input.roughness, input.worldPos);
 
 		let shadowFactor = 1.0;
-		if (light.shadowIndex != u32.Max)
+		const if (EnableShadowMapping)
 		{
-			let shadowAtlasEntry: Shadow.PointShadowAtlasEntry = Scene.pointShadowAtlasMapping.shadowMappings[light.shadowIndex];
-			shadowFactor = Shadow.ComputePointLightShadow(Scene.shadowAtlas, light, shadowAtlasEntry, result.lightToWorldDir, input.worldPos);
+			if (light.shadowIndex != u32.Max)
+			{
+				let shadowAtlasEntry: Shadow.PointShadowAtlasEntry = Scene.pointShadowAtlasMapping.shadowMappings[light.shadowIndex];
+				shadowFactor = Shadow.ComputePointLightShadow(Scene.shadowAtlas, light, shadowAtlasEntry, result.lightToWorldDir, input.worldPos);
+			}
 		}
 
 		lightRadiance += shadowFactor * result.radiance;
@@ -247,24 +301,25 @@ fn ComputeLighting(color: vec3[f32], input: VertOut) -> vec3[f32]
 	for lightIndex in 0 -> Scene.spotLights.lightCount
 	{
 		let light = Scene.spotLights.lights[lightIndex];
-		let result = PhysicallyBased.ComputeSpotLight(light, eyeVec, albedoFactor, F0, normal, metallic, roughness, input.worldPos);
+		let result = PhysicallyBased.ComputeSpotLight(light, eyeVec, albedoFactor, F0, input.normal, input.metallic, input.roughness, input.worldPos);
 
 		let shadowFactor = 1.0;
-		if (light.shadowIndex != u32.Max)
+		const if (EnableShadowMapping)
 		{
-			let shadowAtlasEntry: Shadow.SpotShadowAtlasEntry = Scene.spotShadowAtlasMapping.shadowMappings[light.shadowIndex];
-			shadowFactor = Shadow.ComputeSpotLightShadow(Scene.shadowAtlas, light, shadowAtlasEntry, input.worldPos);
+			if (light.shadowIndex != u32.Max)
+			{
+				let shadowAtlasEntry: Shadow.SpotShadowAtlasEntry = Scene.spotShadowAtlasMapping.shadowMappings[light.shadowIndex];
+				shadowFactor = Shadow.ComputeSpotLightShadow(Scene.shadowAtlas, light, shadowAtlasEntry, input.worldPos);
+			}
 		}
 
 		lightRadiance += shadowFactor * result.radiance;
 	}
 
-	let ambient = (0.03).rrr * albedo;
-	const if (HasAmbientOcclusionTexture)
-		ambient *= Material.ambientOcclusionMap.Sample(input.uv).x;
+	let ambient = lightAmbient * albedo * input.ambientOcclusion;
 
 	let finalColor = ambient + lightRadiance;
-	//finalColor = finalColor / (finalColor + vec3[f32](1.0, 1.0, 1.0));
+	finalColor += input.emissive;
 
 	return finalColor;
 }
@@ -273,42 +328,64 @@ fn ComputeLighting(color: vec3[f32], input: VertOut) -> vec3[f32]
 fn FragMain(input: VertOut) -> FragOut
 {
 	let color = ComputeColor(input);
+	const if (AlphaTest)
+	{
+		if (color.w < Material.settings.AlphaThreshold)
+			discard;
+	}
 
-	const if (HasNormal)
-		color.rgb = ComputeLighting(color.rgb, input);
+	const if (ForwardPass)
+	{
+		const if (HasLighting)
+		{
+			let metalnessRoughness = ComputeMetallicRoughness(input);
 
-	let output: FragOut;
-	output.RenderTarget0 = color;
-	return output;
+			let pbrInput: PBRInput;
+			pbrInput.ambientOcclusion = 1.0;
+			pbrInput.baseColor = color.rgb;
+			pbrInput.emissive = Material.settings.EmissiveColor.rgb;
+			pbrInput.metallic = metalnessRoughness.x;
+			pbrInput.normal = ComputeNormal(input);
+			pbrInput.roughness = metalnessRoughness.y;
+			pbrInput.worldPos = input.worldPos;
+
+			const if (HasAmbientOcclusionTexture)
+				pbrInput.ambientOcclusion *= Material.ambientOcclusionMap.Sample(input.uv).x;
+
+			const if (HasEmissiveTexture)
+				pbrInput.emissive += Material.emissiveMap.Sample(input.uv).rgb;
+	
+			color.rgb = ComputeLighting(pbrInput);
+		}
+
+		let output: FragOut;
+		output.color = color;
+	
+		return output;
+	}
+	else
+	{
+		let normal = ComputeNormal(input);
+		let metalnessRoughness = ComputeMetallicRoughness(input);
+
+		let output: FragOut;
+		output.albedo = vec4[f32](color.rgb, metalnessRoughness.x);
+		output.normal = vec4[f32](EncodeNormal(normal), metalnessRoughness.y);
+
+		return output;
+	}
 }
 
 // Shadow passes entries
-[entry(frag), cond(DepthPass && DistanceDepth)]
-[depth_write(replace)]
-fn FragDepthDist(input: VertOut) -> FragOut
+[entry(frag), cond(DepthPass && AlphaTest)]
+fn FragDepth(input: VertOut)
 {
 	let color = ComputeColor(input);
-
-	let output: FragOut;
-	output.RenderTarget0 = color;
-
-	let dist = distance(Viewer.viewerData.eyePosition, input.worldPos);
-	output.fragdepth = dist / Viewer.viewerData.farPlane;
-
-	return output;
+	if (color.w < Material.settings.AlphaThreshold)
+		discard;
 }
 
-[entry(frag), cond(DepthPass && AlphaTest && !DistanceDepth)]
-fn FragDepth(input: VertOut) -> FragOut
-{
-	let color = ComputeColor(input);
-
-	let output: FragOut;
-	output.RenderTarget0 = color;
-	return output;
-}
-
-[entry(frag), cond(DepthPass && !AlphaTest && !DistanceDepth)]
+[entry(frag), cond(DepthPass && !AlphaTest)]
 fn FragDepthNoAlpha() {} //< dummy
 
 // Vertex stage
@@ -451,7 +528,7 @@ fn VertMain(input: VertIn) -> VertOut
 	output.worldPos = worldPosition.xyz;
 	output.position = Viewer.viewerData.viewProjMatrix * worldPosition;
 
-	let rotationMatrix = transpose(mat3[f32](instanceData.invWorldMatrix));
+	const if (HasNormal || HasNormalMapping) let rotationMatrix = transpose(mat3[f32](instanceData.invWorldMatrix));
 
 	const if (HasColor)
 		output.color = input.color;

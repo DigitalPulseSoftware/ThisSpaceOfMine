@@ -240,4 +240,12 @@ namespace tsom
 			m_previewTextures[blockIndex] = Nz::TextureAsset::CreateView(m_blockTextures[previewTextures[blockIndex].first], slotTexView);
 		}
 	}
+
+	bool ClientBlockLibrary::LoadFromString(std::string_view content, bool merge)
+	{
+		if (!BlockLibrary::LoadFromString(content, merge))
+			return false;
+
+		return true;
+	}
 }

@@ -5,6 +5,7 @@
 #include <ClientLib/Scripting/ClientScriptingLibrary.hpp>
 #include <ClientLib/ClientAssetLibraryAppComponent.hpp>
 #include <ClientLib/ClientSessionHandler.hpp>
+#include <ClientLib/Scripting/ClientEntityScriptingLibrary.hpp>
 #include <CommonLib/ConfigFile.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
 #include <Nazara/Graphics/Model.hpp>
@@ -26,8 +27,18 @@ namespace sol
 
 namespace tsom
 {
+	ClientScriptingLibrary::ClientScriptingLibrary(Nz::ApplicationBase& app, ConfigFile& configFile, ClientSessionHandler& sessionHandler, ClientEntityScriptingLibrary& entityScriptingLibrary) :
+	SharedScriptingLibrary(entityScriptingLibrary),
+	m_app(app),
+	m_sessionHandler(sessionHandler),
+	m_config(configFile)
+	{
+	}
+
 	void ClientScriptingLibrary::Register(sol::state& state)
 	{
+		SharedScriptingLibrary::Register(state);
+
 		state["CLIENT"] = true;
 		state["SERVER"] = false;
 

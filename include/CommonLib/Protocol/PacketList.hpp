@@ -20,12 +20,18 @@ TSOM_NETWORK_PACKET(S_AuthResponse)
 TSOM_NETWORK_PACKET(S_DebugDrawLineList)
 
 // Client opcodes
+TSOM_NETWORK_PACKET(C_ConnectEntities)
+TSOM_NETWORK_PACKET(C_EntityProcedureCall)
 TSOM_NETWORK_PACKET(C_ExitShipControl)
-TSOM_NETWORK_PACKET(C_Interact)
+TSOM_NETWORK_PACKET(C_GrabEntity)
+TSOM_NETWORK_PACKET(C_Interact) //< TODO: Replace by C_EntityProcedureCall
 TSOM_NETWORK_PACKET(C_MineBlock)
 TSOM_NETWORK_PACKET(C_PlaceBlock)
+TSOM_NETWORK_PACKET(C_PlaceEntity)
+TSOM_NETWORK_PACKET(C_RemoveEntity)
 TSOM_NETWORK_PACKET(C_SendChatMessage)
 TSOM_NETWORK_PACKET(C_SendConsoleCommand)
+TSOM_NETWORK_PACKET(C_ToggleFlashlight) //< TODO: Replace by C_EntityProcedureCall
 TSOM_NETWORK_PACKET(C_UpdatePlayerInputs)
 
 // Server opcodes
@@ -38,6 +44,7 @@ TSOM_NETWORK_PACKET(S_ConsoleOutput)
 TSOM_NETWORK_PACKET(S_EntitiesCreation)
 TSOM_NETWORK_PACKET(S_EntitiesDelete)
 TSOM_NETWORK_PACKET(S_EntitiesStateUpdate)
+TSOM_NETWORK_PACKET(S_EntityDistributionUpdate)
 TSOM_NETWORK_PACKET(S_EntityEnvironmentUpdate)
 TSOM_NETWORK_PACKET(S_EntityProcedureCall)
 TSOM_NETWORK_PACKET(S_EntityPropertiesUpdate)

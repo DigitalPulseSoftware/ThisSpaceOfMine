@@ -16,12 +16,18 @@ namespace tsom
 	class TextureCooker : public Cooker
 	{
 		public:
-			enum class ChannelSource
+			enum class SourceChannel
 			{
 				Red,
+				InvRed,
 				Green,
+				InvGreen,
 				Blue,
-				Alpha
+				InvBlue,
+				Alpha,
+				InvAlpha,
+
+				Max = InvAlpha
 			};
 
 			enum class TextureType
@@ -40,8 +46,9 @@ namespace tsom
 			OutputFileList GetOutputFiles() const override;
 
 		private:
-			std::array<ChannelSource, 4> m_channelSources;
-			std::filesystem::path m_inputFile;
+			std::array<SourceChannel, 4> m_sourceChannel;
+			std::array<Nz::UInt32, 4> m_sourceTexture;
+			std::array<std::filesystem::path, 4> m_inputFiles;
 			std::filesystem::path m_outputFile;
 			bool m_compress;
 			bool m_generateMipmaps;

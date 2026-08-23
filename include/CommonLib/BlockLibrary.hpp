@@ -40,7 +40,7 @@ namespace tsom
 			inline bool IsValidBlock(BlockIndex blockIndex) const;
 			inline bool IsValidLayer(std::size_t layerIndex) const;
 
-			bool LoadFromString(std::string_view content, bool merge = false);
+			virtual bool LoadFromString(std::string_view content, bool merge = false);
 
 			BlockIndex RegisterBlock(std::string name, BlockInfo blockInfo);
 			std::size_t RegisterLayer(std::string name, LayerInfo layerInfo);

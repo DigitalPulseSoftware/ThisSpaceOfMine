@@ -44,6 +44,7 @@ namespace tsom
 			~CompressedUnsigned() = default;
 
 			operator T() const;
+			T operator*() const;
 
 			CompressedUnsigned& operator=(T value);
 

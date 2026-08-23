@@ -36,13 +36,21 @@ local function Explode(physWorld, controller, radius)
                 local chunkIndices, innerCoordinates = chunkContainer:GetChunkIndicesByBlockIndices(globalBlockIndices + Vec3(x, y, z))
                 local targetChunk = chunkContainer:GetChunk(chunkIndices)
                 if targetChunk then
-                    targetChunk:UpdateBlock(innerCoordinates, EmptyBlock)
-                    updatedChunks[tostring(targetChunk:GetIndices())] = true
+                    local chunkKey = tostring(targetChunk:GetIndices())
+                    if not updatedChunks[chunkKey] then
+                        targetChunk:BeginBatchUpdate()
+                        updatedChunks[chunkKey] = targetChunk
+                    end
+                    targetChunk:UpdateBlock(innerCoordinates, EmptyBlock, true)
                 end
 
                 ::continue::
             end
         end
+    end
+
+    for chunkKey, chunk in pairs(updatedChunks) do
+        chunk:EndBatchUpdate()
     end
 end
 

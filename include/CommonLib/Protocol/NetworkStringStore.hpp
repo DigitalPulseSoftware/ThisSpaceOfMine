@@ -27,19 +27,20 @@ namespace tsom
 
 			inline void Clear();
 
-			inline Nz::UInt32 CheckStringIndex(const std::string& string) const;
+			inline Nz::UInt32 CheckStringIndex(std::string_view string) const;
 
 			void FillStore(Nz::UInt32 firstId, std::vector<SecuredString<1024>> strings);
 
 			inline const std::string& GetString(Nz::UInt32 id) const;
-			inline Nz::UInt32 GetStringIndex(const std::string& string) const;
+			inline const std::string& GetStringUnchecked(Nz::UInt32 id) const;
+			inline Nz::UInt32 GetStringIndex(std::string_view string) const;
 
 			inline Nz::UInt32 RegisterString(std::string string);
 
 			static constexpr Nz::UInt32 InvalidIndex = std::numeric_limits<Nz::UInt32>::max();
 
 		private:
-			tsl::hopscotch_map<std::string, Nz::UInt32> m_stringMap;
+			tsl::hopscotch_map<std::string, Nz::UInt32, std::hash<std::string_view>, std::equal_to<>> m_stringMap;
 			std::vector<std::string> m_strings;
 	};
 }

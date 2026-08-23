@@ -17,7 +17,7 @@ namespace tsom
 	class TSOM_COMMONLIB_API SurfaceNetsChunk : public Chunk
 	{
 		public:
-			inline SurfaceNetsChunk(const BlockLibrary& blockLibrary, ChunkContainer& owner, const ChunkIndices& indices, const Nz::Vector3ui& size, float blockSize);
+			inline SurfaceNetsChunk(ChunkContainer& owner, const ChunkIndices& indices, const Nz::Vector3ui& size, float blockSize);
 			SurfaceNetsChunk(const SurfaceNetsChunk&) = delete;
 			SurfaceNetsChunk(SurfaceNetsChunk&&) = delete;
 			~SurfaceNetsChunk() = default;

@@ -8,6 +8,7 @@
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
+#include <Nazara/Graphics/Graphics.hpp>
 #include <Nazara/Graphics/Material.hpp>
 #include <Nazara/Graphics/MaterialInstance.hpp>
 #include <Nazara/Graphics/Model.hpp>
@@ -53,10 +54,22 @@ namespace tsom
 	{
 		sol::table assetLibrary = state.create_named_table("AssetLibrary");
 
+		assetLibrary["GetMaterial"] = LuaFunction([this](std::string_view name)
+		{
+			auto& clientAsset = m_app.GetComponent<ClientAssetLibraryAppComponent>();
+			return clientAsset.GetMaterial(name);
+		});
+
 		assetLibrary["GetModel"] = LuaFunction([this](std::string_view name)
 		{
 			auto& clientAsset = m_app.GetComponent<ClientAssetLibraryAppComponent>();
 			return clientAsset.GetModel(name);
+		});
+
+		assetLibrary["RegisterMaterialInstance"] = LuaFunction([this](std::string name, std::shared_ptr<Nz::MaterialInstance> materialInstance)
+		{
+			auto& clientAsset = m_app.GetComponent<ClientAssetLibraryAppComponent>();
+			clientAsset.RegisterMaterialInstance(std::move(name), std::move(materialInstance));
 		});
 
 		assetLibrary["RegisterModel"] = LuaFunction([this](std::string name, std::shared_ptr<Nz::Model> model)
@@ -88,6 +101,22 @@ namespace tsom
 			"PhysicallyBased", Nz::MaterialType::PhysicallyBased
 		);
 
+		state.new_enum("SamplerFilter",
+			"Linear", Nz::SamplerFilter::Linear,
+			"Nearest", Nz::SamplerFilter::Nearest
+		);
+
+		state.new_enum("SamplerMipmapMode",
+			"Linear", Nz::SamplerMipmapMode::Linear,
+			"Nearest", Nz::SamplerMipmapMode::Nearest
+		);
+
+		state.new_enum("SamplerWrap",
+			"Clamp", Nz::SamplerWrap::Clamp,
+			"MirroredRepeat", Nz::SamplerWrap::MirroredRepeat,
+			"Repeat", Nz::SamplerWrap::Repeat
+		);
+
 		state.new_usertype<Nz::MaterialInstancePresetFlags>("MaterialInstancePresetFlags",
 			sol::no_constructor,
 
@@ -103,13 +132,50 @@ namespace tsom
 
 			"ApplyPreset", LuaFunction(&Nz::MaterialInstance::ApplyPreset),
 
+			"Clone", LuaFunction(&Nz::MaterialInstance::Clone),
+
 			"DisablePass", LuaFunction(Nz::Overload<std::string_view>(&Nz::MaterialInstance::DisablePass)),
 			"EnablePass", LuaFunction([](Nz::MaterialInstance& mat, std::string_view passName, sol::optional<bool> enable)
 			{
 				mat.EnablePass(passName, enable.value_or(true));
 			}),
 
+			"GetValueProperty", LuaFunction([](Nz::MaterialInstance& matInstance, std::string_view propertyName, sol::this_state L) -> sol::object
+			{
+				const Nz::MaterialSettings::Value* value = matInstance.GetValueProperty(propertyName);
+				if (!value)
+					TriggerLuaArgError(L, 2, fmt::format("property {} doesn't exist", propertyName));
+
+				if (const bool* bValue = std::get_if<bool>(value))
+					return sol::make_object(L, *bValue);
+				else if (const float* fValue = std::get_if<float>(value))
+					return sol::make_object(L, *fValue);
+				else if (const Nz::Int32* iValue = std::get_if<Nz::Int32>(value))
+					return sol::make_object(L, *iValue);
+				else if (const Nz::UInt32* uValue = std::get_if<Nz::UInt32>(value))
+					return sol::make_object(L, *uValue);
+				else if (const Nz::Color* colorValue = std::get_if<Nz::Color>(value))
+					return sol::make_object(L, *colorValue);
+				else
+					TriggerLuaError(L, "property type is not yet mapped to Lua");
+			}),
+
 			"SetTextureProperty", LuaFunction(Nz::Overload<std::string_view, std::shared_ptr<Nz::TextureAsset>>(&Nz::MaterialInstance::SetTextureProperty)),
+			"SetTextureSamplerProperty", LuaFunction([](Nz::MaterialInstance& matInstance, std::string_view propertyName, sol::stack_table samplerParams)
+			{
+				Nz::TextureSamplerInfo samplerInfo;
+				samplerInfo.anisotropyLevel = samplerParams.get_or("anisotropyLevel", samplerInfo.anisotropyLevel);
+				samplerInfo.magFilter = samplerParams.get_or("magFilter", samplerInfo.magFilter);
+				samplerInfo.minFilter = samplerParams.get_or("minFilter", samplerInfo.minFilter);
+				samplerInfo.mipmapMode = samplerParams.get_or("mipmapMode", samplerInfo.mipmapMode);
+				samplerInfo.wrapModeU = samplerParams.get_or("wrapModeU", samplerInfo.wrapModeU);
+				samplerInfo.wrapModeV = samplerParams.get_or("wrapModeV", samplerInfo.wrapModeV);
+				samplerInfo.wrapModeW = samplerParams.get_or("wrapModeW", samplerInfo.wrapModeW);
+				samplerInfo.depthCompare = samplerParams.get_or("depthCompare", samplerInfo.depthCompare);
+				samplerInfo.depthComparison = samplerParams.get_or("depthComparison", samplerInfo.depthComparison);
+
+				matInstance.SetTextureSamplerProperty(propertyName, samplerInfo);
+			}),
 			"SetValueProperty", sol::overload(
 				LuaFunction([](Nz::MaterialInstance& matInstance, std::string_view propertyName, bool propertyValue)
 				{
@@ -155,9 +221,24 @@ namespace tsom
 				});
 			}),
 
-			"Instantiate", LuaFunction([this](Nz::MaterialType matType, std::optional<Nz::MaterialInstancePresetFlags> presetFlags)
+			"Instantiate", LuaFunction([this](Nz::MaterialType matType, std::optional<Nz::MaterialInstancePresetFlags> presetFlagsOpt)
 			{
-				return Nz::MaterialInstance::Instantiate(matType, presetFlags.value_or(Nz::MaterialInstancePresetFlags{}) | Nz::MaterialInstancePreset::ReverseZ);
+				// Force ReverseZ
+				Nz::MaterialInstancePresetFlags presetFlags = presetFlagsOpt.value_or(Nz::MaterialInstancePresetFlags{}) | Nz::MaterialInstancePreset::ReverseZ;
+
+				// Override PBR material
+				if (matType == Nz::MaterialType::PhysicallyBased)
+				{
+					auto& clientAsset = m_app.GetComponent<ClientAssetLibraryAppComponent>();
+					const auto& pbrMat = clientAsset.GetMaterial("PBRMaterial");
+
+					auto matInstance = pbrMat->Instantiate();
+					matInstance->ApplyPreset(presetFlags);
+
+					return matInstance;
+				}
+				else
+					return Nz::MaterialInstance::Instantiate(matType, presetFlags);
 			})
 		);
 	}
@@ -167,7 +248,7 @@ namespace tsom
 		state.new_usertype<nzsl::ShaderStageTypeFlags>("ShaderStageType",
 			sol::no_constructor,
 
-			"Compute", sol::var(nzsl::ShaderStageTypeFlags(nzsl::ShaderStageType::Compute)),
+			"Compute",  sol::var(nzsl::ShaderStageTypeFlags(nzsl::ShaderStageType::Compute)),
 			"Fragment", sol::var(nzsl::ShaderStageTypeFlags(nzsl::ShaderStageType::Fragment)),
 			"Vertex",   sol::var(nzsl::ShaderStageTypeFlags(nzsl::ShaderStageType::Vertex)),
 
@@ -182,7 +263,10 @@ namespace tsom
 			}),
 			"AddPass", LuaFunction([](Nz::MaterialSettings& settings, std::string_view passName, sol::stack_table passParameters)
 			{
+				auto& renderQueueRegistry = Nz::Graphics::Instance()->GetRenderQueueRegistry();
+
 				Nz::MaterialPass pass;
+				pass.renderQueue = renderQueueRegistry.GetIndex(passParameters.get_or<std::string_view>("renderQueue", "ForwardOpaque"));
 				pass.flags = passParameters.get_or("flags", pass.flags);
 				pass.states = passParameters.get_or("states", pass.states);
 
@@ -216,21 +300,9 @@ namespace tsom
 		state.new_usertype<Nz::Model>("Model",
 			sol::no_constructor,
 			sol::base_classes, sol::bases<Nz::InstancedRenderable>(),
+			"BuildFromMesh", LuaFunction(&Nz::Model::BuildFromMesh),
+			"Clone", LuaFunction(&Nz::Model::Clone),
 			"SetMaterial", LuaFunction(&Nz::Model::SetMaterial),
-			"BuildFromMesh", LuaFunction([](const Nz::Mesh& mesh)
-			{
-				std::shared_ptr<Nz::Model> model = Nz::Model::BuildFromMesh(mesh);
-
-				// Fix reverse-depth
-				std::size_t materialCount = model->GetMaterialCount();
-				for (std::size_t i = 0; i < materialCount; ++i)
-				{
-					const auto& matPtr = model->GetMaterial(i);
-					matPtr->ApplyPreset(Nz::MaterialInstancePreset::ReverseZ);
-				}
-
-				return model;
-			}),
 			"UpdateRenderLayer", LuaFunction(&Nz::Model::UpdateRenderLayer),
 			"Load", LuaFunction([this](std::string assetPath, sol::optional<sol::table> paramOpt)
 			{
@@ -289,6 +361,11 @@ namespace tsom
 			"Point", Nz::FaceFilling::Point
 		);
 
+		state.new_enum("FrontFace",
+			"Clockwise", Nz::FrontFace::Clockwise,
+			"CounterClockwise", Nz::FrontFace::CounterClockwise
+		);
+
 		state.new_usertype<Nz::RenderStates>("RenderStates",
 			sol::meta_function::construct, LuaFunction([]
 			{
@@ -299,6 +376,7 @@ namespace tsom
 			}),
 			"faceCulling", &Nz::RenderStates::faceCulling,
 			"faceFilling", &Nz::RenderStates::faceFilling,
+			"frontFace",   &Nz::RenderStates::frontFace,
 
 			"blending",    &Nz::RenderStates::blending,
 			"depthBias",   &Nz::RenderStates::depthBias,

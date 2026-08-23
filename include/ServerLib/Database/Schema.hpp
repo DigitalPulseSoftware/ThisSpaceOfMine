@@ -37,6 +37,7 @@ namespace tsom::Database
 		Nz::Vector3i32 position;
 		Nz::UInt32 version;
 		std::span<const Nz::UInt8> chunkData;
+		bool cacheState;
 	};
 
 	struct PlanetEntityPartial
@@ -53,6 +54,16 @@ namespace tsom::Database
 		Nz::Uuid uniqueId;
 		Nz::UInt32 planetId;
 		std::string_view className;
+	};
+
+	struct PlanetGeneratorCache
+	{
+		std::string generatorName;
+		std::string generatorHash;
+		Nz::UInt32 seed;
+		Nz::Vector3i32 chunkIndices;
+		Nz::UInt32 chunkDataVersion;
+		std::span<const Nz::UInt8> chunkData;
 	};
 
 	struct PlanetLink

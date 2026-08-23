@@ -115,7 +115,7 @@ namespace tsom
 		return m_players.RetrieveFromIndex(playerIndex);
 	}
 
-	inline ServerDatabase& ServerInstance::GetServerDatabase()
+	inline ServerDatabase& ServerInstance::GetThreadServerDatabase()
 	{
 		return m_serverDatabase.GetOrCreate(m_application, m_config.databaseFile);
 	}

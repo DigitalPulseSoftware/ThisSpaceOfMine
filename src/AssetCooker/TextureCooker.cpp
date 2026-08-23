@@ -12,11 +12,15 @@
 
 namespace nlohmann
 {
-	NLOHMANN_JSON_SERIALIZE_ENUM(tsom::TextureCooker::ChannelSource, {
-		{tsom::TextureCooker::ChannelSource::Red, "Red"},
-		{tsom::TextureCooker::ChannelSource::Green, "Green"},
-		{tsom::TextureCooker::ChannelSource::Blue, "Blue"},
-		{tsom::TextureCooker::ChannelSource::Alpha, "Alpha"}
+	NLOHMANN_JSON_SERIALIZE_ENUM(tsom::TextureCooker::SourceChannel, {
+		{tsom::TextureCooker::SourceChannel::Red, "Red"},
+		{tsom::TextureCooker::SourceChannel::InvRed, "InvRed"},
+		{tsom::TextureCooker::SourceChannel::Green, "Green"},
+		{tsom::TextureCooker::SourceChannel::InvGreen, "InvGreen"},
+		{tsom::TextureCooker::SourceChannel::Blue, "Blue"},
+		{tsom::TextureCooker::SourceChannel::InvBlue, "InvBlue"},
+		{tsom::TextureCooker::SourceChannel::Alpha, "Alpha"},
+		{tsom::TextureCooker::SourceChannel::InvAlpha, "InvAlpha"},
 	});
 
 	NLOHMANN_JSON_SERIALIZE_ENUM(tsom::TextureCooker::TextureType, {
@@ -29,17 +33,50 @@ namespace nlohmann
 
 namespace tsom
 {
+	namespace
+	{
+		struct TextureChannelData
+		{
+			Nz::UInt32 channelIndex;
+			bool inversed;
+		};
+
+		constexpr Nz::EnumArray<TextureCooker::SourceChannel, TextureChannelData> s_textureChannelData = {
+			TextureChannelData { 0, false },
+			TextureChannelData { 0, true },
+			TextureChannelData { 1, false },
+			TextureChannelData { 1, true },
+			TextureChannelData { 2, false },
+			TextureChannelData { 2, true },
+			TextureChannelData { 3, false },
+			TextureChannelData { 3, true },
+		};
+	}
+
 	TextureCooker::TextureCooker(const std::filesystem::path& inputDir, const std::filesystem::path& outputDir, const nlohmann::json& doc) :
-	m_inputFile(inputDir / Nz::Utf8Path(doc.at("input").get<std::string>())),
 	m_outputFile(outputDir / Nz::Utf8Path(doc.at("output").get<std::string>())),
 	m_compress(doc.value("compress", true)),
 	m_generateMipmaps(doc.value("generateMipmaps", true)),
 	m_textureType(doc.value("type", TextureType::Color))
 	{
-		m_channelSources[0] = doc.value("channel0", ChannelSource::Red);
-		m_channelSources[1] = doc.value("channel1", ChannelSource::Green);
-		m_channelSources[2] = doc.value("channel2", ChannelSource::Blue);
-		m_channelSources[3] = doc.value("channel3", ChannelSource::Alpha);
+		if (auto it = doc.find("inputs"); it != doc.end())
+		{
+			const nlohmann::json& inputs = *it;
+			for (std::size_t i = 0; i < inputs.size(); ++i)
+				m_inputFiles[i] = inputDir / Nz::Utf8Path(inputs[i].get<std::string>());
+		}
+		else
+			m_inputFiles[0] = inputDir / Nz::Utf8Path(doc.at("input").get<std::string>());
+
+		m_sourceChannel[0] = doc.value("channel0", SourceChannel::Red);
+		m_sourceChannel[1] = doc.value("channel1", SourceChannel::Green);
+		m_sourceChannel[2] = doc.value("channel2", SourceChannel::Blue);
+		m_sourceChannel[3] = doc.value("channel3", SourceChannel::Alpha);
+
+		m_sourceTexture[0] = doc.value("channelSourceTexture0", 0);
+		m_sourceTexture[1] = doc.value("channelSourceTexture1", 0);
+		m_sourceTexture[2] = doc.value("channelSourceTexture2", 0);
+		m_sourceTexture[3] = doc.value("channelSourceTexture3", 0);
 	}
 
 	void TextureCooker::Cook(Nz::TaskScheduler& taskScheduler)
@@ -57,7 +94,11 @@ namespace tsom
 				return;
 			}
 
-			bool noSwizzling = m_channelSources[0] == ChannelSource::Red && m_channelSources[1] == ChannelSource::Green && m_channelSources[2] == ChannelSource::Blue && m_channelSources[3] == ChannelSource::Alpha;
+			bool noSwizzling =
+				s_textureChannelData[m_sourceChannel[0]].channelIndex == 0 &&
+				s_textureChannelData[m_sourceChannel[1]].channelIndex == 1 &&
+				s_textureChannelData[m_sourceChannel[2]].channelIndex == 2 &&
+				s_textureChannelData[m_sourceChannel[3]].channelIndex == 3;
 
 			Nz::ImageParams imageParams;
 			switch (m_textureType)
@@ -79,51 +120,89 @@ namespace tsom
 					break;
 			}
 
-			std::shared_ptr<Nz::Image> inputImage = Nz::Image::LoadFromFile(m_inputFile, imageParams);
-			if (!inputImage)
+			std::array<std::shared_ptr<Nz::Image>, 4> inputImages;
+			for (std::size_t i = 0; i < inputImages.size(); ++i)
 			{
-				spdlog::error("failed to load image from {}", Nz::PathToString(m_inputFile));
-				return;
+				if (m_inputFiles[i].empty())
+					continue;
+
+				inputImages[i] = Nz::Image::LoadFromFile(m_inputFiles[i], imageParams);
+				if (!inputImages[i])
+				{
+					spdlog::error("failed to load image from {}", Nz::PathToString(m_inputFiles[i]));
+					return;
+				}
 			}
+
+			Nz::UInt32 width = inputImages[0]->GetWidth();
+			Nz::UInt32 height = inputImages[0]->GetHeight();
+			Nz::UInt8 bpp = Nz::PixelFormatInfo::GetBytesPerPixel(inputImages[0]->GetFormat());
+
+			for (std::size_t i = 0; i < m_sourceTexture.size(); ++i)
+			{
+				Nz::UInt32 imageIndex = m_sourceTexture[i];
+				if (!inputImages[imageIndex])
+				{
+					spdlog::error("channel references texture #{} that's not valid", imageIndex);
+					return;
+				}
+
+				if (inputImages[imageIndex]->GetWidth() != width && inputImages[imageIndex]->GetHeight() != height)
+				{
+					spdlog::error("texture #{} don't match texture #0 dimensions", imageIndex);
+					return;
+				}
+
+				if (inputImages[imageIndex]->GetFormat() != inputImages[0]->GetFormat())
+				{
+					spdlog::error("texture #{} don't match texture #0 format", imageIndex);
+					return;
+				}
+			}
+
+			std::array<const Nz::UInt8*, 4> imagePixels;
+			for (std::size_t i = 0; i < inputImages.size(); ++i)
+				imagePixels[i] = inputImages[i] ? inputImages[i]->GetConstPixels() : nullptr;
+
+			std::array<const Nz::UInt8*, 4> sourcePixels;
+			for (std::size_t i = 0; i < sourcePixels.size(); ++i)
+				sourcePixels[i] = imagePixels[m_sourceTexture[i]];
 
 			Nz::Image cookedImage;
 			switch (m_textureType)
 			{
 				case TextureType::Color:
 				{
-					if (noSwizzling)
+					if (noSwizzling && m_sourceTexture[0] == 0 && m_sourceTexture[1] == 0 && m_sourceTexture[2] == 0 && m_sourceTexture[3] == 0)
 					{
 						// Image is already good
-						cookedImage = std::move(*inputImage);
-						inputImage.reset();
+						cookedImage = std::move(*inputImages[0]);
+						inputImages[0].reset();
 						break;
 					}
 
 					// Apply swizzling
-					Nz::UInt32 width = inputImage->GetWidth();
-					Nz::UInt32 height = inputImage->GetHeight();
 					cookedImage.Create(Nz::ImageType::E2D, Nz::PixelFormat::RGBA8, width, height);
 
-					const Nz::UInt8* sourcePixels = inputImage->GetConstPixels();
 					Nz::UInt8* cookedPixels = cookedImage.GetPixels();
-					Nz::UInt8 bpp = Nz::PixelFormatInfo::GetBytesPerPixel(inputImage->GetFormat());
 
-					Nz::UInt32 channelR = Nz::UnderlyingCast(m_channelSources[0]);
-					Nz::UInt32 channelG = Nz::UnderlyingCast(m_channelSources[1]);
-					Nz::UInt32 channelB = Nz::UnderlyingCast(m_channelSources[2]);
-					Nz::UInt32 channelA = Nz::UnderlyingCast(m_channelSources[3]);
+					auto [channelRIndex, channelRInv] = s_textureChannelData[m_sourceChannel[0]];
+					auto [channelGIndex, channelGInv] = s_textureChannelData[m_sourceChannel[1]];
+					auto [channelBIndex, channelBInv] = s_textureChannelData[m_sourceChannel[2]];
+					auto [channelAIndex, channelAInv] = s_textureChannelData[m_sourceChannel[3]];
 
 					for (std::size_t y = 0; y < height; ++y)
 					{
 						for (std::size_t x = 0; x < width; ++x)
 						{
-							cookedPixels[0] = sourcePixels[channelR];
-							cookedPixels[1] = sourcePixels[channelG];
-							cookedPixels[2] = sourcePixels[channelB];
-							cookedPixels[3] = sourcePixels[channelA];
-
-							sourcePixels += bpp;
+							cookedPixels[0] = (channelRInv) ? 0xFF - sourcePixels[0][channelRIndex] : sourcePixels[0][channelRIndex];
+							cookedPixels[1] = (channelGInv) ? 0xFF - sourcePixels[1][channelGIndex] : sourcePixels[1][channelGIndex];
+							cookedPixels[2] = (channelBInv) ? 0xFF - sourcePixels[2][channelBIndex] : sourcePixels[2][channelBIndex];
+							cookedPixels[3] = (channelAInv) ? 0xFF - sourcePixels[3][channelAIndex] : sourcePixels[3][channelAIndex];
 							cookedPixels += 4;
+
+							for (std::size_t i = 0; i < sourcePixels.size(); ++i)
+								sourcePixels[i] += bpp;
 						}
 					}
 
@@ -132,31 +211,29 @@ namespace tsom
 
 				case TextureType::Greyscale:
 				{
-					if (noSwizzling)
+					if (noSwizzling && m_sourceTexture[0] == 0)
 					{
 						// Image is already good
-						cookedImage = std::move(*inputImage);
-						inputImage.reset();
+						cookedImage = std::move(*inputImages[0]);
+						inputImages[0].reset();
 						break;
 					}
 
 					// Apply swizzling
-					Nz::UInt32 width = inputImage->GetWidth();
-					Nz::UInt32 height = inputImage->GetHeight();
 					cookedImage.Create(Nz::ImageType::E2D, Nz::PixelFormat::R8, width, height);
 
-					const Nz::UInt8* sourcePixels = inputImage->GetConstPixels();
 					Nz::UInt8* cookedPixels = cookedImage.GetPixels();
-					Nz::UInt8 bpp = Nz::PixelFormatInfo::GetBytesPerPixel(inputImage->GetFormat());
 
-					Nz::UInt32 channelR = Nz::UnderlyingCast(m_channelSources[0]);
+					auto [channelRIndex, channelRInv] = s_textureChannelData[m_sourceChannel[0]];
 
 					for (std::size_t y = 0; y < height; ++y)
 					{
 						for (std::size_t x = 0; x < width; ++x)
 						{
-							*cookedPixels++ = sourcePixels[channelR];
-							sourcePixels += bpp;
+							*cookedPixels++ = (channelRInv) ? 0xFF - sourcePixels[0][channelRIndex] : sourcePixels[0][channelRIndex];
+
+							for (std::size_t i = 0; i < sourcePixels.size(); ++i)
+								sourcePixels[i] += bpp;
 						}
 					}
 					break;
@@ -164,35 +241,32 @@ namespace tsom
 
 				case TextureType::BiGreyscale:
 				{
-					if (noSwizzling)
+					if (noSwizzling && m_sourceTexture[0] == 0 && m_sourceTexture[1] == 0)
 					{
 						// Image is already good
-						cookedImage = std::move(*inputImage);
-						inputImage.reset();
+						cookedImage = std::move(*inputImages[0]);
+						inputImages[0].reset();
 						break;
 					}
 
 					// Apply swizzling
-					Nz::UInt32 width = inputImage->GetWidth();
-					Nz::UInt32 height = inputImage->GetHeight();
 					cookedImage.Create(Nz::ImageType::E2D, Nz::PixelFormat::RG8, width, height);
 
-					const Nz::UInt8* sourcePixels = inputImage->GetConstPixels();
 					Nz::UInt8* cookedPixels = cookedImage.GetPixels();
-					Nz::UInt8 bpp = Nz::PixelFormatInfo::GetBytesPerPixel(inputImage->GetFormat());
 
-					Nz::UInt32 channelR = Nz::UnderlyingCast(m_channelSources[0]);
-					Nz::UInt32 channelG = Nz::UnderlyingCast(m_channelSources[1]);
+					auto [channelRIndex, channelRInv] = s_textureChannelData[m_sourceChannel[0]];
+					auto [channelGIndex, channelGInv] = s_textureChannelData[m_sourceChannel[1]];
 
 					for (std::size_t y = 0; y < height; ++y)
 					{
 						for (std::size_t x = 0; x < width; ++x)
 						{
-							cookedPixels[0] = sourcePixels[channelR];
-							cookedPixels[1] = sourcePixels[channelG];
-
+							cookedPixels[0] = (channelRInv) ? 0xFF - sourcePixels[0][channelRIndex] : sourcePixels[0][channelRIndex];
+							cookedPixels[1] = (channelGInv) ? 0xFF - sourcePixels[1][channelGIndex] : sourcePixels[1][channelGIndex];
 							cookedPixels += 2;
-							sourcePixels += bpp;
+
+							for (std::size_t i = 0; i < sourcePixels.size(); ++i)
+								sourcePixels[i] += bpp;
 						}
 					}
 					break;
@@ -200,30 +274,28 @@ namespace tsom
 
 				case TextureType::Normal:
 				{
-					Nz::UInt32 width = inputImage->GetWidth();
-					Nz::UInt32 height = inputImage->GetHeight();
 					cookedImage.Create(Nz::ImageType::E2D, Nz::PixelFormat::RG8, width, height);
 
-					const Nz::UInt8* sourcePixels = inputImage->GetConstPixels();
 					Nz::UInt8* cookedPixels = cookedImage.GetPixels();
-					Nz::UInt8 bpp = Nz::PixelFormatInfo::GetBytesPerPixel(inputImage->GetFormat());
 
-					Nz::UInt32 channel0 = Nz::UnderlyingCast(m_channelSources[0]);
-					Nz::UInt32 channel1 = Nz::UnderlyingCast(m_channelSources[1]);
-					Nz::UInt32 channel2 = Nz::UnderlyingCast(m_channelSources[2]);
+					auto [channel0Index, channel0Inv] = s_textureChannelData[m_sourceChannel[0]];
+					auto [channel1Index, channel1Inv] = s_textureChannelData[m_sourceChannel[1]];
+					auto [channel2Index, channel2Inv] = s_textureChannelData[m_sourceChannel[2]];
 
 					for (std::size_t y = 0; y < height; ++y)
 					{
 						for (std::size_t x = 0; x < width; ++x)
 						{
-							if (sourcePixels[channel2] < 127)
-								spdlog::warn("normal map pixel at ({};{}) has Z value < 127: {}", x, y, sourcePixels[2]);
+							Nz::UInt32 zValue = (channel2Inv) ? 0xFF - sourcePixels[2][channel2Index] : sourcePixels[2][channel2Index];
+							if (zValue < 127)
+								spdlog::warn("normal map pixel at ({};{}) has Z value < 127: {}", x, y, sourcePixels[2][2]);
 
-							cookedPixels[0] = sourcePixels[channel0];
-							cookedPixels[1] = sourcePixels[channel1];
-
-							sourcePixels += bpp;
+							cookedPixels[0] = (channel0Inv) ? 0xFF - sourcePixels[0][channel0Index] : sourcePixels[0][channel0Index];
+							cookedPixels[1] = (channel1Inv) ? 0xFF - sourcePixels[1][channel1Index] : sourcePixels[1][channel1Index];
 							cookedPixels += 2;
+
+							for (std::size_t i = 0; i < sourcePixels.size(); ++i)
+								sourcePixels[i] += bpp;
 						}
 					}
 					break;
@@ -269,7 +341,12 @@ namespace tsom
 
 	auto TextureCooker::GetInputFiles() const -> InputFileList
 	{
-		return { m_inputFile };
+		InputFileList inputFiles { m_inputFiles[0] };
+		for (std::size_t i = 1; i < 4; ++i)
+		if (!m_inputFiles[i].empty())
+			inputFiles.push_back(m_inputFiles[i]);
+
+		return inputFiles;
 	}
 
 	auto TextureCooker::GetOutputFiles() const -> OutputFileList

@@ -9,6 +9,7 @@
 #include <CommonLib/Ship.hpp>
 #include <CommonLib/ShipController.hpp>
 #include <CommonLib/Components/BuoyancyComponent.hpp>
+#include <ServerLib/ServerCharacterController.hpp>
 #include <ServerLib/ServerPlayer.hpp>
 #include <ServerLib/ServerShipEnvironment.hpp>
 #include <ServerLib/Components/AtmosphereExchanger.hpp>
@@ -61,6 +62,7 @@ namespace tsom
 					auto& playerControlled = playerEntity.get<ServerPlayerControlledComponent>();
 					playerControlled.GetPlayer()->ExitPiloting();
 
+					ClassInstanceComponent::TriggerDestructionCallback(playerEntity);
 					playerEntity.destroy();
 				}
 			}
@@ -123,6 +125,8 @@ namespace tsom
 			auto& characterController = player->GetCharacterController();
 			characterController->SetGravityController(newEnvironment->GetGravityController());
 			characterController->RotateInstantaneously(envTransform.rotation);
+
+			Nz::SafeCast<ServerCharacterController&>(*characterController).UpdateEnvironment(newEnvironment);
 
 			Nz::PhysCharacter3DComponent::Settings characterSettings;
 			characterSettings.collider = previousCharacter.GetCollider();

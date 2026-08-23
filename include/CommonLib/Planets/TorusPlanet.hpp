@@ -15,7 +15,7 @@ namespace tsom
 	class TSOM_COMMONLIB_API TorusPlanet final : public Planet
 	{
 		public:
-			inline TorusPlanet(Nz::ApplicationBase& app, float blockSize, Nz::UInt32 seed, float gravity, float radius, float thickness);
+			inline TorusPlanet(Nz::ApplicationBase& app, const BlockLibrary& blockLibrary, float blockSize, Nz::UInt32 seed, float gravity, float radius, float thickness);
 
 			GravityForce ComputeGravity(const Nz::Vector3f& position) const override;
 			Nz::Vector3f ComputeUpDirection(const Nz::Vector3f& position) const;

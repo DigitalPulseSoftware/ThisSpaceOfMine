@@ -48,6 +48,8 @@ namespace tsom
 	{
 		state.new_usertype<Chunk>("Chunk",
 			sol::no_constructor,
+			"BeginBatchUpdate", LuaFunction(&Chunk::BeginBatchUpdate),
+			"ComputeCoordinates", LuaFunction(&Chunk::ComputeCoordinates),
 			"ComputeHitCoordinates", LuaFunction([](const Chunk& chunk, const Nz::Vector3f& hitPos, const Nz::Vector3f& hitNormal, const Nz::Collider3D& collider, std::uint32_t hitSubshapeId, sol::this_state L) -> sol::optional<sol::table>
 			{
 				auto hitBlock = chunk.ComputeHitCoordinates(hitPos, hitNormal, collider, hitSubshapeId);
@@ -60,14 +62,11 @@ namespace tsom
 					"blockIndices", hitBlock->blockIndices
 				);
 			}),
+			"EndBatchUpdate", LuaFunction(&Chunk::EndBatchUpdate),
 			"GetBlockCenterPosition", LuaFunction([](const Chunk& chunk, const Nz::Vector3ui& blockIndices)
 			{
 				Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> corners = chunk.ComputeBlockCorners(blockIndices);
 				return std::accumulate(corners.begin(), corners.end(), Nz::Vector3f::Zero()) / corners.size();
-			}),
-			"GetBlockLibrary", LuaFunction([](const Chunk& chunk)
-			{
-				return &chunk.GetBlockLibrary();
 			}),
 			"GetBlockContent", sol::overload(
 				LuaFunction(Nz::Overload<unsigned int>(&Chunk::GetBlockContent)),
@@ -88,7 +87,7 @@ namespace tsom
 			{
 				sol::state_view state(L);
 
-				auto& blockLibrary = chunk.GetBlockLibrary();
+				auto& blockLibrary = chunk.GetContainer().GetBlockLibrary();
 
 				unsigned int blockCount = chunk.GetBlockCount();
 				sol::table contentTable = state.create_table(blockCount);
@@ -106,7 +105,7 @@ namespace tsom
 				if (contentSize != blockCount)
 					spdlog::error("Chunk:Reset called with a table containing {} entries, {} expected", contentSize, blockCount);
 
-				auto& blockLibrary = chunk.GetBlockLibrary();
+				auto& blockLibrary = chunk.GetContainer().GetBlockLibrary();
 
 				chunk.Reset([&](BlockIndex* blockIndexPtr)
 				{
@@ -140,6 +139,10 @@ namespace tsom
 		state.new_usertype<ChunkContainer>("ChunkContainer",
 			sol::no_constructor,
 			"GetBlockIndices", LuaFunction(&ChunkContainer::GetBlockIndices),
+			"GetBlockLibrary", LuaFunction([](const ChunkContainer& chunkContainer)
+			{
+				return &chunkContainer.GetBlockLibrary();
+			}),
 			"GetCenterPosition", LuaFunction(&ChunkContainer::GetCenter),
 			"GetChunk", LuaFunction([](ChunkContainer& container, const ChunkIndices& chunkIndices)
 			{
@@ -152,6 +155,7 @@ namespace tsom
 				ChunkIndices chunkIndices = container.GetChunkIndicesByBlockIndices(blockIndices, &localIndices);
 				return std::make_pair(chunkIndices, localIndices);
 			}),
+			"GetChunkIndicesByPosition", LuaFunction(&ChunkContainer::GetChunkIndicesByPosition),
 			"GetChunkOffset", LuaFunction(&ChunkContainer::GetChunkOffset),
 			"GetTileSize", LuaFunction(&ChunkContainer::GetTileSize)
 		);

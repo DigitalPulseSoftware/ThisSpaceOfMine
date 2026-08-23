@@ -11,10 +11,10 @@
 
 namespace tsom::Config
 {
+	static constexpr auto Chunk_EnableCache = ConfigFile::BoolOptionName{ "Chunk.EnableCache" };
 	static constexpr auto ConnectionToken_EncryptionKey = ConfigFile::StringOptionName{ "ConnectionToken.EncryptionKey" };
 	static constexpr auto Database_Filename = ConfigFile::StringOptionName{ "Database.Filename" };
 	static constexpr auto Debug_EnableDrawer = ConfigFile::BoolOptionName{ "Debug.EnableDrawer" };
-	static constexpr auto Save_Directory = ConfigFile::StringOptionName{ "Save.Directory" };
 	static constexpr auto Save_Interval = ConfigFile::IntegerOptionName{ "Save.Interval" };
 	static constexpr auto Server_MaxStuckSeconds = ConfigFile::IntegerOptionName{ "Server.MaxStuckSeconds" };
 	static constexpr auto Server_Port = ConfigFile::IntegerOptionName{ "Server.Port" };

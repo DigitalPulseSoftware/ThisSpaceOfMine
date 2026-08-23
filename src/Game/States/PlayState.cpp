@@ -29,18 +29,14 @@ namespace tsom
 	WidgetState(stateData),
 	m_previousState(std::move(previousState))
 	{
-		auto& gameConfig = GetStateData().app->GetComponent<GameConfigAppComponent>().GetConfig();
-
-		bool devMode = gameConfig.GetBoolValue(Config::Api_DevMode);
-
 		m_layout = CreateWidget<Nz::BoxLayout>(Nz::BoxLayoutOrientation::TopToBottom);
 
 		m_createOrConnectButton = m_layout->Add<Nz::ButtonWidget>();
 		m_createOrConnectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Loading player info...", 30, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
 		m_createOrConnectButton->SetMaximumWidth(m_createOrConnectButton->GetPreferredWidth() * 1.5f);
-		ConnectSignal(m_createOrConnectButton->OnButtonTrigger, [this, devMode](const Nz::ButtonWidget*)
+		ConnectSignal(m_createOrConnectButton->OnButtonTrigger, [this](const Nz::ButtonWidget*)
 		{
-			OnCreateOrConnectPressed(devMode);
+			OnCreateOrConnectPressed();
 		});
 
 		m_directConnect = m_layout->Add<Nz::ButtonWidget>();
@@ -87,6 +83,12 @@ namespace tsom
 			m_directConnect->UpdateText(Nz::SimpleTextDrawer::Draw("Play as guest", 30, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
 			m_directConnect->SetMaximumWidth(m_directConnect->GetPreferredWidth() * 1.5f);
 			m_directConnect->Enable();
+
+			if (m_autoConnect)
+			{
+				m_nextState = std::make_shared<DirectConnectionState>(GetStateDataPtr(), shared_from_this());
+				m_autoConnect = false;
+			}
 		}
 
 		WidgetState::Enter(fsm);
@@ -94,12 +96,6 @@ namespace tsom
 
 	bool PlayState::Update(Nz::StateMachine& fsm, Nz::Time elapsedTime)
 	{
-		if (m_autoConnect)
-		{
-			m_nextState = std::make_shared<DirectConnectionState>(GetStateDataPtr(), shared_from_this());
-			m_autoConnect = false;
-		}
-
 		if (m_nextState)
 		{
 			fsm.ChangeState(std::move(m_nextState));
@@ -166,6 +162,9 @@ namespace tsom
 
 					playState->m_createOrConnectButton->UpdateText(Nz::SimpleTextDrawer::Draw(fmt::format("Play as {}{}", playerNickname, devMode ? " (DEV)" : ""), 36, Nz::TextStyle_Regular, Nz::Color::sRGBToLinear(Nz::Color(0.13f))));
 					playState->m_createOrConnectButton->Enable();
+
+					if (playState->m_autoConnect)
+						playState->OnCreateOrConnectPressed();
 				}
 				catch (const std::exception& e)
 				{
@@ -186,15 +185,16 @@ namespace tsom
 		m_layout->Center();
 	}
 
-	void PlayState::OnCreateOrConnectPressed(bool devMode)
+	void PlayState::OnCreateOrConnectPressed()
 	{
-		auto& gameConfig = GetStateData().app->GetComponent<GameConfigAppComponent>();
-		std::string_view playerToken = gameConfig.GetConfig().GetStringValue(Config::Player_Token);
+		auto& gameConfig = GetStateData().app->GetComponent<GameConfigAppComponent>().GetConfig();
+		std::string_view playerToken = gameConfig.GetStringValue(Config::Player_Token);
 
 		if (!playerToken.empty())
 		{
-			auto& gameConfig = GetStateData().app->GetComponent<GameConfigAppComponent>().GetConfig();
 			auto& webService = GetStateData().app->GetComponent<Nz::WebServiceAppComponent>();
+
+			bool devMode = gameConfig.GetBoolValue(Config::Api_DevMode);
 
 			webService.QueueRequest([&, devMode](Nz::WebRequest& request)
 			{

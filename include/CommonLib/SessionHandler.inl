@@ -29,17 +29,20 @@ namespace tsom
 					{
 						PacketType deserializedPacket;
 
-						PacketSerializer serializer(packet, false, sessionHandler.GetProtocolVersion());
-						try
+						if constexpr (!std::is_empty_v<PacketType>)
 						{
-							Nz::ErrorFlags errFlags(Nz::ErrorMode::Silent | Nz::ErrorMode::ThrowException);
-							Packets::Serialize(serializer, deserializedPacket);
-						}
-						catch (const std::exception&)
-						{
-							constexpr std::size_t packetIndex = Nz::TypeListFind<PacketTypes, PacketType>;
-							static_cast<Handler&>(sessionHandler).OnDeserializationError(packetIndex);
-							return;
+							PacketSerializer serializer(packet, false, sessionHandler.GetProtocolVersion());
+							try
+							{
+								Nz::ErrorFlags errFlags(Nz::ErrorMode::Silent | Nz::ErrorMode::ThrowException);
+								Packets::Serialize(serializer, deserializedPacket);
+							}
+							catch (const std::exception&)
+							{
+								constexpr std::size_t packetIndex = Nz::TypeListFind<PacketTypes, PacketType>;
+								static_cast<Handler&>(sessionHandler).OnDeserializationError(packetIndex);
+								return;
+							}
 						}
 
 						static_cast<Handler&>(sessionHandler).HandlePacket(std::move(deserializedPacket));

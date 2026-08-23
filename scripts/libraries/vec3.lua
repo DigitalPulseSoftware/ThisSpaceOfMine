@@ -1,4 +1,3 @@
-
 local Vec3Mt = CreateMetatable("vec3")
 Vec3Mt.__index = Vec3Mt
 
@@ -29,6 +28,10 @@ end
 
 function Vec3Mt:Minimize(vec)
     return Vec3(math.min(self.x, vec.x), math.min(self.y, vec.y), math.min(self.z, vec.z))
+end
+
+function Vec3Mt:__eq(vec)
+    return self.x == vec.x and self.y == vec.y and self.z == vec.z
 end
 
 function Vec3Mt:__add(vec)
@@ -77,3 +80,11 @@ function Vec3.Distance(vec1, vec2)
 end
 
 setmetatable(Vec3, Vec3ClassMt)
+
+Vec3.Backward = Vec3(0, 0, 1)
+Vec3.Down = Vec3(0, -1, 0)
+Vec3.Forward = Vec3(0, 0, -1)
+Vec3.Left = Vec3(-1, 0, 0)
+Vec3.Right = Vec3(1, 0, 0)
+Vec3.Up = Vec3(0, 1, 0)
+Vec3.Zero = Vec3(0, 0, 0)

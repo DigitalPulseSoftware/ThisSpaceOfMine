@@ -17,7 +17,6 @@ namespace tsom::Config
 	static constexpr auto Input_MouseSensitivity = ConfigFile::FloatOptionName{ "Input.MouseSensitivity" };
 	static constexpr auto Player_Token = ConfigFile::StringOptionName{ "Player.Token" };
 	static constexpr auto Server_Port = ConfigFile::IntegerOptionName{ "Server.Port" };
-	static constexpr auto Graphics_FPSLimit = ConfigFile::IntegerOptionName{ "Graphics.FPSLimit" };
 }
 
 #endif // TSOM_GAME_GAMECONFIGS_HPP

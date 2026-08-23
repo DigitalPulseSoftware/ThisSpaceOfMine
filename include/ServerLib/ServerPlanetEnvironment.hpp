@@ -41,6 +41,8 @@ namespace tsom
 			void ForEachAtmosphere(Nz::FunctionRef<void(ServerAtmosphere*)> callback) override;
 			void ForEachAtmosphere(Nz::FunctionRef<void(const ServerAtmosphere*)> callback) const override;
 
+			ChunkContainer& GetChunkContainer() override;
+			const ChunkContainer& GetChunkContainer() const override;
 			inline std::optional<Nz::UInt32> GetDatabaseId() const;
 			const GravityController* GetGravityController() const override;
 			Planet& GetPlanet();
@@ -66,7 +68,8 @@ namespace tsom
 				std::mutex mutex;
 				std::shared_ptr<Planet> planet;
 				tsl::hopscotch_map<ChunkIndices, bool> visitedChunks;
-				tsl::ordered_map<ChunkIndices, DirectionMask> remainingChunks;
+				std::unordered_set<ChunkIndices /*chunkIndex*/> generatedChunks;
+				std::vector<ChunkIndices> remainingChunks;
 
 				void HandleChunkLoaded(const ChunkIndices& chunkIndices, DirectionMask visibilityMask);
 			};
@@ -75,6 +78,7 @@ namespace tsom
 			std::filesystem::path m_savePath;
 			std::optional<Nz::UInt32> m_databaseId;
 			std::shared_ptr<ChunkLoadingData> m_chunkLoadingData;
+			std::string m_generatorHash;
 			std::string m_generatorName;
 			std::unordered_set<ChunkIndices /*chunkIndex*/> m_dirtyChunks;
 			std::unordered_map<std::string, EntityProperty> m_planetProperties;

@@ -6,7 +6,6 @@
 #include <ClientLib/ClientChunkEntities.hpp>
 #include <ClientLib/EscapeMenu.hpp>
 #include <ClientLib/RenderConstants.hpp>
-#include <ClientLib/Components/VisualEntityComponent.hpp>
 #include <ClientLib/Entities/ClientChunkClassLibrary.hpp>
 #include <ClientLib/Entities/ClientEntityClassLibrary.hpp>
 #include <CommonLib/SurfaceNetsChunk.hpp>
@@ -190,9 +189,8 @@ namespace tsom
 
 		m_planetParentEntity = stateData.world->CreateEntity();
 		m_planetParentEntity.emplace<Nz::NodeComponent>();
-		m_planetParentEntity.emplace<VisualEntityComponent>().visualEntity = m_planetParentEntity;
 
-		m_planet = std::make_unique<RoundCubePlanet>(*stateData.app, 0.5f, 0, 16.f, 9.81f);
+		m_planet = std::make_unique<RoundCubePlanet>(*stateData.app, *stateData.blockLibrary, 0.5f, 0, 16.f, 9.81f);
 		for (std::size_t layerIndex = 0; layerIndex < m_planetEntities.size(); ++layerIndex)
 		{
 			if (!stateData.blockLibrary->IsValidLayer(layerIndex))
@@ -480,7 +478,7 @@ namespace tsom
 		SurfaceNetsChunk::ResetTime();
 
 		m_planet->ClearChunks();
-		m_planet->AddChunks(*stateData.blockLibrary, m_planetSettings.chunkCount);
+		m_planet->AddChunks(m_planetSettings.chunkCount);
 		m_planet->GenerateChunks(taskScheduler, m_planetSettings.chunkCount, m_planetSettings.scriptName, m_planetSettings.properties);
 	}
 

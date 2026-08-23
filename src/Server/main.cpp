@@ -77,6 +77,7 @@ int ServerMain(int argc, char* argv[])
 	instanceConfig.pauseWhenEmpty = config.GetBoolValue(tsom::Config::Server_SleepWhenEmpty);
 	instanceConfig.saveInterval = Nz::Time::Seconds(config.GetIntegerValue<long long>(tsom::Config::Save_Interval));
 	instanceConfig.connectionTokenEncryptionKey = config.GetConnectionTokenEncryptionKey();
+	instanceConfig.enableChunkCache = config.GetBoolValue(tsom::Config::Chunk_EnableCache);
 	instanceConfig.enableDebugDrawer = config.GetBoolValue(tsom::Config::Debug_EnableDrawer);
 	instanceConfig.databaseFile = config.GetStringValue(tsom::Config::Database_Filename);
 
@@ -84,12 +85,10 @@ int ServerMain(int argc, char* argv[])
 	auto& sessionManager = instance.AddSessionManager(serverPort);
 	sessionManager.SetDefaultHandler<tsom::InitialSessionHandler>(std::ref(instance));
 
-	std::filesystem::path saveDirectory = Nz::Utf8Path(config.GetStringValue(tsom::Config::Save_Directory));
-
 	if (!std::filesystem::is_regular_file(instanceConfig.databaseFile))
 	{
 		// No save exists, create a default planet
-		auto& serverDatabase = instance.GetServerDatabase();
+		auto& serverDatabase = instance.GetThreadServerDatabase();
 		serverDatabase.StorePlanet({
 			.id = 1,
 			.generatorName = "bob",

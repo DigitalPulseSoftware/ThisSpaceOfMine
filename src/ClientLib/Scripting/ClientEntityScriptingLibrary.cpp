@@ -5,9 +5,10 @@
 #include <ClientLib/Scripting/ClientEntityScriptingLibrary.hpp>
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Components/ClientInteractibleComponent.hpp>
-#include <ClientLib/Components/VisualEntityComponent.hpp>
+#include <CommonLib/Components/DistributionComponent.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
 #include <Nazara/Graphics/PointLight.hpp>
+#include <Nazara/Graphics/SpotLight.hpp>
 #include <Nazara/Graphics/Components/GraphicsComponent.hpp>
 #include <Nazara/Graphics/Components/LightComponent.hpp>
 #include <NazaraUtils/FunctionTraits.hpp>
@@ -28,32 +29,10 @@ namespace tsom
 	{
 		constexpr auto s_clientComponents = frozen::make_unordered_map<frozen::string, SharedEntityScriptingLibrary::ComponentEntry>({
 			{
-				"graphics", SharedEntityScriptingLibrary::ComponentEntry{
-					.addComponent = [](sol::this_state L, entt::handle entity, sol::optional<sol::table> parametersOpt)
-					{
-						auto& visualEntityComp = entity.get<VisualEntityComponent>();
-						return sol::make_object(L, &visualEntityComp.visualEntity.emplace<Nz::GraphicsComponent>());
-					},
-					.getComponent = [](sol::this_state L, entt::handle entity)
-					{
-						auto& visualEntityComp = entity.get<VisualEntityComponent>();
-						return sol::make_object(L, &visualEntityComp.visualEntity.get<Nz::GraphicsComponent>());
-					}
-				}
+				"graphics", SharedEntityScriptingLibrary::ComponentEntry::Default<Nz::GraphicsComponent>()
 			},
 			{
-				"light", SharedEntityScriptingLibrary::ComponentEntry{
-					.addComponent = [](sol::this_state L, entt::handle entity, sol::optional<sol::table> parametersOpt)
-					{
-						auto& visualEntityComp = entity.get<VisualEntityComponent>();
-						return sol::make_object(L, &visualEntityComp.visualEntity.emplace<Nz::LightComponent>());
-					},
-					.getComponent = [](sol::this_state L, entt::handle entity)
-					{
-						auto& visualEntityComp = entity.get<VisualEntityComponent>();
-						return sol::make_object(L, &visualEntityComp.visualEntity.get<Nz::LightComponent>());
-					}
-				}
+				"light", SharedEntityScriptingLibrary::ComponentEntry::Default<Nz::LightComponent>()
 			}
 		});
 	}
@@ -117,16 +96,46 @@ namespace tsom
 
 		state.new_usertype<Nz::LightComponent>("LightComponent",
 			sol::no_constructor,
-			"AddPointLight", LuaFunction([](Nz::LightComponent& lightComponent)
+			"AddPointLight", LuaFunction([](Nz::LightComponent& lightComponent, sol::stack_table lightParameters)
 			{
 				auto& pointLight = lightComponent.AddLight<Nz::PointLight>();
-				pointLight.UpdateEnergy(20.f);
+				pointLight.UpdateColor(lightParameters.get_or("Color", Nz::Color::White()));
+				pointLight.UpdateEnergy(lightParameters.get_or("Energy", 5.f));
 			}),
+			"AddSpotLight", LuaFunction([](Nz::LightComponent& lightComponent, sol::stack_table lightParameters)
+			{
+				auto& spotLight = lightComponent.AddLight<Nz::SpotLight>();
+				spotLight.UpdateAngles(Nz::DegreeAnglef(lightParameters.get_or("InnerAngle", 45.f)), Nz::DegreeAnglef(lightParameters.get_or("OuterAngle", 60.f)));
+				spotLight.UpdateColor(lightParameters.get_or("Color", Nz::Color::White()));
+				spotLight.UpdateEnergy(lightParameters.get_or("Energy", 5.f));
+				spotLight.UpdateRadius(lightParameters.get_or("Radius", 10.f));
+			}),
+			"Clear", LuaFunction(&Nz::LightComponent::Clear),
 			"Hide", LuaFunction(&Nz::LightComponent::Hide),
 			"Show", sol::overload(
 				LuaFunction([](Nz::LightComponent& lightComponent) { lightComponent.Show(); }),
 				LuaFunction(&Nz::LightComponent::Show)
 			)
+		);
+
+		state.new_usertype<DistributionComponent>("DistributionComponent",
+			sol::no_constructor,
+			"GetInputConnectedEntity", LuaFunction([&](DistributionComponent& component, std::size_t outputIndex, sol::this_state L)
+			{
+				sol::state_view state(L);
+				return ToEntityTable(state, component.GetInputConnectedEntity(outputIndex));
+			}),
+			"GetInputConnectedPort", LuaFunction(&DistributionComponent::GetInputConnectedPort),
+			"GetInputCount", LuaFunction(&DistributionComponent::GetInputCount),
+			"GetOutputConnectedEntity", LuaFunction([&](DistributionComponent& component, std::size_t outputIndex, sol::this_state L)
+			{
+				sol::state_view state(L);
+				return ToEntityTable(state, component.GetOutputConnectedEntity(outputIndex));
+			}),
+			"GetOutputConnectedPort", LuaFunction(&DistributionComponent::GetOutputConnectedPort),
+			"GetOutputCount", LuaFunction(&DistributionComponent::GetOutputCount),
+			"IsInputConnected", LuaFunction(&DistributionComponent::IsInputConnected),
+			"IsOutputConnected", LuaFunction(&DistributionComponent::IsOutputConnected)
 		);
 	}
 

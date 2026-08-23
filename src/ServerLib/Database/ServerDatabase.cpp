@@ -6,6 +6,7 @@
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <NazaraUtils/CallOnExit.hpp>
+#include <sqlite3.h>
 #include <SQLiteCpp/Transaction.h>
 #include <spdlog/spdlog.h>
 #include <tsl/hopscotch_set.h>
@@ -18,9 +19,9 @@ namespace tsom
 	getAllPlanetQuery(database, "SELECT id, generator, chunk_count_x, chunk_count_y, chunk_count_z, type, properties FROM planets"),
 	storePlanetQuery(database, "REPLACE INTO planets(id, generator, chunk_count_x, chunk_count_y, chunk_count_z, type, properties) VALUES(?, ?, ?, ?, ?, ?, ?)"),
 	deletePlanetChunkQuery(database, "DELETE FROM planet_chunks WHERE planet_id = ? AND position_x = ? AND position_y = ? AND position_z = ?"),
-	getAllPlanetChunksQuery(database, "SELECT position_x, position_y, position_z, version, chunk_data FROM planet_chunks WHERE planet_id = ?"),
-	getPlanetChunkQuery(database, "SELECT version, chunk_data FROM planet_chunks WHERE planet_id = ? AND position_x = ? AND position_y = ? AND position_z = ?"),
-	storePlanetChunkQuery(database, "REPLACE INTO planet_chunks(planet_id, position_x, position_y, position_z, version, chunk_data, last_update) VALUES(?, ?, ?, ?, ?, ?, datetime())"),
+	getAllPlanetChunksQuery(database, "SELECT position_x, position_y, position_z, version, chunk_data, cache_state FROM planet_chunks WHERE planet_id = ?"),
+	getPlanetChunkQuery(database, "SELECT version, chunk_data, cache_state FROM planet_chunks WHERE planet_id = ? AND position_x = ? AND position_y = ? AND position_z = ?"),
+	storePlanetChunkQuery(database, "REPLACE INTO planet_chunks(planet_id, position_x, position_y, position_z, version, chunk_data, cache_state, last_update) VALUES(?, ?, ?, ?, ?, ?, ?, datetime())"),
 	createPlanetEntityQuery(database, "INSERT INTO planet_entities(unique_id, planet_id, class_name, class_version, position_x, position_y, position_z, rotation_x, rotation_y, rotation_z, rotation_w, properties, last_update) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime()) RETURNING id"),
 	deletePlanetEntityQuery(database, "DELETE FROM planet_entities WHERE id = ?"),
 	getAllPlanetEntitiesQuery(database, "SELECT id, unique_id, class_name, class_version, position_x, position_y, position_z, rotation_x, rotation_y, rotation_z, rotation_w, properties FROM planet_entities WHERE planet_id = ?"),
@@ -203,6 +204,8 @@ namespace tsom
 			const Nz::UInt8* chunkData = static_cast<const Nz::UInt8*>(column.getBlob());
 			planetChunk.chunkData = std::span(chunkData, chunkData + column.getBytes());
 
+			planetChunk.cacheState = m_preparedStatements->getAllPlanetChunksQuery.getColumn(5).getInt() != 0;
+
 			if (!callback(std::move(planetChunk)))
 				break;
 		}
@@ -216,8 +219,24 @@ namespace tsom
 		m_preparedStatements->getPlanetChunkQuery.bind(3, chunkIndices.y);
 		m_preparedStatements->getPlanetChunkQuery.bind(4, chunkIndices.z);
 
-		if (!m_preparedStatements->getPlanetChunkQuery.executeStep())
+		int resultCode;
+		for (;;)
+		{
+			resultCode = m_preparedStatements->getPlanetChunkQuery.tryExecuteStep();
+			if (resultCode != SQLITE_BUSY)
+				break;
+
+			std::this_thread::yield();
+		}
+
+		if (resultCode == SQLITE_DONE)
+			return false; //< row doesn't exist
+
+		if (resultCode != SQLITE_ROW)
+		{
+			spdlog::error("getPlanetChunkQuery query failed: {} (error code: {})", m_database.getErrorMsg(), resultCode);
 			return false;
+		}
 
 		Database::PlanetChunk planetChunk;
 		planetChunk.planetId = planetId;
@@ -229,6 +248,8 @@ namespace tsom
 		SQLite::Column column = m_preparedStatements->getPlanetChunkQuery.getColumn(1);
 		const Nz::UInt8* chunkData = static_cast<const Nz::UInt8*>(column.getBlob());
 		planetChunk.chunkData = std::span(chunkData, chunkData + column.getBytes());
+
+		planetChunk.cacheState = m_preparedStatements->getPlanetChunkQuery.getColumn(2).getInt() != 0;
 
 		callback(std::move(planetChunk));
 		return true;
@@ -335,7 +356,16 @@ namespace tsom
 
 	void ServerDatabase::StorePlanetChunk(const Database::PlanetChunk& planetChunk)
 	{
-		NAZARA_DEFER({ m_preparedStatements->storePlanetChunkQuery.reset(); });
+		NAZARA_DEFER({
+			try
+			{
+				m_preparedStatements->storePlanetChunkQuery.reset();
+			}
+			catch (const SQLite::Exception& e)
+			{
+				spdlog::error("store planet chunk query failed: {} (error code: {})", e.getErrorStr(), e.getErrorCode());
+			}
+		});
 
 		m_preparedStatements->storePlanetChunkQuery.bind(1, planetChunk.planetId);
 		m_preparedStatements->storePlanetChunkQuery.bind(2, planetChunk.position.x);
@@ -343,15 +373,20 @@ namespace tsom
 		m_preparedStatements->storePlanetChunkQuery.bind(4, planetChunk.position.z);
 		m_preparedStatements->storePlanetChunkQuery.bind(5, planetChunk.version);
 		m_preparedStatements->storePlanetChunkQuery.bindNoCopy(6, planetChunk.chunkData.data(), Nz::SafeCaster(planetChunk.chunkData.size()));
+		m_preparedStatements->storePlanetChunkQuery.bind(7, planetChunk.cacheState ? 1 : 0);
 
-		try
+		int resultCode;
+		for (;;)
 		{
-			m_preparedStatements->storePlanetChunkQuery.exec();
+			resultCode = m_preparedStatements->storePlanetChunkQuery.tryExecuteStep();
+			if (resultCode != SQLITE_BUSY)
+				break;
+
+			std::this_thread::yield();
 		}
-		catch (const std::exception& e)
-		{
-			spdlog::error("store planet chunk query failed: {}", e.what());
-		}
+
+		if (resultCode != SQLITE_DONE)
+			spdlog::error("storePlanetChunkQuery query failed: {} (error code: {})", m_database.getErrorMsg(), resultCode);
 	}
 
 	void ServerDatabase::StorePlanetLink(const Database::PlanetLink& planetLink)
@@ -376,11 +411,28 @@ namespace tsom
 
 	void ServerDatabase::Transaction(Nz::FunctionRef<bool(ServerDatabase& database)> callback)
 	{
-		SQLite::Transaction transaction(m_database);
+		m_database.exec("BEGIN TRANSACTION");
+
 		if (callback(*this))
-			transaction.commit();
+		{
+			int resultCode;
+			for (;;)
+			{
+				resultCode = m_database.tryExec("COMMIT TRANSACTION");
+				if (resultCode != SQLITE_BUSY)
+					break;
+
+				std::this_thread::yield();
+			}
+
+			if (resultCode != SQLITE_OK)
+			{
+				spdlog::error("failed to commit transaction: {} (error code: {})", m_database.getErrorMsg(), resultCode);
+				m_database.exec("ROLLBACK TRANSACTION");
+			}
+		}
 		else
-			transaction.rollback();
+			m_database.exec("ROLLBACK TRANSACTION");
 	}
 
 	void ServerDatabase::UpdatePlanetEntity(Nz::UInt32 planetEntityId, const Database::PlanetEntityPartial& planetEntity)

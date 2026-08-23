@@ -148,8 +148,18 @@ namespace tsom
 			}
 		}
 
-		void Serialize(PacketSerializer& serializer, C_ExitShipControl& data)
+		void Serialize(PacketSerializer& serializer, C_ConnectEntities& data)
 		{
+			serializer &= data.sourceEntityId;
+			serializer &= data.targetEntityId;
+			serializer &= data.sourceEntityPort;
+			serializer &= data.targetEntityPort;
+		}
+
+		void Serialize(PacketSerializer& serializer, C_EntityProcedureCall& data)
+		{
+			serializer &= data.entity;
+			serializer &= data.rpcIndex;
 		}
 
 		void Serialize(PacketSerializer& serializer, C_Interact& data)
@@ -168,6 +178,20 @@ namespace tsom
 			serializer &= data.chunkId;
 			Helper::Serialize(serializer, data.voxelLoc);
 			serializer &= data.newContent;
+		}
+
+		void Serialize(PacketSerializer& serializer, C_PlaceEntity& data)
+		{
+			serializer &= data.chunkId;
+			Helper::Serialize(serializer, data.voxelLoc);
+			serializer &= data.topFace;
+			serializer.Serialize(data.entityClass);
+			serializer &= data.entityRotation;
+		}
+
+		void Serialize(PacketSerializer& serializer, C_RemoveEntity& data)
+		{
+			serializer &= data.entityId;
 		}
 
 		void Serialize(PacketSerializer& serializer, C_SendChatMessage& data)
@@ -339,6 +363,15 @@ namespace tsom
 			}
 		}
 
+		void Serialize(PacketSerializer& serializer, S_EntityDistributionUpdate& data)
+		{
+			serializer &= data.tickIndex;
+			serializer &= data.sourceEntity;
+			serializer &= data.targetEntity;
+			serializer &= data.sourceEntityPort;
+			serializer &= data.targetEntityPort;
+		}
+
 		void Serialize(PacketSerializer& serializer, S_EntityEnvironmentUpdate& data)
 		{
 			serializer &= data.tickIndex;
@@ -353,7 +386,7 @@ namespace tsom
 			serializer &= data.rpcIndex;
 		}
 
-		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_EntityPropertiesUpdate& data)
+		void Serialize(PacketSerializer& serializer, S_EntityPropertiesUpdate& data)
 		{
 			serializer &= data.tickIndex;
 			serializer &= data.entity;
@@ -439,10 +472,6 @@ namespace tsom
 			serializer &= data.referenceRotation;
 			serializer &= data.shipEntity;
 			serializer &= data.shipExteriorEntity;
-		}
-
-		void Serialize(PacketSerializer& serializer, S_PilotShipFinish& data)
-		{
 		}
 	}
 }

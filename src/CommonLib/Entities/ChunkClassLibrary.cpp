@@ -44,10 +44,10 @@ namespace tsom
 				float gravity = entityInstance.GetProperty<EntityPropertyType::Float>(2);
 				Nz::Int64 seed = entityInstance.GetProperty<EntityPropertyType::Integer>(3);
 
-				InitializePlanetEntity(entity, std::make_shared<RoundCubePlanet>(m_app, blockSize, Nz::SafeCaster(seed), gravity, cornerRadius));
+				InitializePlanetEntity(entity, std::make_shared<RoundCubePlanet>(m_app, m_blockLibrary, blockSize, Nz::SafeCaster(seed), gravity, cornerRadius));
 			}
 		},
-		{}));
+		{}, {}));
 
 		registry.RegisterClass(EntityClass("torus_planet", {
 			{
@@ -77,10 +77,10 @@ namespace tsom
 				float gravity = entityInstance.GetProperty<EntityPropertyType::Float>(3);
 				Nz::Int64 seed = entityInstance.GetProperty<EntityPropertyType::Integer>(4);
 
-				InitializePlanetEntity(entity, std::make_shared<TorusPlanet>(m_app, blockSize, Nz::SafeCaster(seed), gravity, radius, thickness));
+				InitializePlanetEntity(entity, std::make_shared<TorusPlanet>(m_app, m_blockLibrary, blockSize, Nz::SafeCaster(seed), gravity, radius, thickness));
 			}
 		},
-		{}));
+		{}, {}));
 
 		registry.RegisterClass(EntityClass("ship", {
 			{
@@ -94,10 +94,10 @@ namespace tsom
 
 				float cellSize = entityInstance.GetProperty<EntityPropertyType::Float>(0);
 
-				InitializeShipEntity(entity, std::make_unique<Ship>(cellSize));
+				InitializeShipEntity(entity, std::make_unique<Ship>(m_blockLibrary, cellSize));
 			}
 		},
-		{}));
+		{}, {}));
 	}
 
 	PlanetComponent& ChunkClassLibrary::InitializePlanetEntity(entt::handle entity, std::shared_ptr<Planet>&& planet)

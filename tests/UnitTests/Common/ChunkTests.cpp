@@ -1,3 +1,4 @@
+#include <CommonLib/BlockLibrary.hpp>
 #include <CommonLib/Chunk.hpp>
 #include <CommonLib/ChunkContainer.hpp>
 #include <CommonLib/Planets/RoundCubePlanet.hpp>
@@ -12,7 +13,8 @@ TEST_CASE("Block positions", "[Chunks]")
 	constexpr int HalfChunkSize = ChunkSize / 2;
 
 	Nz::ApplicationBase app;
-	RoundCubePlanet planet(app, 1.f, 42, 0.f, 9.81f);
+	BlockLibrary blockLibrary;
+	RoundCubePlanet planet(app, blockLibrary, 1.f, 42, 0.f, 9.81f);
 
 	SECTION("Testing block indices")
 	{

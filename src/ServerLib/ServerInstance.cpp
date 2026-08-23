@@ -6,6 +6,7 @@
 #include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/Entities/ChunkClassLibrary.hpp>
 #include <CommonLib/Scripting/BaseScriptingLibrary.hpp>
+#include <CommonLib/Scripting/ChunkScriptingLibrary.hpp>
 #include <CommonLib/Scripting/MathScriptingLibrary.hpp>
 #include <CommonLib/Scripting/SharedScriptingLibrary.hpp>
 #include <ServerLib/ServerConfig.hpp>
@@ -47,8 +48,8 @@ namespace tsom
 
 		m_scriptingContext.RegisterLibrary<BaseScriptingLibrary>();
 		m_scriptingContext.RegisterLibrary<MathScriptingLibrary>();
+		m_scriptingContext.RegisterLibrary<ChunkScriptingLibrary>();
 		auto& entityScriptingLibrary = m_scriptingContext.RegisterLibrary<ServerEntityScriptingLibrary>(m_entityRegistry);
-		m_scriptingContext.RegisterLibrary<SharedScriptingLibrary>(entityScriptingLibrary);
 		m_scriptingContext.RegisterLibrary<ServerScriptingLibrary>(*this, entityScriptingLibrary);
 
 		LoadScripts();
@@ -196,7 +197,7 @@ namespace tsom
 
 	void ServerInstance::LoadFromDatabase()
 	{
-		ServerDatabase& serverDatabase = GetServerDatabase();
+		ServerDatabase& serverDatabase = GetThreadServerDatabase();
 		ServerConfig databaseConfig = ServerConfig::Load(serverDatabase);
 
 		m_databaseEnvironments.clear();
@@ -217,6 +218,25 @@ namespace tsom
 			ServerEnvironment* planetEnv = it->second.get();
 			SetDefaultSpawnpoint(planetEnv, databaseConfig.defaultSpawnpoint.position, databaseConfig.defaultSpawnpoint.rotation);
 		}
+	}
+
+	void ServerInstance::LoadScripts(bool isReloading)
+	{
+		if (!isReloading)
+		{
+			m_scriptingContext.LoadDirectory("scripts/libraries");
+			m_scriptingContext.LoadDirectory("scripts/entities");
+			return;
+		}
+
+		std::vector<entt::registry*> registries;
+		for (ServerEnvironment* environment : m_environments)
+			registries.push_back(&environment->GetWorld().GetRegistry());
+
+		m_entityRegistry.Refresh(registries, [this]
+		{
+			LoadScripts(false);
+		});
 	}
 
 	void ServerInstance::RegisterDatabaseEnvironment(Nz::UInt32 databaseId, std::unique_ptr<ServerEnvironment>&& serverEnvironment)
@@ -288,25 +308,6 @@ namespace tsom
 
 		std::vector<EntityProperty> properties = planetClass->PropertiesFromJson(planetData.properties);
 		RegisterDatabaseEnvironment(planetData.id, std::make_unique<ServerPlanetEnvironment>(*this, planetData.id, std::string(planetData.generatorName), planetData.chunkCount, planetData.type, std::move(properties)));
-	}
-
-	void ServerInstance::LoadScripts(bool isReloading)
-	{
-		if (!isReloading)
-		{
-			m_scriptingContext.LoadDirectory("scripts/libraries");
-			m_scriptingContext.LoadDirectory("scripts/entities");
-			return;
-		}
-
-		std::vector<entt::registry*> registries;
-		for (ServerEnvironment* environment : m_environments)
-			registries.push_back(&environment->GetWorld().GetRegistry());
-
-		m_entityRegistry.Refresh(registries, [this]
-		{
-			LoadScripts(false);
-		});
 	}
 
 	void ServerInstance::HandleNetworkEvents()

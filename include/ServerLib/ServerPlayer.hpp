@@ -55,6 +55,7 @@ namespace tsom
 			inline const EntityReference& GetControlledEntityReference() const;
 			ServerEnvironment* GetControlledEntityEnvironment();
 			const ServerEnvironment* GetControlledEntityEnvironment() const;
+			EntityReference GetControlledShipEntityReference() const;
 			inline ServerEnvironment* GetRootEnvironment();
 			inline const ServerEnvironment* GetRootEnvironment() const;
 			inline const std::string& GetNickname() const;
@@ -68,13 +69,17 @@ namespace tsom
 			inline const SessionVisibilityHandler& GetVisibilityHandler() const;
 			inline const std::optional<Nz::Uuid>& GetUuid() const;
 
+			void GrabEntity(EntityReference entity, const Nz::Vector3f& grabOffset);
+
+			inline bool HasGrabbedEntity() const;
+
 			inline bool HasPermission(PlayerPermission permission);
 
 			inline bool IsAuthenticated() const;
 
 			inline bool IsInEnvironment(const ServerEnvironment* environment);
 
-			void PilotShip(EntityReference shipEntity, EntityReference shipExteriorEntity, const Nz::Quaternionf& referenceRotation);
+			bool PilotShip(EntityReference shipEntity, EntityReference shipExteriorEntity, const Nz::Quaternionf& referenceRotation);
 
 			void PushInputs(const PlayerInputs& inputs);
 
@@ -90,6 +95,8 @@ namespace tsom
 
 			std::string ToString() const;
 
+			void Ungrab();
+
 			void UpdateNickname(std::string nickname);
 			void UpdateRootEnvironment(ServerEnvironment* environment);
 
@@ -98,6 +105,7 @@ namespace tsom
 
 		private:
 			struct Console;
+			struct GrabConstraint;
 
 			std::optional<Nz::Uuid> m_uuid;
 			std::shared_ptr<CharacterController> m_controller;
@@ -106,6 +114,7 @@ namespace tsom
 			std::vector<ServerEnvironment*> m_registeredEnvironments;
 			Nz::FixedVector<PlayerInputs, 10> m_inputBuffer;
 			Nz::PrivateImpl<Console> m_console;
+			Nz::PrivateImpl<GrabConstraint> m_grabConstraint;
 			Nz::Time m_respawnTimer;
 			Nz::UInt32 m_inputQueueAdvancement;
 			NetworkSession* m_session;

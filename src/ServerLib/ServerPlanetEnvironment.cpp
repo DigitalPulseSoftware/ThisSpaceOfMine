@@ -19,8 +19,10 @@
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/ByteArray.hpp>
 #include <Nazara/Core/ByteStream.hpp>
+#include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <Nazara/Core/TaskSchedulerAppComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
+#include <Nazara/Core/Hash/SHA256.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <nlohmann/json.hpp>
 
@@ -51,7 +53,7 @@ struct fmt::formatter<Nz::Flags<T>> : formatter<string_view>
 
 	auto format(Nz::Flags<T> flags, format_context& ctx) const -> format_context::iterator
 	{
-		std::string flagStr = "";
+		std::string flagStr;
 		for (T flag : flags)
 		{
 			if (!flagStr.empty())
@@ -74,6 +76,16 @@ namespace tsom
 	m_generatorName(std::move(generatorName)),
 	m_chunkCount(chunkCount)
 	{
+		// Compute generator hash
+		auto& filesystem = serverInstance.GetApplication().GetComponent<Nz::FilesystemAppComponent>();
+		if (std::shared_ptr<Nz::Stream> generatorStream = filesystem.GetFile(fmt::format("scripts/planets/{}.lua", m_generatorName)))
+		{
+			Nz::SHA256Hasher hash;
+			hash.Begin();
+			Nz::HashAppend(hash, *generatorStream);
+			m_generatorHash = hash.End().ToHex();
+		}
+
 		m_world->GetRegistry().ctx().emplace<ServerPlanetEnvironment*>(this);
 		m_world->AddSystem<EnvironmentSwitchSystem>();
 
@@ -106,13 +118,8 @@ namespace tsom
 		{
 			for (int x = 0; x < m_chunkCount.x; ++x)
 			{
-				ChunkIndices chunkIndices;
-				if ((x % 2) == (z % 2))
-					chunkIndices = ChunkIndices(-int(m_chunkCount.x / 2) + x, -int(m_chunkCount.y / 2), -int(m_chunkCount.z / 2) + z);
-				else
-					chunkIndices = ChunkIndices(-int(m_chunkCount.x / 2) + x, -int(m_chunkCount.y / 2) + m_chunkCount.y - 1, -int(m_chunkCount.z / 2) + z);
-
-				m_chunkLoadingData->remainingChunks[chunkIndices] |= (x % 2) == (z % 2) ? Direction::Up : Direction::Down;
+				ChunkIndices chunkIndices = ChunkIndices(-int(m_chunkCount.x / 2) + x, -int(m_chunkCount.y / 2) + m_chunkCount.y - 1, -int(m_chunkCount.z / 2) + z);
+				m_chunkLoadingData->remainingChunks.emplace_back(chunkIndices);
 				m_chunkLoadingData->visitedChunks.emplace(chunkIndices, true);
 			}
 		}
@@ -151,7 +158,7 @@ namespace tsom
 
 		if (m_databaseId)
 		{
-			ServerDatabase& serverDatabase = m_serverInstance.GetServerDatabase();
+			ServerDatabase& serverDatabase = m_serverInstance.GetThreadServerDatabase();
 			m_world->AddSystem<PlanetDatabaseSystem>(serverDatabase, *m_databaseId);
 
 			LoadEntitiesFromDatabase();
@@ -190,6 +197,16 @@ namespace tsom
 		callback(&m_atmosphere);
 	}
 
+	ChunkContainer& ServerPlanetEnvironment::GetChunkContainer()
+	{
+		return GetPlanet();
+	}
+
+	const ChunkContainer& ServerPlanetEnvironment::GetChunkContainer() const
+	{
+		return GetPlanet();
+	}
+
 	const GravityController* ServerPlanetEnvironment::GetGravityController() const
 	{
 		return m_planetEntity.get<PlanetComponent>().planet.get();
@@ -215,44 +232,53 @@ namespace tsom
 			spdlog::info("saving {} dirty chunks...", m_dirtyChunks.size());
 
 			BinaryCompressor& binaryCompressor = BinaryCompressor::GetThreadCompressor();
-			ServerDatabase& serverDatabase = m_serverInstance.GetServerDatabase();
+			ServerDatabase& serverDatabase = m_serverInstance.GetThreadServerDatabase();
 			Planet& planet = GetPlanet();
 
-			Nz::ByteArray byteArray;
-			for (const ChunkIndices& chunkIndices : m_dirtyChunks)
+			serverDatabase.Transaction([&](ServerDatabase& database)
 			{
-				Chunk* chunk = planet.GetChunk(chunkIndices);
+				Nz::ByteArray byteArray;
+				for (const ChunkIndices& chunkIndices : m_dirtyChunks)
+				{
+					Chunk* chunk = planet.GetChunk(chunkIndices);
 
-				byteArray.Clear();
+					ChunkWriteLock lock(chunk); //< write lock because we clear its flags
 
-				Nz::ByteStream byteStream(&byteArray);
-				chunk->Serialize(byteStream);
+					byteArray.Clear();
 
-				Nz::UInt32 decompressedSize = Nz::SafeCaster(byteArray.GetSize());
+					Nz::ByteStream byteStream(&byteArray);
+					chunk->Serialize(byteStream);
 
-				std::optional compressedDataOpt = binaryCompressor.Compress(byteArray.GetBuffer(), byteArray.GetSize());
-				if NAZARA_UNLIKELY(!compressedDataOpt)
-					throw std::runtime_error("chunk compression failed");
+					Nz::UInt32 decompressedSize = Nz::SafeCaster(byteArray.GetSize());
 
-				std::span<Nz::UInt8>& compressedData = *compressedDataOpt;
+					std::optional compressedDataOpt = binaryCompressor.Compress(byteArray.GetBuffer(), byteArray.GetSize());
+					if NAZARA_UNLIKELY(!compressedDataOpt)
+						throw std::runtime_error("chunk compression failed");
 
-				// Reuse byteArray
-				byteArray.Clear();
-				byteArray.Resize(sizeof(Nz::UInt32) + compressedData.size());
+					std::span<Nz::UInt8>& compressedData = *compressedDataOpt;
 
-				decompressedSize = Nz::HostToLittleEndian(decompressedSize);
-				std::memcpy(&byteArray[0], &decompressedSize, sizeof(decompressedSize));
-				std::memcpy(&byteArray[sizeof(decompressedSize)], &compressedData[0], compressedData.size());
+					// Reuse byteArray
+					byteArray.Clear();
+					byteArray.Resize(sizeof(Nz::UInt32) + compressedData.size());
 
-				serverDatabase.StorePlanetChunk(Database::PlanetChunk{
-					.planetId = *m_databaseId,
-					.position = chunkIndices,
-					.version = s_chunkVersion,
-					.chunkData = std::span(byteArray.GetBuffer(), byteArray.GetSize())
-				});
+					decompressedSize = Nz::HostToLittleEndian(decompressedSize);
+					std::memcpy(&byteArray[0], &decompressedSize, sizeof(decompressedSize));
+					std::memcpy(&byteArray[sizeof(decompressedSize)], &compressedData[0], compressedData.size());
 
-				chunk->ClearFlags(ChunkFlag::SaveToDatabase);
-			}
+					serverDatabase.StorePlanetChunk(Database::PlanetChunk{
+						.planetId = *m_databaseId,
+						.position = chunkIndices,
+						.version = s_chunkVersion,
+						.chunkData = std::span(byteArray.GetBuffer(), byteArray.GetSize()),
+						.cacheState = !chunk->HasFlags(ChunkFlag::PlayerModified)
+					});
+
+					chunk->ClearFlags(ChunkFlag::SaveToDatabase);
+				}
+
+				return true;
+			});
+
 			m_dirtyChunks.clear();
 		}
 
@@ -264,24 +290,29 @@ namespace tsom
 	{
 		std::unique_lock lock(m_chunkLoadingData->mutex);
 
-		for (auto&& [indices, originDir] : m_chunkLoadingData->remainingChunks)
+		for (ChunkIndices indices : m_chunkLoadingData->remainingChunks)
 		{
-			spdlog::debug("loading chunk {};{};{} from {} ({} remaining)", indices.x, indices.y, indices.z, originDir, m_chunkLoadingData->remainingChunks.size());
+			spdlog::debug("loading chunk {};{};{} ({} remaining)", indices.x, indices.y, indices.z, m_chunkLoadingData->remainingChunks.size());
 
 			Chunk* chunk = GetPlanet().GetChunk(indices);
 			if (!chunk)
-				chunk = &GetPlanet().AddChunk(m_serverInstance.GetBlockLibrary(), indices);
+				chunk = &GetPlanet().AddChunk(indices);
 
 			auto& taskScheduler = m_serverInstance.GetApplication().GetComponent<Nz::TaskSchedulerAppComponent>();
+			bool enableChunkCache = m_serverInstance.GetConfig().enableChunkCache;
 
 			m_chunkLoadingData->chunkLoadingCount++;
-			taskScheduler.AddTask([chunk, serverInstance = &m_serverInstance, databaseId = m_databaseId, chunkLoadingData = m_chunkLoadingData, chunkCount = m_chunkCount, generatorName = m_generatorName, originDir = originDir, properties = m_planetProperties]
+			taskScheduler.AddTask([chunk, enableChunkCache, serverInstance = &m_serverInstance, databaseId = m_databaseId, chunkLoadingData = m_chunkLoadingData, chunkCount = m_chunkCount, generatorName = m_generatorName, generatorHash = m_generatorHash, properties = m_planetProperties]
 			{
+				ServerDatabase& serverDatabase = serverInstance->GetThreadServerDatabase();
+				BinaryCompressor& binaryCompressor = BinaryCompressor::GetThreadCompressor();
+
+				ChunkIndices chunkIndices = chunk->GetIndices();
+
 				bool chunkFound = false;
 				if (databaseId)
 				{
-					ServerDatabase& serverDatabase = serverInstance->GetServerDatabase();
-					chunkFound = serverDatabase.GetPlanetChunk(*databaseId, chunk->GetIndices(), [&](Database::PlanetChunk&& planetChunk)
+					chunkFound = serverDatabase.GetPlanetChunk(*databaseId, chunkIndices, [&](Database::PlanetChunk&& planetChunk)
 					{
 						if (planetChunk.version != s_chunkVersion)
 							throw std::runtime_error(fmt::format("unhandled version {}", planetChunk.version));
@@ -290,8 +321,6 @@ namespace tsom
 						Nz::UInt32 decompressedSize;
 						std::memcpy(&decompressedSize, &planetChunk.chunkData[0], sizeof(decompressedSize));
 						decompressedSize = Nz::LittleEndianToHost(decompressedSize);
-
-						BinaryCompressor& binaryCompressor = BinaryCompressor::GetThreadCompressor();
 
 						std::vector<Nz::UInt8> decompressedData(decompressedSize);
 						std::optional compressedDataOpt = binaryCompressor.Decompress(planetChunk.chunkData.data() + sizeof(decompressedSize), planetChunk.chunkData.size() - sizeof(decompressedSize), decompressedData.data(), decompressedData.size());
@@ -303,29 +332,38 @@ namespace tsom
 
 						Nz::ByteStream byteStream(decompressedData.data(), decompressedData.size());
 
-						chunk->LockWrite();
+						ChunkWriteLock lock(chunk);
 						chunk->Deserialize(byteStream);
-						chunk->UnlockWrite();
+						if (!planetChunk.cacheState)
+							chunk->SetFlags(ChunkFlag::PlayerModified);
 					});
 				}
 
 				if (!chunkFound)
 					chunkLoadingData->planet->GenerateChunk(*chunk, chunkCount, generatorName, properties);
 
-				const auto& faceVisibilityMasks = chunk->GetFaceVisibilityMasks();
-
-				DirectionMask visibilityMask;
-				for (Direction dir : originDir)
-					visibilityMask |= faceVisibilityMasks[s_oppositeDirections[dir]];
+				DirectionMask visibilityMask = chunk->GetVisibilityMask();
 
 				std::unique_lock lock(chunkLoadingData->mutex);
 				chunkLoadingData->HandleChunkLoaded(chunk->GetIndices(), visibilityMask);
+				if (!chunkFound && enableChunkCache)
+					chunkLoadingData->generatedChunks.insert(chunk->GetIndices());
 
 				if (--chunkLoadingData->chunkLoadingCount == 0 && chunkLoadingData->remainingChunks.empty())
 					spdlog::debug("planet chunk loading finished, total chunks: {} (out of {})", chunkLoadingData->visitedChunks.size(), chunkCount.x * chunkCount.y * chunkCount.z);
 			});
 		}
 		m_chunkLoadingData->remainingChunks.clear();
+
+		if (!m_dirtyChunks.empty())
+		{
+			for (const ChunkIndices& chunkIndices : m_chunkLoadingData->generatedChunks)
+				m_dirtyChunks.emplace(chunkIndices);
+		}
+		else
+			m_dirtyChunks = std::move(m_chunkLoadingData->generatedChunks);
+
+		m_chunkLoadingData->generatedChunks.clear();
 	}
 
 	ServerAtmosphere* ServerPlanetEnvironment::GetFallbackAtmosphereAtPosition(const Nz::Vector3f& position)
@@ -341,10 +379,9 @@ namespace tsom
 	{
 		NazaraAssert(m_databaseId);
 
-		ServerDatabase& serverDatabase = m_serverInstance.GetServerDatabase();
+		ServerDatabase& serverDatabase = m_serverInstance.GetThreadServerDatabase();
 
 		BinaryCompressor& binaryCompressor = BinaryCompressor::GetThreadCompressor();
-		auto& blockLibrary = m_serverInstance.GetBlockLibrary();
 		Planet& planet = GetPlanet();
 
 		serverDatabase.GetAllPlanetChunks(*m_databaseId, [&](Database::PlanetChunk&& planetChunk)
@@ -368,7 +405,7 @@ namespace tsom
 			Nz::ByteStream byteStream(decompressedData.data(), decompressedData.size());
 			Chunk* chunk = planet.GetChunk(planetChunk.position);
 			if (!chunk)
-				chunk = &planet.AddChunk(blockLibrary, planetChunk.position);
+				chunk = &planet.AddChunk(planetChunk.position);
 
 			ChunkWriteLock lock(chunk);
 			chunk->Deserialize(byteStream);
@@ -379,7 +416,7 @@ namespace tsom
 
 	void ServerPlanetEnvironment::LoadEntitiesFromDatabase()
 	{
-		ServerDatabase& serverDatabase = m_serverInstance.GetServerDatabase();
+		ServerDatabase& serverDatabase = m_serverInstance.GetThreadServerDatabase();
 		serverDatabase.GetAllPlanetEntities(*m_databaseId, [&](Database::PlanetEntity&& planetEntity)
 		{
 			std::shared_ptr<const EntityClass> entityClass = m_serverInstance.GetEntityRegistry().FindClass(planetEntity.className);
@@ -429,7 +466,7 @@ namespace tsom
 			}
 
 			visitedChunks.emplace(neighborIndices, isNeighborPrimaryChunk);
-			remainingChunks[neighborIndices] |= direction;
+			remainingChunks.push_back(neighborIndices);
 		}
 	}
 }

@@ -69,6 +69,12 @@ namespace tsom
 	}
 
 	template<typename T>
+	T CompressedUnsigned<T>::operator*() const
+	{
+		return m_value;
+	}
+
+	template<typename T>
 	CompressedUnsigned<T>& CompressedUnsigned<T>::operator=(T value)
 	{
 		m_value = value;

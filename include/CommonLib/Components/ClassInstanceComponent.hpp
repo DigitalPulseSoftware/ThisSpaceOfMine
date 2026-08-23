@@ -9,6 +9,7 @@
 
 #include <CommonLib/EntityProperties.hpp>
 #include <NazaraUtils/Signal.hpp>
+#include <entt/fwd.hpp>
 #include <string_view>
 #include <vector>
 
@@ -54,6 +55,8 @@ namespace tsom
 			NazaraSignal(OnPropertyUpdate, ClassInstanceComponent* /*classInstance*/, Nz::UInt32 /*propertyIndex*/, const EntityProperty& /*newValue*/);
 
 			static constexpr Nz::UInt32 InvalidIndex = Nz::MaxValue();
+
+			static void TriggerDestructionCallback(entt::handle entity);
 
 		private:
 			std::shared_ptr<const EntityClass> m_entityClass;

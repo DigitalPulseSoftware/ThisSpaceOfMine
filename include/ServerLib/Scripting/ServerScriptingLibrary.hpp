@@ -8,7 +8,7 @@
 #define TSOM_SERVERLIB_SCRIPTING_SERVERSCRIPTINGLIBRARY_HPP
 
 #include <ServerLib/Export.hpp>
-#include <CommonLib/Scripting/ScriptingLibrary.hpp>
+#include <CommonLib/Scripting/SharedScriptingLibrary.hpp>
 #include <memory>
 
 namespace tsom
@@ -16,10 +16,10 @@ namespace tsom
 	class ServerEntityScriptingLibrary;
 	class ServerInstance;
 
-	class TSOM_SERVERLIB_API ServerScriptingLibrary : public ScriptingLibrary
+	class TSOM_SERVERLIB_API ServerScriptingLibrary : public SharedScriptingLibrary
 	{
 		public:
-			inline ServerScriptingLibrary(ServerInstance& serverInstance, ServerEntityScriptingLibrary& entityScriptingLibrary);
+			ServerScriptingLibrary(ServerInstance& serverInstance, ServerEntityScriptingLibrary& entityScriptingLibrary);
 			ServerScriptingLibrary(const ServerScriptingLibrary&) = delete;
 			ServerScriptingLibrary(ServerScriptingLibrary&&) = delete;
 			inline ~ServerScriptingLibrary();
@@ -31,10 +31,13 @@ namespace tsom
 
 		private:
 			void RegisterAtmosphere(sol::state& state);
+			void RegisterDebugDraw(sol::state& state);
+			void RegisterDistribution(sol::state& state);
 			void RegisterEnvironment(sol::state& state);
 			void RegisterPlayer(sol::state& state);
 			void RegisterServer(sol::state& state);
 			void RegisterServerDatabase(sol::state& state);
+			void RegisterScripts(sol::state& state);
 
 			std::shared_ptr<bool> m_aliveSignal;
 			ServerEntityScriptingLibrary& m_entityScriptingLibrary;

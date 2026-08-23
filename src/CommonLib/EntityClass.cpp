@@ -12,10 +12,12 @@
 
 namespace tsom
 {
-	EntityClass::EntityClass(std::string name, std::vector<Property> properties, Callbacks callbacks, std::vector<RemoteProcedureCall> clientRpcs) :
+	EntityClass::EntityClass(std::string name, std::vector<Property> properties, Callbacks callbacks, std::vector<RemoteProcedureCall> clientRpcs, std::vector<RemoteProcedureCall> serverRpcs, Nz::ParameterList metadata) :
 	m_name(std::move(name)),
 	m_properties(std::move(properties)),
 	m_clientRpcs(std::move(clientRpcs)),
+	m_serverRpcs(std::move(serverRpcs)),
+	m_metadata(std::move(metadata)),
 	m_callbacks(std::move(callbacks))
 	{
 		for (const auto& clientRpc : m_clientRpcs)
@@ -40,6 +42,13 @@ namespace tsom
 		NazaraAssert(entity.get<ClassInstanceComponent>().GetClass().get() == this);
 		if (m_callbacks.onActivate)
 			m_callbacks.onActivate(entity);
+	}
+
+	void EntityClass::DestroyEntity(entt::handle entity) const
+	{
+		NazaraAssert(entity.get<ClassInstanceComponent>().GetClass().get() == this);
+		if (m_callbacks.onDestroy)
+			m_callbacks.onDestroy(entity);
 	}
 
 	void EntityClass::InitAndActivateEntity(entt::handle entity) const

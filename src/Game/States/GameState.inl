@@ -6,4 +6,8 @@
 
 namespace tsom
 {
+	inline BlockSelectionBar* GameState::GetBlockSelectionBar() const
+	{
+		return m_blockSelectionBar;
+	}
 }

@@ -9,6 +9,7 @@
 
 #include <CommonLib/Export.hpp>
 #include <CommonLib/EntityProperties.hpp>
+#include <Nazara/Core/ParameterList.hpp>
 #include <entt/fwd.hpp>
 #include <nlohmann/json_fwd.hpp>
 #include <tsl/hopscotch_map.h>
@@ -28,22 +29,27 @@ namespace tsom
 			struct Property;
 			struct RemoteProcedureCall;
 
-			EntityClass(std::string name, std::vector<Property> properties, Callbacks callbacks, std::vector<RemoteProcedureCall> clientRpcs);
+			EntityClass(std::string name, std::vector<Property> properties, Callbacks callbacks, std::vector<RemoteProcedureCall> clientRpcs, std::vector<RemoteProcedureCall> serverRpcs, Nz::ParameterList metadata = {});
 			EntityClass(const EntityClass&) = delete;
 			EntityClass(EntityClass&&) noexcept = default;
 			~EntityClass() = default;
 
 			void ActivateEntity(entt::handle entity) const;
+			void DestroyEntity(entt::handle entity) const;
 
 			inline Nz::UInt32 FindClientRpc(std::string_view propertyName) const;
 			inline Nz::UInt32 FindProperty(std::string_view propertyName) const;
+			inline Nz::UInt32 FindServerRpc(std::string_view propertyName) const;
 
 			inline const RemoteProcedureCall& GetClientRpc(Nz::UInt32 rpcIndex) const;
 			inline Nz::UInt32 GetClientRpcCount() const;
+			inline const Nz::ParameterList& GetMetadata() const;
 			inline const std::string& GetName() const;
 			inline const std::vector<Property>& GetProperties() const;
 			inline const Property& GetProperty(Nz::UInt32 propertyIndex) const;
 			inline Nz::UInt32 GetPropertyCount() const;
+			inline const RemoteProcedureCall& GetServerRpc(Nz::UInt32 rpcIndex) const;
+			inline Nz::UInt32 GetServerRpcCount() const;
 
 			void InitAndActivateEntity(entt::handle entity) const;
 			void InitEntity(entt::handle entity) const;
@@ -58,6 +64,7 @@ namespace tsom
 			{
 				std::function<void(entt::handle)> onActivate;
 				std::function<void(entt::handle)> onInit;
+				std::function<void(entt::handle)> onDestroy;
 			};
 
 			struct Property
@@ -65,8 +72,8 @@ namespace tsom
 				std::string name;
 				EntityPropertyType type;
 				EntityProperty defaultValue;
-				bool isArray;
-				bool isNetworked;
+				bool isArray = false;
+				bool isNetworked = false;
 			};
 
 			struct RemoteProcedureCall
@@ -83,8 +90,11 @@ namespace tsom
 			std::string m_name;
 			std::vector<Property> m_properties;
 			std::vector<RemoteProcedureCall> m_clientRpcs;
+			std::vector<RemoteProcedureCall> m_serverRpcs;
 			tsl::hopscotch_map<std::string, std::size_t, std::hash<std::string_view>, std::equal_to<>> m_clientRpcIndices;
 			tsl::hopscotch_map<std::string, std::size_t, std::hash<std::string_view>, std::equal_to<>> m_propertyIndices;
+			tsl::hopscotch_map<std::string, std::size_t, std::hash<std::string_view>, std::equal_to<>> m_serverRpcIndices;
+			Nz::ParameterList m_metadata;
 			Callbacks m_callbacks;
 	};
 }

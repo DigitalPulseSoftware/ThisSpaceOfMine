@@ -2,18 +2,25 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
-#include <cassert>
+#include <NazaraUtils/Assert.hpp>
+#include <NazaraUtils/CallOnExit.hpp>
 
 namespace tsom
 {
-	inline Chunk::Chunk(const BlockLibrary& blockLibrary, ChunkContainer& owner, const ChunkIndices& indices, const Nz::Vector3ui& size, float cellSize) :
+	inline Chunk::Chunk(ChunkContainer& owner, const ChunkIndices& indices, const Nz::Vector3ui& size, float cellSize) :
 	m_size(size),
 	m_indices(indices),
-	m_blockLibrary(blockLibrary),
 	m_owner(owner),
 	m_hasPerFaceCollision(false),
+	m_isBatchUpdating(false),
 	m_blockSize(cellSize)
 	{
+	}
+
+	inline void Chunk::BeginBatchUpdate()
+	{
+		NazaraAssertMsg(!m_isBatchUpdating, "already in a batch update");
+		m_isBatchUpdating = true;
 	}
 
 	inline void Chunk::ClearContent()
@@ -28,16 +35,41 @@ namespace tsom
 			layerOpt.reset();
 
 		m_blockTypeCount.clear();
-		m_blockTypeCount.shrink_to_fit();
-
-		m_faceVisibilityMasks.fill(DirectionMask_All);
+		m_blockTypeCount.resize(EmptyBlockIndex + 1);
+		m_directionHoleCount[Direction::Left] = m_directionHoleCount[Direction::Right] = m_size.y * m_size.z;
+		m_directionHoleCount[Direction::Front] = m_directionHoleCount[Direction::Back] = m_size.x * m_size.z;
+		m_directionHoleCount[Direction::Down] = m_directionHoleCount[Direction::Up] = m_size.x * m_size.y;
 
 		OnClear(this, activeLayerMask);
+
+		if (m_visibilityMask != DirectionMask_All)
+		{
+			DirectionMask previousVisibilityMask = m_visibilityMask;
+			m_visibilityMask = DirectionMask_All;
+			OnVisibilityMaskUpdated(this, previousVisibilityMask, m_visibilityMask);
+		}
 	}
 
 	inline void Chunk::ClearFlags(ChunkFlags flags)
 	{
 		m_flags.Clear(flags);
+	}
+
+	inline void Chunk::EndBatchUpdate()
+	{
+		NazaraAssertMsg(m_isBatchUpdating, "not in a batch update");
+		NAZARA_DEFER({ m_isBatchUpdating = false; });
+
+		if (!HasContent())
+			return;
+
+		if (GetBlockCount(EmptyBlockIndex) == GetBlockCount())
+		{
+			ClearContent();
+			return;
+		}
+
+		RebuildVisibilityMask();
 	}
 
 	inline std::span<const std::size_t> Chunk::GetActiveLayers() const
@@ -61,11 +93,6 @@ namespace tsom
 		return m_layers[layerIndex]->collisionCellMasks;
 	}
 
-	inline const BlockLibrary& Chunk::GetBlockLibrary() const
-	{
-		return m_blockLibrary;
-	}
-
 	inline unsigned int Chunk::GetBlockLocalIndex(const Nz::Vector3ui& indices) const
 	{
 		assert(indices.x < m_size.x);
@@ -87,8 +114,7 @@ namespace tsom
 
 	inline BlockIndex Chunk::GetBlockContent(unsigned int blockIndex) const
 	{
-		NazaraAssertMsg(!m_blocks.empty(), "chunk has not been reset");
-		return m_blocks[blockIndex];
+		return HasContent() ? m_blocks[blockIndex] : EmptyBlockIndex;
 	}
 
 	inline BlockIndex Chunk::GetBlockContent(const Nz::Vector3ui& indices) const
@@ -103,6 +129,9 @@ namespace tsom
 
 	inline Nz::UInt16 Chunk::GetBlockCount(std::size_t blockIndex) const
 	{
+		if (!HasContent())
+			return blockIndex == EmptyBlockIndex ? GetBlockCount() : 0;
+
 		if (blockIndex >= m_blockTypeCount.size())
 			return 0;
 
@@ -130,11 +159,6 @@ namespace tsom
 		return m_blocks.data();
 	}
 
-	inline auto Chunk::GetFaceVisibilityMasks() const -> FaceVisibilityMasks
-	{
-		return m_faceVisibilityMasks;
-	}
-
 	inline ChunkFlags Chunk::GetFlags() const
 	{
 		return m_flags;
@@ -148,6 +172,11 @@ namespace tsom
 	inline const Nz::Vector3ui& Chunk::GetSize() const
 	{
 		return m_size;
+	}
+
+	inline DirectionMask Chunk::GetVisibilityMask() const
+	{
+		return m_visibilityMask;
 	}
 
 	inline bool Chunk::HasContent() const

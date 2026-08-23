@@ -4,12 +4,13 @@
 
 #include <ClientLib/Rendering/AtmosphereScatteringPipelinePass.hpp>
 #include <CommonLib/AtmosphereScattering.hpp>
+#include <Nazara/Core/Components/DisabledComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Graphics/AbstractViewer.hpp>
 #include <Nazara/Graphics/FrameGraph.hpp>
 #include <Nazara/Graphics/FramePipelinePassRegistry.hpp>
-#include <Nazara/Graphics/Graphics.hpp>
 #include <Nazara/Graphics/GpuBufferPool.hpp>
+#include <Nazara/Graphics/Graphics.hpp>
 #include <Nazara/Graphics/ViewerInstance.hpp>
 #include <NZSL/Math/FieldOffsets.hpp>
 
@@ -66,6 +67,7 @@ namespace tsom
 			std::size_t invViewMatrixOffset;
 			std::size_t viewerPositionOffset;
 			std::size_t zNearOffset;
+			std::size_t sunDirOffset;
 
 			std::size_t atmosphereCountOffset;
 			std::size_t atmospheresOffset;
@@ -81,6 +83,7 @@ namespace tsom
 				atmosphereScatteringPassData.invViewMatrixOffset = fieldOffsets.AddMatrix(nzsl::StructFieldType::Float1, 4, 4, true);
 				atmosphereScatteringPassData.viewerPositionOffset = fieldOffsets.AddField(nzsl::StructFieldType::Float3);
 				atmosphereScatteringPassData.zNearOffset = fieldOffsets.AddField(nzsl::StructFieldType::Float1);
+				atmosphereScatteringPassData.sunDirOffset = fieldOffsets.AddField(nzsl::StructFieldType::Float3);
 
 				atmosphereScatteringPassData.atmosphereCountOffset = fieldOffsets.AddField(nzsl::StructFieldType::UInt1);
 				atmosphereScatteringPassData.atmospheresOffset = fieldOffsets.AddStructArray(AtmosphereScatteringFields.fieldOffsets, MaxAtmosphereCount);
@@ -159,10 +162,14 @@ namespace tsom
 		Nz::AccessByOffset<Nz::Vector3f&>(allocation.mappedPtr, AtmosphereScatteringPassFields.viewerPositionOffset) = eyePosition;
 		Nz::AccessByOffset<float&>(allocation.mappedPtr, AtmosphereScatteringPassFields.zNearOffset) = viewerInstance.GetNearPlane();
 
+		auto atmosphereCameraView = m_registry.view<AtmosphereScatteringCameraSettings>(entt::exclude<Nz::DisabledComponent>);
+		for (auto&& [entity, atmosphereScatteringCameraSettings] : atmosphereCameraView.each())
+			Nz::AccessByOffset<Nz::Vector3f&>(allocation.mappedPtr, AtmosphereScatteringPassFields.sunDirOffset) = atmosphereScatteringCameraSettings.sunDir;
+
 		m_cachedAtmospheres.clear();
 
-		auto view = m_registry.view<Nz::NodeComponent, AtmosphereScattering>();
-		for (auto&& [entity, atmosphereNode, atmosphereScattering] : view.each())
+		auto atmosphereView = m_registry.view<Nz::NodeComponent, AtmosphereScattering>(entt::exclude<Nz::DisabledComponent>);
+		for (auto&& [entity, atmosphereNode, atmosphereScattering] : atmosphereView.each())
 		{
 			// TODO: Cull atmospheres
 			m_cachedAtmospheres.emplace_back(atmosphereNode.GetGlobalPosition(), &atmosphereScattering);

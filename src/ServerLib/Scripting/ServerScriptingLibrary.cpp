@@ -4,9 +4,11 @@
 
 #include <ServerLib/Scripting/ServerScriptingLibrary.hpp>
 #include <CommonLib/CharacterController.hpp>
-#include <CommonLib/Components/ClassInstanceComponent.hpp>
-#include <CommonLib/Scripting/ScriptingUtils.hpp>
 #include <CommonLib/Planet.hpp>
+#include <CommonLib/Ship.hpp>
+#include <CommonLib/Components/ClassInstanceComponent.hpp>
+#include <CommonLib/Components/DistributionComponent.hpp>
+#include <CommonLib/Scripting/ScriptingUtils.hpp>
 #include <ServerLib/ServerAtmosphere.hpp>
 #include <ServerLib/ServerInstance.hpp>
 #include <ServerLib/ServerPlanetEnvironment.hpp>
@@ -29,26 +31,33 @@ SOL_DERIVED_CLASSES(tsom::ServerEnvironment, tsom::ServerPlanetEnvironment, tsom
 
 namespace tsom
 {
+	ServerScriptingLibrary::ServerScriptingLibrary(ServerInstance& serverInstance, ServerEntityScriptingLibrary& entityScriptingLibrary) :
+	SharedScriptingLibrary(entityScriptingLibrary),
+	m_entityScriptingLibrary(entityScriptingLibrary),
+	m_serverInstance(serverInstance)
+	{
+		m_aliveSignal = std::make_shared<bool>(true);
+	}
+
 	void ServerScriptingLibrary::Register(sol::state& state)
 	{
+		SharedScriptingLibrary::Register(state);
+
 		state["CLIENT"] = false;
 		state["SERVER"] = true;
 
 		RegisterAtmosphere(state);
+		RegisterDebugDraw(state);
+		RegisterDistribution(state);
 		RegisterServerDatabase(state);
 		RegisterEnvironment(state);
 		RegisterPlayer(state);
 		RegisterServer(state);
+		RegisterScripts(state);
 	}
 
 	void ServerScriptingLibrary::RegisterAtmosphere(sol::state& state)
 	{
-		state.new_enum("GasType",
-			"CarbonDioxyde", GasType::CarbonDioxyde,
-			"Nitrogen", GasType::Nitrogen,
-			"Oxygen", GasType::Oxygen
-		);
-
 		state.new_usertype<ServerAtmosphere>("Atmosphere",
 			sol::no_constructor,
 			"Exchange", LuaFunction([](ServerAtmosphere& serverAtmosphere, sol::stack_table exchangeGas)
@@ -69,6 +78,30 @@ namespace tsom
 			"GetGasAmount", LuaFunction(&ServerAtmosphere::GetGasAmount),
 			"SetGasAmount", LuaFunction(&ServerAtmosphere::SetGasAmount)
 		);
+	}
+
+	void ServerScriptingLibrary::RegisterDebugDraw(sol::state& state)
+	{
+		state.new_usertype<DebugDrawInterface>("DebugDrawInterface",
+			sol::no_constructor,
+
+			"DrawBox", LuaFunction(&DebugDrawInterface::DrawBox),
+			"DrawLine", LuaFunction([](DebugDrawInterface* debugDraw, Nz::UInt64 hash, float duration, const Nz::Vector3f& from, const Nz::Vector3f& to, const Nz::Color& color)
+			{
+				std::array points = { from, to };
+				debugDraw->DrawLines(hash, duration, points, color);
+			})
+		);
+	}
+
+	void ServerScriptingLibrary::RegisterDistribution(sol::state& state)
+	{
+		sol::table distribution = state.create_named_table("Distribution");
+
+		distribution["Connect"] = LuaFunction([](sol::table sourceEntity, sol::table targetEntity, std::size_t sourceOutputPort, std::size_t targetInputPort)
+		{
+			return DistributionComponent::Connect(AssertScriptEntity(sourceEntity), AssertScriptEntity(targetEntity), sourceOutputPort, targetInputPort);
+		});
 	}
 
 	void ServerScriptingLibrary::RegisterEnvironment(sol::state& state)
@@ -122,6 +155,7 @@ namespace tsom
 			}),
 
 			"GetAtmosphereAtPosition", LuaFunction(&ServerEnvironment::GetAtmosphereAtPosition),
+			"GetDebugDrawInterface", LuaFunction(&ServerEnvironment::GetDebugDrawInterface),
 			"GetPhysWorld", LuaFunction([](ServerEnvironment* environment)
 			{
 				return &environment->GetWorld().GetSystem<Nz::Physics3DSystem>();
@@ -145,6 +179,7 @@ namespace tsom
 		state.new_usertype<ServerShipEnvironment>("ShipEnvironment",
 			sol::no_constructor,
 			sol::base_classes, sol::bases<ServerEnvironment>(),
+			"GetChunkContainer", LuaFunction([](ServerShipEnvironment& env) -> ChunkContainer* { return &env.GetShip(); }),
 			"GetExteriorShipEntity", LuaFunction([this](sol::this_state L, ServerShipEnvironment& shipEnvironment)
 			{
 				sol::state_view stateView(L);
@@ -167,6 +202,11 @@ namespace tsom
 				return player.ExitPiloting();
 			}),
 			"GetController", LuaFunction(&ServerPlayer::GetCharacterController),
+			"GetControlledShipEntity", LuaFunction([this](ServerPlayer& player, sol::this_state L)
+			{
+				sol::state_view stateView(L);
+				return m_entityScriptingLibrary.ToEntityTable(stateView, player.GetControlledShipEntityReference());
+			}),
 			"GetEntity", LuaFunction([this](ServerPlayer& player, sol::this_state L)
 			{
 				sol::state_view stateView(L);
@@ -186,10 +226,11 @@ namespace tsom
 			{
 				auto uuidOpt = player.GetUuid();
 				if (!uuidOpt)
-					return sol::nil;
+					return sol::lua_nil;
 
 				return sol::make_object(L, uuidOpt->ToString());
 			}),
+			"IsValid", &ServerPlayerHandle::IsValid,
 			"PilotShip", LuaFunction([](ServerPlayer& player, sol::table shipEntity, sol::table shipExteriorEntity, const Nz::Quaternionf& referenceRotation)
 			{
 				entt::handle entity = AssertScriptEntity(shipEntity);
@@ -309,7 +350,7 @@ namespace tsom
 				{
 				}*/
 
-				return m_serverInstance.GetServerDatabase().CreatePlanet(planet);
+				return m_serverInstance.GetThreadServerDatabase().CreatePlanet(planet);
 			}),
 			"StorePlanetLink", LuaFunction([this](sol::stack_table table)
 			{
@@ -318,8 +359,18 @@ namespace tsom
 				planetLink.destinationPlanet = table["destinationPlanet"];
 				planetLink.position = table["position"];
 
-				return m_serverInstance.GetServerDatabase().StorePlanetLink(planetLink);
+				return m_serverInstance.GetThreadServerDatabase().StorePlanetLink(planetLink);
 			})
 		);
+	}
+
+	void ServerScriptingLibrary::RegisterScripts(sol::state& state)
+	{
+		sol::table scriptsLibrary = state.create_named_table("Scripts");
+
+		scriptsLibrary["Reload"] = LuaFunction([this]
+		{
+			m_serverInstance.LoadScripts(true);
+		});
 	}
 }

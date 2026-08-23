@@ -4,6 +4,7 @@
 
 #include <ServerLib/Scripting/ServerEntityScriptingLibrary.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
+#include <CommonLib/Components/DistributionComponent.hpp>
 #include <CommonLib/Components/ScriptedEntityComponent.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
 #include <ServerLib/ServerPlanetEnvironment.hpp>
@@ -49,7 +50,7 @@ namespace tsom
 			entity.emplace<ServerEnvironmentSwitchComponent>();
 		});
 
-		entityMetatable["CallClientRPC"] = LuaFunction([](sol::table entityTable, std::string rpcName, std::optional<ServerPlayerHandle> targetPlayer)
+		entityMetatable["CallClientRPC"] = LuaFunction([](sol::table entityTable, std::string_view rpcName, std::optional<ServerPlayerHandle> targetPlayer)
 		{
 			entt::handle entity = AssertScriptEntity(entityTable);
 
@@ -78,53 +79,78 @@ namespace tsom
 		{
 			entt::handle entity = AssertScriptEntity(entityTable);
 
-			ServerInteractibleComponent* interactibleComponent = entity.try_get<ServerInteractibleComponent>();
-			if (isInteractible)
-			{
-				if (!interactibleComponent || !interactibleComponent->onInteraction)
-					TriggerLuaError(L, "entity has no interact callback");
-			}
-
-			interactibleComponent->isEnabled = isInteractible;
+			ServerInteractibleComponent& interactibleComponent = entity.get_or_emplace<ServerInteractibleComponent>();
+			interactibleComponent.isEnabled = isInteractible;
 		});
 	}
 
-	void ServerEntityScriptingLibrary::HandleInit(sol::table classMetatable, entt::handle entity)
+	void ServerEntityScriptingLibrary::PostInit(sol::table classMetatable, entt::handle entity)
 	{
 		sol::optional<sol::protected_function> interactCallback = classMetatable["_Interact"];
 		if (interactCallback)
 		{
-			auto& entityInteractible = entity.emplace<ServerInteractibleComponent>();
-			entityInteractible.isEnabled = false;
-			entityInteractible.onInteraction = [cb = std::move(*interactCallback)](entt::handle entity, ServerPlayer* triggeringPlayer)
+			ServerInteractibleComponent* entityInteractible = entity.try_get<ServerInteractibleComponent>();
+			if (entityInteractible)
 			{
-				auto& entityScripted = entity.get<ScriptedEntityComponent>();
-
-				auto res = cb(entityScripted.entityTable, (triggeringPlayer) ? triggeringPlayer->CreateHandle() : Nz::ObjectHandle<ServerPlayer>{});
-				if (!res.valid())
+				entityInteractible->onInteraction = [cb = std::move(*interactCallback)](entt::handle entity, ServerPlayer* triggeringPlayer)
 				{
-					sol::error err = res;
-					spdlog::error("entity interact event failed: {}", err.what());
-				}
-			};
+					auto& entityScripted = entity.get<ScriptedEntityComponent>();
+
+					auto res = cb(entityScripted.entityTable, (triggeringPlayer) ? triggeringPlayer->CreateHandle() : Nz::ObjectHandle<ServerPlayer>{});
+					if (!res.valid())
+					{
+						sol::error err = res;
+						spdlog::error("entity interact event failed: {}", err.what());
+					}
+				};
+			}
+			else
+				spdlog::error("entity has interact event but :SetInteractible() has not been called");
 		}
 
 		sol::optional<sol::protected_function> envSwitchCallback = classMetatable["_EnvSwitch"];
 		if (envSwitchCallback)
 		{
-			auto& entityEnvSwitch = entity.get<ServerEnvironmentSwitchComponent>();
-			entityEnvSwitch.handleEnvironmentSwitch = [cb = std::move(*envSwitchCallback)](entt::handle previousEntity, entt::handle newEntity, const EnvironmentTransform& /*relativeTransform*/)
+			ServerEnvironmentSwitchComponent* entityEnvSwitch = entity.try_get<ServerEnvironmentSwitchComponent>();
+			if (entityEnvSwitch)
 			{
-				auto& previousEntityScripted = previousEntity.get<ScriptedEntityComponent>();
-				auto& newEntityScripted = newEntity.get<ScriptedEntityComponent>();
-
-				auto res = cb(newEntityScripted.entityTable, previousEntityScripted.entityTable);
-				if (!res.valid())
+				entityEnvSwitch->handleEnvironmentSwitch = [cb = std::move(*envSwitchCallback)](entt::handle previousEntity, entt::handle newEntity, const EnvironmentTransform& /*relativeTransform*/)
 				{
-					sol::error err = res;
-					spdlog::error("entity environment switch event failed: {}", err.what());
-				}
-			};
+					auto& previousEntityScripted = previousEntity.get<ScriptedEntityComponent>();
+					auto& newEntityScripted = newEntity.get<ScriptedEntityComponent>();
+
+					auto res = cb(newEntityScripted.entityTable, previousEntityScripted.entityTable);
+					if (!res.valid())
+					{
+						sol::error err = res;
+						spdlog::error("entity environment switch event failed: {}", err.what());
+					}
+				};
+			}
+			else
+				spdlog::error("entity has env_switch event but :AllowEnvironmentSwitch() has not been called");
+		}
+
+		sol::optional<sol::protected_function> distributionCallback = classMetatable["_Distribution"];
+		if (distributionCallback)
+		{
+			DistributionComponent* entityDistribution = entity.try_get<DistributionComponent>();
+			if (entityDistribution)
+			{
+				entityDistribution->BindDistributionCallback([cb = std::move(*distributionCallback)](entt::handle entity)
+				{
+					auto& entityScripted = entity.get<ScriptedEntityComponent>();
+
+					auto res = cb(entityScripted.entityTable);
+					if (!res.valid())
+					{
+						sol::error err = res;
+						spdlog::error("entity distribution event failed: {}", err.what());
+					}
+				});
+			}
+			else
+				spdlog::error("entity has env_switch event but :AllowEnvironmentSwitch() has not been called");
 		}
 	}
 
@@ -138,6 +164,11 @@ namespace tsom
 		else if (eventName == "env_switch")
 		{
 			classMetatable["_EnvSwitch"] = std::move(callback);
+			return true;
+		}
+		else if (eventName == "distribution")
+		{
+			classMetatable["_Distribution"] = std::move(callback);
 			return true;
 		}
 
@@ -169,6 +200,31 @@ namespace tsom
 		state.new_usertype<AtmosphereMonitor>("AtmosphereMonitor",
 			sol::no_constructor,
 			"Atmosphere", sol::readonly_property(&AtmosphereMonitor::atmosphere));
+
+		state.new_usertype<DistributionComponent>("DistributionComponent",
+			sol::no_constructor,
+			"GetConsumptionValue", LuaFunction(&DistributionComponent::GetConsumptionValue),
+			"GetDistributedValue", LuaFunction(&DistributionComponent::GetDistributedValue),
+			"GetProductionValue",  LuaFunction(&DistributionComponent::GetProductionValue),
+			"GetInputConnectedEntity", LuaFunction([&](DistributionComponent& component, std::size_t outputIndex, sol::this_state L)
+			{
+				sol::state_view state(L);
+				return ToEntityTable(state, component.GetInputConnectedEntity(outputIndex));
+			}),
+			"GetInputConnectedPort", LuaFunction(&DistributionComponent::GetInputConnectedPort),
+			"GetInputCount", LuaFunction(&DistributionComponent::GetInputCount),
+			"GetOutputConnectedEntity", LuaFunction([&](DistributionComponent& component, std::size_t outputIndex, sol::this_state L)
+			{
+				sol::state_view state(L);
+				return ToEntityTable(state, component.GetOutputConnectedEntity(outputIndex));
+			}),
+			"GetOutputConnectedPort", LuaFunction(&DistributionComponent::GetOutputConnectedPort),
+			"GetOutputCount", LuaFunction(&DistributionComponent::GetOutputCount),
+			"IsInputConnected", LuaFunction(&DistributionComponent::IsInputConnected),
+			"IsOutputConnected", LuaFunction(&DistributionComponent::IsOutputConnected),
+			"UpdateConsumptionValue", LuaFunction(&DistributionComponent::UpdateConsumptionValue),
+			"UpdateProductionValue", LuaFunction(&DistributionComponent::UpdateProductionValue)
+		);
 	}
 
 	auto ServerEntityScriptingLibrary::RetrieveAddComponentHandler(std::string_view componentType) -> AddComponentFunc

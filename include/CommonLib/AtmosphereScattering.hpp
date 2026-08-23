@@ -19,6 +19,11 @@ namespace tsom
 		Torus
 	};
 
+	struct AtmosphereScatteringCameraSettings
+	{
+		Nz::Vector3f sunDir = Nz::Vector3f(0.852868497f, 0.5f, 0.150383770f);
+	};
+
 	struct AtmosphereScattering
 	{
 		Nz::Vector3f sunDir = Nz::Vector3f(0.852868497f, 0.5f, 0.150383770f);

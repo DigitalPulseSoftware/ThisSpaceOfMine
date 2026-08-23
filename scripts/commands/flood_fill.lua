@@ -43,9 +43,8 @@ return function ()
 		return
 	end
 
-	local water = result.hitChunk:GetBlockLibrary():GetBlockIndex("water")
-
 	local chunkContainer = result.hitChunk:GetContainer()
+	local water = chunkContainer:GetBlockLibrary():GetBlockIndex("water")
 
 	local blockIndices = chunkContainer:GetBlockIndices(result.hitChunk:GetIndices(), hitBlock.blockIndices)
 
@@ -113,7 +112,13 @@ return function ()
 			end
 
 			if targetChunk:GetBlockContent(innerCoordinates) == 0 then
-				targetChunk:UpdateBlock(innerCoordinates, water)
+				local chunkKey = tostring(targetChunk:GetIndices())
+				if not updatedChunks[chunkKey] then
+					targetChunk:BeginBatchUpdate()
+					updatedChunks[chunkKey] = targetChunk
+				end
+
+				targetChunk:UpdateBlock(innerCoordinates, water, true)
 
 				-- add empty neighbor blocks
 				local axis = GetUpAxis(targetChunk, innerCoordinates)
@@ -125,11 +130,17 @@ return function ()
 				AddNeighbor(chunkContainer, firstBlock, axis, "up", -1)
 			end
 
-			updatedChunks[tostring(chunkIndices)] = true
 			if table.count(updatedChunks) > 10 then
+				for chunkKey, chunk in pairs(updatedChunks) do
+					chunk:EndBatchUpdate()
+				end
 				-- limit concurrent chunk updates per tick
 				return
 			end
+		end
+
+		for chunkKey, chunk in pairs(updatedChunks) do
+			chunk:EndBatchUpdate()
 		end
 	end
 

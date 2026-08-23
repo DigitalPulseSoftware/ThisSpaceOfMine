@@ -74,12 +74,13 @@ namespace tsom
 			inline const EntityRegistry& GetEntityRegistry() const;
 			inline ServerPlayer* GetPlayer(PlayerIndex playerIndex);
 			inline const ServerPlayer* GetPlayer(PlayerIndex playerIndex) const;
-			inline ServerDatabase& GetServerDatabase();
+			inline ServerDatabase& GetThreadServerDatabase();
 			inline Nz::Time GetTickDuration() const;
 			inline Nz::TimerManager& GetTickedTimerManager();
 
 			void LinkDatabaseEnvironments(Nz::UInt32 sourceDatabaseId, Nz::UInt32 destinationDatabaseId, const Nz::Vector3f& position);
 			void LoadFromDatabase();
+			void LoadScripts(bool isReloading = false);
 
 			void RegisterDatabaseEnvironment(Nz::UInt32 databaseId, std::unique_ptr<ServerEnvironment>&& serverEnvironment);
 			std::unique_ptr<Nz::EnttWorld> RegisterEnvironment(ServerEnvironment* environment);
@@ -101,6 +102,7 @@ namespace tsom
 				std::string databaseFile;
 				Nz::Time saveInterval = Nz::Time::Seconds(30);
 				bool enableDebugDrawer = false;
+				bool enableChunkCache = false;
 				bool pauseWhenEmpty = true;
 			};
 
@@ -113,7 +115,6 @@ namespace tsom
 
 		private:
 			void LoadPlanetFromDatabase(Database::Planet&& planetData);
-			void LoadScripts(bool isReloading = false);
 			void HandleNetworkEvents();
 			void OnNetworkTick();
 			void OnSave();

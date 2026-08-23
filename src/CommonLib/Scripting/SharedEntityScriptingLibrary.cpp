@@ -9,6 +9,7 @@
 #include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/PhysicsConstants.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
+#include <CommonLib/Components/DistributionComponent.hpp>
 #include <CommonLib/Components/ScriptedEntityComponent.hpp>
 #include <CommonLib/Components/TickComponent.hpp>
 #include <CommonLib/Scripting/ScriptingProperties.hpp>
@@ -39,8 +40,10 @@ namespace tsom
 		{
 			sol::table classMetatable;
 			std::vector<EntityClass::RemoteProcedureCall> clientRpcs;
+			std::vector<EntityClass::RemoteProcedureCall> serverRpcs;
 			std::vector<EntityClass::Property> properties;
 			std::vector<sol::protected_function> propertyUpdateCallbacks;
+			Nz::ParameterList metadata;
 			EntityClass::Callbacks callbacks;
 		};
 
@@ -106,6 +109,32 @@ namespace tsom
 					},
 					.getComponent = SharedEntityScriptingLibrary::ComponentEntry::DefaultGet<Nz::RigidBody3DComponent>()
 				}
+			},
+			{
+				"distribution", SharedEntityScriptingLibrary::ComponentEntry{
+					.addComponent = [](sol::this_state L, entt::handle entity, sol::optional<sol::table> parameters)
+					{
+						if (!parameters)
+							throw std::runtime_error("missing parameters");
+
+						sol::table tableInputs = (*parameters)["inputs"];
+
+						std::size_t inputCount = tableInputs.size();
+						std::vector<DistributionType> inputs(inputCount);
+						for (std::size_t i = 0; i < inputCount; ++i)
+							inputs[i] = tableInputs[i + 1];
+
+						sol::table tableOutputs = (*parameters)["outputs"];
+
+						std::size_t outputCount = tableOutputs.size();
+						std::vector<DistributionType> outputs(outputCount);
+						for (std::size_t i = 0; i < outputCount; ++i)
+							outputs[i] = tableOutputs[i + 1];
+
+						return sol::make_object(L, &entity.emplace<DistributionComponent>(inputs, outputs));
+					},
+					.getComponent = SharedEntityScriptingLibrary::ComponentEntry::DefaultGet<DistributionComponent>()
+				}
 			}
 		});
 	}
@@ -123,8 +152,11 @@ namespace tsom
 		RegisterPhysics(state);
 	}
 
-	sol::table SharedEntityScriptingLibrary::ToEntityTable(sol::state_view& state, entt::handle entity)
+	sol::object SharedEntityScriptingLibrary::ToEntityTable(sol::state_view& state, entt::handle entity)
 	{
+		if (!entity)
+			return sol::lua_nil;
+
 		if (ScriptedEntityComponent* scriptedComponent = entity.try_get<ScriptedEntityComponent>())
 		{
 			if (scriptedComponent->entityTable.lua_state() == state)
@@ -143,6 +175,7 @@ namespace tsom
 	{
 		// Game
 		constants["PlayerOxygenConsumption"] = Constants::PlayerOxygenConsumption;
+		constants["DistributionTickRate"] = Constants::DistributionTickRate;
 
 		// Internal
 		constants["TickDuration"] = Constants::TickDuration;
@@ -223,7 +256,7 @@ namespace tsom
 		});
 	}
 
-	void SharedEntityScriptingLibrary::HandleInit(sol::table classMetatable, entt::handle entity)
+	void SharedEntityScriptingLibrary::PostInit(sol::table classMetatable, entt::handle entity)
 	{
 	}
 
@@ -267,18 +300,47 @@ namespace tsom
 	{
 		state.new_usertype<Nz::NodeComponent>("NodeComponent",
 			sol::no_constructor,
-			"GetRotation", LuaFunction([](const Nz::NodeComponent& nodeComponent)
+			"GetPosition", LuaFunction(&Nz::Node::GetPosition),
+			"GetRotation", LuaFunction(&Nz::Node::GetRotation),
+			"GetForward", LuaFunction(&Nz::Node::GetForward),
+			"GetRight", LuaFunction(&Nz::Node::GetRight),
+			"GetUp", LuaFunction(&Nz::Node::GetUp),
+			"Scale", sol::overload(
+				LuaFunction([](Nz::NodeComponent& nodeComponent, float scale)
+				{
+					return nodeComponent.Scale(scale);
+				}),
+				LuaFunction([](Nz::NodeComponent& nodeComponent, const Nz::Vector3f& scale)
+				{
+					return nodeComponent.Scale(scale);
+				})
+			),
+			"SetPosition", LuaFunction([](Nz::NodeComponent& nodeComponent, const Nz::Vector3f& position)
 			{
-				return nodeComponent.GetRotation();
+				return nodeComponent.SetPosition(position);
 			}),
-			"GetPosition", LuaFunction([](const Nz::NodeComponent& nodeComponent)
+			"SetRotation", LuaFunction([](Nz::NodeComponent& nodeComponent, const Nz::Quaternionf& rotation)
 			{
-				return nodeComponent.GetPosition();
+				return nodeComponent.SetRotation(rotation);
 			}),
-			"Scale", LuaFunction([](Nz::NodeComponent& nodeComponent, const Nz::Vector3f& scale)
+			"SetScale", sol::overload(
+				LuaFunction([](Nz::NodeComponent& nodeComponent, float scale)
+				{
+					return nodeComponent.SetScale(scale);
+				}),
+				LuaFunction([](Nz::NodeComponent& nodeComponent, const Nz::Vector3f& position)
+				{
+					return nodeComponent.SetPosition(position);
+				})
+			),
+			"SetTransform", LuaFunction([](Nz::NodeComponent& nodeComponent, const Nz::Vector3f& position, const Nz::Quaternionf& rotation, const Nz::Vector3f& scale)
 			{
-				return nodeComponent.Scale(scale);
+				return nodeComponent.SetTransform(position, rotation, scale);
 			}),
+			"ToGlobalDirection", LuaFunction(&Nz::NodeComponent::ToGlobalDirection),
+			"ToGlobalPosition", LuaFunction(&Nz::NodeComponent::ToGlobalPosition),
+			"ToGlobalRotation", LuaFunction(&Nz::NodeComponent::ToGlobalRotation),
+			"ToGlobalScale", LuaFunction(&Nz::NodeComponent::ToGlobalScale),
 			"ToLocalDirection", LuaFunction(&Nz::NodeComponent::ToLocalDirection),
 			"ToLocalPosition", LuaFunction(&Nz::NodeComponent::ToLocalPosition),
 			"ToLocalRotation", LuaFunction(&Nz::NodeComponent::ToLocalRotation),
@@ -325,6 +387,25 @@ namespace tsom
 			"SetRotation", LuaFunction(&Nz::RigidBody3DComponent::SetRotation),
 			"TeleportTo", LuaFunction(&Nz::RigidBody3DComponent::TeleportTo)
 		);
+
+		state.new_enum("DistributionType",
+			"Electrical", DistributionType::Electrical,
+			"Gas", DistributionType::Gas
+		);
+
+		state.new_usertype<ElectricalQuantity>("ElectricalQuantity",
+			sol::call_constructor, [](std::uint32_t energy) { return ElectricalQuantity{ energy }; },
+			"Minimize", &ElectricalQuantity::Minimize,
+			"energy", &ElectricalQuantity::energy
+		);
+
+		state.new_usertype<GasQuantity>("GasQuantity",
+			sol::call_constructor, sol::constructors<GasQuantity()>(),
+			"Increment", &GasQuantity::Increment,
+			"Minimize", &GasQuantity::Minimize,
+			sol::meta_function::index, &GasQuantity::Get,
+			sol::meta_function::new_index, &GasQuantity::Set
+		);
 	}
 
 	void SharedEntityScriptingLibrary::RegisterEntityBuilder(sol::state& state)
@@ -354,12 +435,38 @@ namespace tsom
 					.isNetworked = isNetworked
 				});
 			}),
+			"Set", sol::overload(
+				LuaFunction([this](EntityBuilder& entityBuilder, std::string parameter, bool value)
+				{
+					entityBuilder.metadata.SetParameter(std::move(parameter), value);
+				}),
+				LuaFunction([this](EntityBuilder& entityBuilder, std::string parameter, long long value)
+				{
+					entityBuilder.metadata.SetParameter(std::move(parameter), value);
+				}),
+				LuaFunction([this](EntityBuilder& entityBuilder, std::string parameter, double value)
+				{
+					entityBuilder.metadata.SetParameter(std::move(parameter), value);
+				}),
+				LuaFunction([this](EntityBuilder& entityBuilder, std::string parameter, std::string value)
+				{
+					entityBuilder.metadata.SetParameter(std::move(parameter), std::move(value));
+				}),
+				LuaFunction([this](EntityBuilder& entityBuilder, const std::string& parameter, const Nz::Vector3f& value)
+				{
+					entityBuilder.metadata.SetParameter(parameter + ".x", value.x);
+					entityBuilder.metadata.SetParameter(parameter + ".y", value.y);
+					entityBuilder.metadata.SetParameter(parameter + ".z", value.z);
+				})
+			),
 			"On", LuaFunction([this](sol::this_state L, EntityBuilder& entityBuilder, std::string_view eventName, sol::protected_function callback)
 			{
 				if (eventName == "init")
 					entityBuilder.classMetatable["_Init"] = std::move(callback);
 				else if (eventName == "activate")
 					entityBuilder.classMetatable["_Activate"] = std::move(callback);
+				else if (eventName == "destroy")
+					entityBuilder.classMetatable["_Destroy"] = std::move(callback);
 				else if (eventName == "tick")
 					entityBuilder.classMetatable["_Tick"] = std::move(callback);
 				else
@@ -414,6 +521,15 @@ namespace tsom
 	{
 		m_entityMetatable = state.create_table();
 		m_entityMetatable[sol::meta_method::index] = m_entityMetatable;
+		m_entityMetatable[sol::meta_method::equal_to] = [](sol::stack_table t1, sol::stack_table t2)
+		{
+			auto t1Entity = t1.get<sol::optional<EntityReference>>("_Entity");
+			auto t2Entity = t2.get<sol::optional<EntityReference>>("_Entity");
+			if (!t1Entity || !t2Entity)
+				return false;
+
+			return *t1Entity == *t2Entity;
+		};
 
 		FillEntityMetatable(state, m_entityMetatable);
 	}
@@ -453,6 +569,21 @@ namespace tsom
 					}
 				};
 			}
+	
+			if (sol::optional<sol::protected_function> destroyCallback = entityBuilder.classMetatable["_Destroy"])
+			{
+				entityBuilder.callbacks.onDestroy = [this, callback = std::move(destroyCallback)](entt::handle entity) mutable
+				{
+					auto& entityScripted = entity.get<ScriptedEntityComponent>();
+
+					auto res = (*callback)(entityScripted.entityTable);
+					if (!res.valid())
+					{
+						sol::error err = res;
+						spdlog::error("entity destroy event failed: {}", err.what());
+					}
+				};
+			}
 
 			sol::optional<sol::protected_function> tickCallback = entityBuilder.classMetatable["_Tick"];
 
@@ -483,8 +614,6 @@ namespace tsom
 				entityScripted.entityTable[sol::metatable_key] = entityScripted.classMetatable;
 				entityScripted.entityTable["_Entity"] = EntityReference(entity);
 
-				HandleInit(entityScripted.classMetatable, entity);
-
 				if (tickCallback)
 				{
 					auto& entityTick = entity.emplace<TickComponent>();
@@ -510,9 +639,13 @@ namespace tsom
 						spdlog::error("entity init event failed: {}", err.what());
 					}
 				}
+
+				PostInit(entityScripted.classMetatable, entity);
 			};
 
-			m_entityRegistry.RegisterClass(EntityClass{ std::move(name), std::move(entityBuilder.properties), std::move(entityBuilder.callbacks), std::move(entityBuilder.clientRpcs) });
+			// TODO: In case of script reloading, we must update the classMetatable for existing entities as well
+
+			m_entityRegistry.RegisterClass(EntityClass{ std::move(name), std::move(entityBuilder.properties), std::move(entityBuilder.callbacks), std::move(entityBuilder.clientRpcs), std::move(entityBuilder.serverRpcs), std::move(entityBuilder.metadata) });
 		});
 	}
 
@@ -527,6 +660,15 @@ namespace tsom
 		state.new_usertype<Nz::BoxCollider3D>("BoxCollider3D",
 			sol::base_classes, sol::bases<Nz::Collider3D>(),
 			sol::meta_function::construct, sol::factories(LuaFunction([](const Nz::Vector3f& lengths) { return std::make_shared<Nz::BoxCollider3D>(lengths); }))
+		);
+
+		state.new_usertype<Nz::TranslatedRotatedCollider3D>("TranslatedRotatedCollider3D",
+			sol::base_classes, sol::bases<Nz::Collider3D>(),
+			sol::meta_function::construct, sol::factories(
+				LuaFunction([](std::shared_ptr<Nz::Collider3D> collider, const Nz::Vector3f& translation) { return std::make_shared<Nz::TranslatedRotatedCollider3D>(std::move(collider), translation); }),
+				LuaFunction([](std::shared_ptr<Nz::Collider3D> collider, const Nz::Quaternionf& rotation) { return std::make_shared<Nz::TranslatedRotatedCollider3D>(std::move(collider), rotation); }),
+				LuaFunction([](std::shared_ptr<Nz::Collider3D> collider, const Nz::Vector3f& translation, const Nz::Quaternionf& rotation) { return std::make_shared<Nz::TranslatedRotatedCollider3D>(std::move(collider), translation, rotation); })
+			)
 		);
 	}
 }

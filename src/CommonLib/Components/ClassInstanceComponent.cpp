@@ -4,7 +4,8 @@
 
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/EntityClass.hpp>
-#include <spdlog/spdlog.h>
+#include <entt/entt.hpp>
+#include <fmt/format.h>
 
 namespace tsom
 {
@@ -54,5 +55,11 @@ namespace tsom
 		m_entityClass = std::move(entityClass);
 
 		// TODO: Handle possible properties changes
+	}
+
+	void ClassInstanceComponent::TriggerDestructionCallback(entt::handle entity)
+	{
+		if (ClassInstanceComponent* classInstance = entity.try_get<ClassInstanceComponent>())
+			classInstance->GetClass()->DestroyEntity(entity);
 	}
 }

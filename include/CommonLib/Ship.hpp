@@ -24,12 +24,12 @@ namespace tsom
 	class TSOM_COMMONLIB_API Ship : public ChunkContainer, public GravityController
 	{
 		public:
-			Ship(float tileSize);
+			Ship(const BlockLibrary& blockLibrary, float tileSize);
 			Ship(const Ship&) = delete;
 			Ship(Ship&&) = delete;
 			~Ship() = default;
 
-			FlatChunk& AddChunk(const BlockLibrary& blockLibrary, const ChunkIndices& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback = nullptr);
+			FlatChunk& AddChunk(const ChunkIndices& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback = nullptr);
 
 			std::shared_ptr<Nz::Collider3D> BuildHullCollider() const;
 
@@ -40,7 +40,7 @@ namespace tsom
 			void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, Chunk& chunk)> callback) override;
 			void ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, const Chunk& chunk)> callback) const override;
 
-			void Generate(const BlockLibrary& blockLibrary, bool small);
+			void Generate(bool small);
 
 			inline Nz::Vector3f GetCenter() const override;
 			inline FlatChunk* GetChunk(const ChunkIndices& chunkIndices) override;

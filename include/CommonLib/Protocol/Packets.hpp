@@ -9,6 +9,7 @@
 
 #include <CommonLib/Export.hpp>
 #include <CommonLib/BlockIndex.hpp>
+#include <CommonLib/Direction.hpp>
 #include <CommonLib/EntityProperties.hpp>
 #include <CommonLib/EnvironmentTransform.hpp>
 #include <CommonLib/GameConstants.hpp>
@@ -116,7 +117,25 @@ namespace tsom
 			std::variant<AuthenticatedPlayerData, AnonymousPlayerData> token;
 		};
 
+		struct C_ConnectEntities
+		{
+			Helper::EntityId sourceEntityId;
+			Helper::EntityId targetEntityId;
+			Nz::UInt8 sourceEntityPort;
+			Nz::UInt8 targetEntityPort;
+		};
+
+		struct C_EntityProcedureCall
+		{
+			Helper::EntityId entity;
+			CompressedUnsigned<Nz::UInt32> rpcIndex;
+		};
+
 		struct C_ExitShipControl
+		{
+		};
+
+		struct C_GrabEntity
 		{
 		};
 
@@ -124,6 +143,53 @@ namespace tsom
 		{
 			Helper::EntityId entityId;
 		};
+
+		struct C_MineBlock
+		{
+			Helper::ChunkId chunkId;
+			Helper::VoxelLocation voxelLoc;
+		};
+
+		struct C_PlaceBlock
+		{
+			Helper::ChunkId chunkId;
+			Helper::VoxelLocation voxelLoc;
+			Nz::UInt8 newContent;
+		};
+
+		struct C_PlaceEntity
+		{
+			Helper::ChunkId chunkId;
+			Helper::VoxelLocation voxelLoc;
+			Direction topFace;
+			CompressedUnsigned<Nz::UInt32> entityClass;
+			Nz::UInt8 entityRotation;
+		};
+
+		struct C_RemoveEntity
+		{
+			Helper::EntityId entityId;
+		};
+
+		struct C_SendChatMessage
+		{
+			SecuredString<Constants::ChatMaxPlayerMessageLength> message;
+		};
+
+		struct C_SendConsoleCommand
+		{
+			SecuredString<Constants::ConsoleMaxCommandLength> command;
+		};
+
+		struct C_ToggleFlashlight
+		{
+		};
+
+		struct C_UpdatePlayerInputs
+		{
+			PlayerInputs inputs;
+		};
+
 
 		struct S_AuthResponse
 		{
@@ -174,34 +240,6 @@ namespace tsom
 			std::vector<BlockIndex> content;
 		};
 
-		struct C_MineBlock
-		{
-			Helper::ChunkId chunkId;
-			Helper::VoxelLocation voxelLoc;
-		};
-
-		struct C_PlaceBlock
-		{
-			Helper::ChunkId chunkId;
-			Helper::VoxelLocation voxelLoc;
-			Nz::UInt8 newContent;
-		};
-
-		struct C_SendChatMessage
-		{
-			SecuredString<Constants::ChatMaxPlayerMessageLength> message;
-		};
-
-		struct C_SendConsoleCommand
-		{
-			SecuredString<Constants::ConsoleMaxCommandLength> command;
-		};
-
-		struct C_UpdatePlayerInputs
-		{
-			PlayerInputs inputs;
-		};
-
 		struct S_ChunkUpdate
 		{
 			struct BlockUpdate
@@ -236,6 +274,15 @@ namespace tsom
 		{
 			Nz::UInt16 tickIndex;
 			std::vector<Helper::EntityId> entities;
+		};
+
+		struct S_EntityDistributionUpdate
+		{
+			Nz::UInt16 tickIndex;
+			Helper::EntityId sourceEntity;
+			Helper::EntityId targetEntity;
+			Nz::UInt8 sourceEntityPort;
+			Nz::UInt8 targetEntityPort;
 		};
 
 		struct S_EntitiesStateUpdate
@@ -362,10 +409,13 @@ namespace tsom
 		};
 
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_AuthRequest& data);
-		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_ExitShipControl& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_ConnectEntities& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_EntityProcedureCall& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_Interact& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_MineBlock& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_PlaceBlock& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_PlaceEntity& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_RemoveEntity& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_SendChatMessage& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_SendConsoleCommand& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, C_UpdatePlayerInputs& data);
@@ -381,6 +431,7 @@ namespace tsom
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_EntitiesCreation& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_EntitiesDelete& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_EntitiesStateUpdate& data);
+		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_EntityDistributionUpdate& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_EntityEnvironmentUpdate& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_EntityProcedureCall& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_EntityPropertiesUpdate& data);
@@ -390,7 +441,6 @@ namespace tsom
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_GameData& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_NetworkStrings& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_PilotShip& data);
-		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_PilotShipFinish& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_PlayerJoin& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_PlayerLeave& data);
 		TSOM_COMMONLIB_API void Serialize(PacketSerializer& serializer, S_PlayerNameUpdate& data);

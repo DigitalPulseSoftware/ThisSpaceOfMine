@@ -17,8 +17,17 @@ Then, features will gradually be added to gather feedback during development, so
 
 Once the project is reasonably polished, I also plan to release it on Steam to make it more accessible.
 
+# How to play
 
+Check the latest [release](https://github.com/DigitalPulseSoftware/ThisSpaceOfMine/releases), be sure to download the right archive for your system and to download/extract the assets too in the game folder (the game should be able to do it by itself but there were issues in the past).
 
+Launch the game, from there you can either directly connect to the server or create an account first (without an account your player data won't be saved).
 
+# How to contribute / test locally?
 
+Thanks a lot for wanting to contribute, there are multiple ways to help the development of this project. 
 
+- Contribute to the game design: [see the dedicated quackback](https://tsom-idea.digitalpulse.software)
+- Contribute to the Lua code (high-level interface for entities): simply edit the Lua files in your scripts folder and restart the game (the client and the server have some support for hotreloading using the `scripts.Reload()` function).
+- Contribute to the C++ code: [check this page](https://github.com/DigitalPulseSoftware/ThisSpaceOfMine/wiki/How-to-build-the-game-and-setup-local-server-(for-testing-development)) to build and setup the server/game locally.
+- Contribute to produceral generation: launch the game with `--planet-editor` and edit/create your own generation scripts (in scripts/planets)

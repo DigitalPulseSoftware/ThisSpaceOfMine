@@ -7,6 +7,7 @@
 #include <CommonLib/ChunkLock.hpp>
 #include <CommonLib/Ship.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
+#include <CommonLib/Components/DistributionComponent.hpp>
 #include <CommonLib/Components/ShipComponent.hpp>
 #include <CommonLib/Systems/BuoyancySystem.hpp>
 #include <CommonLib/Systems/GravityPhysicsSystem.hpp>
@@ -111,7 +112,7 @@ namespace tsom
 				auto& outsideNode = m_exteriorEntity.get<Nz::NodeComponent>();
 				Nz::Vector3f outsidePosition = outsideNode.GetPosition();
 
-				ServerAtmosphere* outsideAtmosphere = m_exteriorEnvironment->GetAtmosphereAtPosition(outsidePosition);
+				/*ServerAtmosphere* outsideAtmosphere = m_exteriorEnvironment->GetAtmosphereAtPosition(outsidePosition);
 				if (outsideAtmosphere)
 				{
 					for (auto&& [chunkIndices, chunkData] : m_chunkData)
@@ -122,7 +123,7 @@ namespace tsom
 								outsideAtmosphere->IncreaseGasAmount(gasType, amount);
 						}
 					}
-				}
+				}*/
 			}
 
 			// Move every switchable entity out of the ship before destroying it (otherwise the entities will be destroyed)
@@ -141,12 +142,23 @@ namespace tsom
 			for (entt::entity entity : switchView)
 			{
 				auto& envSwitch = switchView.get<ServerEnvironmentSwitchComponent>(entity);
-				envSwitch.Switch(entt::handle(registry, entity), this, m_exteriorEnvironment, outsideTransform);
+				entt::handle newEntity = envSwitch.Switch(entt::handle(registry, entity), this, m_exteriorEnvironment, outsideTransform);
+
+				if (Nz::PhysCharacter3DComponent* controlledCharacter = newEntity.try_get<Nz::PhysCharacter3DComponent>())
+					controlledCharacter->AddLinearVelocity(outsideVelocity);
+				else if (Nz::RigidBody3DComponent* controlledRigidbody = newEntity.try_get<Nz::RigidBody3DComponent>())
+				{
+					if (controlledRigidbody->IsDynamic())
+						controlledRigidbody->AddLinearVelocity(outsideVelocity);
+				}
 			}
 		}
 
 		if (m_exteriorEntity)
+		{
+			ClassInstanceComponent::TriggerDestructionCallback(m_exteriorEntity);
 			m_exteriorEntity.destroy();
+		}
 
 		ClearEntities();
 
@@ -179,17 +191,51 @@ namespace tsom
 
 	void ServerShipEnvironment::GenerateShip(bool small)
 	{
-		auto& blockLibrary = m_serverInstance.GetBlockLibrary();
 		auto& ship = GetShip();
 		ship.ClearChunks();
-		ship.Generate(blockLibrary, small);
+		ship.Generate(small);
+	}
+
+	ChunkContainer& ServerShipEnvironment::GetChunkContainer()
+	{
+		return GetShip();
+	}
+
+	const ChunkContainer& ServerShipEnvironment::GetChunkContainer() const
+	{
+		return GetShip();
 	}
 
 	ServerAtmosphere* ServerShipEnvironment::GetFallbackAtmosphereAtPosition(const Nz::Vector3f& position)
 	{
-		// Should (almost) never be called since entities exit the ship when exiting atmosphere
-		// Atmosphere is handled by multiple entities AtmosphereCarrier
-		return nullptr;
+		if (!m_exteriorEnvironment || !m_exteriorEntity)
+			return nullptr;
+
+		auto& ship = GetShip();
+
+		bool isInside = false;
+		for (const auto& [chunkIndices, chunkData] : m_chunkData)
+		{
+			if (!chunkData.hullCollider)
+				continue;
+
+			Nz::Vector3f relativePos = position - ship.GetChunkOffset(chunkIndices);
+			relativePos -= chunkData.hullCollider->GetCenterOfMass(); //< https://jrouwe.github.io/JoltPhysics/index.html#center-of-mass
+			if (chunkData.hullCollider->CollisionQuery(relativePos))
+			{
+				isInside = true;
+				break;
+			}
+		}
+
+		if (isInside)
+			return nullptr; //< Inside the ship but outside of an atmosphere carrier (inside a wall for example)
+
+		// Compute the outside position
+		auto& outsideNode = m_exteriorEntity.get<Nz::NodeComponent>();
+
+		EnvironmentTransform outsideTransform(outsideNode.GetPosition(), outsideNode.GetRotation());
+		return m_exteriorEnvironment->GetAtmosphereAtPosition(outsideTransform.Translate(position));
 	}
 
 	const GravityController* ServerShipEnvironment::GetGravityController() const
@@ -281,11 +327,12 @@ namespace tsom
 
 				Nz::ByteStream byteStream(decompressedData.data(), decompressedData.size());
 
-				Chunk& chunk = ship.AddChunk(blockLibrary, chunkIndices);
+				Chunk& chunk = ship.AddChunk(chunkIndices);
 				chunk.Deserialize(byteStream);
 			}
 
 			// Load entities
+			std::unordered_map<Nz::Uuid, entt::handle> entityByUuid;
 			if (auto it = data.find("entities"); it != data.end())
 			{
 				const nlohmann::json& entities = *it;
@@ -293,6 +340,8 @@ namespace tsom
 				std::size_t entityIndex = 0;
 				for (const nlohmann::json& entityDoc : entities)
 				{
+					NAZARA_DEFER({ entityIndex++; });
+
 					const std::string& uniqueId = entityDoc["unique_id"];
 					const std::string& className = entityDoc["class_name"];
 					Nz::UInt32 classVersion = entityDoc["class_version"];
@@ -303,19 +352,57 @@ namespace tsom
 					std::shared_ptr<const EntityClass> entityClass = m_serverInstance.GetEntityRegistry().FindClass(className);
 					if (!entityClass)
 					{
-						NazaraError("Database entity #{} has unknown class {}", entityIndex, className);
+						spdlog::error("Database entity #{} has unknown class {}", entityIndex, className);
 						continue;
 					}
+
+					Nz::Uuid entityUuid = Nz::Uuid::FromString(uniqueId);
 
 					entt::handle entity = CreateEntity();
 					entity.emplace<Nz::NodeComponent>(position, rotation);
 					entity.emplace<NetworkedComponent>();
-					entity.emplace<DatabaseComponent>(Nz::Uuid::FromString(uniqueId)); //< no planet id for ships
+					entity.emplace<DatabaseComponent>(entityUuid); //< no planet id for ships
 
 					entity.emplace<ClassInstanceComponent>(entityClass, entityClass->PropertiesFromJson(propertiesDoc));
 					entityClass->InitAndActivateEntity(entity);
 
-					entityIndex++;
+					entityByUuid[entityUuid] = entity;
+				}
+			}
+
+			// Load entities connections
+			if (auto it = data.find("entityConnections"); it != data.end())
+			{
+				const nlohmann::json& entityConnections = *it;
+
+				std::size_t entityConnectionIndex = 0;
+				for (const nlohmann::json& connectionDoc : entityConnections)
+				{
+					NAZARA_DEFER({ entityConnectionIndex++; });
+
+					const std::string& sourceEntity = connectionDoc["source_entity"];
+					const std::string& targetEntity = connectionDoc["target_entity"];
+
+					Nz::Uuid sourceEntityUuid = Nz::Uuid::FromString(sourceEntity);
+					Nz::Uuid targetEntityUuid = Nz::Uuid::FromString(targetEntity);
+					std::size_t sourceOutputIndex = connectionDoc["source_port"];
+					std::size_t targetInputIndex = connectionDoc["target_port"];
+
+					auto sourceEntityIt = entityByUuid.find(sourceEntityUuid);
+					if (sourceEntityIt == entityByUuid.end())
+					{
+						spdlog::error("Database entity connection #{} has unknown source entity {}", entityConnectionIndex, sourceEntity);
+						continue;
+					}
+
+					auto targetEntityIt = entityByUuid.find(targetEntityUuid);
+					if (targetEntityIt == entityByUuid.end())
+					{
+						spdlog::error("Database entity connection #{} has unknown target entity {}", entityConnectionIndex, targetEntity);
+						continue;
+					}
+
+					DistributionComponent::Connect(sourceEntityIt->second, targetEntityIt->second, sourceOutputIndex, targetInputIndex);
 				}
 			}
 
@@ -334,6 +421,7 @@ namespace tsom
 
 		nlohmann::json chunks = nlohmann::json::array();
 		nlohmann::json entities = nlohmann::json::array();
+		nlohmann::json entityConnections = nlohmann::json::array();
 
 		// Chunks
 		BinaryCompressor& binaryCompressor = BinaryCompressor::GetThreadCompressor();
@@ -375,11 +463,37 @@ namespace tsom
 			entityDoc["properties"] = entityClass->PropertiesToJson(entityClassInstance.GetProperties());
 		}
 
+		// Entity connections
+		auto entityConnectionView = m_world->GetRegistry().view<DatabaseComponent, DistributionComponent>();
+		for (auto&& [entity, entityDatabase, entityDistribution] : entityConnectionView.each())
+		{
+			nlohmann::json entityConnectionDoc;
+			entityConnectionDoc["source_entity"] = entityDatabase.uniqueId.ToString();
+
+			for (std::size_t outputIndex = 0; outputIndex < entityDistribution.GetOutputCount(); ++outputIndex)
+			{
+				entt::handle connectedEntity = entityDistribution.GetOutputConnectedEntity(outputIndex);
+				if (!connectedEntity)
+					continue;
+
+				DatabaseComponent* connectedEntityDatabase = connectedEntity.try_get<DatabaseComponent>();
+				if (!connectedEntityDatabase)
+					continue; //< Can't save connections to ephemeral entities
+
+				entityConnectionDoc["source_port"] = outputIndex;
+				entityConnectionDoc["target_entity"] = connectedEntityDatabase->uniqueId.ToString();
+				entityConnectionDoc["target_port"] = entityDistribution.GetOutputConnectedPort(outputIndex);
+
+				entityConnections.push_back(entityConnectionDoc);
+			}
+		}
+
 		bool hasEntities = !entities.empty();
 
 		nlohmann::json shipData;
 		shipData["chunks"] = std::move(chunks);
 		shipData["entities"] = std::move(entities);
+		shipData["entityConnections"] = std::move(entityConnections);
 		shipData["version"] = Nz::UInt32(1);
 
 		nlohmann::json body;
@@ -488,7 +602,10 @@ namespace tsom
 				if (Nz::PhysCharacter3DComponent* controlledCharacter = newEntity.try_get<Nz::PhysCharacter3DComponent>())
 					controlledCharacter->AddLinearVelocity(shipLinearVelocity);
 				else if (Nz::RigidBody3DComponent* controlledRigidbody = newEntity.try_get<Nz::RigidBody3DComponent>())
-					controlledRigidbody->AddLinearVelocity(shipLinearVelocity);
+				{
+					if (controlledRigidbody->IsDynamic())
+						controlledRigidbody->AddLinearVelocity(shipLinearVelocity);
+				}
 			}
 		}
 	}
@@ -552,8 +669,8 @@ namespace tsom
 
 							Nz::UInt64 oxygenAmount = Constants::SecondsToEmptyOxygenBlock * Nz::UInt64(Constants::PlayerOxygenConsumption) * occupiedBlockCount;
 							Nz::UInt64 nitrogenAmount = oxygenAmount * (100 - Constants::OxygenAtmospherePct) / Constants::OxygenAtmospherePct;
-							outsideAtmosphere->DecreaseGasAmount(GasType::Oxygen, oxygenAmount);
-							outsideAtmosphere->DecreaseGasAmount(GasType::Nitrogen, nitrogenAmount);
+							//outsideAtmosphere->DecreaseGasAmount(GasType::Oxygen, oxygenAmount);
+							//outsideAtmosphere->DecreaseGasAmount(GasType::Nitrogen, nitrogenAmount);
 							newAtmosphere.IncreaseGasAmount(GasType::Oxygen, oxygenAmount);
 							newAtmosphere.IncreaseGasAmount(GasType::Nitrogen, nitrogenAmount);
 						}

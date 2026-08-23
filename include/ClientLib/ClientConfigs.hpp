@@ -12,6 +12,7 @@
 namespace tsom::Config
 {
 	static constexpr auto Chunk_NormalSmoothAngle = ConfigFile::FloatOptionName{ "Chunk.NormalSmoothAngle" };
+	static constexpr auto Graphics_FPSLimit = ConfigFile::IntegerOptionName{ "Graphics.FPSLimit" };
 	static constexpr auto Graphics_SunShadowMapSize = ConfigFile::IntegerOptionName{ "Graphics.SunShadowMapSize" };
 }
 

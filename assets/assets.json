@@ -67,11 +67,11 @@
         },
         {
             "input": "Player/Textures/Soldier_MetallicSmoothness.png",
-            "output": "Models/Player/Textures/Soldier_MetallicSmoothness.dds",
+            "output": "Models/Player/Textures/Soldier_MetallicRoughness.dds",
             "method": "Texture",
             "type": "BiGreyscale",
             "channel0": "Red",
-            "channel1": "Alpha"
+            "channel1": "InvAlpha"
         },
         {
             "input": "Player/Textures/Soldier_Normal.png",
@@ -110,13 +110,23 @@
             "method": "Shader"
         },
         {
-            "input": "Shaders/PlayerPBR.nzsl",
-            "output": "Shaders/PlayerPBR.nzslb",
+            "input": "Shaders/LeafPBR.nzsl",
+            "output": "Shaders/LeafPBR.nzslb",
+            "method": "Shader"
+        },
+        {
+            "input": "Shaders/PhysicallyBasedMaterial.nzsl",
+            "output": "Shaders/PhysicallyBasedMaterial.nzslb",
             "method": "Shader"
         },
         {
             "input": "Shaders/SkyboxMaterial.nzsl",
             "output": "Shaders/SkyboxMaterial.nzslb",
+            "method": "Shader"
+        },
+        {
+            "input": "Shaders/ToneMapping.nzsl",
+            "output": "Shaders/ToneMapping.nzslb",
             "method": "Shader"
         },
         {
@@ -149,6 +159,504 @@
             "input": "blocks.json",
             "output": "BlockData.json",
             "method": "Copy"
+        },
+        {
+            "input": "sci-fi-battery/battery.obj",
+            "output": "Models/Battery/Battery.obj",
+            "method": "Copy"
+        },
+        {
+            "input": "sci-fi-battery/textures/lambert3SG_baseColor.png",
+            "output": "Models/Battery/Textures/lambert3SG_baseColor.dds",
+            "method": "Texture"
+        },
+        {
+            "input": "sci-fi-battery/textures/lambert3SG_metallicRoughness.png",
+            "output": "Models/Battery/Textures/lambert3SG_metallicRoughness.dds",
+            "method": "Texture",
+            "type": "BiGreyscale",
+            "channel0": "Green",
+            "channel1": "Blue"
+        },
+        {
+            "input": "sci-fi-battery/textures/lambert3SG_normal.png",
+            "output": "Models/Battery/Textures/lambert3SG_normal.dds",
+            "method": "Texture",
+            "type": "Normal"
+        },
+        {
+            "input": "sci-fi-battery/textures/lambert4SG_baseColor.png",
+            "output": "Models/Battery/Textures/lambert4SG_baseColor.dds",
+            "method": "Texture"
+        },
+        {
+            "input": "sci-fi-battery/textures/lambert4SG_metallicRoughness.png",
+            "output": "Models/Battery/Textures/lambert4SG_metallicRoughness.dds",
+            "method": "Texture",
+            "type": "BiGreyscale",
+            "channel0": "Green",
+            "channel1": "Blue"
+        },
+        {
+            "input": "sci-fi-battery/textures/lambert5SG_baseColor.png",
+            "output": "Models/Battery/Textures/lambert5SG_baseColor.dds",
+            "method": "Texture"
+        },
+        {
+            "input": "sci-fi-battery/textures/lambert5SG_metallicRoughness.png",
+            "output": "Models/Battery/Textures/lambert5SG_metallicRoughness.dds",
+            "method": "Texture",
+            "type": "BiGreyscale",
+            "channel0": "Green",
+            "channel1": "Blue"
+        },
+        {
+            "input": "sci-fi-battery/textures/lambert5SG_normal.png",
+            "output": "Models/Battery/Textures/lambert5SG_normal.dds",
+            "method": "Texture",
+            "type": "Normal"
+        },
+        {
+            "input": "sci-fi-battery/textures/lambert6SG_baseColor.png",
+            "output": "Models/Battery/Textures/lambert6SG_baseColor.dds",
+            "method": "Texture"
+        },
+        {
+            "input": "sci-fi-battery/textures/lambert6SG_metallicRoughness.png",
+            "output": "Models/Battery/Textures/lambert6SG_metallicRoughness.dds",
+            "method": "Texture",
+            "type": "BiGreyscale",
+            "channel0": "Green",
+            "channel1": "Blue"
+        },
+        {
+            "input": "sci-fi-battery/textures/lambert6SG_normal.png",
+            "output": "Models/Battery/Textures/lambert6SG_normal.dds",
+            "method": "Texture",
+            "type": "Normal"
+        },
+        {
+            "input": "sci-fi-control-panel/DistributionBoard.obj",
+            "output": "Models/ControlPanel/ControlPanel.obj",
+            "method": "Copy"
+        },
+        {
+            "input": "sci-fi-control-panel/textures/DistributionBoard_DistributionBoard_BaseColor.png",
+            "output": "Models/ControlPanel/Textures/BaseColor.dds",
+            "method": "Texture"
+        },
+        {
+            "input": "sci-fi-control-panel/textures/DistributionBoard_DistributionBoard_Normal.png",
+            "output": "Models/ControlPanel/Textures/Normal.dds",
+            "method": "Texture",
+            "type": "Normal"
+        },
+        {
+            "input": "sci-fi-control-panel/textures/DistributionBoard_DistributionBoard_AO.png",
+            "output": "Models/ControlPanel/Textures/AmbientOcclusion.dds",
+            "method": "Texture",
+            "type": "Greyscale"
+        },
+        {
+            "inputs": [
+                "sci-fi-control-panel/textures/DistributionBoard_DistributionBoard_Metallic.png",
+                "sci-fi-control-panel/textures/DistributionBoard_DistributionBoard_Roughness.png"
+            ],
+            "output": "Models/ControlPanel/Textures/MetallicRoughness.dds",
+            "method": "Texture",
+            "type": "BiGreyscale",
+            "channel0": "Red",
+            "channel1": "Red",
+            "channelSourceTexture0": 0,
+            "channelSourceTexture1": 1
+        },
+        {
+            "input": "sci-fi-switch-box/SwitchBox.obj",
+            "output": "Models/SwitchBox/SwitchBox.obj",
+            "method": "Copy"
+        },
+        {
+            "input": "sci-fi-switch-box/textures/SwitchAlbedo.png",
+            "output": "Models/SwitchBox/Textures/BaseColor.dds",
+            "method": "Texture"
+        },
+        {
+            "input": "sci-fi-switch-box/textures/SwitchNormal.png",
+            "output": "Models/SwitchBox/Textures/Normal.dds",
+            "method": "Texture",
+            "type": "Normal"
+        },
+        {
+            "input": "sci-fi-switch-box/textures/SwitchAO.png",
+            "output": "Models/SwitchBox/Textures/AmbientOcclusion.dds",
+            "method": "Texture",
+            "type": "Greyscale"
+        },
+        {
+            "input": "sci-fi-switch-box/textures/SwitchMetalness.png",
+            "output": "Models/SwitchBox/Textures/Metallic.dds",
+            "method": "Texture",
+            "type": "Greyscale"
+        },
+        {
+            "input": "sci-fi-light-source/LightSource_GGJ_NoHandle.obj",
+            "output": "Models/LightSource/LightSource.obj",
+            "method": "Copy"
+        },
+        {
+            "input": "sci-fi-light-source/textures/LightSource_Albedo.png",
+            "output": "Models/LightSource/Textures/BaseColor.dds",
+            "method": "Texture"
+        },
+        {
+            "input": "sci-fi-light-source/textures/LightSource_Normal.png",
+            "output": "Models/LightSource/Textures/Normal.dds",
+            "method": "Texture",
+            "type": "Normal"
+        },
+        {
+            "input": "sci-fi-light-source/textures/LightSource_AO.png",
+            "output": "Models/LightSource/Textures/AmbientOcclusion.dds",
+            "method": "Texture",
+            "type": "Greyscale"
+        },
+        {
+            "inputs": [
+                "sci-fi-light-source/textures/LightSource_Metalness.png",
+                "sci-fi-light-source/textures/LightSource_Roughness.png"
+            ],
+            "output": "Models/LightSource/Textures/MetallicRoughness.dds",
+            "method": "Texture",
+            "type": "BiGreyscale",
+            "channel0": "Red",
+            "channel1": "Red",
+            "channelSourceTexture0": 0,
+            "channelSourceTexture1": 1
+        },
+        {
+            "input": "sci-fi-lamps/lamp1x1.obj",
+            "output": "Models/WallLights/WallLight1x1.obj",
+            "method": "Copy"
+        },
+        {
+            "input": "sci-fi-lamps/textures/metal_diffuse.png",
+            "output": "Models/WallLights/Textures/BaseColor.dds",
+            "method": "Texture"
+        },
+        {
+            "input": "sci-fi-lamps/textures/metal_normalmap.png",
+            "output": "Models/WallLights/Textures/Normal.dds",
+            "method": "Texture",
+            "type": "Normal"
+        },
+        {
+            "input": "sci-fi-lamps/textures/lamps_ao.png",
+            "output": "Models/WallLights/Textures/AmbientOcclusion.dds",
+            "method": "Texture",
+            "type": "Greyscale"
+        },
+        {
+            "inputs": [
+                "sci-fi-lamps/textures/metal_metalness.png",
+                "sci-fi-lamps/textures/metal_gloss.png"
+            ],
+            "output": "Models/WallLights/Textures/MetallicRoughness.dds",
+            "method": "Texture",
+            "type": "BiGreyscale",
+            "channel0": "Red",
+            "channel1": "InvRed",
+            "channelSourceTexture0": 0,
+            "channelSourceTexture1": 1
+        },
+        {
+            "input": "sci-fi-canister/sci-fi-canister.obj",
+            "output": "Models/Canister/Canister.obj",
+            "method": "Copy"
+        },
+        {
+            "input": "sci-fi-canister/textures/008_Cylider_low_SciFiCylinder_BaseColor.png",
+            "output": "Models/Canister/Textures/BaseColor.dds",
+            "method": "Texture"
+        },
+        {
+            "input": "sci-fi-canister/textures/008_Cylider_low_SciFiCylinder_Normal.png",
+            "output": "Models/Canister/Textures/Normal.dds",
+            "method": "Texture",
+            "type": "Normal"
+        },
+        {
+            "inputs": [
+                "sci-fi-canister/textures/008_Cylider_low_SciFiCylinder_Metallic.png",
+                "sci-fi-canister/textures/008_Cylider_low_SciFiCylinder_Roughness.png"
+            ],
+            "output": "Models/Canister/Textures/MetallicRoughness.dds",
+            "method": "Texture",
+            "type": "BiGreyscale",
+            "channel0": "Red",
+            "channel1": "Red",
+            "channelSourceTexture0": 0,
+            "channelSourceTexture1": 1
+        },
+        {
+            "input": "air-compressor/air-compressor.obj",
+            "output": "Models/GasPump/GasPump.obj",
+            "method": "Copy"
+        },
+        {
+            "input": "air-compressor/textures/01_-_Base_Base_Color.png",
+            "output": "Models/GasPump/Textures/BaseColor.dds",
+            "method": "Texture"
+        },
+        {
+            "input": "air-compressor/textures/dial.png",
+            "output": "Models/GasPump/Textures/Dial_BaseColor.dds",
+            "method": "Texture"
+        },
+        {
+            "input": "air-compressor/textures/01_-_Base_Normal_DirectX.png",
+            "output": "Models/GasPump/Textures/Normal.dds",
+            "method": "Texture",
+            "type": "Normal",
+            "channel0": "Red",
+            "channel1": "InvGreen"
+        },
+        {
+            "inputs": [
+                "air-compressor/textures/01_-_Base_Metallic.png",
+                "air-compressor/textures/01_-_Base_Roughness.png"
+            ],
+            "output": "Models/GasPump/Textures/MetallicRoughness.dds",
+            "method": "Texture",
+            "type": "BiGreyscale",
+            "channel0": "Red",
+            "channel1": "Red",
+            "channelSourceTexture0": 0,
+            "channelSourceTexture1": 1
+        },
+        {
+            "input": "vents/vent.obj",
+            "output": "Models/GasVent/GasVent.obj",
+            "method": "Copy"
+        },
+        {
+            "input": "vents/textures/ventsColor.png",
+            "output": "Models/GasVent/Textures/BaseColor.dds",
+            "method": "Texture"
+        },
+        {
+            "input": "vents/textures/ventsAO.png",
+            "output": "Models/GasVent/Textures/AmbientOcclusion.dds",
+            "method": "Texture",
+            "type": "Greyscale"
+        },
+        {
+            "input": "vents/textures/ventsNormal.png",
+            "output": "Models/GasVent/Textures/Normal.dds",
+            "method": "Texture",
+            "type": "Normal"
+        },
+        {
+            "inputs": [
+                "vents/textures/ventsMetallic.png",
+                "vents/textures/ventsRoughness.png"
+            ],
+            "output": "Models/GasVent/Textures/MetallicRoughness.dds",
+            "method": "Texture",
+            "type": "BiGreyscale",
+            "channel0": "Red",
+            "channel1": "Red",
+            "channelSourceTexture0": 0,
+            "channelSourceTexture1": 1
+        },
+        {
+            "input": "futuristic-sensor/sensor.obj",
+            "output": "Models/Sensor/Sensor.obj",
+            "method": "Copy"
+        },
+        {
+            "input": "futuristic-sensor/textures/Image_4_6.png",
+            "output": "Models/Sensor/Textures/BaseColor.dds",
+            "method": "Texture"
+        },
+        {
+            "input": "futuristic-sensor/textures/Image_6_4.png",
+            "output": "Models/Sensor/Textures/Normal.dds",
+            "method": "Texture",
+            "type": "Normal"
+        },
+        {
+            "inputs": [
+                "futuristic-sensor/textures/Image_5_5@channels=G.png",
+                "futuristic-sensor/textures/Image_5_5@channels=B.png"
+            ],
+            "output": "Models/Sensor/Textures/MetallicRoughness.dds",
+            "method": "Texture",
+            "type": "BiGreyscale",
+            "channel0": "Red",
+            "channel1": "Red",
+            "channelSourceTexture0": 1,
+            "channelSourceTexture1": 0
+        },
+        {
+            "input": "futuristic-sensor/textures/1911.i516.017_hud interface radar composition 2.png",
+            "output": "Models/Sensor/Textures/Screen.dds",
+            "method": "Texture"
+        },
+        {
+            "input": "StarterNaturePack_(FoliageKit1)/FBX_Textures/FBX/F1_Tree1.obj",
+            "output": "Models/Trees/Tree1.obj",
+            "method": "Copy"
+        },
+        {
+            "input": "StarterNaturePack_(FoliageKit1)/FBX_Textures/FBX/F1_Tree2.obj",
+            "output": "Models/Trees/Tree2.obj",
+            "method": "Copy"
+        },
+        {
+            "input": "StarterNaturePack_(FoliageKit1)/FBX_Textures/FBX/F1_Tree3.obj",
+            "output": "Models/Trees/Tree3.obj",
+            "method": "Copy"
+        },
+        {
+            "input": "StarterNaturePack_(FoliageKit1)/FBX_Textures/FBX/F1_Tree4.obj",
+            "output": "Models/Trees/Tree4.obj",
+            "method": "Copy"
+        },
+        {
+            "input": "StarterNaturePack_(FoliageKit1)/FBX_Textures/Textures/Bark1/bark1_baseColor.png",
+            "output": "Models/Trees/Textures/Bark_BaseColor.dds",
+            "method": "Texture"
+        },
+        {
+            "input": "StarterNaturePack_(FoliageKit1)/FBX_Textures/Textures/Bark1/bark1_normal_GL.png",
+            "output": "Models/Trees/Textures/Bark_Normal.dds",
+            "method": "Texture",
+            "type": "Normal"
+        },
+        {
+            "input": "StarterNaturePack_(FoliageKit1)/FBX_Textures/Textures/F1_Leaves_Map1.png",
+            "output": "Models/Trees/Textures/Leaves_BaseColor.dds",
+            "method": "Texture",
+            "type": "Greyscale"
+        },
+        {
+            "input": "metal-door/metal-door.obj",
+            "output": "Models/MetalDoor/MetalDoor.obj",
+            "method": "Copy"
+        },
+        {
+            "input": "metal-door/Image_0.png",
+            "output": "Models/MetalDoor/Textures/BaseColor.dds",
+            "method": "Texture"
+        },
+        {
+            "input": "metal-door/Image_2.png",
+            "output": "Models/MetalDoor/Textures/Normal.dds",
+            "method": "Texture",
+            "type": "Normal"
+        },
+        {
+            "input": "metal-door/Image_1.png",
+            "output": "Models/MetalDoor/Textures/MetallicRoughness.dds",
+            "method": "Texture",
+            "type": "BiGreyscale",
+            "channel0": "Green",
+            "channel1": "Blue"
+        },
+        {
+            "input": "metal-door/Image_1.png",
+            "output": "Models/MetalDoor/Textures/AmbientOcclusion.dds",
+            "method": "Texture",
+            "type": "Greyscale",
+            "channel0": "Red"
+        },
+        {
+            "input": "sci-fi-solar-panel/sci-fi-solar-panel.obj",
+            "output": "Models/SolarPanel/SolarPanel.obj",
+            "method": "Copy"
+        },
+        {
+            "input": "sci-fi-solar-panel/others_0013_color_2k.jpg",
+            "output": "Models/SolarPanel/Textures/BaseColor.dds",
+            "method": "Texture"
+        },
+        {
+            "input": "sci-fi-solar-panel/others_0013_normal_opengl_2k.png",
+            "output": "Models/SolarPanel/Textures/Normal.dds",
+            "method": "Texture",
+            "type": "Normal"
+        },
+        {
+            "input": "sci-fi-solar-panel/others_0013_ao_2k.jpg",
+            "output": "Models/SolarPanel/Textures/AmbientOcclusion.dds",
+            "method": "Texture",
+            "type": "Greyscale"
+        },
+        {
+            "inputs": [
+                "sci-fi-solar-panel/others_0013_metallic_2k.jpg",
+                "sci-fi-solar-panel/others_0013_roughness_2k.jpg"
+            ],
+            "output": "Models/SolarPanel/Textures/MetallicRoughness.dds",
+            "method": "Texture",
+            "type": "BiGreyscale",
+            "channel0": "Red",
+            "channel1": "Red",
+            "channelSourceTexture0": 1,
+            "channelSourceTexture1": 0
+        },
+        {
+            "input": "plant-pot/source/Plant_Pot_1.fbx",
+            "output": "Models/PlantPot/PlantPot.fbx",
+            "method": "Copy"
+        },
+        {
+            "input": "plant-pot/textures/Plant_Pot_1_Plant_BaseColor.jpg",
+            "output": "Models/PlantPot/Textures/BaseColor.dds",
+            "method": "Texture"
+        },
+        {
+            "input": "plant-pot/textures/Plant_Pot_1_Plant_GL_Normal.jpg",
+            "output": "Models/PlantPot/Textures/Normal.dds",
+            "method": "Texture",
+            "type": "Normal"
+        },
+        {
+            "input": "plant-pot/textures/Plant_Pot_1_Plant_Roughness.jpg",
+            "output": "Models/PlantPot/Textures/Roughness.dds",
+            "method": "Texture",
+            "type": "Greyscale"
+        },
+        {
+        
+            "input": "UI/ToolsMenu/ToolsMenu_Tool0.png",
+            "output": "UI/ToolsMenu/ToolsMenu_Tool0.dds",
+            "method": "Texture"
+        },
+        {
+            "input": "UI/ToolsMenu/ToolsMenu_Tool1.png",
+            "output": "UI/ToolsMenu/ToolsMenu_Tool1.dds",
+            "method": "Texture"
+        },
+        {
+            "input": "UI/ToolsMenu/ToolsMenu_Tool2.png",
+            "output": "UI/ToolsMenu/ToolsMenu_Tool2.dds",
+            "method": "Texture"
+        },
+        {
+            "input": "UI/ToolsMenu/ToolsMenu_Tool3.png",
+            "output": "UI/ToolsMenu/ToolsMenu_Tool3.dds",
+            "method": "Texture"
+        },
+        {
+            "input": "UI/ToolsMenu/ToolsMenu_Tool4.png",
+            "output": "UI/ToolsMenu/ToolsMenu_Tool4.dds",
+            "method": "Texture"
+        }, 
+        {
+            "input": "UI/ToolsMenu/ToolsMenu_Tool5.png",
+            "output": "UI/ToolsMenu/ToolsMenu_Tool5.dds",
+            "method": "Texture"
         }
     ]
 }

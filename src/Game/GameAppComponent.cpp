@@ -3,6 +3,7 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <Game/GameAppComponent.hpp>
+#include <ClientLib/ClientConfigs.hpp>
 #include <ClientLib/ClientFramePipeline.hpp>
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Rendering/AtmosphereScatteringPipelinePass.hpp>
@@ -11,14 +12,11 @@
 #include <ClientLib/Systems/NetworkMovementInterpolationSystem.hpp>
 #include <ClientLib/Systems/PhysicsInterpolationSystem.hpp>
 #include <ClientLib/Systems/TransformCopySystem.hpp>
-#include <CommonLib/DownloadManager.hpp>
-#include <CommonLib/GameConstants.hpp>
 #include <CommonLib/InternalConstants.hpp>
-#include <CommonLib/UpdaterAppComponent.hpp>
-#include <CommonLib/Utils.hpp>
 #include <CommonLib/Physics/PhysicsSettings.hpp>
 #include <CommonLib/Systems/PlanetSystem.hpp>
 #include <CommonLib/Systems/ShipSystem.hpp>
+#include <CommonLib/Systems/TickSystem.hpp>
 #include <Game/GameConfigAppComponent.hpp>
 #include <Game/GameConfigs.hpp>
 #include <Game/States/BackgroundState.hpp>
@@ -133,6 +131,8 @@ namespace tsom
 
 		if (CheckAssets())
 		{
+			auto& commandLineParams = GetApp().GetCommandLineParameters();
+
 			auto& window = SetupWindow();
 			auto& world = SetupWorld();
 			auto& swapchain = SetupSwapchain(world, window);
@@ -162,6 +162,19 @@ namespace tsom
 			stateData->world = &world;
 
 			m_fpsLimit = stateData->config->GetIntegerValue<Nz::Int16>(Config::Graphics_FPSLimit);
+			m_fpsLimitUpdateSlot.Connect(stateData->config->GetIntegerUpdateSignal(Config::Graphics_FPSLimit), [this](long long newValue)
+			{
+				m_fpsLimit = Nz::SafeCaster(newValue);
+			});
+
+			std::string_view fpsParam;
+			if (commandLineParams.GetParameter("fps-limit", &fpsParam))
+			{
+				if (std::from_chars(fpsParam.data(), fpsParam.data() + fpsParam.size(), m_fpsLimit).ec == std::errc{})
+					stateData->config->SetIntegerValue(Config::Graphics_FPSLimit, m_fpsLimit);
+				else
+					spdlog::error("failed to parse fps-limit parameter (expected an integer, got \"{}\")", fpsParam);
+			}
 
 #ifdef TSOM_DEV_TOOLS
 			stateData->imgui = &m_imguiRuntime.value();
@@ -174,7 +187,6 @@ namespace tsom
 				stateData->window = nullptr;
 			});
 
-			auto& commandLineParams = GetApp().GetCommandLineParameters();
 			if (commandLineParams.HasFlag("planet-editor"))
 			{
 				m_stateMachine.PushState(std::make_shared<tsom::DebugInfoState>(stateData));
@@ -206,7 +218,10 @@ namespace tsom
 #endif
 
 		if (!m_stateMachine.Update(elapsedTime))
+		{
 			GetApp().Quit();
+			return;
+		}
 
 #ifdef TSOM_DEV_TOOLS
 		if (m_imguiRuntime)
@@ -216,12 +231,12 @@ namespace tsom
 		// FPS limiting
 		if (m_fpsLimit > 0)
 		{
-			Nz::Time targetDuration = Nz::Time::Seconds(1.f / m_fpsLimit);
+			Nz::Time targetDuration = Nz::Time::TickDuration(m_fpsLimit);
 			Nz::Time elapsed = m_frameClock.GetElapsedTime();
 			if (elapsed < targetDuration)
 			{
 				Nz::Time sleepTime = targetDuration - elapsed;
-				std::this_thread::sleep_for(std::chrono::microseconds(sleepTime.AsMicroseconds()));
+				std::this_thread::sleep_for(sleepTime.AsDuration<std::chrono::milliseconds>());
 			}
 		}
 		m_frameClock.Restart();
@@ -230,115 +245,25 @@ namespace tsom
 	bool GameAppComponent::CheckAssets()
 	{
 		auto& app = GetApp();
-
-		std::filesystem::path assetPath = Nz::Utf8Path("CookedAssets");
-		if (!std::filesystem::is_directory(assetPath))
-		{
-			spdlog::error("assets are missing!");
-
-			if (auto* updater = app.TryGetComponent<UpdaterAppComponent>())
-			{
-				Nz::MessageBox requestBox(Nz::MessageBoxType::Info, "Missing assets folder", "The assets folder was not found.\nDownload assets?");
-				requestBox.AddButton(0, Nz::MessageBoxStandardButton::No);
-				requestBox.AddButton(1, Nz::MessageBoxStandardButton::Yes);
-				if (auto result = requestBox.Show(); !result)
-				{
-					spdlog::error("failed to open the prompt message box: {0}!", result.GetError());
-					app.Quit();
-					return false;
-				}
-				else if (result.GetValue() != 1)
-				{
-					app.Quit();
-					return false;
-				}
-
-				updater->FetchLastVersion(false, [updater](Nz::Result<UpdateInfo, std::string>&& result)
-				{
-					if (!result)
-					{
-						Nz::MessageBox errorBox(Nz::MessageBoxType::Error, "Asset download failed", "Failed to fetch asset info: " + result.GetError());
-						errorBox.AddButton(0, Nz::MessageBoxStandardButton::Close);
-
-						if (auto result = errorBox.Show(); !result)
-							spdlog::error("failed to open the error message box: {0}!", result.GetError());
-
-						Nz::ApplicationBase::Instance()->Quit();
-						return;
-					}
-
-					updater->OnUpdateFailed.Connect([]
-					{
-						Nz::MessageBox errorBox(Nz::MessageBoxType::Error, "Asset download failed", "Failed to download assets");
-						errorBox.AddButton(0, Nz::MessageBoxStandardButton::Close);
-
-						if (auto result = errorBox.Show(); !result)
-							spdlog::error("failed to open the error message box: {0}!", result.GetError());
-
-						Nz::ApplicationBase::Instance()->Quit();
-					});
-
-					updater->OnDownloadProgress.Connect([lastPrint = Nz::MillisecondClock()](std::size_t activeDownloadCount, Nz::UInt64 downloaded, Nz::UInt64 total) mutable
-					{
-						if (lastPrint.RestartIfOver(Nz::Time::Second()))
-							spdlog::info("downloading {} file(s) ({}/{}) - {}%", activeDownloadCount, ByteToString(downloaded), ByteToString(total), 100 * downloaded / total);
-					});
-
-					updater->OnUpdateStarting.Connect([]
-					{
-						spdlog::info("update is starting...");
-					});
-
-					updater->DownloadAndUpdate(result.GetValue(), true, false, true, true);
-				});
-			}
-			else
-			{
-				Nz::MessageBox errorBox(Nz::MessageBoxType::Error, "Missing assets folder", "The assets folder was not found, it should be located next to the executable.");
-				errorBox.AddButton(0, Nz::MessageBoxStandardButton::Close);
-
-				if (auto result = errorBox.Show(); !result)
-					spdlog::error("failed to open the error message box: {0}!", result.GetError());
-
-				app.Quit();
-			}
-
-			return false;
-		}
-
-		std::filesystem::path scriptPath = Nz::Utf8Path("scripts");
-		if (!std::filesystem::is_directory(scriptPath))
-		{
-			spdlog::critical("scripts are missing!");
-			app.Quit();
-			return false;
-		}
-
 		auto& filesystem = app.GetComponent<Nz::FilesystemAppComponent>();
-		filesystem.Mount("CookedAssets", Nz::Utf8Path("CookedAssets"));
-		filesystem.Mount("scripts", scriptPath);
-
-		Nz::Graphics* graphics = Nz::Graphics::Instance();
-		graphics->GetShaderModuleResolver()->RegisterDirectory(Nz::Utf8Path("CookedAssets/Shaders"), true);
-
-		auto& commandLineParams = GetApp().GetCommandLineParameters();
-		if (commandLineParams.HasFlag("dev-assets"))
-		{
-			filesystem.Mount("CookedAssets/Passes", Nz::Utf8Path("assets/Passes"));
-			filesystem.Mount("CookedAssets/Shaders", Nz::Utf8Path("assets/Shaders"));
-
-			graphics->GetShaderModuleResolver()->RegisterDirectory(Nz::Utf8Path("assets/Shaders"), true);
-		}
 
 		m_blockLibrary.emplace(app);
-
-		filesystem.GetFileContent("CookedAssets/BlockData.json", [&](const void* ptr, Nz::UInt64 size)
 		{
-			m_blockLibrary->LoadFromString(std::string_view(reinterpret_cast<const char*>(ptr), Nz::SafeCast<std::size_t>(size)));
-			return true;
-		});
+			auto callback = [&](const void* ptr, Nz::UInt64 size)
+			{
+				m_blockLibrary->LoadFromString(std::string_view(reinterpret_cast<const char*>(ptr), Nz::SafeCast<std::size_t>(size)));
+				return true;
+			};
 
-		m_blockLibrary->BuildTexture(*Nz::Graphics::Instance()->GetGpuDevice());
+			if (!filesystem.GetFileContent("CookedAssets/BlockData.json", callback))
+			{
+				spdlog::critical("failed to load block data (missing assets)");
+				app.Quit();
+				return false;
+			}
+
+			m_blockLibrary->BuildTexture(*Nz::Graphics::Instance()->GetGpuDevice());
+		}
 
 		return true;
 	}
@@ -424,6 +349,7 @@ namespace tsom
 		world.AddSystem<NetworkMovementInterpolationSystem>(Constants::TickDuration);
 		world.AddSystem<PlanetSystem>();
 		world.AddSystem<ShipSystem>();
+		world.AddSystem<TickSystem>();
 		world.AddSystem<TransformCopySystem>();
 		world.AddSystem<Nz::LifetimeSystem>();
 		world.AddSystem<Nz::RenderSystem>([this](Nz::ElementRendererRegistry& elementRegistry) { return std::make_unique<ClientFramePipeline>(elementRegistry, *m_blockLibrary); });

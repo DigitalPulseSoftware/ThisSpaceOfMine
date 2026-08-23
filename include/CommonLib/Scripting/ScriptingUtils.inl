@@ -3,6 +3,7 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
+#include <Nazara/Core/Color.hpp>
 #include <Nazara/Core/HandledObject.hpp>
 #include <Nazara/Core/ObjectHandle.hpp>
 #include <Nazara/Math/Box.hpp>
@@ -194,6 +195,9 @@ namespace sol
 	template<typename T>
 	struct lua_size<Nz::Box<T>> : std::integral_constant<int, 1> {};
 
+	template<>
+	struct lua_size<Nz::Color> : std::integral_constant<int, 1> {};
+
 	template<typename T>
 	struct lua_size<Nz::EulerAngles<T>> : std::integral_constant<int, 1> {};
 
@@ -211,6 +215,9 @@ namespace sol
 
 	template<typename T>
 	struct lua_type_of<Nz::Box<T>> : std::integral_constant<sol::type, sol::type::table> {};
+
+	template<>
+	struct lua_type_of<Nz::Color> : std::integral_constant<sol::type, sol::type::table> {};
 
 	template<typename T>
 	struct lua_type_of<Nz::EulerAngles<T>> : std::integral_constant<sol::type, sol::type::table> {};
@@ -243,6 +250,21 @@ namespace sol
 		tracking.use(1);
 
 		return Nz::Box<T>(x, y, z, width, height, depth);
+	}
+
+	inline Nz::Color sol_lua_get(sol::types<Nz::Color>, lua_State* L, int index, sol::stack::record& tracking)
+	{
+		int absoluteIndex = lua_absindex(L, index);
+
+		sol::table box = sol::stack::get<sol::table>(L, absoluteIndex);
+		float r = box["r"];
+		float g = box["g"];
+		float b = box["b"];
+		std::optional<float> a = box["a"];
+
+		tracking.use(1);
+
+		return Nz::Color(r, g, b, a.value_or(1.0f));
 	}
 
 	template<typename T>
@@ -333,7 +355,20 @@ namespace sol
 		boxTable["z"] = box.z;
 		boxTable["width"] = box.width;
 		boxTable["height"] = box.height;
-		boxTable["depth"] = box.height;
+		boxTable["depth"] = box.depth;
+
+		return 1;
+	}
+
+	inline int sol_lua_push(sol::types<Nz::Color>, lua_State* L, const Nz::Color& color)
+	{
+		lua_createtable(L, 0, 6);
+		luaL_setmetatable(L, "color");
+		sol::stack_table colorTable(L);
+		colorTable["r"] = color.r;
+		colorTable["g"] = color.g;
+		colorTable["b"] = color.b;
+		colorTable["a"] = color.a;
 
 		return 1;
 	}

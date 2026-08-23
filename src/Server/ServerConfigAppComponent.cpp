@@ -15,12 +15,12 @@ namespace tsom
 	ServerConfigFile::ServerConfigFile()
 	{
 		RegisterStringOption(Config::Api_Url);
+		RegisterBoolOption(Config::Chunk_EnableCache, false);
 		RegisterStringOption(Config::ConnectionToken_EncryptionKey, "");
 		RegisterIntegerOption(Config::Server_Port, 1, 0xFFFF, 29536);
 		RegisterIntegerOption(Config::Server_MaxStuckSeconds, 0, 60, 10);
 		RegisterBoolOption(Config::Debug_EnableDrawer, true);
 		RegisterBoolOption(Config::Server_SleepWhenEmpty, true);
-		RegisterStringOption(Config::Save_Directory, "saves/chunks");
 		RegisterStringOption(Config::Database_Filename, "server_database.db");
 		RegisterIntegerOption(Config::Save_Interval, 0, 60 * 60, 30);
 

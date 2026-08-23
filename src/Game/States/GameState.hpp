@@ -8,6 +8,7 @@
 #define TSOM_GAME_STATES_GAMESTATE_HPP
 
 #include <ClientLib/ClientSessionHandler.hpp>
+#include <ClientLib/GameInterface.hpp>
 #include <CommonLib/ConsoleExecutor.hpp>
 #include <CommonLib/NetworkReactor.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
@@ -30,6 +31,7 @@
 
 namespace Nz
 {
+	class DebugDrawer;
 	class LabelWidget;
 	class SimpleLabelWidget;
 }
@@ -41,8 +43,10 @@ namespace tsom
 	class Console;
 	class EscapeMenu;
 	struct StateData;
+	class ToolBase;
+	class ToolsMenu;
 
-	class GameState : public WidgetState
+	class GameState : public WidgetState, public GameInterface
 	{
 		public:
 			GameState(std::shared_ptr<StateData> stateData);
@@ -50,6 +54,16 @@ namespace tsom
 			GameState(GameState&&) = delete;
 			~GameState();
 
+			BlockSelectionBar* GetBlockSelectionBar() const override;
+			Nz::Canvas* GetCanvas() override;
+			Nz::DebugDrawer* GetDebugDrawer() override;
+			const EntityRegistry& GetEntityRegistry() const override;
+			NetworkSession* GetNetworkSession() override;
+			Nz::EnttWorld& GetWorld() override;
+			std::optional<RaycastResult> RaycastQuery() const override;
+			void UpdateMouseLock() override;
+
+			// StateMachine
 			void Enter(Nz::StateMachine& fsm) override;
 			void Leave(Nz::StateMachine& fsm) override;
 			bool Update(Nz::StateMachine& fsm, Nz::Time elapsedTime) override;
@@ -68,23 +82,26 @@ namespace tsom
 				Last = ThirdpersonRear
 			};
 
-			struct RaycastResult
+			enum class ToolMode
 			{
-				entt::handle hitEntity;
-				Nz::Vector3f hitPos;
-				Nz::Vector3f hitNormal;
-				Nz::UInt32 subShapeID;
+				None,
+				Block,
+				PlaceEntity,
+				RemoveEntity,
+				Connection,
+				Grab,
+
+				First = None,
+				Last = Grab
 			};
 
 			void BindControlledEntitySignals();
 			void LayoutWidgets(const Nz::Vector2f& newSize) override;
 			void RefreshPlayerListWidget();
 			Nz::Vector3f RaycastCamera(const Nz::Vector3f& from, const Nz::Vector3f& to);
-			std::optional<RaycastResult> RaycastQuery() const;
 			void OnTick(Nz::Time elapsedTime, bool lastTick);
 			void SendInputs();
 			void UpdateHealthAndOxygenText();
-			void UpdateMouseLock();
 
 			NazaraSlot(ClassInstanceComponent, OnPropertyUpdate, m_controlledEntityPropertyUpdate);
 			NazaraSlot(ClientSessionHandler, OnChatMessage, m_onChatMessage);
@@ -146,14 +163,16 @@ namespace tsom
 			std::optional<ConsoleExecutor> m_consoleExecutor;
 			std::optional<PilotedShip> m_pilotedShip;
 			std::shared_ptr<DebugOverlay> m_debugOverlay;
-			Nz::LabelWidget* m_playerListWidget = nullptr;
+			std::size_t m_toolIndex;
 			std::vector<InputRotation> m_predictedInputRotations;
+			std::vector<std::unique_ptr<ToolBase>> m_tools;
 			tsl::hopscotch_map<Nz::UInt64, DebugDrawLines> m_debugDrawLines;
 			entt::handle m_cameraEntity;
 			entt::handle m_controlledEntity;
 			entt::handle m_crosshairEntity;
 			entt::handle m_skyboxEntity;
 			entt::handle m_sunLightEntity;
+			entt::handle m_targetEntity;
 			Nz::Boxf m_shipAABB;
 			Nz::DegreeAnglef m_targetCameraFOV;
 			Nz::EulerAnglesf m_incomingCameraRotation;  //< Accumulated rotation from inputs (will be applied on inputs)
@@ -170,12 +189,14 @@ namespace tsom
 			Nz::UInt8 m_nextInputIndex;
 			CameraMode m_cameraMode;
 			HealthOxygen m_healthOxygen;
+ 			Nz::LabelWidget* m_playerListWidget;
 			Nz::SimpleLabelWidget* m_interactionLabel;
 			BlockSelectionBar* m_blockSelectionBar;
 			Chatbox* m_chatBox;
 			Console* m_localConsole;
 			Console* m_remoteConsole;
 			EscapeMenu* m_escapeMenu;
+			ToolsMenu* m_toolsMenu;
 			bool m_isMouseLocked;
 			float m_currentCameraDistance;
 			float m_defaultCameraDistance;

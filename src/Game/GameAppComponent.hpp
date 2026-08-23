@@ -62,6 +62,7 @@ namespace tsom
 #ifdef TSOM_DEV_TOOLS
 			std::optional<ImGuiRuntime> m_imguiRuntime;
 #endif
+			Nz::Signal<long long>::ConnectionGuard m_fpsLimitUpdateSlot;
 			Nz::StateMachine m_stateMachine;
 
 			Nz::HighPrecisionClock m_frameClock;
