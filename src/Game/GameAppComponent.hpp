@@ -49,7 +49,7 @@ namespace tsom
 
 		private:
 			bool CheckAssets();
-			void SetupCamera(std::shared_ptr<const Nz::RenderTarget> renderTarget, Nz::EnttWorld& world);
+			entt::handle SetupCamera(std::shared_ptr<const Nz::RenderTarget> renderTarget, Nz::EnttWorld& world);
 			void SetupCanvas(Nz::EnttWorld& world, Nz::Window& window);
 			Nz::WindowSwapchain& SetupSwapchain(Nz::EnttWorld& world, Nz::Window& window);
 			Nz::Window& SetupWindow();

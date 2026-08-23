@@ -147,13 +147,14 @@ namespace tsom
 			auto renderWindow = std::make_shared<Nz::RenderWindow>(swapchain);
 
 			SetupCanvas(world, window);
-			SetupCamera(renderWindow, world);
+			entt::handle camera2D = SetupCamera(renderWindow, world);
 
 			auto& gameConfig = GetApp().GetComponent<GameConfigAppComponent>();
 
 			std::shared_ptr<tsom::StateData> stateData = std::make_shared<tsom::StateData>();
 			stateData->app = &GetApp();
 			stateData->blockLibrary = &m_blockLibrary.value();
+			stateData->camera2D = camera2D;
 			stateData->canvas = &m_canvas.value();
 			stateData->config = &gameConfig.GetConfig();
 			stateData->renderTarget = std::move(renderWindow);
@@ -268,7 +269,7 @@ namespace tsom
 		return true;
 	}
 
-	void GameAppComponent::SetupCamera(std::shared_ptr<const Nz::RenderTarget> renderTarget, Nz::EnttWorld& world)
+	entt::handle GameAppComponent::SetupCamera(std::shared_ptr<const Nz::RenderTarget> renderTarget, Nz::EnttWorld& world)
 	{
 		entt::handle camera2D = world.CreateEntity();
 		camera2D.emplace<Nz::NodeComponent>();
@@ -280,6 +281,8 @@ namespace tsom
 		cameraComponent.UpdateClearColor(Nz::Color(0.f, 0.f, 0.f, 0.f));
 		cameraComponent.UpdateRenderMask(Constants::RenderMask2D);
 		cameraComponent.UpdateRenderOrder(1);
+
+		return camera2D;
 	}
 
 	void GameAppComponent::SetupCanvas(Nz::EnttWorld& world, Nz::Window& window)

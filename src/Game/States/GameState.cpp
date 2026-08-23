@@ -558,6 +558,16 @@ namespace tsom
 					break;
 				}
 
+				case Nz::Keyboard::Scancode::F11:
+				{
+					auto& stateData = GetStateData();
+					if (stateData.camera2D.any_of<Nz::DisabledComponent>())
+						stateData.camera2D.erase<Nz::DisabledComponent>();
+					else
+						stateData.camera2D.emplace<Nz::DisabledComponent>();
+					break;
+				}
+
 				default:
 					break;
 			}
