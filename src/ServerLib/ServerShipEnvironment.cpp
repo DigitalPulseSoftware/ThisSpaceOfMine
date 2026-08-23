@@ -62,14 +62,14 @@ namespace tsom
 		shipClass->InitAndActivateEntity(m_shipEntity);
 
 		auto& shipComponent = m_shipEntity.get<ShipComponent>();
-		shipComponent.ship->OnChunkLayerAdded.Connect([this](ChunkContainer*, Chunk* chunk, std::size_t /*layerIndex*/)
+		shipComponent.ship->OnChunkAdded.Connect([this](ChunkContainer*, Chunk* chunk)
 		{
 			auto& chunkData = m_chunkData[chunk->GetIndices()];
 			chunkData.blockSize = chunk->GetBlockSize();
 			m_invalidatedChunks.emplace(chunk);
 		});
 
-		shipComponent.ship->OnChunkLayerRemove.Connect([this](ChunkContainer*, Chunk* chunk, std::size_t /*layerIndex*/)
+		shipComponent.ship->OnChunkRemove.Connect([this](ChunkContainer*, Chunk* chunk)
 		{
 			const ChunkIndices& indices = chunk->GetIndices();
 			m_chunkData.erase(indices);

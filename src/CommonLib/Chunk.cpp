@@ -11,6 +11,7 @@
 #include <Nazara/Math/Box.hpp>
 #include <NazaraUtils/CallOnExit.hpp>
 #include <NazaraUtils/EnumArray.hpp>
+#include <spdlog/spdlog.h>
 #include <cassert>
 #include <numeric>
 
@@ -234,35 +235,43 @@ namespace tsom
 
 			BlockIndex blockIndex = blockLibrary.GetBlockIndex(blockName);
 			if (blockIndex == InvalidBlockIndex)
-				throw std::runtime_error("unknown block " + blockName);
+			{
+				spdlog::error("chunk loading: unknown block {}", blockName);
+				blockIndex = EmptyBlockIndex;
+			}
 
 			deserializationIndices.push_back(blockIndex);
 		}
 
-		Reset([&](BlockIndex* blockIndices)
+		if (blockTypeCount > 0)
 		{
-			std::size_t blockCount = GetBlockCount();
-			if (blockTypeCount > 8)
+			Reset([&](BlockIndex* blockIndices)
 			{
-				for (std::size_t i = 0; i < blockCount; ++i)
+				std::size_t blockCount = GetBlockCount();
+				if (blockTypeCount > 8)
 				{
-					Nz::UInt16 value;
-					byteStream >> value;
+					for (std::size_t i = 0; i < blockCount; ++i)
+					{
+						Nz::UInt16 value;
+						byteStream >> value;
 
-					*blockIndices++ = deserializationIndices[value];
+						*blockIndices++ = deserializationIndices[value];
+					}
 				}
-			}
-			else if (blockTypeCount > 0)
-			{
-				for (std::size_t i = 0; i < blockCount; ++i)
+				else if (blockTypeCount > 0)
 				{
-					Nz::UInt8 value;
-					byteStream >> value;
+					for (std::size_t i = 0; i < blockCount; ++i)
+					{
+						Nz::UInt8 value;
+						byteStream >> value;
 
-					*blockIndices++ = deserializationIndices[value];
+						*blockIndices++ = deserializationIndices[value];
+					}
 				}
-			}
-		});
+			});
+		}
+		else
+			ClearContent();
 	}
 
 	void Chunk::Serialize(Nz::ByteStream& byteStream) const

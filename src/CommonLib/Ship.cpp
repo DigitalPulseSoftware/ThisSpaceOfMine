@@ -164,6 +164,7 @@ namespace tsom
 		for (auto&& [chunkIndices, chunkData] : m_chunks)
 		{
 			Chunk* chunk = chunkData.chunk.get();
+			OnChunkRemove(this, chunk);
 			for (std::size_t layerIndex : chunk->GetActiveLayers())
 				OnChunkLayerRemove(this, chunk, layerIndex);
 		}
@@ -191,8 +192,6 @@ namespace tsom
 		if (hullIndex == InvalidBlockIndex)
 			return;
 
-		BlockIndex forcefieldIndex = m_blockLibrary.GetBlockIndex("forcefield");
-
 		unsigned int boxSize = (small) ? 6 : 12;
 		unsigned int height = (small) ? 4 : 6;
 		Nz::Vector3ui startPos = chunk.GetSize() / 2 - Nz::Vector3ui(boxSize / 2, boxSize / 2, height / 2);
@@ -213,7 +212,7 @@ namespace tsom
 						continue;
 
 					if (x == 0 && y == boxSize / 2 && z > 0 && z < height - 1)
-						chunk.UpdateBlock(startPos + Nz::Vector3ui{ x, y, z }, forcefieldIndex);
+						chunk.UpdateBlock(startPos + Nz::Vector3ui{ x, y, z }, EmptyBlockIndex);
 					else
 						chunk.UpdateBlock(startPos + Nz::Vector3ui{ x, y, z }, hullIndex);
 				}
