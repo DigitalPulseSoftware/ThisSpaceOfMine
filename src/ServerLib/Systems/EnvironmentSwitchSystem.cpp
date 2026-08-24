@@ -31,7 +31,7 @@ namespace tsom
 				continue;
 
 			//if (DebugDrawInterface* debugDraw = m_ownerEnvironment->GetDebugDrawInterface())
-			//	debugDraw->DrawBox(static_cast<Nz::UInt64>(triggerEntity), 0.1f, enterTrigger.aabb, Nz::Color::Yellow());
+			//  debugDraw->DrawBox(static_cast<Nz::UInt64>(triggerEntity), 0.1f, enterTrigger.aabb, Nz::Color::Yellow());
 
 			for (auto&& [entity, entityNode, entityInstance, envSwitch] : entityView.each())
 			{

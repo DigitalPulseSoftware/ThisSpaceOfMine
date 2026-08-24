@@ -10,13 +10,13 @@
 #include <ClientLib/Console.hpp>
 #include <ClientLib/EscapeMenu.hpp>
 #include <ClientLib/RenderConstants.hpp>
+#include <ClientLib/ToolMenu.hpp>
 #include <ClientLib/Components/ChunkNetworkMapComponent.hpp>
 #include <ClientLib/Components/ClientEntityNetworkIndex.hpp>
 #include <ClientLib/Components/ClientInteractibleComponent.hpp>
 #include <ClientLib/Components/EnvironmentComponent.hpp>
 #include <ClientLib/Systems/AnimationSystem.hpp>
 #include <ClientLib/Systems/CameraFollowerSystem.hpp>
-#include <ClientLib/ToolsMenu.hpp>
 #include <ClientLib/Tools/BlockTool.hpp>
 #include <ClientLib/Tools/ConnectTool.hpp>
 #include <ClientLib/Tools/GrabEntityTool.hpp>
@@ -319,7 +319,7 @@ namespace tsom
 			UpdateMouseLock();
 		});
 
-		m_toolsMenu = CreateWidget<ToolsMenu>(filesystem, m_toolIndex);
+		m_toolsMenu = CreateWidget<ToolMenu>(*stateData.app, m_toolIndex);
 		m_toolsMenu->OnWidgetVisibilityUpdated.Connect([&](const Nz::BaseWidget* /*widget*/, bool /*isVisible*/)
 		{
 			UpdateMouseLock();
@@ -1323,7 +1323,7 @@ namespace tsom
 	void GameState::RefreshPlayerListWidget()
 	{
 		Nz::RichTextDrawer textDrawer;
-		textDrawer.AppendText(" "); //< will override later
+		textDrawer.AppendText("Players"); //< will override later
 
 		std::size_t playerCount = 0;
 		GetStateData().sessionHandler->ForEachPlayer([&](PlayerIndex playerIndex, const ClientSessionHandler::PlayerInfo& playerInfo)

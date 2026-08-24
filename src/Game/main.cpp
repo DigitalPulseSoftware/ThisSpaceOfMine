@@ -56,7 +56,7 @@ int GameMain(int argc, char* argv[])
 
 	if (assets.CheckAssets())
 		game.Start();
-	
+
 	return app.Run();
 }
 

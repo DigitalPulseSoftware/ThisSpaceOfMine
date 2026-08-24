@@ -569,7 +569,7 @@ namespace tsom
 					}
 				};
 			}
-	
+
 			if (sol::optional<sol::protected_function> destroyCallback = entityBuilder.classMetatable["_Destroy"])
 			{
 				entityBuilder.callbacks.onDestroy = [this, callback = std::move(destroyCallback)](entt::handle entity) mutable

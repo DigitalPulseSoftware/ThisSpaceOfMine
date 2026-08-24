@@ -4,7 +4,7 @@
 
 namespace tsom
 {
-	inline const uint8_t ToolsMenu::GetHoveredTool() const
+	inline std::size_t ToolMenu::GetHoveredTool() const
 	{
 		return m_hoveredTool;
 	}

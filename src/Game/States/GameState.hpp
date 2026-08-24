@@ -44,7 +44,7 @@ namespace tsom
 	class EscapeMenu;
 	struct StateData;
 	class ToolBase;
-	class ToolsMenu;
+	class ToolMenu;
 
 	class GameState : public WidgetState, public GameInterface
 	{
@@ -196,7 +196,7 @@ namespace tsom
 			Console* m_localConsole;
 			Console* m_remoteConsole;
 			EscapeMenu* m_escapeMenu;
-			ToolsMenu* m_toolsMenu;
+			ToolMenu* m_toolsMenu;
 			bool m_isMouseLocked;
 			float m_currentCameraDistance;
 			float m_defaultCameraDistance;

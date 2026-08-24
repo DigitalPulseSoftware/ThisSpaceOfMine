@@ -3,9 +3,9 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ServerLib/ServerCharacterController.hpp>
-#include <ServerLib/ServerEnvironment.hpp>
 #include <CommonLib/ChunkContainer.hpp>
 #include <CommonLib/GravityController.hpp>
+#include <ServerLib/ServerEnvironment.hpp>
 
 namespace tsom
 {
