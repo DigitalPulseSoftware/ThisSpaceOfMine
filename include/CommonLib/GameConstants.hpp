@@ -37,7 +37,7 @@ namespace tsom::Constants
 	constexpr std::size_t PlayerMaxNicknameLength = 16;
 	constexpr float PlayerColliderRadius = 0.2f;
 	constexpr float PlayerColliderHeight = 1.85f;
-	constexpr float PlayerEyesHeight = 1.75f;
+	constexpr float PlayerEyesHeight = 1.7f;
 	constexpr float PlayerFlySpeed = 20.f;
 	constexpr float PlayerJumpPower = 5.f;
 	constexpr float PlayerSprintSpeed = 8.f;
