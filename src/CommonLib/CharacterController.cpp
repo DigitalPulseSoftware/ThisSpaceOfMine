@@ -174,7 +174,7 @@ namespace tsom
 
 		float desiredImpact;
 		if (m_isFlying)
-			desiredImpact = 0.2f;
+			desiredImpact = 0.1f;
 		else if (hasGravity)
 		{
 			desiredVelocity += velocity.Project(m_gravityForce.direction);
