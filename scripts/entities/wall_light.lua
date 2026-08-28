@@ -35,7 +35,10 @@ classData:On("init", function (self)
 		local isEnabled = self:GetProperty("light_enabled")
 		self.LightMat:SetValueProperty("EmissiveColor", isEnabled and Color.White or Color.Black)
 
-		local light = self:AddComponent("light")
+		self.LightEntity = self:CreateChildEntity()
+		self.LightEntity:GetComponent("node"):SetRotation(EulerAngles(90, 0, 0):ToQuaternion())
+
+		local light = self.LightEntity:AddComponent("light")
 		light:AddSpotLight({ Color = Color.White, radius = 50 })
 		light:Show(isEnabled)
 
@@ -54,7 +57,7 @@ if SERVER then
 	end)
 else
 	classData:OnPropertyUpdate("light_enabled", function (self, isEnabled)
-		local light = self:GetComponent("light")
+		local light = self.LightEntity:GetComponent("light")
 		light:Show(isEnabled)
 
 		self.LightMat:SetValueProperty("EmissiveColor", isEnabled and Color.White or Color.Black)
