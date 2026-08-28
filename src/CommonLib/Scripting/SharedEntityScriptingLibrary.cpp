@@ -10,6 +10,7 @@
 #include <CommonLib/PhysicsConstants.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Components/DistributionComponent.hpp>
+#include <CommonLib/Components/EntityOwnerComponent.hpp>
 #include <CommonLib/Components/ScriptedEntityComponent.hpp>
 #include <CommonLib/Components/TickComponent.hpp>
 #include <CommonLib/Scripting/ScriptingProperties.hpp>
@@ -205,6 +206,20 @@ namespace tsom
 				throw std::runtime_error(fmt::format("invalid component {}", componentType));
 
 			return addComponent(L, entity, parameters);
+		});
+
+		entityMetatable["CreateChildEntity"] = LuaFunction([this](sol::this_state L, sol::table entityTable)
+		{
+			entt::handle entity = AssertScriptEntity(entityTable);
+
+			entt::handle childEntity(*entity.registry(), entity.registry()->create());
+			childEntity.emplace<Nz::NodeComponent>().SetParent(entity);
+
+			// Make child entity dependent on our lifetime
+			entity.get_or_emplace<EntityOwnerComponent>().Register(childEntity);
+
+			sol::state_view state(L);
+			return ToEntityTable(state, childEntity);
 		});
 
 		entityMetatable["GetComponent"] = LuaFunction([this](sol::this_state L, sol::table entityTable, std::string_view componentType) -> sol::object
