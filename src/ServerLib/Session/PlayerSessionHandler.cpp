@@ -323,8 +323,6 @@ namespace tsom
 		spawnOffset.z = static_cast<float>(metadata.GetDoubleParameter("spawnable_offset.z").GetValueOr(0.0));
 
 		Nz::Vector3ui blockIndices(placeEntity.voxelLoc.x, placeEntity.voxelLoc.y, placeEntity.voxelLoc.z);
-		if (!CheckCanPlaceEntity(chunkEnvironment, chunk, blockIndices, placeEntity.topFace, collider, placeEntity.entityRotation))
-			return;
 
 		auto& chunkOwnerNode = entityOwner.get<Nz::NodeComponent>();
 
@@ -354,10 +352,14 @@ namespace tsom
 		}
 
 		Nz::Quaternionf localRotation = Nz::Quaternionf(Nz::DegreeAnglef(placeEntity.entityRotation * 45.f), rotationAxis);
-		Nz::Quaternionf entityRotation = Nz::Quaternionf::CombineRotations(localRotation, surfaceRotation);
+		Nz::Quaternionf spawnRotation = Nz::Quaternionf::CombineRotations(localRotation, surfaceRotation);
+
+		Nz::Vector3f spawnPosition = entityPos - spawnRotation * spawnOffset;
+		if (!CheckCanPlaceEntity(chunkEnvironment, spawnPosition, spawnRotation, collider))
+			return;
 
 		entt::handle entity = chunkEnvironment->CreateEntity();
-		entity.emplace<Nz::NodeComponent>(entityPos - entityRotation * spawnOffset, entityRotation);
+		entity.emplace<Nz::NodeComponent>(entityPos - spawnRotation * spawnOffset, spawnRotation);
 		entity.emplace<NetworkedComponent>();
 		entity.emplace<ClassInstanceComponent>(entityClass);
 		entity.emplace<DatabaseComponent>();
@@ -869,12 +871,12 @@ namespace tsom
 		if (chunk->HasContent() && chunk->GetBlockContent(blockIndices) != EmptyBlockIndex)
 			return false;
 
-		return true; //< FIXME
-
 		// Check that nothing blocks the way
-		auto [blockCollider, colliderOffset] = chunk->BuildBlockCollider(blockIndices, 0.75f); // Test a smaller block to allow a bit of overlap
+		auto [blockCollider, colliderOffset] = chunk->BuildBlockCollider(blockIndices, 0.8f); // Test a smaller block to allow a bit of overlap
 
-		Nz::Vector3f offset = chunk->GetContainer().GetChunkOffset(chunk->GetIndices());
+		const ChunkContainer& chunkContainer = chunk->GetContainer();
+
+		Nz::Vector3f offset = chunkContainer.GetChunkOffset(chunk->GetIndices());
 		offset += colliderOffset;
 
 		struct IgnoreTrigger : Nz::PhysObjectLayerFilter3D
@@ -888,17 +890,28 @@ namespace tsom
 		IgnoreTrigger physObjectLayerFilter;
 
 		auto& physicsSystem = environment->GetWorld().GetSystem<Nz::Physics3DSystem>();
-		bool doesCollide = physicsSystem.CollisionQuery(*blockCollider, Nz::Matrix4f::Translate(offset), [](const Nz::Physics3DSystem::ShapeCollisionInfo& hitInfo) -> std::optional<float>
+		bool doesCollide = physicsSystem.CollisionQuery(*blockCollider, Nz::Matrix4f::Translate(offset), [&](const Nz::Physics3DSystem::ShapeCollisionInfo& hitInfo) -> std::optional<float>
 		{
+			// Ignore collisions between the chunk from the same container
+			if (hitInfo.hitEntity)
+			{
+				if (const ChunkComponent* entityChunk = hitInfo.hitEntity.try_get<ChunkComponent>())
+				{
+					if (&entityChunk->chunk->GetContainer() == &chunkContainer)
+						return std::nullopt; //< Ignore collision
+				}
+			}
+
 			return hitInfo.penetrationDepth;
 		}, nullptr, &physObjectLayerFilter);
 
-		/*Packets::DebugDrawLineList debugDrawLineList;
+		/*Packets::S_DebugDrawLineList debugDrawLineList;
+		debugDrawLineList.uniqueHash = 42;
 		debugDrawLineList.color = (doesCollide) ? Nz::Color::Red() : Nz::Color::Green();
 		debugDrawLineList.duration = 5.f;
-		debugDrawLineList.position = offset;
-		debugDrawLineList.rotation = Nz::Quaternionf::Identity();
 		blockCollider->BuildDebugMesh(debugDrawLineList.vertices, debugDrawLineList.indices, Nz::Matrix4f::Identity());
+		for (Nz::Vector3f& vertex : debugDrawLineList.vertices)
+			vertex += offset;
 
 		auto& visibility = m_player->GetVisibilityHandler();
 
@@ -911,17 +924,27 @@ namespace tsom
 		return true;
 	}
 
-	bool PlayerSessionHandler::CheckCanPlaceEntity(ServerEnvironment* environment, const Chunk* chunk, const Nz::Vector3ui& blockIndices, Direction direction, const Nz::Vector3f& collider, Nz::UInt8 entityRotation) const
+	bool PlayerSessionHandler::CheckCanPlaceEntity(ServerEnvironment* environment, const Nz::Vector3f& position, Nz::Quaternionf& rotation, const Nz::Vector3f& collider) const
 	{
-		Nz::Vector3ui chunkSize = chunk->GetSize();
-		if (blockIndices.x >= chunkSize.x || blockIndices.y >= chunkSize.y || blockIndices.z >= chunkSize.z)
-			return false;
+		// Test with a smaller collider to avoid precision issues
+		Nz::BoxCollider3D colliderBox(collider * 0.9f);
 
-		// Check that target block is full
-		if (chunk->GetBlockContent(blockIndices) == EmptyBlockIndex)
-			return false;
+		struct IgnoreTrigger : Nz::PhysObjectLayerFilter3D
+		{
+			bool ShouldCollide(Nz::PhysObjectLayer3D objectLayer) const override
+			{
+				return objectLayer != Constants::ObjectLayerStaticTrigger;
+			}
+		};
 
-		// TODO
-		return true;
+		IgnoreTrigger physObjectLayerFilter;
+
+		auto& physicsSystem = environment->GetWorld().GetSystem<Nz::Physics3DSystem>();
+		bool doesCollide = physicsSystem.CollisionQuery(colliderBox, Nz::Matrix4f::Transform(position, rotation), [&](const Nz::Physics3DSystem::ShapeCollisionInfo& hitInfo) -> std::optional<float>
+		{
+			return hitInfo.penetrationDepth;
+		}, nullptr, &physObjectLayerFilter);
+
+		return !doesCollide;
 	}
 }

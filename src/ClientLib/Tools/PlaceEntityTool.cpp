@@ -220,7 +220,7 @@ namespace tsom
 						{
 							bool ShouldCollide(Nz::PhysObjectLayer3D objectLayer) const override
 							{
-								return objectLayer != Constants::ObjectLayerStatic;
+								return objectLayer != Constants::ObjectLayerStaticTrigger;
 							}
 						};
 
@@ -233,13 +233,22 @@ namespace tsom
 
 						Nz::BoxCollider3D collider(m_preview->collider * 0.9f);
 
+						Nz::Physics3DSystem::ShapeCollisionInfo closestCollisionInfo;
+
 						auto& physSystem = m_gameInterface.GetWorld().GetSystem<Nz::Physics3DSystem>();
-						bool doesCollide = physSystem.CollisionQuery(collider, physicsMatrix, [](const Nz::Physics3DSystem::ShapeCollisionInfo& hitInfo) -> std::optional<float>
+						bool doesCollide = physSystem.CollisionQuery(collider, physicsMatrix, [&](const Nz::Physics3DSystem::ShapeCollisionInfo& hitInfo) -> std::optional<float>
 						{
+							closestCollisionInfo = hitInfo;
 							return hitInfo.penetrationDepth;
-						});
+						}, nullptr, &physObjectLayerFilter);
 
 						m_preview->material->SetValueProperty("BaseColor", doesCollide ? Nz::Color(0.8f, 0.2f, 0.2f, 0.5f) : Nz::Color(1.f, 1.f, 1.f, 0.5f));
+
+						if (doesCollide)
+						{
+							// Draw a visual line to show where collision happens
+							m_gameInterface.GetDebugDrawer()->DrawLine(entityPos, closestCollisionInfo.collisionPosition1, Nz::Color::Red());
+						}
 					}
 				}
 			}
