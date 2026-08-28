@@ -58,7 +58,7 @@ namespace tsom
 
 	void PlaceEntityTool::OnTrigger(TriggerType triggerType)
 	{
-		if (triggerType != TriggerType::Primary && triggerType != TriggerType::Tertiary)
+		if (triggerType != TriggerType::Primary && triggerType != TriggerType::Secondary)
 			return;
 
 		auto raycastHit = m_gameInterface.RaycastQuery();
@@ -248,7 +248,7 @@ namespace tsom
 #ifdef TSOM_DEV_TOOLS
 		if (m_isSelectingEntities)
 		{
-			if (ImGui::Begin("Entity selection", &m_isSelectingEntities))
+			if (ImGui::Begin("Entity selection", &m_isSelectingEntities, ImGuiWindowFlags_NoTitleBar))
 			{
 				ImGui::Text("Select the entity you wish to use");
 
