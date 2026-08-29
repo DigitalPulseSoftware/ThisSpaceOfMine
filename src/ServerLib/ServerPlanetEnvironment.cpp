@@ -416,13 +416,23 @@ namespace tsom
 
 	void ServerPlanetEnvironment::LoadEntitiesFromDatabase()
 	{
+		struct Connection
+		{
+			entt::handle sourceEntity;
+			Nz::Uuid targetEntityUuid;
+			Nz::UInt8 sourcePort;
+			Nz::UInt8 targetPort;
+		};
+		std::unordered_map<Nz::Uuid, entt::handle> databaseEntities;
+		std::vector<Connection> connections;
+
 		ServerDatabase& serverDatabase = m_serverInstance.GetThreadServerDatabase();
 		serverDatabase.GetAllPlanetEntities(*m_databaseId, [&](Database::PlanetEntity&& planetEntity)
 		{
 			std::shared_ptr<const EntityClass> entityClass = m_serverInstance.GetEntityRegistry().FindClass(planetEntity.className);
 			if (!entityClass)
 			{
-				NazaraError("Database entity {} has unknown class {}", planetEntity.id, planetEntity.className);
+				spdlog::error("Database entity {} has unknown class {}", planetEntity.uniqueId.ToString(), planetEntity.className);
 				return true;
 			}
 
@@ -432,10 +442,55 @@ namespace tsom
 			entity.emplace<DatabaseComponent>(planetEntity.uniqueId, planetEntity.id);
 
 			entity.emplace<ClassInstanceComponent>(entityClass, entityClass->PropertiesFromJson(planetEntity.properties));
-			entityClass->InitAndActivateEntity(entity);
+			entityClass->InitEntity(entity); //< Activate all entities in a second pass
+
+			databaseEntities.emplace(planetEntity.uniqueId, entity);
+
+			// Handle connections
+			const nlohmann::json& connectionsDoc = planetEntity.connections;
+			if (auto it = connectionsDoc.find("connections"); it != connectionsDoc.end())
+			{
+				Nz::UInt32 version = connectionsDoc["version"];
+				if (version == 1)
+				{
+					for (const auto& connectionDoc : connectionsDoc["connections"])
+					{
+						const std::string& targetEntity = connectionDoc["target_entity"];
+
+						connections.push_back(Connection{
+							.sourceEntity = entity,
+							.targetEntityUuid = Nz::Uuid::FromString(targetEntity),
+							.sourcePort = connectionDoc["source_port"],
+							.targetPort = connectionDoc["target_port"]
+						});
+					}
+				}
+				else
+					spdlog::error("Database entity {} has unhandled connection version {}", planetEntity.uniqueId.ToString(), version);
+			}
 
 			return true;
 		});
+
+		// Process connections
+		for (const Connection& connection : connections)
+		{
+			auto it = databaseEntities.find(connection.targetEntityUuid);
+			if (it == databaseEntities.end())
+			{
+				spdlog::error("Database entity {} has connection to entity {} which doesn't exist", connection.sourceEntity.get<DatabaseComponent>().uniqueId.ToString(), connection.targetEntityUuid.ToString());
+				continue;
+			}
+
+			DistributionComponent::Connect(connection.sourceEntity, it->second, connection.sourcePort, connection.targetPort);
+		}
+
+		// Activate all entities
+		for (const auto& [uuid, entity] : databaseEntities)
+		{
+			auto& entityClassInstance = entity.get<ClassInstanceComponent>();
+			entityClassInstance.GetClass()->ActivateEntity(entity);
+		}
 	}
 
 	void ServerPlanetEnvironment::ChunkLoadingData::HandleChunkLoaded(const ChunkIndices& chunkIndices, DirectionMask visibilityMask)

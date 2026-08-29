@@ -46,6 +46,7 @@ namespace tsom::Database
 		Nz::Vector3f position;
 		Nz::Quaternionf rotation;
 		nlohmann::json properties;
+		nlohmann::json connections;
 	};
 
 	struct PlanetEntity : PlanetEntityPartial

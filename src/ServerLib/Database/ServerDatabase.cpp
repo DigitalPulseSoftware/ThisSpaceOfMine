@@ -22,10 +22,10 @@ namespace tsom
 	getAllPlanetChunksQuery(database, "SELECT position_x, position_y, position_z, version, chunk_data, cache_state FROM planet_chunks WHERE planet_id = ?"),
 	getPlanetChunkQuery(database, "SELECT version, chunk_data, cache_state FROM planet_chunks WHERE planet_id = ? AND position_x = ? AND position_y = ? AND position_z = ?"),
 	storePlanetChunkQuery(database, "REPLACE INTO planet_chunks(planet_id, position_x, position_y, position_z, version, chunk_data, cache_state, last_update) VALUES(?, ?, ?, ?, ?, ?, ?, datetime())"),
-	createPlanetEntityQuery(database, "INSERT INTO planet_entities(unique_id, planet_id, class_name, class_version, position_x, position_y, position_z, rotation_x, rotation_y, rotation_z, rotation_w, properties, last_update) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime()) RETURNING id"),
+	createPlanetEntityQuery(database, "INSERT INTO planet_entities(unique_id, planet_id, class_name, class_version, position_x, position_y, position_z, rotation_x, rotation_y, rotation_z, rotation_w, properties, connections, last_update) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime()) RETURNING id"),
 	deletePlanetEntityQuery(database, "DELETE FROM planet_entities WHERE id = ?"),
-	getAllPlanetEntitiesQuery(database, "SELECT id, unique_id, class_name, class_version, position_x, position_y, position_z, rotation_x, rotation_y, rotation_z, rotation_w, properties FROM planet_entities WHERE planet_id = ?"),
-	partialUpdatePlanetEntityQuery(database, "UPDATE planet_entities SET class_version = ?, position_x = ?, position_y = ?, position_z = ?, rotation_x = ?, rotation_y = ?, rotation_z = ?, rotation_w = ?, properties = ?, last_update = datetime() WHERE id = ?"),
+	getAllPlanetEntitiesQuery(database, "SELECT id, unique_id, class_name, class_version, position_x, position_y, position_z, rotation_x, rotation_y, rotation_z, rotation_w, properties, connections FROM planet_entities WHERE planet_id = ?"),
+	partialUpdatePlanetEntityQuery(database, "UPDATE planet_entities SET class_version = ?, position_x = ?, position_y = ?, position_z = ?, rotation_x = ?, rotation_y = ?, rotation_z = ?, rotation_w = ?, properties = ?, connections = ?, last_update = datetime() WHERE id = ?"),
 	getAllPlanetLinkQuery(database, "SELECT source_planet_id, destination_planet_id, position_x, position_y, position_z FROM planet_links"),
 	storePlanetLinkQuery(database, "REPLACE INTO planet_links(source_planet_id, destination_planet_id, position_x, position_y, position_z) VALUES(?, ?, ?, ?, ?)")
 	{
@@ -80,6 +80,7 @@ namespace tsom
 		m_preparedStatements->createPlanetEntityQuery.bind(10, planetEntity.rotation.z);
 		m_preparedStatements->createPlanetEntityQuery.bind(11, planetEntity.rotation.w);
 		m_preparedStatements->createPlanetEntityQuery.bind(12, planetEntity.properties.dump());
+		m_preparedStatements->createPlanetEntityQuery.bind(13, planetEntity.connections.dump());
 
 		m_preparedStatements->createPlanetEntityQuery.executeStep();
 
@@ -163,6 +164,7 @@ namespace tsom
 			planetEntity.rotation.z = Nz::SafeCaster(m_preparedStatements->getAllPlanetEntitiesQuery.getColumn(9).getDouble());
 			planetEntity.rotation.w = Nz::SafeCaster(m_preparedStatements->getAllPlanetEntitiesQuery.getColumn(10).getDouble());
 			planetEntity.properties = nlohmann::json::parse(m_preparedStatements->getAllPlanetEntitiesQuery.getColumn(11).getText());
+			planetEntity.connections = nlohmann::json::parse(m_preparedStatements->getAllPlanetEntitiesQuery.getColumn(12).getText());
 
 			if (!callback(std::move(planetEntity)))
 				break;
@@ -448,7 +450,8 @@ namespace tsom
 		m_preparedStatements->partialUpdatePlanetEntityQuery.bind(7, planetEntity.rotation.z);
 		m_preparedStatements->partialUpdatePlanetEntityQuery.bind(8, planetEntity.rotation.w);
 		m_preparedStatements->partialUpdatePlanetEntityQuery.bind(9, planetEntity.properties.dump());
-		m_preparedStatements->partialUpdatePlanetEntityQuery.bind(10, planetEntityId);
+		m_preparedStatements->partialUpdatePlanetEntityQuery.bind(10, planetEntity.connections.dump());
+		m_preparedStatements->partialUpdatePlanetEntityQuery.bind(11, planetEntityId);
 
 		m_preparedStatements->partialUpdatePlanetEntityQuery.exec();
 	}

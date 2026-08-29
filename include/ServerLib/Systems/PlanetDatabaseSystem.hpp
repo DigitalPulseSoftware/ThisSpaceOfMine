@@ -10,15 +10,14 @@
 #include <ServerLib/Export.hpp>
 #include <Nazara/Core/EnttObserver.hpp>
 #include <Nazara/Core/Time.hpp>
+#include <Nazara/Core/Components/NodeComponent.hpp>
+#include <CommonLib/Components/ClassInstanceComponent.hpp>
+#include <CommonLib/Components/DistributionComponent.hpp>
 #include <NazaraUtils/TypeList.hpp>
 #include <entt/entt.hpp>
+#include <nlohmann/json_fwd.hpp>
 #include <tsl/hopscotch_map.h>
 #include <vector>
-
-namespace Nz
-{
-	class NodeComponent;
-}
 
 namespace tsom
 {
@@ -42,6 +41,8 @@ namespace tsom
 			PlanetDatabaseSystem& operator=(PlanetDatabaseSystem&&) = delete;
 
 		private:
+			nlohmann::json BuildConnectionJson(entt::entity entity);
+
 			enum class DatabaseOperation
 			{
 				Create,
@@ -56,7 +57,23 @@ namespace tsom
 				Nz::UInt32 databaseId; // Only for Update/Destroy
 			};
 
-			Nz::EnttObserver<Nz::TypeList<Nz::NodeComponent, class DatabaseComponent, class ClassInstanceComponent>> m_databaseObserver;
+			struct EntityData
+			{
+				NazaraSlot(Nz::NodeComponent, OnNodeInvalidation, onNodeInvalidation);
+				NazaraSlot(ClassInstanceComponent, OnPropertyUpdate, onPropertyUpdate);
+			};
+
+			struct EntityDistributionData
+			{
+				NazaraSlot(DistributionComponent, OnOutputChanged, onOutputedChanged);
+			};
+
+			using ComponentList = Nz::TypeList<Nz::NodeComponent, class DatabaseComponent, ClassInstanceComponent>;
+			using ExcludedComponents = Nz::TypeList<>;
+
+			Nz::EnttObserver<ComponentList, ExcludedComponents, EntityData> m_databaseObserver;
+			Nz::EnttObserver<Nz::TypeListAppend<ComponentList, DistributionComponent>, ExcludedComponents, EntityDistributionData> m_databaseDistributionObserver;
+			entt::storage<void> m_updatedEntities;
 			std::vector<DatabaseUpdate> m_pendingUpdates;
 			entt::registry& m_registry;
 			ServerDatabase& m_database;
