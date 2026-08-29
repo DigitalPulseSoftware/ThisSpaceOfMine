@@ -195,7 +195,7 @@ fn ComputeNormal(input: VertOut) -> vec3[f32]
 		let tbnMatrix = mat3[f32](T, B, N);
 
 		let normal = vec3[f32](Material.normalMap.Sample(input.uv).xy * 2.0 - (1.0).rr, 0.0);
-		normal.z = sqrt(1.0 - normal.x - normal.y);
+		normal.z = sqrt(1.0 - normal.x * normal.x - normal.y * normal.y);
 		normal = normalize(tbnMatrix * normal);
 
 		return normal;

@@ -212,7 +212,7 @@ fn ComputeColor(input: VertOut) -> vec4[f32]
 fn UnpackNormal(texData: vec2[f32]) -> vec3[f32]
 {
 	let normal = vec3[f32](texData.x * 2.0 - 1.0, texData.y * 2.0 - 1.0, 0.0);
-	normal.z = sqrt(1.0 - normal.x - normal.y);
+	normal.z = sqrt(1.0 - normal.x * normal.x - normal.y * normal.y);
 
 	return normal;
 }
