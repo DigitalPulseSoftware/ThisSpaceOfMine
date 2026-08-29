@@ -45,7 +45,7 @@ namespace tsom
 			void ForEachVisibility(const Nz::FunctionRef<void(SessionVisibilityHandler& visibility)>& functor);
 			bool ForgetEntity(entt::entity entity);
 
-			inline void RegisterPlayer(ServerPlayer* player, bool createEntities);
+			void RegisterPlayer(ServerPlayer* player, bool createEntities);
 			void UnregisterPlayer(ServerPlayer* player);
 
 			void Update(Nz::Time elapsedTime);
@@ -66,7 +66,6 @@ namespace tsom
 				NazaraSlot(DistributionComponent, OnOutputChanged, onOutputChanged);
 			};
 
-			std::vector<ServerPlayer*> m_pendingPlayers;
 			entt::storage<void> m_pendingCreatedEntities;
 			Nz::EnttObserver<Nz::TypeList<class NetworkedComponent>, Nz::TypeList<Nz::DisabledComponent>, EntityData> m_networkedEntities;
 			entt::registry& m_registry;

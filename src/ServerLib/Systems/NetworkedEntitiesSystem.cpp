@@ -56,13 +56,29 @@ namespace tsom
 		return m_pendingCreatedEntities.remove(entity);
 	}
 
+	void NetworkedEntitiesSystem::RegisterPlayer(ServerPlayer* player, bool createEntities)
+	{
+		m_players.RegisterPlayer(player);
+
+		// Create entities immediately if requested (may be required for dependencies such as environments)
+		if (createEntities)
+		{
+			SessionVisibilityHandler& visibilityHandler = player->GetVisibilityHandler();
+			for (auto&& [entity, entityData] : m_networkedEntities.each())
+			{
+				// Don't send pending entities as they will be sent to each player next tick
+				if (m_pendingCreatedEntities.find(entity) != m_pendingCreatedEntities.end())
+					continue;
+
+				entt::handle entityHandle(m_registry, entity);
+				CreateEntity(visibilityHandler, entityHandle, BuildCreateEntityData(entity));
+			}
+		}
+	}
+
 	void NetworkedEntitiesSystem::UnregisterPlayer(ServerPlayer* player)
 	{
-		auto it = std::find(m_pendingPlayers.begin(), m_pendingPlayers.end(), player);
-		if (it != m_pendingPlayers.end())
-			m_pendingPlayers.erase(it);
-		else
-			m_players.UnregisterPlayer(player);
+		m_players.UnregisterPlayer(player);
 	}
 
 	void NetworkedEntitiesSystem::Update(Nz::Time /*elapsedTime*/)
@@ -172,24 +188,6 @@ namespace tsom
 			});
 		}
 		m_pendingCreatedEntities.clear();
-
-		if (!m_pendingPlayers.empty())
-		{
-			// Send all entities to newly connected players
-			for (auto&& [entity, entityData] : m_networkedEntities.each())
-			{
-				entt::handle entityHandle(m_registry, entity);
-
-				SessionVisibilityHandler::CreateEntityData createData = BuildCreateEntityData(entity);
-				for (ServerPlayer* player : m_pendingPlayers)
-					CreateEntity(player->GetVisibilityHandler(), entityHandle, createData);
-			}
-
-			for (ServerPlayer* player : m_pendingPlayers)
-				m_players.RegisterPlayer(player);
-
-			m_pendingPlayers.clear();
-		}
 	}
 
 	SessionVisibilityHandler::CreateEntityData NetworkedEntitiesSystem::BuildCreateEntityData(entt::entity entity) const
@@ -233,11 +231,10 @@ namespace tsom
 
 	void NetworkedEntitiesSystem::CreateEntity(SessionVisibilityHandler& visibility, entt::handle entity, const SessionVisibilityHandler::CreateEntityData& createData) const
 	{
-		entt::handle handle(m_registry, entity);
-		visibility.CreateEntity(handle, createData);
+		visibility.CreateEntity(entity, createData);
 
 		// Connections are sent afterward to handle entity dependency issues
-		if (DistributionComponent* entityDistribution = m_registry.try_get<DistributionComponent>(entity))
+		if (DistributionComponent* entityDistribution = entity.try_get<DistributionComponent>())
 		{
 			for (std::size_t outputIndex = 0; outputIndex < entityDistribution->GetOutputCount(); ++outputIndex)
 			{
@@ -246,23 +243,23 @@ namespace tsom
 				entt::handle connectedEntity = entityDistribution->GetOutputConnectedEntity(outputIndex);
 
 				if (connectedEntity)
-					visibility.UpdateEntityDistributionConnection(handle, outputIndex8, connectedEntity, inputIndex8);
+					visibility.UpdateEntityDistributionConnection(entity, outputIndex8, connectedEntity, inputIndex8);
 			}
 		}
 
-		if (PlanetComponent* planetComponent = handle.try_get<PlanetComponent>())
+		if (PlanetComponent* planetComponent = entity.try_get<PlanetComponent>())
 		{
 			planetComponent->planet->ForEachChunk([&](const ChunkIndices& /*chunkIndices*/, Chunk& chunk)
 			{
-				visibility.CreateChunk(handle, chunk);
+				visibility.CreateChunk(entity, chunk);
 			});
 		}
 
-		if (ShipComponent* shipComponent = handle.try_get<ShipComponent>())
+		if (ShipComponent* shipComponent = entity.try_get<ShipComponent>())
 		{
 			shipComponent->ship->ForEachChunk([&](const ChunkIndices& /*chunkIndices*/, Chunk& chunk)
 			{
-				visibility.CreateChunk(handle, chunk);
+				visibility.CreateChunk(entity, chunk);
 			});
 		}
 	}
