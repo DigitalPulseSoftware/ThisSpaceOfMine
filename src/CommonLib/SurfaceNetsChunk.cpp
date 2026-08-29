@@ -123,8 +123,17 @@ namespace tsom
 
 	std::pair<std::shared_ptr<Nz::Collider3D>, Nz::Vector3f> SurfaceNetsChunk::BuildBlockCollider(const Nz::Vector3ui& blockIndices, float scale) const
 	{
-		Nz::Vector3f offset = (Nz::Vector3f(blockIndices.x, blockIndices.z, blockIndices.y) - Nz::Vector3f(m_size) * 0.5f + Nz::Vector3f(0.5f)) * m_blockSize;
-		return { std::make_shared<Nz::BoxCollider3D>(Nz::Vector3f(m_blockSize * scale)), offset };
+		auto corners = ComputeBlockCorners(blockIndices);
+
+		Nz::Vector3f blockPos = (Nz::Vector3f(blockIndices) - Nz::Vector3f(m_size) * 0.5f) * m_blockSize + Nz::Vector3f(m_blockSize);
+		Nz::Vector3f blockOffset(blockPos.x, blockPos.z, blockPos.y);
+		blockOffset -= Nz::Vector3f(m_blockSize * 0.5f);
+
+		Nz::Vector3f center = std::accumulate(corners.begin(), corners.end(), Nz::Vector3f::Zero()) / corners.size();
+		for (Nz::Vector3f& corner : corners)
+			corner = Nz::Lerp(center, corner, scale) - blockOffset;
+
+		return { std::make_shared<Nz::ConvexHullCollider3D>(corners.data(), corners.size()), blockOffset };
 	}
 
 	std::shared_ptr<Nz::Collider3D> SurfaceNetsChunk::BuildCollider(std::size_t layerIndex) const
