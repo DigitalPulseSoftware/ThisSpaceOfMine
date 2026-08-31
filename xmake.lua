@@ -67,13 +67,6 @@ end
 
 add_requireconfs("fmt", { debug = is_mode("debug") })
 
--- temporary use commits because those versions aren't released yet
-add_requireconfs("nazarautils", "**.nazarautils", { version = "d20136d17d15f9351046b3b9338940f4a81954b9", override = true })
-add_requireconfs("nzsl", "**.nzsl", { version = "6be2f9d208beeff566fc4ec809eb24880f579a55", override = true })
-add_requireconfs("nazaraengine", "**.nazaraengine", { version = "0344060f0a7a8e76dfd5393ef246b006a69de9e5", override = true })
-add_requireconfs("entt", "nazaraengine.entt", { version = "v4.0.0", override = true })
-add_requireconfs("joltphysics", "nazaraengine.joltphysics", { version = "v5.6.0", override = true })
-
 -- Don't link with system-installed libs on CI
 if os.getenv("CI") then
 	add_requireconfs("**", { system = false })
