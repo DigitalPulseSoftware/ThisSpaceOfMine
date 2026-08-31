@@ -825,6 +825,8 @@ namespace tsom
 	{
 		WidgetState::Enter(fsm);
 
+		m_tools[m_toolIndex]->OnActivate();
+
 		m_chatBox->Close();
 		m_escapeMenu->Hide();
 		m_toolsMenu->Hide();
@@ -897,6 +899,8 @@ namespace tsom
 	void GameState::Leave(Nz::StateMachine& fsm)
 	{
 		WidgetState::Leave(fsm);
+
+		m_tools[m_toolIndex]->OnDeactivate();
 
 		if (Nz::Window* window = GetStateData().window)
 			window->SetRelativeMouseMode(false);
