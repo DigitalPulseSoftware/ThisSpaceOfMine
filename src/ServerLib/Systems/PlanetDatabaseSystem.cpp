@@ -34,13 +34,15 @@ namespace tsom
 			Nz::NodeComponent& entityNode = m_registry.get<Nz::NodeComponent>(entity);
 			entityData.onNodeInvalidation.Connect(entityNode.OnNodeInvalidation, [this, entity](const Nz::Node* /*node*/)
 			{
-				m_updatedEntities.emplace(entity);
+				if (!m_updatedEntities.contains(entity))
+					m_updatedEntities.emplace(entity);
 			});
 
 			ClassInstanceComponent& classInstance = m_registry.get<ClassInstanceComponent>(entity);
 			entityData.onPropertyUpdate.Connect(classInstance.OnPropertyUpdate, [this, entity](ClassInstanceComponent* /*classInstance*/, Nz::UInt32 /*propertyIndex*/, const EntityProperty& /*newValue*/)
 			{
-				m_updatedEntities.emplace(entity);
+				if (!m_updatedEntities.contains(entity))
+					m_updatedEntities.emplace(entity);
 			});
 		});
 
@@ -51,7 +53,8 @@ namespace tsom
 			DistributionComponent& distributionComponent = m_registry.get<DistributionComponent>(entity);
 			entityData.onOutputedChanged.Connect(distributionComponent.OnOutputChanged, [this, entity](DistributionComponent*, std::size_t /*outputIndex*/)
 			{
-				m_updatedEntities.emplace(entity);
+				if (!m_updatedEntities.contains(entity))
+					m_updatedEntities.emplace(entity);
 			});
 		});
 
