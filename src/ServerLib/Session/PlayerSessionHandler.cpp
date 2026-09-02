@@ -354,12 +354,13 @@ namespace tsom
 		Nz::Quaternionf localRotation = Nz::Quaternionf(Nz::DegreeAnglef(placeEntity.entityRotation * 45.f), rotationAxis);
 		Nz::Quaternionf spawnRotation = Nz::Quaternionf::CombineRotations(localRotation, surfaceRotation);
 
-		Nz::Vector3f spawnPosition = entityPos - spawnRotation * spawnOffset;
-		if (!CheckCanPlaceEntity(chunkEnvironment, spawnPosition, spawnRotation, collider))
+		if (!CheckCanPlaceEntity(chunkEnvironment, entityPos, spawnRotation, collider))
 			return;
 
+		Nz::Vector3f spawnPosition = entityPos - spawnRotation * spawnOffset;
+
 		entt::handle entity = chunkEnvironment->CreateEntity();
-		entity.emplace<Nz::NodeComponent>(entityPos - spawnRotation * spawnOffset, spawnRotation);
+		entity.emplace<Nz::NodeComponent>(spawnPosition, spawnRotation);
 		entity.emplace<NetworkedComponent>();
 		entity.emplace<ClassInstanceComponent>(entityClass);
 		entity.emplace<DatabaseComponent>();
@@ -944,6 +945,17 @@ namespace tsom
 		{
 			return hitInfo.penetrationDepth;
 		}, nullptr, &physObjectLayerFilter);
+
+		/*Packets::S_DebugDrawLineList debugDrawLineList;
+		debugDrawLineList.uniqueHash = 43;
+		debugDrawLineList.color = (doesCollide) ? Nz::Color::Red() : Nz::Color::Green();
+		debugDrawLineList.duration = 5.f;
+		colliderBox.BuildDebugMesh(debugDrawLineList.vertices, debugDrawLineList.indices, Nz::Matrix4f::Transform(position, rotation));
+
+		auto& visibility = m_player->GetVisibilityHandler();
+
+		debugDrawLineList.environmentId = visibility.GetEnvironmentId(environment);
+		m_player->GetSession()->SendPacket(debugDrawLineList);*/
 
 		return !doesCollide;
 	}

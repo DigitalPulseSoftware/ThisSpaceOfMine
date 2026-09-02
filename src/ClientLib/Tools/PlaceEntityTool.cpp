@@ -202,10 +202,10 @@ namespace tsom
 						Nz::Vector3f normal = s_dirNormals[hitCoordinates->direction];
 
 						if (m_preview->keepUpright)
-							entityPos += normal * m_preview->collider * 0.5f;
+							entityPos += chunkNode.ToGlobalDirection(normal * m_preview->collider * 0.5f);
 						else
 						{
-							entityPos += normal * m_preview->collider.y * 0.5f;
+							entityPos += chunkNode.ToGlobalDirection(normal * m_preview->collider.y * 0.5f);
 
 							Nz::Quaternionf correctionRotation = Nz::Quaternionf::RotationBetween(Nz::Vector3f::Up(), Nz::Vector3f::Forward());
 							surfaceRotation = Nz::Quaternionf::CombineRotations(correctionRotation, Nz::Quaternionf::RotationBetween(Nz::Vector3f::Forward(), normal));
@@ -257,7 +257,7 @@ namespace tsom
 #ifdef TSOM_DEV_TOOLS
 		if (m_isSelectingEntities)
 		{
-			if (ImGui::Begin("Entity selection", &m_isSelectingEntities, ImGuiWindowFlags_NoTitleBar))
+			if (ImGui::Begin("Entity selection", nullptr))
 			{
 				ImGui::Text("Select the entity you wish to use");
 
