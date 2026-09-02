@@ -5,6 +5,7 @@ assets/*
 cache/
 CookedAssets/
 saves/
+screenshots/
 gameconfig.lua
 serverconfig.lua
 src/CommonLib/VersionData.hpp

@@ -53,6 +53,9 @@ namespace tsom
 		});
 
 		RegisterIntegerOption(Config::Graphics_FPSLimit, -1, 1000, -1);
+
+		RegisterIntegerOption(Config::Screenshot_Height, 1, 16384, 2160);
+		RegisterIntegerOption(Config::Screenshot_Width, 1, 16384, 3840);
 	}
 
 	std::filesystem::path GameConfigFile::GetPath()

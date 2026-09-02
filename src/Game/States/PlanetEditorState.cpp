@@ -4,6 +4,7 @@
 
 #include <Game/States/PlanetEditorState.hpp>
 #include <ClientLib/ClientChunkEntities.hpp>
+#include <ClientLib/ClientConfigs.hpp>
 #include <ClientLib/EscapeMenu.hpp>
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Entities/ClientChunkClassLibrary.hpp>
@@ -177,12 +178,7 @@ namespace tsom
 			UpdateMouseLock();
 		});
 
-		m_escapeMenu->OnDisconnect.Connect([this](EscapeMenu* /*menu*/)
-		{
-			GetStateData().app->Quit();
-		});
-
-		m_escapeMenu->OnQuitApp.Connect([this](EscapeMenu* /*menu*/)
+		m_escapeMenu->AddButton("Quit", [this]
 		{
 			GetStateData().app->Quit();
 		});

@@ -8,11 +8,11 @@
 #define TSOM_SERVERLIB_SYSTEMS_PLANETDATABASESYSTEM_HPP
 
 #include <ServerLib/Export.hpp>
+#include <CommonLib/Components/ClassInstanceComponent.hpp>
+#include <CommonLib/Components/DistributionComponent.hpp>
 #include <Nazara/Core/EnttObserver.hpp>
 #include <Nazara/Core/Time.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
-#include <CommonLib/Components/ClassInstanceComponent.hpp>
-#include <CommonLib/Components/DistributionComponent.hpp>
 #include <NazaraUtils/TypeList.hpp>
 #include <entt/entt.hpp>
 #include <nlohmann/json_fwd.hpp>

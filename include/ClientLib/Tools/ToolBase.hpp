@@ -37,6 +37,7 @@ namespace tsom
 			virtual void OnActivate();
 			virtual void OnDeactivate();
 
+			virtual void OnMouseMoved(float deltaX, float deltaY);
 			virtual void OnTrigger(TriggerType triggerType) = 0;
 			virtual void OnWheel(float delta);
 

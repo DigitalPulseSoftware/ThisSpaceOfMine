@@ -16,44 +16,33 @@ namespace tsom
 
 		m_layout = Add<Nz::BoxLayout>(Nz::BoxLayoutOrientation::TopToBottom);
 
-		m_closeMenuButton = m_layout->Add<Nz::ButtonWidget>();
-		m_closeMenuButton->UpdateText(Nz::SimpleTextDrawer::Draw("Close", 30, Nz::TextStyle_Regular, Nz::Color::Black()));
-		m_closeMenuButton->SetMaximumSize(m_closeMenuButton->GetPreferredSize());
-		m_closeMenuButton->OnButtonTrigger.Connect([this](const Nz::ButtonWidget*)
+		AddButton("Close", [this]{ Hide(); });
+	}
+
+	void EscapeMenu::AddButton(std::string buttonName, std::function<void()> callback)
+	{
+		Nz::ButtonWidget* button = m_layout->Add<Nz::ButtonWidget>();
+		button->UpdateText(Nz::SimpleTextDrawer::Draw(std::move(buttonName), 30, Nz::TextStyle_Regular, Nz::Color::Black()));
+		button->SetMaximumSize(button->GetPreferredSize());
+		button->OnButtonTrigger.Connect([this, cb = std::move(callback)](const Nz::ButtonWidget*)
 		{
-			Hide();
+			cb();
 		});
 
-		m_disconnectButton = m_layout->Add<Nz::ButtonWidget>();
-		m_disconnectButton->UpdateText(Nz::SimpleTextDrawer::Draw("Disconnect", 30, Nz::TextStyle_Regular, Nz::Color::Black()));
-		m_disconnectButton->SetMaximumSize(m_disconnectButton->GetPreferredSize());
-		m_disconnectButton->OnButtonTrigger.Connect([this](const Nz::ButtonWidget*)
-		{
-			OnDisconnect(this);
-		});
-
-		m_quitAppButton = m_layout->Add<Nz::ButtonWidget>();
-		m_quitAppButton->UpdateText(Nz::SimpleTextDrawer::Draw("Exit application", 30, Nz::TextStyle_Regular, Nz::Color::Black()));
-		m_quitAppButton->SetMaximumSize(m_quitAppButton->GetPreferredSize());
-		m_quitAppButton->OnButtonTrigger.Connect([this](const Nz::ButtonWidget*)
-		{
-			OnQuitApp(this);
-		});
+		m_buttons.push_back(button);
 
 		constexpr float padding = 20.f;
 		constexpr float buttonPadding = 10.f;
 
-		std::array buttons = { m_closeMenuButton, m_disconnectButton, m_quitAppButton };
-
 		float maxWidth = 0.f;
 		float height = 0.f;
-		for (Nz::ButtonWidget* button : buttons)
+		for (Nz::ButtonWidget* button : m_buttons)
 		{
 			maxWidth = std::max(maxWidth, button->GetPreferredWidth());
 			height += button->GetPreferredHeight();
 		}
 
-		height += buttonPadding * (buttons.size() - 1);
+		height += buttonPadding * (m_buttons.size() - 1);
 
 		SetMinimumSize({ maxWidth, height });
 
@@ -61,6 +50,8 @@ namespace tsom
 		height += padding * 2.f;
 
 		SetPreferredSize({ maxWidth, height });
+
+		Layout();
 	}
 
 	void EscapeMenu::Layout()

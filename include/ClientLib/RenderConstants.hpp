@@ -12,7 +12,7 @@
 
 namespace tsom::Constants
 {
-	constexpr Nz::DegreeAnglef DefaultCameraFOV = 90.f;
+	constexpr Nz::DegreeAnglef DefaultCameraFOV = 86.f;
 
 	constexpr Nz::UInt32 RenderMask2D = 0xFFFF0000;
 	constexpr Nz::UInt32 RenderMaskUI = 0x00010000;

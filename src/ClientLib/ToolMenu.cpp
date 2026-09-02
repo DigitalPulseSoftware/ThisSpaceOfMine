@@ -33,7 +33,7 @@ namespace tsom
 			entry.toolLabel = Add<Nz::LabelWidget>();
 			entry.toolLabel->UpdateText(Nz::SimpleTextDrawer::Draw(std::string(s_toolTexts[i]), 30, Nz::TextStyle_Regular, (i == m_hoveredTool ? Nz::Color::Black() : Nz::Color::White())));
 		}
-	
+
 		m_image = Add<Nz::ImageWidget>(m_toolEntries[m_hoveredTool].material);
 		m_image->Resize({ 600.f, 600.f });
 

@@ -14,6 +14,7 @@
 
 namespace Nz
 {
+	class ApplicationBase;
 	class Canvas;
 	class DebugDrawer;
 	class EnttWorld;
@@ -22,6 +23,7 @@ namespace Nz
 namespace tsom
 {
 	struct BlockSelectionBar;
+	class ConfigFile;
 	class EntityRegistry;
 	class NetworkSession;
 
@@ -35,8 +37,13 @@ namespace tsom
 			GameInterface(GameInterface&&) = delete;
 			~GameInterface() = default;
 
+			virtual Nz::ApplicationBase& GetApplication() = 0;
 			virtual BlockSelectionBar* GetBlockSelectionBar() const = 0;
+			virtual entt::handle GetCamera2DEntity() = 0;
+			virtual entt::handle GetCamera3DEntity() = 0;
 			virtual Nz::Canvas* GetCanvas() = 0;
+			virtual ConfigFile& GetConfig() = 0;
+			virtual entt::handle GetControlledEntity() = 0;
 			virtual Nz::DebugDrawer* GetDebugDrawer() = 0;
 			virtual const EntityRegistry& GetEntityRegistry() const = 0;
 			virtual NetworkSession* GetNetworkSession() = 0;

@@ -54,8 +54,13 @@ namespace tsom
 			GameState(GameState&&) = delete;
 			~GameState();
 
+			Nz::ApplicationBase& GetApplication() override;
 			BlockSelectionBar* GetBlockSelectionBar() const override;
+			entt::handle GetCamera2DEntity() override;
+			entt::handle GetCamera3DEntity() override;
 			Nz::Canvas* GetCanvas() override;
+			ConfigFile& GetConfig() override;
+			entt::handle GetControlledEntity() override;
 			Nz::DebugDrawer* GetDebugDrawer() override;
 			const EntityRegistry& GetEntityRegistry() const override;
 			NetworkSession* GetNetworkSession() override;
@@ -164,6 +169,9 @@ namespace tsom
 			std::optional<PilotedShip> m_pilotedShip;
 			std::shared_ptr<DebugOverlay> m_debugOverlay; 
 			std::size_t m_toolIndex;
+#ifdef TSOM_DEV_TOOLS
+			std::unique_ptr<ToolBase> m_cameraTool;
+#endif
 			std::vector<InputRotation> m_predictedInputRotations;
 			std::vector<std::unique_ptr<ToolBase>> m_tools;
 			tsl::hopscotch_map<Nz::UInt64, DebugDrawLines> m_debugDrawLines;

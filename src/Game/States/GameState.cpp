@@ -11,6 +11,7 @@
 #include <ClientLib/EscapeMenu.hpp>
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/ToolMenu.hpp>
+#include <ClientLib/Components/AnimationComponent.hpp>
 #include <ClientLib/Components/ChunkNetworkMapComponent.hpp>
 #include <ClientLib/Components/ClientEntityNetworkIndex.hpp>
 #include <ClientLib/Components/ClientInteractibleComponent.hpp>
@@ -18,6 +19,7 @@
 #include <ClientLib/Systems/AnimationSystem.hpp>
 #include <ClientLib/Systems/CameraFollowerSystem.hpp>
 #include <ClientLib/Tools/BlockTool.hpp>
+#include <ClientLib/Tools/CameraTool.hpp>
 #include <ClientLib/Tools/ConnectTool.hpp>
 #include <ClientLib/Tools/GrabEntityTool.hpp>
 #include <ClientLib/Tools/NoTool.hpp>
@@ -41,6 +43,7 @@
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <Nazara/Core/PrimitiveList.hpp>
+#include <Nazara/Core/TaskSchedulerAppComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Graphics/DirectionalLight.hpp>
 #include <Nazara/Graphics/FramePipeline.hpp>
@@ -49,6 +52,7 @@
 #include <Nazara/Graphics/Model.hpp>
 #include <Nazara/Graphics/PipelinePassList.hpp>
 #include <Nazara/Graphics/PointLight.hpp>
+#include <Nazara/Graphics/RenderTexture.hpp>
 #include <Nazara/Graphics/SpotLight.hpp>
 #include <Nazara/Graphics/TextureAsset.hpp>
 #include <Nazara/Graphics/Components/CameraComponent.hpp>
@@ -61,6 +65,7 @@
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <Nazara/Platform/Window.hpp>
 #include <Nazara/Platform/WindowEventHandler.hpp>
+#include <Nazara/Renderer/Texture.hpp>
 #include <Nazara/Renderer/Plugins/ImGuiPlugin.hpp>
 #include <Nazara/TextRenderer/RichTextBuilder.hpp>
 #include <Nazara/Widgets/LabelWidget.hpp>
@@ -116,8 +121,8 @@ namespace tsom
 			cameraComponent.EnableReversedZ(true);
 			cameraComponent.UpdateClearColor(Nz::Color::Black());
 			cameraComponent.UpdateClearDepth(0.f);
-			cameraComponent.UpdateFOV(86.f);
-			cameraComponent.UpdateRenderMask(tsom::Constants::RenderMask3D & ~tsom::Constants::RenderMaskLocalPlayer);
+			cameraComponent.UpdateFOV(Constants::DefaultCameraFOV);
+			cameraComponent.UpdateRenderMask(Constants::RenderMask3D & ~Constants::RenderMaskLocalPlayer);
 			cameraComponent.UpdateZNear(0.1f);
 			cameraComponent.UpdateZFar(5000.f); //< when infinite zfar is enabled, zfar is used as a limit for directional lights
 
@@ -131,7 +136,7 @@ namespace tsom
 			sprite->SetSize(sprite->GetSize() * 0.15f);
 
 			m_crosshairEntity.emplace<Nz::NodeComponent>();
-			auto& crosshairGfx = m_crosshairEntity.emplace<Nz::GraphicsComponent>(std::move(sprite), tsom::Constants::RenderMask2D);
+			auto& crosshairGfx = m_crosshairEntity.emplace<Nz::GraphicsComponent>(std::move(sprite), Constants::RenderMask2D);
 			crosshairGfx.Hide();
 		}
 
@@ -140,7 +145,7 @@ namespace tsom
 			m_healthOxygen.textSprite = std::make_shared<Nz::TextSprite>(Nz::Widgets::Instance()->GetTransparentMaterial());
 
 			m_healthOxygen.entity.emplace<Nz::NodeComponent>();
-			m_healthOxygen.entity.emplace<Nz::GraphicsComponent>(m_healthOxygen.textSprite, tsom::Constants::RenderMask2D);
+			m_healthOxygen.entity.emplace<Nz::GraphicsComponent>(m_healthOxygen.textSprite, Constants::RenderMask2D);
 		}
 
 		m_sunLightEntity = CreateEntity();
@@ -153,7 +158,7 @@ namespace tsom
 			Nz::UInt32 shadowMapSize = stateData.config->GetIntegerValue<Nz::UInt32>(Config::Graphics_SunShadowMapSize);
 
 			auto& lightComponent = m_sunLightEntity.emplace<Nz::LightComponent>();
-			auto& dirLight = lightComponent.AddLight<Nz::DirectionalLight>(tsom::Constants::RenderMask3D);
+			auto& dirLight = lightComponent.AddLight<Nz::DirectionalLight>(Constants::RenderMask3D);
 			dirLight.UpdateAmbientFactor(0.05f);
 			dirLight.EnableShadowCasting(true);
 			dirLight.UpdateShadowMapSettings(shadowMapSize, Nz::PixelFormat::Depth16);
@@ -214,7 +219,7 @@ namespace tsom
 			skyboxModel->SetMaterial(0, skyboxMat);
 
 			// Attach the model to the entity
-			m_skyboxEntity.emplace<Nz::GraphicsComponent>(std::move(skyboxModel), tsom::Constants::RenderMask3D);
+			m_skyboxEntity.emplace<Nz::GraphicsComponent>(std::move(skyboxModel), Constants::RenderMask3D);
 
 			// Setup entity position and attach it to the camera (position only, camera rotation does not impact skybox)
 			auto& skyboxNode = m_skyboxEntity.emplace<Nz::NodeComponent>();
@@ -317,6 +322,35 @@ namespace tsom
 		m_escapeMenu->OnWidgetVisibilityUpdated.Connect([&](const Nz::BaseWidget* /*widget*/, bool /*isVisible*/)
 		{
 			UpdateMouseLock();
+		});
+
+		m_escapeMenu->AddButton("Disconnect", [this]
+		{
+			// DisconnectionType::Kick doesn't wait for server acknowledgement
+			GetStateData().networkSession->Disconnect(DisconnectionType::Kick);
+		});
+
+#ifdef TSOM_DEV_TOOLS
+		m_escapeMenu->AddButton("Photo mode", [this]
+		{
+			m_escapeMenu->Hide();
+
+			if (m_cameraTool)
+				return;
+
+			m_cameraTool = std::make_unique<CameraTool>(*this, [this]
+			{
+				m_cameraTool->OnDeactivate();
+				m_cameraTool.reset();
+				UpdateMouseLock();
+			});
+			m_cameraTool->OnActivate();
+		});
+#endif
+
+		m_escapeMenu->AddButton("Quit game", [this]
+		{
+			GetStateData().app->Quit();
 		});
 
 		m_toolsMenu = CreateWidget<ToolMenu>(*stateData.app, m_toolIndex);
@@ -478,6 +512,19 @@ namespace tsom
 					break;
 				}
 
+				case Nz::Keyboard::Scancode::F2:
+				{
+					auto& states = GetStateData();
+
+					Nz::Vector2ui32 screenshotSize;
+					screenshotSize.x = states.config->GetIntegerValue<Nz::UInt32>(Config::Screenshot_Width);
+					screenshotSize.y = states.config->GetIntegerValue<Nz::UInt32>(Config::Screenshot_Height);
+
+					auto& taskScheduler = states.app->GetComponent<Nz::TaskSchedulerAppComponent>();
+					CameraTool::TakeScreenshot(taskScheduler, *states.world, m_cameraEntity, screenshotSize);
+					break;
+				}
+
 				case Nz::Keyboard::Scancode::F3:
 				{
 					if (!m_debugOverlay)
@@ -516,9 +563,9 @@ namespace tsom
 
 					auto& cameraComponent = m_cameraEntity.get<Nz::CameraComponent>();
 					if (m_cameraMode != CameraMode::Firstperson)
-						cameraComponent.UpdateRenderMask(tsom::Constants::RenderMask3D);
+						cameraComponent.UpdateRenderMask(Constants::RenderMask3D);
 					else
-						cameraComponent.UpdateRenderMask(tsom::Constants::RenderMask3D & ~tsom::Constants::RenderMaskLocalPlayer);
+						cameraComponent.UpdateRenderMask(Constants::RenderMask3D & ~Constants::RenderMaskLocalPlayer);
 					break;
 				}
 
@@ -530,6 +577,7 @@ namespace tsom
 
 				case Nz::Keyboard::Scancode::F11:
 				{
+					// Toggle HUD
 					auto& stateData = GetStateData();
 					if (stateData.camera2D.any_of<Nz::DisabledComponent>())
 						stateData.camera2D.erase<Nz::DisabledComponent>();
@@ -726,25 +774,40 @@ namespace tsom
 			m_crosshairEntity.get<Nz::GraphicsComponent>().Show(false);
 			LayoutWidgets(Nz::Vector2f(GetStateData().renderTarget->GetSize()));
 		});
-
-		m_escapeMenu->OnDisconnect.Connect([this](EscapeMenu* /*menu*/)
-		{
-			GetStateData().networkSession->Disconnect();
-		});
-
-		m_escapeMenu->OnQuitApp.Connect([this](EscapeMenu* /*menu*/)
-		{
-			GetStateData().app->Quit();
-		});
 	}
 
 	GameState::~GameState()
 	{
 	}
 
+	Nz::ApplicationBase& GameState::GetApplication()
+	{
+		return *GetStateData().app;
+	}
+
+	entt::handle GameState::GetCamera2DEntity()
+	{
+		return GetStateData().camera2D;
+	}
+
+	entt::handle GameState::GetCamera3DEntity()
+	{
+		return m_cameraEntity;
+	}
+
 	Nz::Canvas* GameState::GetCanvas()
 	{
 		return GetStateData().canvas;
+	}
+
+	ConfigFile& GameState::GetConfig()
+	{
+		return *GetStateData().config;
+	}
+
+	entt::handle GameState::GetControlledEntity()
+	{
+		return GetStateData().sessionHandler->GetControlledEntity();
 	}
 
 	Nz::DebugDrawer* GameState::GetDebugDrawer()
@@ -809,6 +872,11 @@ namespace tsom
 	void GameState::UpdateMouseLock()
 	{
 		m_isMouseLocked = !m_chatBox->IsTyping() && !m_escapeMenu->IsVisible() && !m_toolsMenu->IsVisible() && !m_localConsole->IsVisible() && !m_remoteConsole->IsVisible() && !m_tools[m_toolIndex]->IsCursorUnlocked();
+#ifdef TSOM_DEV_TOOLS
+		if (m_cameraTool)
+			m_isMouseLocked &= !m_cameraTool->IsCursorUnlocked();
+#endif
+
 		m_chatBox->EnableMouseInput(!m_isMouseLocked);
 		m_localConsole->EnableMouseInput(!m_isMouseLocked);
 		m_remoteConsole->EnableMouseInput(!m_isMouseLocked);
@@ -856,41 +924,38 @@ namespace tsom
 
 				m_incomingCameraRotation.pitch += pitchMod;
 				m_incomingCameraRotation.yaw += yawMod;
+
+				m_tools[m_toolIndex]->OnMouseMoved(event.deltaX, event.deltaY);
+#ifdef TSOM_DEV_TOOLS
+				if (m_cameraTool)
+					m_cameraTool->OnMouseMoved(event.deltaX, event.deltaY);
+#endif
 			}
-			else
-			{
-				if (m_toolsMenu->IsVisible())
-				{
-					m_toolsMenu->HandleMouseMoved(event.x, event.y, m_toolIndex);
-				}
-			}
+			else if (m_toolsMenu->IsVisible())
+				m_toolsMenu->HandleMouseMoved(event.x, event.y, m_toolIndex);
 		});
 
 		m_mouseButtonReleasedSlot.Connect(stateData.canvas->OnUnhandledMouseButtonReleased, [&](const Nz::WindowEventHandler*, const Nz::WindowEvent::MouseButtonEvent& event)
 		{
-			if (!m_isMouseLocked)
-				return;
-
-			if (m_pilotedShip)
-				return;
-
+			ToolBase::TriggerType triggerType;
 			switch (event.button)
 			{
-				case Nz::Mouse::Left:
-					m_tools[m_toolIndex]->OnTrigger(ToolBase::TriggerType::Primary);
-					break;
-
-				case Nz::Mouse::Middle:
-					m_tools[m_toolIndex]->OnTrigger(ToolBase::TriggerType::Tertiary);
-					break;
-
-				case Nz::Mouse::Right:
-					m_tools[m_toolIndex]->OnTrigger(ToolBase::TriggerType::Secondary);
-					break;
-
-				default:
-					break;
+				case Nz::Mouse::Left: triggerType = ToolBase::TriggerType::Primary; break;
+				case Nz::Mouse::Middle: triggerType = ToolBase::TriggerType::Tertiary; break;
+				case Nz::Mouse::Right: triggerType = ToolBase::TriggerType::Secondary; break;
+				default: return;
 			}
+
+#ifdef TSOM_DEV_TOOLS
+			if (m_cameraTool)
+			{
+				m_cameraTool->OnTrigger(triggerType);
+				return;
+			}
+#endif
+
+			if (m_isMouseLocked && !m_pilotedShip)
+				m_tools[m_toolIndex]->OnTrigger(triggerType);
 		});
 
 		UpdateMouseLock();
@@ -1207,7 +1272,12 @@ namespace tsom
 			}
 		}
 
-		m_tools[m_toolIndex]->Update(elapsedTime, raycastHit ? &*raycastHit : nullptr);
+#ifdef TSOM_DEV_TOOLS
+		if (m_cameraTool)
+			m_cameraTool->Update(elapsedTime, raycastHit ? &*raycastHit : nullptr);
+		else
+#endif
+			m_tools[m_toolIndex]->Update(elapsedTime, raycastHit ? &*raycastHit : nullptr);
 
 		if (interactibleEntity)
 		{
@@ -1236,9 +1306,24 @@ namespace tsom
 
 		GetStateData().world->GetSystem<CameraFollowerSystem>().SetCameraPosition(m_cameraEntity.get<Nz::NodeComponent>().GetGlobalPosition());
 
-#if defined(TSOM_DEV_TOOLS) && 0
+		/*entt::registry& registry = GetStateData().world->GetRegistry();
+		auto view = registry.view<Nz::NodeComponent, Nz::GraphicsComponent, ClassInstanceComponent>(entt::exclude<AnimationComponent>);
+		for (auto [entity, entityNode, entityGfx, entityClass] : view.each())
+		{
+			Nz::Boxf box = entityGfx.GetAABB();
+			//box.ExtendTo(Nz::Vector3f::Zero());
+			box.Translate(entityNode.GetGlobalPosition());
+
+			debugDrawer->DrawBox(box, Nz::Color::Red());
+			//debugDrawer->DrawPoint(entityNode.GetGlobalPosition(), Nz::Color::Blue(), 0.1f);
+			//debugDrawer->DrawSphere(box.GetBoundingSphere(), Nz::Color::Orange());
+			//debugDrawer->DrawSphere(Nz::Spheref(entityNode.GetGlobalPosition(), box.GetCenter().GetLength() * 0.5f + box.GetRadius()), Nz::Color::Orange());
+		}*/
+
+#ifdef TSOM_DEV_TOOLS
 		if (stateData.imgui)
 		{
+#if 0
 			ImGui::SetNextWindowPos({ 60, 60 }, ImGuiCond_FirstUseEver);
 
 			if (ImGui::Begin("Directional light settings", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
@@ -1272,6 +1357,8 @@ namespace tsom
 				}
 			}
 			ImGui::End();
+#endif
+		}
 #endif
 
 		return true;
@@ -1330,7 +1417,7 @@ namespace tsom
 		textDrawer.AppendText("Players"); //< will override later
 
 		std::size_t playerCount = 0;
-		GetStateData().sessionHandler->ForEachPlayer([&](PlayerIndex playerIndex, const ClientSessionHandler::PlayerInfo& playerInfo)
+		GetStateData().sessionHandler->ForEachPlayer([&](PlayerIndex /*playerIndex*/, const ClientSessionHandler::PlayerInfo& playerInfo)
 		{
 			textDrawer.SetTextColor((playerInfo.isAuthenticated) ? Nz::Color::Yellow() : Nz::Color::Gray());
 			textDrawer.AppendText(playerInfo.nickname, (playerCount == 0) ? true : false); //< force a new block to avoid being merged with the first one
@@ -1411,6 +1498,11 @@ namespace tsom
 
 	void GameState::SendInputs()
 	{
+#ifdef TSOM_DEV_TOOLS
+		if (m_cameraTool)
+			return;
+#endif
+
 		Packets::C_UpdatePlayerInputs inputPacket;
 		inputPacket.inputs.index = m_nextInputIndex++;
 

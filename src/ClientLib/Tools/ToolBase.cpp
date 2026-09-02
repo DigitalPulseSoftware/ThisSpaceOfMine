@@ -16,6 +16,10 @@ namespace tsom
 	{
 	}
 
+	void ToolBase::OnMouseMoved(float /*deltaX*/, float /*deltaY*/)
+	{
+	}
+
 	void ToolBase::OnWheel(float /*delta*/)
 	{
 	}

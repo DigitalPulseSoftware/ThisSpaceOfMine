@@ -11,6 +11,7 @@
 #include <Nazara/Widgets/ButtonWidget.hpp>
 #include <Nazara/Widgets/Canvas.hpp>
 #include <NazaraUtils/Signal.hpp>
+#include <vector>
 
 namespace Nz
 {
@@ -28,19 +29,16 @@ namespace tsom
 			EscapeMenu(EscapeMenu&&) = delete;
 			~EscapeMenu() = default;
 
+			void AddButton(std::string buttonName, std::function<void()> callback);
+
 			EscapeMenu& operator=(const EscapeMenu&) = delete;
 			EscapeMenu& operator=(EscapeMenu&&) = delete;
-
-			NazaraSignal(OnDisconnect, EscapeMenu* /*emitter*/);
-			NazaraSignal(OnQuitApp, EscapeMenu* /*emitter*/);
 
 		private:
 			void Layout() override;
 
+			std::vector<Nz::ButtonWidget*> m_buttons;
 			Nz::BoxLayout* m_layout;
-			Nz::ButtonWidget* m_closeMenuButton;
-			Nz::ButtonWidget* m_disconnectButton;
-			Nz::ButtonWidget* m_quitAppButton;
 	};
 }
 

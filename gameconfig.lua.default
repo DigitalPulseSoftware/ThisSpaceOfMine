@@ -1,8 +1,15 @@
 Api = {
 	Url = "https://tsom-api.digitalpulse.software"
 }
+Chunk = {
+	NormalSmoothAngle = 60.0
+}
 Input = {
 	MouseSensitivity = 0.1
+}
+Graphics = {
+	FPSLimit = -1,
+	SunShadowMapSize = 1024
 }
 Menu = {
 	ServerAddress = "tsom.digitalpulse.software",
@@ -11,12 +18,10 @@ Menu = {
 Player = {
 	Token = ""
 }
+Screenshot = {
+	Width = 3840,
+	Height = 2160
+}
 Server = {
 	Port = 29536,
-}
-Visual = {
-	ChunkNormalSmoothAngle = 0.0
-}
-Graphics = {
-	FPSLimit = -1
 }

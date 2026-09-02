@@ -10,19 +10,27 @@
             "method": "CubemapSplitFaces",
             "output": "Textures/Skybox/MenuSkybox.dds",
             "faces": {
-                "+x": "PurpleNebulaSkybox/purple_nebula_skybox_right1.png",
-                "-x": "PurpleNebulaSkybox/purple_nebula_skybox_left2.png",
-                "+y": "PurpleNebulaSkybox/purple_nebula_skybox_top3.png",
-                "-y": "PurpleNebulaSkybox/purple_nebula_skybox_bottom4.png",
-                "+z": "PurpleNebulaSkybox/purple_nebula_skybox_front5.png",
-                "-z": "PurpleNebulaSkybox/purple_nebula_skybox_back6.png"
+                "+x": "skybox/menu/right.png",
+                "-x": "skybox/menu/left.png",
+                "+y": "skybox/menu/up.png",
+                "-y": "skybox/menu/down.png",
+                "+z": "skybox/menu/front.png",
+                "-z": "skybox/menu/back.png"
             },
             "sRGB": false
         },
         {
             "input": "skybox-space.png",
             "output": "Textures/Skybox/GameSkybox.dds",
-            "method": "Cubemap"
+            "faces": {
+                "+x": "skybox/game/right.png",
+                "-x": "skybox/game/left.png",
+                "+y": "skybox/game/top.png",
+                "-y": "skybox/game/bottom.png",
+                "+z": "skybox/game/front.png",
+                "-z": "skybox/game/back.png"
+            },
+            "method": "CubemapSplitFaces"
         },
         {
             "input": "dev/grey.png",

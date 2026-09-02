@@ -92,6 +92,15 @@ namespace tsom
 		Nz::Vector3f::Up()
 	};
 
+	constexpr Nz::EnumArray<Direction, std::string_view> s_dirNames = {
+		"back",
+		"down",
+		"forward",
+		"left",
+		"right",
+		"up"
+	};
+
 	// Debug colors
 	constexpr Nz::EnumArray<Direction, Nz::Color> s_dirColors = {
 		Nz::Color::Green(), //< Back

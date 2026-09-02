@@ -14,7 +14,6 @@ namespace tsom::Config
 	static constexpr auto Api_DevMode = ConfigFile::BoolOptionName{ "Api.DevMode" };
 	static constexpr auto Menu_Login = ConfigFile::StringOptionName{ "Menu.Login" };
 	static constexpr auto Menu_ServerAddress = ConfigFile::StringOptionName{ "Menu.ServerAddress" };
-	static constexpr auto Input_MouseSensitivity = ConfigFile::FloatOptionName{ "Input.MouseSensitivity" };
 	static constexpr auto Player_Token = ConfigFile::StringOptionName{ "Player.Token" };
 	static constexpr auto Server_Port = ConfigFile::IntegerOptionName{ "Server.Port" };
 }
