@@ -154,13 +154,13 @@ namespace tsom
 
 		auto& viewerInstance = m_viewer->GetViewerInstance();
 
-		Nz::Vector3f eyePosition = viewerInstance.GetEyePosition();
+		Nz::Vector3f eyePosition = viewerInstance->GetEyePosition();
 
 		auto& allocation = frameData.renderResources.GetUploadPool().Allocate(AtmosphereScatteringPassFields.totalSize);
-		Nz::AccessByOffset<Nz::Matrix4f&>(allocation.mappedPtr, AtmosphereScatteringPassFields.invProjectionMatrixOffset) = viewerInstance.GetInvProjectionMatrix();
-		Nz::AccessByOffset<Nz::Matrix4f&>(allocation.mappedPtr, AtmosphereScatteringPassFields.invViewMatrixOffset) = viewerInstance.GetInvViewMatrix();
+		Nz::AccessByOffset<Nz::Matrix4f&>(allocation.mappedPtr, AtmosphereScatteringPassFields.invProjectionMatrixOffset) = viewerInstance->GetInvProjectionMatrix();
+		Nz::AccessByOffset<Nz::Matrix4f&>(allocation.mappedPtr, AtmosphereScatteringPassFields.invViewMatrixOffset) = viewerInstance->GetInvViewMatrix();
 		Nz::AccessByOffset<Nz::Vector3f&>(allocation.mappedPtr, AtmosphereScatteringPassFields.viewerPositionOffset) = eyePosition;
-		Nz::AccessByOffset<float&>(allocation.mappedPtr, AtmosphereScatteringPassFields.zNearOffset) = viewerInstance.GetNearPlane();
+		Nz::AccessByOffset<float&>(allocation.mappedPtr, AtmosphereScatteringPassFields.zNearOffset) = viewerInstance->GetNearPlane();
 
 		auto atmosphereCameraView = m_registry.view<AtmosphereScatteringCameraSettings>(entt::exclude<Nz::DisabledComponent>);
 		for (auto&& [entity, atmosphereScatteringCameraSettings] : atmosphereCameraView.each())
