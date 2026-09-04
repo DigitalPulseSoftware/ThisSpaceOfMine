@@ -6,6 +6,7 @@
 #include <ClientLib/ClientConfigs.hpp>
 #include <ClientLib/GameInterface.hpp>
 #include <ClientLib/RenderConstants.hpp>
+#include <CommonLib/AtmosphereScattering.hpp>
 #include <CommonLib/ConfigFile.hpp>
 #include <CommonLib/Direction.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
@@ -46,6 +47,7 @@ namespace tsom
 
 		m_cameraEntity = m_gameInterface.GetWorld().CreateEntity();
 		m_cameraEntity.emplace<Nz::NodeComponent>(camera3D.get<Nz::NodeComponent>());
+		m_cameraEntity.emplace<AtmosphereScatteringCameraSettings>(camera3D.get<AtmosphereScatteringCameraSettings>());
 
 		auto& camera = m_cameraEntity.emplace<Nz::CameraComponent>(camera3D.get<Nz::CameraComponent>());
 		camera.UpdateRenderMask(Constants::RenderMask3D);
