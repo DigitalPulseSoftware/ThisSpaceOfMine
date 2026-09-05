@@ -260,6 +260,7 @@ namespace tsom
 			{
 				taskScheduler.AddTask([filename = std::move(filename), screenshot = std::move(screenshotImage)]() mutable
 				{
+					screenshot.ConvertTo(Nz::PixelFormat::RGB8);
 					screenshot.SaveToFile(Nz::Utf8Path(filename));
 					spdlog::info("saved screenshot to {}", filename);
 				});
@@ -314,6 +315,7 @@ namespace tsom
 		{
 			taskScheduler.AddTask([filename = std::move(filename), screenshot = std::move(screenshotImage)]() mutable
 			{
+				screenshot.ConvertTo(Nz::PixelFormat::RGB8);
 				screenshot.SaveToFile(Nz::Utf8Path(filename));
 				spdlog::info("saved screenshot to {}", filename);
 			});
