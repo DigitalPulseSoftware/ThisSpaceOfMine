@@ -96,6 +96,8 @@ namespace tsom
 			placeEntity.entityRotation = m_preview->rotationMultiplier;
 			placeEntity.entityClass = networkSession->GetStringStore().CheckStringIndex(m_selectedEntityClass);
 
+			std::tie(placeEntity.xPos, placeEntity.zPos) = ComputeTargetPosition(hitChunk.ComputeBlockCorners(hitCoordinates->blockIndices), hitCoordinates->direction, localPos, nullptr);
+
 			networkSession->SendPacket(placeEntity);
 		}
 		else
@@ -187,16 +189,13 @@ namespace tsom
 
 					if (m_preview->entity)
 					{
-						auto cornerPos = hitChunk.ComputeBlockCorners(hitCoordinates->blockIndices);
-						auto& corners = s_faceCorners[hitCoordinates->direction];
-						std::array<Nz::Vector3f, 4> cornerGlobalPos;
-						for (std::size_t i = 0; i < 4; ++i)
-							cornerGlobalPos[i] = chunkNode.ToGlobalPosition(cornerPos[corners[i]]);
-						Nz::Vector3f faceCenter = std::accumulate(cornerGlobalPos.begin(), cornerGlobalPos.end(), Nz::Vector3f::Zero()) / corners.size();
+						Nz::Vector3f entityPos;
+						ComputeTargetPosition(hitChunk.ComputeBlockCorners(hitCoordinates->blockIndices), hitCoordinates->direction, localPos, &entityPos);
+
+						entityPos = chunkNode.ToGlobalPosition(entityPos);
 
 						auto& previewNode = m_preview->entity.get<Nz::NodeComponent>();
 
-						Nz::Vector3f entityPos = faceCenter;
 						Nz::Quaternionf localRotation = Nz::Quaternionf(Nz::DegreeAnglef(45.f) * m_preview->rotationMultiplier, m_preview->rotationAxis);
 						Nz::Quaternionf surfaceRotation = Nz::Quaternionf::Identity();
 						Nz::Vector3f normal = s_dirNormals[hitCoordinates->direction];
@@ -298,5 +297,38 @@ namespace tsom
 		});
 
 		std::sort(m_spawnableClasses.begin(), m_spawnableClasses.end());
+	}
+
+	std::pair<float, float> PlaceEntityTool::ComputeTargetPosition(const Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f>& cornerPositions, Direction direction, Nz::Vector3f localPos, Nz::Vector3f* position)
+	{
+		auto& corners = s_faceCorners[direction];
+		Nz::Vector3f max(-Nz::Infinity<float>());
+		Nz::Vector3f min(Nz::Infinity<float>());
+
+		std::array<Nz::Vector3f, 4> faceCornerPositions;
+		for (std::size_t i = 0; i < 4; ++i)
+		{
+			faceCornerPositions[i] = cornerPositions[corners[i]];
+			max.Maximize(faceCornerPositions[i]);
+			min.Minimize(faceCornerPositions[i]);
+		}
+
+		Nz::Quaternionf rotationToUp = Nz::Quaternionf::RotationBetween(s_dirNormals[direction], Nz::Vector3f::Up());
+		Nz::Vector3f localPosUp = rotationToUp * localPos;
+		Nz::Vector3f maxUp = rotationToUp * max;
+		Nz::Vector3f minUp = rotationToUp * min;
+
+		float xFactor = (localPosUp.x - minUp.x) / (maxUp.x - minUp.x);
+		float zFactor = (localPosUp.z - minUp.z) / (maxUp.z - minUp.z);
+
+		// Round factors
+		xFactor = std::round(xFactor * 2.0f) / 2.0f;
+		zFactor = std::round(zFactor * 2.0f) / 2.0f;
+
+		// Position
+		if (position)
+			*position = Nz::Lerp(Nz::Lerp(faceCornerPositions[0], faceCornerPositions[1], zFactor), Nz::Lerp(faceCornerPositions[3], faceCornerPositions[2], zFactor), xFactor);
+
+		return { xFactor, zFactor };
 	}
 }

@@ -292,6 +292,12 @@ namespace tsom
 		if (!m_player->GetVisibilityHandler().GetChunkByNetworkId(placeEntity.chunkId, &entityOwner, &chunk))
 			return; //< ignore
 
+		if (!std::isfinite(placeEntity.xPos) || !std::isfinite(placeEntity.zPos))
+			return;
+
+		float xFactor = std::round(std::clamp(placeEntity.xPos, 0.0f, 1.0f) * 2.0f) / 2.0f;
+		float zFactor = std::round(std::clamp(placeEntity.zPos, 0.0f, 1.0f) * 2.0f) / 2.0f;
+
 		const std::string& className = GetSession()->GetStringStore().GetString(placeEntity.entityClass);
 
 		auto& serverInstance = m_player->GetServerInstance();
@@ -330,17 +336,15 @@ namespace tsom
 
 		auto cornerPos = chunk->ComputeBlockCorners(blockIndices);
 		auto& corners = s_faceCorners[placeEntity.topFace];
-		std::array<Nz::Vector3f, 4> cornerGlobalPos;
-		for (std::size_t i = 0; i < 4; ++i)
-			cornerGlobalPos[i] = chunkOwnerNode.ToGlobalPosition(chunkOffset + cornerPos[corners[i]]);
 
-		Nz::Vector3f faceCenter = std::accumulate(cornerGlobalPos.begin(), cornerGlobalPos.end(), Nz::Vector3f::Zero()) / corners.size();
+		std::array<Nz::Vector3f, 4> cornerPositions;
+		for (std::size_t i = 0; i < 4; ++i)
+			cornerPositions[i] = cornerPos[corners[i]];
+
+		Nz::Vector3f entityPos = chunkOwnerNode.ToGlobalPosition(chunkOffset + Nz::Lerp(Nz::Lerp(cornerPositions[0], cornerPositions[1], zFactor), Nz::Lerp(cornerPositions[3], cornerPositions[2], zFactor), xFactor));
 
 		Nz::Vector3f normal = s_dirNormals[placeEntity.topFace];
-
 		Nz::Quaternionf surfaceRotation = Nz::Quaternionf::Identity();
-		Nz::Vector3f entityPos = faceCenter;
-
 		if (keepUpright)
 			entityPos += normal * collider * 0.5f;
 		else

@@ -187,6 +187,17 @@ namespace tsom
 			serializer &= data.topFace;
 			serializer.Serialize(data.entityClass);
 			serializer &= data.entityRotation;
+
+			if (serializer.GetProtocolVersion() >= BuildVersion(0, 10, 1))
+			{
+				serializer &= data.xPos;
+				serializer &= data.zPos;
+			}
+			else if (!serializer.IsWriting())
+			{
+				data.xPos = 0.5f;
+				data.zPos = 0.5f;
+			}
 		}
 
 		void Serialize(PacketSerializer& serializer, C_RemoveEntity& data)

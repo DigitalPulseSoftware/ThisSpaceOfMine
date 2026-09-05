@@ -191,15 +191,15 @@ namespace tsom
 
 	constexpr Nz::EnumArray<Direction, std::array<Nz::BoxCorner, 4>> s_faceCorners = {
 		// Back
-		std::array{ Nz::BoxCorner::LeftBottomNear, Nz::BoxCorner::LeftBottomFar, Nz::BoxCorner::LeftTopFar, Nz::BoxCorner::LeftTopNear },
+		std::array{ Nz::BoxCorner::LeftBottomFar, Nz::BoxCorner::LeftBottomNear, Nz::BoxCorner::LeftTopNear, Nz::BoxCorner::LeftTopFar },
 		// Down
-		std::array{ Nz::BoxCorner::LeftBottomFar, Nz::BoxCorner::RightBottomFar, Nz::BoxCorner::RightTopFar, Nz::BoxCorner::LeftTopFar },
+		std::array{ Nz::BoxCorner::RightBottomFar, Nz::BoxCorner::LeftBottomFar, Nz::BoxCorner::LeftTopFar, Nz::BoxCorner::RightTopFar },
 		// Front
 		std::array{ Nz::BoxCorner::RightBottomFar, Nz::BoxCorner::RightBottomNear, Nz::BoxCorner::RightTopNear, Nz::BoxCorner::RightTopFar },
 		// Left
-		std::array{ Nz::BoxCorner::LeftBottomNear, Nz::BoxCorner::RightBottomNear, Nz::BoxCorner::RightBottomFar, Nz::BoxCorner::LeftBottomFar },
+		std::array{ Nz::BoxCorner::RightBottomFar, Nz::BoxCorner::LeftBottomFar, Nz::BoxCorner::LeftBottomNear, Nz::BoxCorner::RightBottomNear },
 		// Right
-		std::array{ Nz::BoxCorner::RightTopNear, Nz::BoxCorner::LeftTopNear, Nz::BoxCorner::LeftTopFar, Nz::BoxCorner::RightTopFar },
+		std::array{ Nz::BoxCorner::RightTopFar, Nz::BoxCorner::LeftTopFar, Nz::BoxCorner::LeftTopNear, Nz::BoxCorner::RightTopNear },
 		// Up
 		std::array{ Nz::BoxCorner::RightBottomNear, Nz::BoxCorner::LeftBottomNear, Nz::BoxCorner::LeftTopNear, Nz::BoxCorner::RightTopNear },
 	};

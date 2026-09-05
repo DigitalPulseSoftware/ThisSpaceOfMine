@@ -164,6 +164,8 @@ namespace tsom
 			Direction topFace;
 			CompressedUnsigned<Nz::UInt32> entityClass;
 			Nz::UInt8 entityRotation;
+			float xPos;
+			float zPos;
 		};
 
 		struct C_RemoveEntity

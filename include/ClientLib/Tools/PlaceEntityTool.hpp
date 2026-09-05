@@ -8,6 +8,7 @@
 #define TSOM_CLIENTLIB_TOOLS_PLACEENTITYTOOL_HPP
 
 #include <ClientLib/Tools/ToolBase.hpp>
+#include <CommonLib/Direction.hpp>
 #include <Nazara/Math/Vector3.hpp>
 #include <NazaraUtils/Prerequisites.hpp>
 #include <entt/entt.hpp>
@@ -40,6 +41,8 @@ namespace tsom
 
 		private:
 			void RefreshEntityClasses();
+
+			static std::pair<float, float> ComputeTargetPosition(const Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f>& cornerPositions, Direction direction, Nz::Vector3f localPos, Nz::Vector3f* position);
 
 			struct PreviewData
 			{
