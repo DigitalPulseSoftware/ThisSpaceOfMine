@@ -201,7 +201,7 @@ namespace tsom
 
 			// Instantiate the material to use it, and configure it (texture + cull front faces as the render is from the inside)
 			std::shared_ptr<Nz::MaterialInstance> skyboxMat = skyboxMaterial->Instantiate();
-			skyboxMat->SetTextureProperty("BaseColorMap", filesystem.Open<Nz::TextureAsset>("CookedAssets/Textures/Skybox/GameSkybox.dds", { .sRGB = true }));
+			skyboxMat->SetTextureProperty("BaseColorMap", filesystem.Open<Nz::TextureAsset>("CookedAssets/Textures/GameSkybox.dds", { .sRGB = true }));
 			skyboxMat->UpdatePassesStates([](Nz::RenderStates& states)
 			{
 				states.faceCulling = Nz::FaceCulling::Front;

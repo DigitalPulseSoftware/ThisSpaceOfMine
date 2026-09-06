@@ -18,6 +18,7 @@
 #include <Nazara/Graphics/Components/CameraComponent.hpp>
 #include <Nazara/Graphics/PropertyHandler/TexturePropertyHandler.hpp>
 #include <Nazara/Graphics/PropertyHandler/UniformValuePropertyHandler.hpp>
+#include <fmt/format.h>
 #include <random>
 
 namespace tsom
@@ -68,9 +69,27 @@ namespace tsom
 			// Finalize the material (using SkyboxMaterial module as a reference for shader reflection)
 			std::shared_ptr<Nz::Material> skyboxMaterial = std::make_shared<Nz::Material>(std::move(skyboxSettings), "SkyboxMaterial");
 
-			// Load skybox
-			std::shared_ptr<Nz::Image> skybox = filesystem.Load<Nz::Image>("CookedAssets/Textures/Skybox/MenuSkybox.dds");
-			std::shared_ptr<Nz::TextureAsset> skyboxTexture = Nz::TextureAsset::CreateFromImage(std::move(*skybox));
+			// Load a random skybox
+			std::shared_ptr<Nz::TextureAsset> skyboxTexture;
+
+			std::vector<std::string> skyboxFilenames;
+			filesystem.IterateOnDirectory("CookedAssets/Textures/Menu", [&](std::string_view filename, const Nz::VirtualDirectory::Entry& entry)
+			{
+				if (!std::holds_alternative<Nz::VirtualDirectory::FileEntry>(entry) || !Nz::EndsWith(filename, ".dds"))
+					return;
+
+				skyboxFilenames.emplace_back(filename);
+			});
+
+			if (!skyboxFilenames.empty())
+			{
+				std::mt19937 gen(std::random_device{}());
+				std::uniform_int_distribution<std::size_t> dis(0, skyboxFilenames.size() - 1);
+				std::string_view skyboxName = skyboxFilenames[dis(gen)];
+
+				std::shared_ptr<Nz::Image> skybox = filesystem.Load<Nz::Image>(fmt::format("CookedAssets/Textures/Menu/{}", skyboxName));
+				skyboxTexture = Nz::TextureAsset::CreateFromImage(std::move(*skybox));
+			}
 
 			// Instantiate the material to use it, and configure it (texture + cull front faces as the render is from the inside)
 			std::shared_ptr<Nz::MaterialInstance> skyboxMat = skyboxMaterial->Instantiate();

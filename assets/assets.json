@@ -8,20 +8,20 @@
         },
         {
             "method": "CubemapSplitFaces",
-            "output": "Textures/Skybox/MenuSkybox.dds",
+            "output": "Textures/Menu/Skybox1.dds",
             "faces": {
-                "+x": "skybox/menu/right.png",
-                "-x": "skybox/menu/left.png",
-                "+y": "skybox/menu/up.png",
-                "-y": "skybox/menu/down.png",
-                "+z": "skybox/menu/front.png",
-                "-z": "skybox/menu/back.png"
+                "+x": "skybox/menu1/right.png",
+                "-x": "skybox/menu1/left.png",
+                "+y": "skybox/menu1/up.png",
+                "-y": "skybox/menu1/down.png",
+                "+z": "skybox/menu1/front.png",
+                "-z": "skybox/menu1/back.png"
             },
             "sRGB": false
         },
         {
             "input": "skybox-space.png",
-            "output": "Textures/Skybox/GameSkybox.dds",
+            "output": "Textures/GameSkybox.dds",
             "faces": {
                 "+x": "skybox/game/right.png",
                 "-x": "skybox/game/left.png",
