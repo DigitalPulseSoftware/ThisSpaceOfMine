@@ -3,7 +3,7 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/Version.hpp>
-#include <spdlog/spdlog.h>
+#include <fmt/format.h>
 
 namespace tsom
 {
