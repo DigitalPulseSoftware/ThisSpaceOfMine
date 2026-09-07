@@ -286,10 +286,6 @@ namespace tsom
 					{
 						for (std::size_t x = 0; x < width; ++x)
 						{
-							Nz::UInt32 zValue = (channel2Inv) ? 0xFF - sourcePixels[2][channel2Index] : sourcePixels[2][channel2Index];
-							if (zValue < 127)
-								spdlog::warn("normal map pixel at ({};{}) has Z value < 127: {}", x, y, sourcePixels[2][2]);
-
 							cookedPixels[0] = (channel0Inv) ? 0xFF - sourcePixels[0][channel0Index] : sourcePixels[0][channel0Index];
 							cookedPixels[1] = (channel1Inv) ? 0xFF - sourcePixels[1][channel1Index] : sourcePixels[1][channel1Index];
 							cookedPixels += 2;

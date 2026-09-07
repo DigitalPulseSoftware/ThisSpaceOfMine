@@ -180,9 +180,6 @@ namespace tsom
 					{
 						for (std::size_t x = 0; x < m_textureSize; ++x)
 						{
-							if (sourcePixels[2] < 127)
-								spdlog::debug("{} normal map {};{} has Z value < 127: {}", blockData.name, x, y, sourcePixels[2]);
-
 							cookedPixels[0] = sourcePixels[0];
 							cookedPixels[1] = sourcePixels[1];
 
