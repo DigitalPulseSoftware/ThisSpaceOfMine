@@ -448,7 +448,7 @@ namespace tsom
 
 		for (const ChunkWithPos& chunk : m_orderedChunkList)
 		{
-			if (*m_activeChunkUpdates >= MaxConcurrentChunkUpdate)
+			if (!IsDevVersion() && *m_activeChunkUpdates >= MaxConcurrentChunkUpdate)
 				return;
 
 			ChunkData& visibleChunk = m_visibleChunks[chunk.chunkIndex];
