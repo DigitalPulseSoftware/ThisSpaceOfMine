@@ -52,7 +52,9 @@ namespace tsom
 		constants["RenderMaskUI"] = Constants::RenderMaskUI;
 		constants["RenderMask3D"] = Constants::RenderMask3D;
 		constants["RenderMaskLocalPlayer"] = Constants::RenderMaskLocalPlayer;
-		constants["RenderMaskOtherPlayer"] = Constants::RenderMaskOtherPlayer;
+		constants["RenderMaskLocalPlayerName"] = Constants::RenderMaskLocalPlayerName;
+		constants["RenderMaskOtherPlayers"] = Constants::RenderMaskOtherPlayers;
+		constants["RenderMaskOtherPlayersName"] = Constants::RenderMaskOtherPlayersName;
 	}
 
 	void ClientEntityScriptingLibrary::FillEntityMetatable(sol::state& state, sol::table entityMetatable)

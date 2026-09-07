@@ -41,16 +41,18 @@ namespace tsom
 	{
 		entt::handle camera2D = m_gameInterface.GetCamera2DEntity();
 		entt::handle camera3D = m_gameInterface.GetCamera3DEntity();
+		entt::handle controlledEntity = m_gameInterface.GetControlledEntity();
 
 		camera2D.emplace<Nz::DisabledComponent>();
 		camera3D.emplace<Nz::DisabledComponent>();
+		controlledEntity.emplace<Nz::DisabledComponent>();
 
 		m_cameraEntity = m_gameInterface.GetWorld().CreateEntity();
 		m_cameraEntity.emplace<Nz::NodeComponent>(camera3D.get<Nz::NodeComponent>());
 		m_cameraEntity.emplace<AtmosphereScatteringCameraSettings>(camera3D.get<AtmosphereScatteringCameraSettings>());
 
 		auto& camera = m_cameraEntity.emplace<Nz::CameraComponent>(camera3D.get<Nz::CameraComponent>());
-		camera.UpdateRenderMask(Constants::RenderMask3D);
+		camera.UpdateRenderMask(Constants::RenderMask3D & ~(Constants::RenderMaskLocalPlayer | Constants::RenderMaskLocalPlayerName));
 
 		m_cameraFOV = camera.GetFOV();
 		m_cameraRotation = Nz::EulerAnglesf::Zero();
@@ -159,24 +161,40 @@ namespace tsom
 
 			entt::handle controlledEntity = m_gameInterface.GetControlledEntity();
 
-			bool isCharacterVisible = (controlledEntity) ? !controlledEntity.any_of<Nz::DisabledComponent>() : false;
+			bool isCharacterVisible = camera.GetRenderMask() & Constants::RenderMaskLocalPlayer;
+			bool arePlayerNameVisible = camera.GetRenderMask() & Constants::RenderMaskPlayerNames;
+
 			if (ImGui::Checkbox("Show character", &isCharacterVisible))
 			{
 				if (controlledEntity)
 				{
-					if (!controlledEntity.any_of<Nz::DisabledComponent>())
+					if (isCharacterVisible)
+					{
+						controlledEntity.erase<Nz::DisabledComponent>();
+
+						Nz::UInt32 newMask = camera.GetRenderMask();
+						newMask |= Constants::RenderMaskLocalPlayer;
+						if (arePlayerNameVisible)
+							newMask |= Constants::RenderMaskLocalPlayerName;
+
+						camera.UpdateRenderMask(newMask);
+					}
+					else
 					{
 						// Disable the player entity to make their shadow disappear
 						controlledEntity.emplace<Nz::DisabledComponent>();
 						// and mask other entities (such as player name) too
-						camera.UpdateRenderMask(Constants::RenderMask3D & ~Constants::RenderMaskLocalPlayer);
-					}
-					else
-					{
-						controlledEntity.erase<Nz::DisabledComponent>();
-						camera.UpdateRenderMask(Constants::RenderMask3D);
+						camera.UpdateRenderMask(camera.GetRenderMask() & ~(Constants::RenderMaskLocalPlayer | Constants::RenderMaskLocalPlayerName));
 					}
 				}
+			}
+
+			if (ImGui::Checkbox("Show player names", &arePlayerNameVisible))
+			{
+				if (arePlayerNameVisible)
+					camera.UpdateRenderMask(camera.GetRenderMask() | ((isCharacterVisible) ? Constants::RenderMaskPlayerNames : Constants::RenderMaskOtherPlayersName));
+				else
+					camera.UpdateRenderMask(camera.GetRenderMask() & ~Constants::RenderMaskPlayerNames);
 			}
 
 			ImGui::Separator();

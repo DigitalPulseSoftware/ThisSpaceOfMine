@@ -746,7 +746,8 @@ namespace tsom
 			}
 		}
 
-		Nz::UInt32 playerRenderMask = (entityData.controllingPlayerId == m_ownPlayerIndex) ? tsom::Constants::RenderMaskLocalPlayer : tsom::Constants::RenderMaskOtherPlayer;
+		Nz::UInt32 playerRenderMask = (entityData.controllingPlayerId == m_ownPlayerIndex) ? Constants::RenderMaskLocalPlayer : Constants::RenderMaskOtherPlayers;
+		Nz::UInt32 playerNameRenderMask = (entityData.controllingPlayerId == m_ownPlayerIndex) ? Constants::RenderMaskLocalPlayerName : Constants::RenderMaskOtherPlayersName;
 
 		auto& gfx = entity.emplace<Nz::GraphicsComponent>();
 		gfx.AttachRenderable(m_playerModel->model, playerRenderMask);
@@ -773,7 +774,7 @@ namespace tsom
 			textNode.SetParent(entity);
 			textNode.SetPosition({ -textSprite->GetAABB().width * 0.5f, 1.5f, 0.f });
 
-			frontTextEntity.emplace<Nz::GraphicsComponent>(textSprite, playerRenderMask);
+			frontTextEntity.emplace<Nz::GraphicsComponent>(textSprite, playerNameRenderMask);
 		}
 		entity.get_or_emplace<EntityOwnerComponent>().Register(frontTextEntity);
 
@@ -784,7 +785,7 @@ namespace tsom
 			textNode.SetPosition({ textSprite->GetAABB().width * 0.5f, 1.5f, 0.f });
 			textNode.SetRotation(Nz::EulerAnglesf(0.f, Nz::TurnAnglef(0.5f), 0.f));
 
-			backTextEntity.emplace<Nz::GraphicsComponent>(textSprite, playerRenderMask);
+			backTextEntity.emplace<Nz::GraphicsComponent>(textSprite, playerNameRenderMask);
 		}
 		entity.get_or_emplace<EntityOwnerComponent>().Register(backTextEntity);
 

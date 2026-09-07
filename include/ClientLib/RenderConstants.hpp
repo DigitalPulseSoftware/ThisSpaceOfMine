@@ -18,7 +18,10 @@ namespace tsom::Constants
 	constexpr Nz::UInt32 RenderMaskUI = 0x00010000;
 	constexpr Nz::UInt32 RenderMask3D = 0x0000FFFF;
 	constexpr Nz::UInt32 RenderMaskLocalPlayer = 0x00000001;
-	constexpr Nz::UInt32 RenderMaskOtherPlayer = 0x00000002;
+	constexpr Nz::UInt32 RenderMaskLocalPlayerName = 0x00000002;
+	constexpr Nz::UInt32 RenderMaskOtherPlayers = 0x00000004;
+	constexpr Nz::UInt32 RenderMaskOtherPlayersName = 0x00000008;
+	constexpr Nz::UInt32 RenderMaskPlayerNames = RenderMaskLocalPlayerName | RenderMaskOtherPlayersName;
 }
 
 #endif // TSOM_CLIENTLIB_RENDERCONSTANTS_HPP
