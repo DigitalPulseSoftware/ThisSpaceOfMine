@@ -4,6 +4,7 @@
 
 #include <Game/States/BackgroundState.hpp>
 #include <ClientLib/RenderConstants.hpp>
+#include <CommonLib/Utility/RandomNumberGenerator.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <Nazara/Core/Primitive.hpp>
@@ -19,7 +20,6 @@
 #include <Nazara/Graphics/PropertyHandler/TexturePropertyHandler.hpp>
 #include <Nazara/Graphics/PropertyHandler/UniformValuePropertyHandler.hpp>
 #include <fmt/format.h>
-#include <random>
 
 namespace tsom
 {
@@ -83,9 +83,8 @@ namespace tsom
 
 			if (!skyboxFilenames.empty())
 			{
-				std::mt19937 gen(std::random_device{}());
-				std::uniform_int_distribution<std::size_t> dis(0, skyboxFilenames.size() - 1);
-				std::string_view skyboxName = skyboxFilenames[dis(gen)];
+				RandomNumberGenerator& rng = RandomNumberGenerator::GetThreadGenerator();
+				std::string_view skyboxName = skyboxFilenames[rng.RandomInteger<std::size_t>(0, skyboxFilenames.size() - 1)];
 
 				std::shared_ptr<Nz::Image> skybox = filesystem.Load<Nz::Image>(fmt::format("CookedAssets/Textures/Menu/{}", skyboxName));
 				skyboxTexture = Nz::TextureAsset::CreateFromImage(std::move(*skybox));
