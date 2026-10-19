@@ -122,7 +122,7 @@ namespace tsom
 			cameraComponent.UpdateClearColor(Nz::Color::Black());
 			cameraComponent.UpdateClearDepth(0.f);
 			cameraComponent.UpdateFOV(Constants::DefaultCameraFOV);
-			cameraComponent.UpdateRenderMask(Constants::RenderMask3D & ~Constants::RenderMaskLocalPlayer);
+			cameraComponent.UpdateRenderMask(Constants::RenderMask3D & ~(Constants::RenderMaskLocalPlayer | Constants::RenderMaskLocalPlayerName));
 			cameraComponent.UpdateZNear(0.1f);
 			cameraComponent.UpdateZFar(5000.f); //< when infinite zfar is enabled, zfar is used as a limit for directional lights
 
