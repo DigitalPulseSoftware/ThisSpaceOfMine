@@ -114,6 +114,7 @@ namespace tsom
 			chunkData.chunk->Reset(initCallback);
 
 		FlatChunk* chunk = it->second.chunk.get();
+		OnChunkAdded(this, chunk);
 		for (std::size_t layerIndex : chunk->GetActiveLayers())
 			OnChunkLayerAdded(this, chunk, layerIndex);
 
