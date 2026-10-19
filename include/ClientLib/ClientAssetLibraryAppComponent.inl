@@ -24,6 +24,11 @@ namespace tsom
 		return m_modelLibrary.Get(name);
 	}
 
+	inline std::shared_ptr<Nz::SoundBuffer> ClientAssetLibraryAppComponent::GetSoundBuffer(std::string_view name) const
+	{
+		return m_soundBufferLibrary.Get(name);
+	}
+
 	inline std::shared_ptr<Nz::TextureAsset> ClientAssetLibraryAppComponent::GetTexture(std::string_view name) const
 	{
 		return m_textureLibrary.Get(name);
@@ -49,6 +54,11 @@ namespace tsom
 		return m_modelLibrary.Query(name);
 	}
 
+	inline std::shared_ptr<Nz::SoundBuffer> tsom::ClientAssetLibraryAppComponent::QuerySoundBuffer(std::string_view name) const
+	{
+		return m_soundBufferLibrary.Query(name);
+	}
+
 	inline std::shared_ptr<Nz::TextureAsset> ClientAssetLibraryAppComponent::QueryTexture(std::string_view name) const
 	{
 		return m_textureLibrary.Query(name);
@@ -72,6 +82,11 @@ namespace tsom
 	inline void ClientAssetLibraryAppComponent::RegisterModel(std::string name, std::shared_ptr<Nz::Model> model)
 	{
 		m_modelLibrary.Register(std::move(name), std::move(model));
+	}
+
+	inline void ClientAssetLibraryAppComponent::RegisterSoundBuffer(std::string name, std::shared_ptr<Nz::SoundBuffer> soundBuffer)
+	{
+		m_soundBufferLibrary.Register(std::move(name), std::move(soundBuffer));
 	}
 
 	inline void ClientAssetLibraryAppComponent::RegisterTexture(std::string name, std::shared_ptr<Nz::TextureAsset> texture)

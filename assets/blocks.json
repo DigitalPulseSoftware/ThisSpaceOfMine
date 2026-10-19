@@ -30,7 +30,8 @@
             "basePath": "blocks/dirt",
             "isSmooth": true,
             "density": 2.0,
-            "permeability": 0.1
+            "permeability": 0.1,
+            "surfaceType": "dirt"
         },
         "hull": {
             "basePath": "blocks/smooth_stone"
@@ -56,13 +57,15 @@
             "basePath": "blocks/stone_bricks"
         },
         "copper_block": {
-            "basePath": "blocks/copper_block"
+            "basePath": "blocks/copper_block",
+            "surfaceType": "metal"
         },
         "grass": {
             "basePath": "blocks/grass",
             "isSmooth": true,
             "density": 2.0,
-			"permeability": 0.1
+			"permeability": 0.1,
+            "surfaceType": "grass"
         },
         "glass": {
             "basePath": "blocks/glass",
@@ -96,13 +99,16 @@
             "basePath": "blocks/white_bricks"
         },
         "gold": {
-            "basePath": "blocks/gold"
+            "basePath": "blocks/gold",
+            "surfaceType": "metal"
         },
         "metal": {
-            "basePath": "blocks/metal"
+            "basePath": "blocks/metal",
+            "surfaceType": "metal"
         },
         "metal_plates": {
-            "basePath": "blocks/metal_plates"
+            "basePath": "blocks/metal_plates",
+            "surfaceType": "metal"
         },
         "brickswall": {
             "basePath": "blocks/brickswall"

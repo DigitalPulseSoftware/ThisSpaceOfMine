@@ -8,28 +8,41 @@
 #define TSOM_CLIENTLIB_PLAYERANIMATIONCONTROLLER_HPP
 
 #include <ClientLib/AnimationController.hpp>
+#include <CommonLib/SurfaceType.hpp>
 #include <CommonLib/Utility/AverageValues.hpp>
-#include <Nazara/Core/Animation.hpp>
 #include <Nazara/Core/AnimationBlender.hpp>
 #include <Nazara/Core/Skeleton.hpp>
 #include <Nazara/Math/Vector3.hpp>
+#include <NazaraUtils/EnumArray.hpp>
 #include <entt/entt.hpp>
 #include <memory>
+#include <vector>
+
+namespace Nz
+{
+	class Animation;
+	class Model;
+	class SoundBuffer;
+}
 
 namespace tsom
 {
-	struct PlayerAnimationAssets
+	struct PlayerAssets
 	{
 		std::shared_ptr<Nz::Animation> idleAnimation;
 		std::shared_ptr<Nz::Animation> runningAnimation;
 		std::shared_ptr<Nz::Animation> walkingAnimation;
+		std::shared_ptr<Nz::Model> model;
+		Nz::EnumArray<SurfaceType, std::vector<std::shared_ptr<Nz::SoundBuffer>>> footstepSounds;
 		Nz::Skeleton referenceSkeleton;
 	};
+
+	class ClientBlockLibrary;
 
 	class TSOM_CLIENTLIB_API PlayerAnimationController : public AnimationController
 	{
 		public:
-			PlayerAnimationController(entt::handle entity, std::shared_ptr<PlayerAnimationAssets> animationAssets);
+			PlayerAnimationController(ClientBlockLibrary& blockLibrary, entt::handle entity, std::shared_ptr<PlayerAssets> playerAssets);
 			PlayerAnimationController(const PlayerAnimationController&) = delete;
 			PlayerAnimationController(PlayerAnimationController&&) = delete;
 			~PlayerAnimationController() = default;
@@ -42,11 +55,13 @@ namespace tsom
 			PlayerAnimationController& operator=(PlayerAnimationController&&) = delete;
 
 		private:
-			std::shared_ptr<PlayerAnimationAssets> m_animationAssets;
+			std::shared_ptr<PlayerAssets> m_playerAssets;
 			entt::handle m_entity;
 			Nz::AnimationBlender m_idleRunBlender;
+			Nz::Time m_footstepAccumulator;
 			Nz::Vector3f m_playerPosition;
 			AverageValues<float> m_playerVelocities;
+			ClientBlockLibrary& m_blockLibrary;
 	};
 }
 

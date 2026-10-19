@@ -33,7 +33,7 @@ namespace tsom
 	class ClientBlockLibrary;
 	class ConfigFile;
 	class GravityController;
-	struct PlayerAnimationAssets;
+	struct PlayerAssets;
 
 	class TSOM_CLIENTLIB_API ClientSessionHandler : public SessionHandler
 	{
@@ -136,14 +136,8 @@ namespace tsom
 				entt::handle entity;
 			};
 
-			struct PlayerModel
-			{
-				std::shared_ptr<Nz::Model> model;
-			};
-
 			entt::handle m_playerControlledEntity;
-			std::optional<PlayerModel> m_playerModel;
-			std::shared_ptr<PlayerAnimationAssets> m_playerAnimAssets;
+			std::shared_ptr<PlayerAssets> m_playerAssets;
 			std::vector<std::optional<EntityData>> m_entities; //< FIXME: Nz::SparseVector
 			std::vector<std::optional<EnvironmentData>> m_environments; //< FIXME: Nz::SparseVector
 			std::vector<std::optional<PlayerInfo>> m_players; //< FIXME: Nz::SparseVector

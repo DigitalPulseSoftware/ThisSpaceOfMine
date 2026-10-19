@@ -34,6 +34,7 @@
 #include <CommonLib/Scripting/BaseScriptingLibrary.hpp>
 #include <CommonLib/Scripting/MathScriptingLibrary.hpp>
 #include <CommonLib/Scripting/SharedEntityScriptingLibrary.hpp>
+#include <Nazara/Audio/SoundBuffer.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/EnttWorld.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
@@ -681,49 +682,48 @@ namespace tsom
 
 		entity.emplace<Nz::RigidBody3DComponent>(physSettings, Nz::PhysicsReplication3D::None);
 
-		// Player model
-		if (!m_playerModel)
+		// Player assets (model, anims, sounds)
+		// FIXME: This doesn't belong here
+		if (!m_playerAssets)
 		{
-			m_playerModel.emplace();
+			m_playerAssets = std::make_shared<PlayerAssets>();
 
 			auto& fs = m_app.GetComponent<Nz::FilesystemAppComponent>();
 			auto& assetLibrary = m_app.GetComponent<ClientAssetLibraryAppComponent>();
 
-			m_playerAnimAssets = std::make_shared<PlayerAnimationAssets>();
-
-			Nz::ModelParams params;
-			params.loadMaterials = false;
-			params.mesh.vertexDeclaration = Nz::VertexDeclaration::Get(Nz::VertexLayout::XYZ_Normal_UV_Tangent_Skinning);
-			params.meshCallback = [&](const std::shared_ptr<Nz::Mesh>& mesh) -> Nz::Result<void, Nz::ResourceLoadingError>
+			Nz::ModelParams modelParams;
+			modelParams.loadMaterials = false;
+			modelParams.mesh.vertexDeclaration = Nz::VertexDeclaration::Get(Nz::VertexLayout::XYZ_Normal_UV_Tangent_Skinning);
+			modelParams.meshCallback = [&](const std::shared_ptr<Nz::Mesh>& mesh) -> Nz::Result<void, Nz::ResourceLoadingError>
 			{
 				if (!mesh->IsAnimable())
 					return Nz::Err(Nz::ResourceLoadingError::Unrecognized);
 
-				m_playerAnimAssets->referenceSkeleton = std::move(*mesh->GetSkeleton());
+				m_playerAssets->referenceSkeleton = std::move(*mesh->GetSkeleton());
 				return Nz::Ok();
 			};
 
-			params.mesh.vertexOffset = Nz::Vector3f(0.f, -0.826f, 0.f);
-			params.mesh.vertexRotation = Nz::Quaternionf(Nz::TurnAnglef(0.5f), Nz::Vector3f::Up());
-			params.mesh.vertexScale = Nz::Vector3f(1.f / 10.f);
+			modelParams.mesh.vertexOffset = Nz::Vector3f(0.f, -0.826f, 0.f);
+			modelParams.mesh.vertexRotation = Nz::Quaternionf(Nz::TurnAnglef(0.5f), Nz::Vector3f::Up());
+			modelParams.mesh.vertexScale = Nz::Vector3f(1.f / 10.f);
 
-			m_playerModel->model = fs.Load<Nz::Model>("CookedAssets/Models/Player/Idle.fbx", params);
-			if (m_playerModel->model)
+			m_playerAssets->model = fs.Load<Nz::Model>("CookedAssets/Models/Player/Idle.fbx", modelParams);
+			if (m_playerAssets->model)
 			{
-				assert(m_playerAnimAssets->referenceSkeleton.IsValid());
+				assert(m_playerAssets->referenceSkeleton.IsValid());
 
 				Nz::AnimationParams animParams;
-				animParams.skeleton = &m_playerAnimAssets->referenceSkeleton;
+				animParams.skeleton = &m_playerAssets->referenceSkeleton;
 
-				animParams.jointOffset = params.mesh.vertexOffset;
-				animParams.jointRotation = params.mesh.vertexRotation;
-				animParams.jointScale = params.mesh.vertexScale;
+				animParams.jointOffset = modelParams.mesh.vertexOffset;
+				animParams.jointRotation = modelParams.mesh.vertexRotation;
+				animParams.jointScale = modelParams.mesh.vertexScale;
 
-				m_playerModel->model->SetMaterial(0, assetLibrary.GetMaterialInstance("PlayerMaterial"));
+				m_playerAssets->model->SetMaterial(0, assetLibrary.GetMaterialInstance("PlayerMaterial"));
 
-				m_playerAnimAssets->idleAnimation = fs.Load<Nz::Animation>("CookedAssets/Models/Player/Idle.fbx", animParams);
-				m_playerAnimAssets->runningAnimation = fs.Load<Nz::Animation>("CookedAssets/Models/Player/Running.fbx", animParams);
-				m_playerAnimAssets->walkingAnimation = fs.Load<Nz::Animation>("CookedAssets/Models/Player/Walking.fbx", animParams);
+				m_playerAssets->idleAnimation = fs.Load<Nz::Animation>("CookedAssets/Models/Player/Idle.fbx", animParams);
+				m_playerAssets->runningAnimation = fs.Load<Nz::Animation>("CookedAssets/Models/Player/Running.fbx", animParams);
+				m_playerAssets->walkingAnimation = fs.Load<Nz::Animation>("CookedAssets/Models/Player/Walking.fbx", animParams);
 			}
 			else
 			{
@@ -740,24 +740,46 @@ namespace tsom
 
 				std::shared_ptr<Nz::GraphicalMesh> colliderGraphicalMesh = Nz::GraphicalMesh::BuildFromMesh(*mesh);
 
-				m_playerModel->model = std::make_shared<Nz::Model>(colliderGraphicalMesh);
-				for (std::size_t i = 0; i < m_playerModel->model->GetSubMeshCount(); ++i)
-					m_playerModel->model->SetMaterial(i, colliderMat);
+				m_playerAssets->model = std::make_shared<Nz::Model>(colliderGraphicalMesh);
+				for (std::size_t i = 0; i < m_playerAssets->model->GetSubMeshCount(); ++i)
+					m_playerAssets->model->SetMaterial(i, colliderMat);
 			}
+
+			// Sounds
+			Nz::SoundBufferParams soundParams;
+			soundParams.mixToMono = true;
+
+			fs.IterateOnDirectory("CookedAssets/Sounds/Footsteps", [&](std::string_view filename, const Nz::VirtualDirectory::Entry& entry)
+			{
+				const Nz::VirtualDirectory::FileEntry* fileEntry = std::get_if<Nz::VirtualDirectory::FileEntry>(&entry);
+				if (!fileEntry)
+					return;
+
+				std::size_t index = filename.find_last_of('_');
+				NazaraAssert(index != std::string::npos);
+
+				std::string_view surfaceType = filename.substr(0, index);
+				auto it = s_surfaceTypeFromString.find(surfaceType);
+				NazaraAssert(it != s_surfaceTypeFromString.end());
+
+				std::shared_ptr<Nz::SoundBuffer> footstepSound = Nz::SoundBuffer::LoadFromStream(*fileEntry->stream, soundParams);
+				if (footstepSound)
+					m_playerAssets->footstepSounds[it->second].push_back(std::move(footstepSound));
+			});
 		}
 
 		Nz::UInt32 playerRenderMask = (entityData.controllingPlayerId == m_ownPlayerIndex) ? Constants::RenderMaskLocalPlayer : Constants::RenderMaskOtherPlayers;
 		Nz::UInt32 playerNameRenderMask = (entityData.controllingPlayerId == m_ownPlayerIndex) ? Constants::RenderMaskLocalPlayerName : Constants::RenderMaskOtherPlayersName;
 
 		auto& gfx = entity.emplace<Nz::GraphicsComponent>();
-		gfx.AttachRenderable(m_playerModel->model, playerRenderMask);
+		gfx.AttachRenderable(m_playerAssets->model, playerRenderMask);
 
 		// Skeleton & animations
-		std::shared_ptr<Nz::Skeleton> skeleton = std::make_shared<Nz::Skeleton>(m_playerAnimAssets->referenceSkeleton);
+		std::shared_ptr<Nz::Skeleton> skeleton = std::make_shared<Nz::Skeleton>(m_playerAssets->referenceSkeleton);
 
 		auto& skeletonComponent = entity.emplace<Nz::SkeletonComponent>(skeleton);
 
-		entity.emplace<AnimationComponent>(skeleton, std::make_shared<PlayerAnimationController>(entity, m_playerAnimAssets));
+		entity.emplace<AnimationComponent>(skeleton, std::make_shared<PlayerAnimationController>(m_blockLibrary, entity, m_playerAssets));
 
 		// Floating name
 		std::shared_ptr<Nz::TextSprite> textSprite = std::make_shared<Nz::TextSprite>(Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic, Nz::MaterialInstancePreset::ReverseZ | Nz::MaterialInstancePreset::AlphaBlended));

@@ -27,3 +27,6 @@ computer:SetMaterial(4, metalMat)
 computer:SetMaterial(5, metalMat)
 
 AssetLibrary.RegisterModel("computer", computer)
+
+AssetLibrary.RegisterSoundBuffer("computer_activation", SoundBuffer.Load("CookedAssets/Sounds/Computer/Activation.opus"))
+AssetLibrary.RegisterSoundBuffer("computer_noenergy", SoundBuffer.Load("CookedAssets/Sounds/Computer/NoEnergy.opus"))

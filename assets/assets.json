@@ -98,11 +98,6 @@
             "method": "Texture"
         },
         {
-            "input": "tree/shapespark-low-poly-plants-kit.gltf",
-            "output": "Models/Tree/shapespark-low-poly-plants-kit.gltf",
-            "method": "Copy"
-        },
-        {
             "input": "Shaders/BlockPBR.nzsl",
             "output": "Shaders/BlockPBR.nzslb",
             "method": "Shader"
@@ -665,6 +660,46 @@
             "input": "UI/ToolsMenu/ToolsMenu_Tool5.png",
             "output": "UI/ToolsMenu/ToolsMenu_Tool5.dds",
             "method": "Texture"
+        },
+        {
+            "input": "sounds/computer/sci-fi_beep_computer_ui_05.wav",
+            "output": "Sounds/Computer/Activation.opus",
+            "method": "Audio"
+        },
+        {
+            "input": "sounds/computer/sci-fi_computer_running_code_02.wav",
+            "output": "Sounds/Computer/NoEnergy.opus",
+            "method": "Audio"
+        },
+        {
+            "input": "sounds/footsteps/joentnt-walk-on-dirt-1-291981.mp3",
+            "output": "Sounds/Footsteps/Dirt_1.opus",
+            "method": "Audio"
+        },
+        {
+            "input": "sounds/footsteps/joentnt-walk-on-dirt-2-291982.mp3",
+            "output": "Sounds/Footsteps/Dirt_2.opus",
+            "method": "Audio"
+        },
+        {
+            "input": "sounds/footsteps/joentnt-walk-on-dirt-3-291983.mp3",
+            "output": "Sounds/Footsteps/Dirt_3.opus",
+            "method": "Audio"
+        },
+        {
+            "input": "sounds/footsteps/joentnt-walk-on-grass-1-291984.mp3",
+            "output": "Sounds/Footsteps/Grass_1.opus",
+            "method": "Audio"
+        },
+        {
+            "input": "sounds/footsteps/joentnt-walk-on-grass-2-291985.mp3",
+            "output": "Sounds/Footsteps/Grass_2.opus",
+            "method": "Audio"
+        },
+        {
+            "input": "sounds/footsteps/joentnt-walk-on-grass-3-291986.mp3",
+            "output": "Sounds/Footsteps/Grass_3.opus",
+            "method": "Audio"
         }
     ]
 }

@@ -6,6 +6,7 @@ classData:Set("spawnable_model", "computer")
 classData:Set("spawnable_collider", Vec3(0.75))
 
 classData:AddProperty("active", { type = "bool", default = false, isNetworked = true })
+classData:AddClientRPC("no_energy")
 
 classData:On("init", function (self)
 	local physSettings = {
@@ -34,6 +35,8 @@ classData:On("init", function (self)
 
 		local gfx = self:AddComponent("graphics")
 		gfx:AttachRenderable(model, Constants.RenderMask3D)
+
+		self:AddComponent("soundemitter")
 	end
 end)
 
@@ -59,6 +62,8 @@ if SERVER then
 				self.UsingPlayer:ExitPiloting()
 				self.UsingPlayer = nil
 				self:UpdateProperty("active", false)
+
+				self:CallClientRPC("no_energy")
 			end
 		end
 	end)
@@ -93,6 +98,22 @@ if SERVER then
 			self.UsingPlayer = nil
 			self:UpdateProperty("active", false)
 		end
+	end)
+else
+	classData:OnPropertyUpdate("active", function (self, isActive)
+		if not isActive then
+			return
+		end
+
+		local soundEmitter = self:GetComponent("soundemitter")
+		local sound = soundEmitter:AddSound(AssetLibrary.GetSoundBuffer("computer_activation"))
+		sound:Play()
+	end)
+
+	classData:OnClientRPC("no_energy", function (self)
+		local soundEmitter = self:GetComponent("soundemitter")
+		local sound = soundEmitter:AddSound(AssetLibrary.GetSoundBuffer("computer_noenergy"))
+		sound:Play()
 	end)
 end
 

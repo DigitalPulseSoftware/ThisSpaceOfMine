@@ -39,6 +39,8 @@ namespace tsom
 			void RegisterMaterialSettings(sol::state& state);
 			void RegisterRenderables(sol::state& state);
 			void RegisterRenderStates(sol::state& state);
+			void RegisterSound(sol::state& state);
+			void RegisterSoundBuffer(sol::state& state);
 			void RegisterTexture(sol::state& state);
 	};
 }

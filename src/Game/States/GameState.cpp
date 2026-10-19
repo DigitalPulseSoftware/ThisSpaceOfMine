@@ -12,7 +12,7 @@
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/ToolMenu.hpp>
 #include <ClientLib/Components/AnimationComponent.hpp>
-#include <ClientLib/Components/ChunkNetworkMapComponent.hpp>
+#include <ClientLib/Components/AudioListenerComponent.hpp>
 #include <ClientLib/Components/ClientEntityNetworkIndex.hpp>
 #include <ClientLib/Components/ClientInteractibleComponent.hpp>
 #include <ClientLib/Components/EnvironmentComponent.hpp>
@@ -108,6 +108,7 @@ namespace tsom
 
 		m_cameraEntity = CreateEntity();
 		{
+			m_cameraEntity.emplace<AudioListenerComponent>();
 			auto& cameraNode = m_cameraEntity.emplace<Nz::NodeComponent>();
 
 #ifdef TSOM_DEV_TOOLS

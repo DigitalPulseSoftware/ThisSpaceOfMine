@@ -11,6 +11,7 @@
 #include <CommonLib/BlockIndex.hpp>
 #include <CommonLib/Direction.hpp>
 #include <CommonLib/PhysicsConstants.hpp>
+#include <CommonLib/SurfaceType.hpp>
 #include <NazaraUtils/EnumArray.hpp>
 #include <tsl/hopscotch_map.h>
 #include <string>
@@ -45,10 +46,10 @@ namespace tsom
 			BlockIndex RegisterBlock(std::string name, BlockInfo blockInfo);
 			std::size_t RegisterLayer(std::string name, LayerInfo layerInfo);
 
-			struct BlockInfo
+			struct CommonBlockData
 			{
-				std::string_view layerName = "default";
 				std::string basePath;
+				SurfaceType surfaceType = SurfaceType::Dirt;
 				bool hasCollisions = true;
 				bool isDoubleSided = false;
 				bool isSmooth = false;
@@ -59,19 +60,15 @@ namespace tsom
 				float roughness = 1.0f; //< Used if texture is not available
 			};
 
-			struct BlockData
+			struct BlockInfo : CommonBlockData
+			{
+				std::string_view layerName = "default";
+			};
+
+			struct BlockData : CommonBlockData
 			{
 				std::size_t layerIndex;
 				std::string name;
-				std::string basePath;
-				bool hasCollisions;
-				bool isDoubleSided;
-				bool isTransparent;
-				bool isSmooth;
-				float density;
-				float metalness = 0.0f; //< Used if texture is not available
-				float permeability;
-				float roughness = 1.0f; //< Used if texture is not available
 			};
 
 			struct PhysicsLayer
@@ -79,23 +76,23 @@ namespace tsom
 				Nz::PhysObjectLayer3D layer;
 			};
 
-			struct LayerInfo
+			struct CommonLayerData
 			{
-				PhysicsLayer physicsLayer = PhysicsLayer { Constants::ObjectLayerStatic };
 				bool isBlended;
 				bool isFluid = false;
 				bool isPhysicsTrigger = false;
 				int renderLayer = 0;
 			};
 
-			struct LayerData
+			struct LayerInfo : CommonLayerData
+			{
+				PhysicsLayer physicsLayer = PhysicsLayer { Constants::ObjectLayerStatic };
+			};
+
+			struct LayerData : CommonLayerData
 			{
 				std::string name;
 				Nz::PhysObjectLayer3D physicsLayer;
-				bool isBlended;
-				bool isFluid;
-				bool isPhysicsTrigger;
-				int renderLayer;
 			};
 
 			BlockLibrary& operator=(const BlockLibrary&) = delete;
