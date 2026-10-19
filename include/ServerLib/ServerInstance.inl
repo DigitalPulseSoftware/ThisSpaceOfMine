@@ -63,16 +63,25 @@ namespace tsom
 		return nullptr;
 	}
 
-	template<typename F> void ServerInstance::ForEachPlayer(F&& functor)
+	template<typename F>
+	void ServerInstance::ForEachPlayer(F&& functor)
 	{
 		for (ServerPlayer& serverPlayer : m_players)
 			functor(serverPlayer);
 	}
 
-	template<typename F> void ServerInstance::ForEachPlayer(F&& functor) const
+	template<typename F>
+	void ServerInstance::ForEachPlayer(F&& functor) const
 	{
 		for (const ServerPlayer& serverPlayer : m_players)
 			functor(serverPlayer);
+	}
+
+	template<typename F>
+	void ServerInstance::ForEachSpaceCell(F&& functor)
+	{
+		for (auto&& [indices, environmentPtr] : m_spaceCellEnvironments)
+			functor(indices, environmentPtr.get());
 	}
 
 	inline Nz::ApplicationBase& ServerInstance::GetApplication()

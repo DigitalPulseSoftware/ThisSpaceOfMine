@@ -16,6 +16,66 @@
 
 namespace tsom
 {
+	bool SessionVisibilityHandler::CreateChildEnvironment(ServerEnvironment& environment, entt::handle environmentOwner)
+	{
+		if (auto it = std::find(m_destroyedEnvironments.begin(), m_destroyedEnvironments.end(), &environment); it != m_destroyedEnvironments.end())
+		{
+			// Environment exists, resurrect it and check if its owner has changed
+			EnvironmentId envId = Nz::Retrieve(m_environmentIndices, &environment);
+			EnvironmentData& envData = m_environments[envId];
+			NazaraAssert(std::holds_alternative<ChildEnvironmentData>(envData.envData));
+
+			if (std::get<ChildEnvironmentData>(envData.envData).owner != environmentOwner)
+			{
+				if (auto it = std::find_if(m_environmentOwnerUpdates.begin(), m_environmentOwnerUpdates.end(), [&](const auto& update) { return update.environment == &environment; }); it != m_environmentOwnerUpdates.end())
+					it->newOwner = environmentOwner;
+				else
+				{
+					m_environmentOwnerUpdates.push_back({
+						.environment = &environment,
+						.newOwner = environmentOwner
+					});
+				}
+			}
+
+			m_destroyedEnvironments.erase(it);
+			return false;
+		}
+		else
+		{
+			// Give an index to the environment before sending it as it may be required for some calls such as UpdateEntityEnvironment
+			std::size_t envIndex = m_freeEnvironmentIds.FindFirst();
+			if (envIndex == m_freeEnvironmentIds.npos)
+			{
+				envIndex = m_freeEnvironmentIds.GetSize();
+				m_freeEnvironmentIds.Resize(envIndex + FreeNetworkIdGrowRate, true);
+			}
+
+			m_freeEnvironmentIds.Set(envIndex, false);
+
+			EnvironmentId envId = Nz::SafeCast<EnvironmentId>(envIndex);
+
+			NazaraAssert(!m_environmentIndices.contains(&environment));
+			m_environmentIndices[&environment] = envId;
+
+			if (envIndex >= m_environments.size())
+				m_environments.resize(envIndex + 1);
+
+			m_environments[envIndex].environment = &environment;
+			m_environments[envIndex].isVisible = false;
+			m_environments[envIndex].envData = ChildEnvironmentData{ environmentOwner };
+
+			NazaraAssert(std::find_if(m_createdEnvironments.begin(), m_createdEnvironments.end(), [&](const EnvironmentCreationData& envCreation) { return envCreation.environment == &environment; }) == m_createdEnvironments.end());
+			m_createdEnvironments.push_back({
+				.environment = &environment,
+				.environmentId = envId,
+				.envData = m_environments[envIndex].envData
+			});
+
+			return true;
+		}
+	}
+
 	bool SessionVisibilityHandler::CreateChunk(entt::handle entity, Chunk& chunk)
 	{
 		NazaraAssert(m_chunkNetworkMaps.contains(entity));
@@ -81,25 +141,15 @@ namespace tsom
 			m_createdEntities.emplace(entity, std::move(entityData));
 	}
 
-	bool SessionVisibilityHandler::CreateEnvironment(ServerEnvironment& environment, entt::handle environmentOwner)
+	bool SessionVisibilityHandler::CreateRootEnvironment(ServerEnvironment& environment, const Nz::Vector3i32& environmentIndices)
 	{
 		if (auto it = std::find(m_destroyedEnvironments.begin(), m_destroyedEnvironments.end(), &environment); it != m_destroyedEnvironments.end())
 		{
-			// Environment exists, resurrect it and check if its owner has changed
+			// Environment exists, resurrect it
 			EnvironmentId envId = Nz::Retrieve(m_environmentIndices, &environment);
 			EnvironmentData& envData = m_environments[envId];
-			if (envData.owner != environmentOwner)
-			{
-				if (auto it = std::find_if(m_environmentOwnerUpdates.begin(), m_environmentOwnerUpdates.end(), [&](const auto& update) { return update.environment == &environment; }); it != m_environmentOwnerUpdates.end())
-					it->newOwner = environmentOwner;
-				else
-				{
-					m_environmentOwnerUpdates.push_back({
-						.environment = &environment,
-						.newOwner = environmentOwner
-					});
-				}
-			}
+			NazaraAssert(std::holds_alternative<RootEnvironmentData>(envData.envData));
+			NazaraAssert(std::get<RootEnvironmentData>(envData.envData).indices == environmentIndices);
 
 			m_destroyedEnvironments.erase(it);
 			return false;
@@ -125,14 +175,14 @@ namespace tsom
 				m_environments.resize(envIndex + 1);
 
 			m_environments[envIndex].environment = &environment;
-			m_environments[envIndex].owner = environmentOwner;
 			m_environments[envIndex].isVisible = false;
+			m_environments[envIndex].envData = RootEnvironmentData{ environmentIndices };
 
 			NazaraAssert(std::find_if(m_createdEnvironments.begin(), m_createdEnvironments.end(), [&](const EnvironmentCreationData& envCreation) { return envCreation.environment == &environment; }) == m_createdEnvironments.end());
 			m_createdEnvironments.push_back({
 				.environment = &environment,
-				.owner = environmentOwner,
-				.environmentId = envId
+				.environmentId = envId,
+				.envData = m_environments[envIndex].envData
 			});
 
 			return true;
@@ -215,7 +265,7 @@ namespace tsom
 			auto& visibleEnvironment = m_environments[envId];
 			visibleEnvironment.environment = nullptr;
 			visibleEnvironment.isVisible = false;
-			visibleEnvironment.owner = {};
+			visibleEnvironment.envData = std::monostate{};
 			visibleEnvironment.entities.Clear();
 
 			m_environmentIndices.erase(it->environment);
@@ -742,7 +792,7 @@ namespace tsom
 					entityData.envIndex = Nz::MaxValue();
 				}
 				environmentData.environment = nullptr;
-				environmentData.owner = {};
+				environmentData.envData = {};
 				environmentData.entities.Clear();
 				environmentData.isVisible = false;
 
@@ -796,21 +846,31 @@ namespace tsom
 		{
 			for (EnvironmentCreationData& environmentCreationData : m_createdEnvironments)
 			{
-				m_environments[environmentCreationData.environmentId].isVisible = true;
-
-				EntityId ownerEntityIndex = Nz::MaxValue();
-				if (environmentCreationData.owner)
-					ownerEntityIndex = Nz::Retrieve(m_entityIndices, environmentCreationData.owner);
-
 				Packets::S_EnvironmentCreate createPacket;
 				createPacket.id = Nz::SafeCast<Nz::UInt8>(environmentCreationData.environmentId);
 				createPacket.tickIndex = tickIndex;
-				createPacket.ownerEntity = ownerEntityIndex;
+
+				std::visit(Nz::Overloaded
+				{
+					[](std::monostate) { NAZARA_UNREACHABLE(); },
+					[&](ChildEnvironmentData& childEnvironment)
+					{
+						NazaraAssert(childEnvironment.owner);
+						EntityId ownerEntityIndex = Nz::Retrieve(m_entityIndices, childEnvironment.owner);
+						createPacket.environmentData = Packets::S_EnvironmentCreate::ChildEnvironment{ ownerEntityIndex };
+					},
+					[&](RootEnvironmentData& rootEnvironment)
+					{
+						createPacket.environmentData = Packets::S_EnvironmentCreate::RootEnvironment{ rootEnvironment.indices };
+					}
+				},
+				environmentCreationData.envData);
 
 				for (auto it = environmentCreationData.createdEntities.begin(); it != environmentCreationData.createdEntities.end(); ++it)
 					HandleEntityCreation(createPacket.entities, it.key(), std::move(it.value()));
 
 				m_networkSession->SendPacket(createPacket);
+				m_environments[environmentCreationData.environmentId].isVisible = true;
 			}
 			m_createdEnvironments.clear();
 		}
@@ -824,10 +884,10 @@ namespace tsom
 			{
 				EnvironmentId envIndex = Nz::Retrieve(m_environmentIndices, ownerUpdate.environment);
 				// It's possible (with two root environment switches at the "same time") that the owner updates to the current owner, dismiss it
-				if (m_environments[envIndex].owner == ownerUpdate.newOwner)
+				/*if (m_environments[envIndex].owner == ownerUpdate.newOwner)
 					continue;
 
-				m_environments[envIndex].owner = ownerUpdate.newOwner;
+				m_environments[envIndex].owner = ownerUpdate.newOwner;*/
 
 				EntityId entityIndex = Nz::MaxValue();
 				if (ownerUpdate.newOwner)

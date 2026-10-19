@@ -32,12 +32,17 @@ namespace tsom
 		return m_entityRegistry;
 	}
 
-	inline const GravityController* ClientSessionHandler::GetGravityController(std::size_t environmentIndex) const
+	inline const GravityController* ClientSessionHandler::GetGravityController(Packets::Helper::EnvironmentId environmentIndex) const
 	{
 		if (environmentIndex > m_environments.size() || !m_environments[environmentIndex])
 			return nullptr;
 
 		return m_environments[environmentIndex]->gravityController;
+	}
+
+	inline Packets::Helper::EnvironmentId ClientSessionHandler::GetRootEnvironmentId() const
+	{
+		return m_rootEnvironmentId;
 	}
 
 	inline ScriptingContext& ClientSessionHandler::GetScriptingContext()

@@ -20,7 +20,7 @@ namespace tsom
 		m_ownerEnvironment = ServerEnvironment::GetEnvironment(m_registry);
 	}
 
-	void EnvironmentSwitchSystem::Update(Nz::Time elapsedTime)
+	void EnvironmentSwitchSystem::Update(Nz::Time /*elapsedTime*/)
 	{
 		auto triggerView = m_registry.view<Nz::NodeComponent, EnvironmentEnterTriggerComponent>(entt::exclude<Nz::DisabledComponent>);
 		auto entityView = m_registry.view<Nz::NodeComponent, ClassInstanceComponent, ServerEnvironmentSwitchComponent>(entt::exclude<Nz::DisabledComponent>);

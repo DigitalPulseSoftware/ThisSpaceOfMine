@@ -25,6 +25,9 @@ namespace tsom::Constants
 
 	// Serialization constants
 	constexpr Nz::UInt32 ChunkBinaryVersion = 1;
+
+	// Space constants
+	constexpr float SpaceCellSize = 8192.0f; //< [-4096;4096]
 }
 
 #endif // TSOM_COMMONLIB_INTERNALCONSTANTS_HPP

@@ -34,6 +34,7 @@
 #include <CommonLib/Scripting/BaseScriptingLibrary.hpp>
 #include <CommonLib/Scripting/MathScriptingLibrary.hpp>
 #include <CommonLib/Scripting/SharedEntityScriptingLibrary.hpp>
+#include <CommonLib/Utility/SpaceTransformations.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/EnttWorld.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
@@ -80,7 +81,8 @@ namespace tsom
 	m_config(config),
 	m_ownPlayerIndex(InvalidPlayerIndex),
 	m_scriptingContext(app),
-	m_lastInputIndex(0)
+	m_lastInputIndex(0),
+	m_rootEnvironmentId(InvalidEnvironment)
 	{
 		SetupHandlerTable(this);
 		SetupAttributeTable(s_packetAttributes);
@@ -112,12 +114,22 @@ namespace tsom
 		}
 	}
 
-	const Nz::Node* ClientSessionHandler::GetEnvironmentNode(std::size_t environmentIndex) const
+	const Nz::Node* ClientSessionHandler::GetEnvironmentNode(Packets::Helper::EnvironmentId environmentIndex) const
 	{
 		if (environmentIndex > m_environments.size() || !m_environments[environmentIndex])
 			return nullptr;
 
 		return m_environments[environmentIndex]->rootEntity.try_get<Nz::NodeComponent>();
+	}
+
+	Packets::Helper::EnvironmentId ClientSessionHandler::GetParentEnvironmentId(Packets::Helper::EnvironmentId environmentId) const
+	{
+		const EnvironmentData::ChildData* childData = std::get_if<EnvironmentData::ChildData>(&m_environments[environmentId]->specData);
+		if (!childData)
+			return InvalidEnvironment;
+
+		NazaraAssert(childData->parentEnvironment < m_environments.size() && m_environments[childData->parentEnvironment]);
+		return childData->parentEnvironment;
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::S_AuthResponse&& authResponse)
@@ -370,6 +382,32 @@ namespace tsom
 		entityData.environmentIndex = environmentUpdate.newEnvironmentId;
 		if (NetworkInterpolationComponent* movementInterpolation = entityData.entity.try_get<NetworkInterpolationComponent>())
 			movementInterpolation->UpdateRoot(oldEnvironment.rootEntity.get<Nz::NodeComponent>(), newEnvironment.rootEntity.get<Nz::NodeComponent>());
+
+		// If this entity owns an environment, update it as well
+		if (auto it = m_entityToOwnedEnvironment.find(environmentUpdate.entity); it != m_entityToOwnedEnvironment.end())
+		{
+			NazaraAssert(it->second < m_environments.size() && m_environments[it->second]);
+			auto& environment = *m_environments[it->second];
+			NazaraAssert(std::holds_alternative<EnvironmentData::ChildData>(environment.specData));
+			auto& childData = std::get<EnvironmentData::ChildData>(environment.specData);
+			childData.parentEnvironment = environmentUpdate.newEnvironmentId;
+
+			// This environment could contain the controlled entity, check for it
+			for (std::size_t entityIndex : environment.entities.IterBits())
+			{
+				assert(entityIndex < m_entities.size() && m_entities[entityIndex]);
+				EntityData& entityData = *m_entities[entityIndex];
+				if (entityData.entity == m_playerControlledEntity)
+				{
+					HandleControlledEntityEnvironmentSwitch(environmentUpdate.newEnvironmentId);
+					break;
+				}
+			}
+		}
+
+		// Update root environment when controlled entity moves
+		if (entityData.entity == m_playerControlledEntity)
+			HandleControlledEntityEnvironmentSwitch(environmentUpdate.newEnvironmentId);
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::S_EntityProcedureCall&& procedureCall)
@@ -397,24 +435,51 @@ namespace tsom
 
 	void ClientSessionHandler::HandlePacket(Packets::S_EnvironmentCreate&& envCreate)
 	{
-		spdlog::info("Created environment #{} (owned by {})", envCreate.id, envCreate.ownerEntity);
 		if (envCreate.id >= m_environments.size())
 			m_environments.resize(envCreate.id + 1);
 
 		auto& environment = m_environments[envCreate.id].emplace();
 
 		environment.rootEntity = m_world.CreateEntity();
-		environment.rootEntity.emplace<Nz::NodeComponent>();
+		auto& rootNode = environment.rootEntity.emplace<Nz::NodeComponent>();
 
-		if (envCreate.ownerEntity != Nz::MaxValue<Packets::Helper::EntityId>())
+		std::visit(Nz::Overloaded
 		{
-			assert(m_entities[envCreate.ownerEntity]);
-			EntityData& ownerEntity = *m_entities[envCreate.ownerEntity];
+			[&](Packets::S_EnvironmentCreate::ChildEnvironment& childEnvironment)
+			{
+				spdlog::info("Created child environment #{} (owned by {})", envCreate.id, childEnvironment.ownerEntity);
+				NazaraAssert(childEnvironment.ownerEntity < m_entities.size() && m_entities[childEnvironment.ownerEntity]);
+				EntityData& ownerEntity = *m_entities[childEnvironment.ownerEntity];
 
-			auto& ownerNode = ownerEntity.entity.get<Nz::NodeComponent>();
+				auto& ownerNode = ownerEntity.entity.get<Nz::NodeComponent>();
+				rootNode.SetParent(ownerNode);
 
-			environment.rootEntity.get<Nz::NodeComponent>().SetParent(ownerNode);
-		}
+				environment.specData = EnvironmentData::ChildData{ ownerEntity.environmentIndex };
+
+				m_entityToOwnedEnvironment.emplace(childEnvironment.ownerEntity, envCreate.id);
+			},
+			[&](Packets::S_EnvironmentCreate::RootEnvironment& rootEnvironment)
+			{
+				spdlog::info("Created root environment #{} (at {};{};{})", envCreate.id, rootEnvironment.indices.x, rootEnvironment.indices.y, rootEnvironment.indices.z);
+
+				auto& rootData = environment.specData.emplace<EnvironmentData::RootData>();
+				rootData.indices = rootEnvironment.indices;
+
+				Nz::Vector3i32 rootIndices = Nz::Vector3i32::Zero();
+				if (m_rootEnvironmentId != InvalidEnvironment)
+				{
+					NazaraAssert(m_rootEnvironmentId < m_environments.size() && m_environments[m_rootEnvironmentId]);
+					NazaraAssert(std::holds_alternative<EnvironmentData::RootData>(m_environments[m_rootEnvironmentId]->specData));
+					rootIndices = std::get<EnvironmentData::RootData>(m_environments[m_rootEnvironmentId]->specData).indices;
+				}
+				else
+					m_rootEnvironmentId = envCreate.id;
+
+				Nz::Vector3f cellTranslation = Nz::Vector3f(rootEnvironment.indices - rootIndices) * Constants::SpaceCellSize;
+				rootNode.SetPosition(cellTranslation);
+			}
+		},
+		envCreate.environmentData);
 
 		for (auto&& entityData : envCreate.entities)
 			HandleEntityCreation(std::move(entityData));
@@ -423,6 +488,8 @@ namespace tsom
 	void ClientSessionHandler::HandlePacket(Packets::S_EnvironmentDestroy&& envDestroy)
 	{
 		spdlog::info("Destroyed environment #{}", envDestroy.id);
+		NazaraAssert(envDestroy.id < m_environments.size() && m_environments[envDestroy.id]);
+
 		for (std::size_t entityIndex : m_environments[envDestroy.id]->entities.IterBits())
 		{
 			assert(m_entities[entityIndex]);
@@ -430,10 +497,13 @@ namespace tsom
 			ClassInstanceComponent::TriggerDestructionCallback(entityData.entity);
 			entityData.entity.destroy();
 
+			m_entityToOwnedEnvironment.erase(entityIndex);
 			m_entities[entityIndex].reset();
 		}
 
 		m_environments[envDestroy.id].reset();
+		if (m_rootEnvironmentId == envDestroy.id)
+			m_rootEnvironmentId = InvalidEnvironment;
 	}
 
 	void ClientSessionHandler::HandlePacket(Packets::S_EnvironmentsUpdateOwner&& envOwnerUpdate)
@@ -592,6 +662,19 @@ namespace tsom
 
 			it = m_pendingChunkReset.erase(it);
 		}
+	}
+
+	void ClientSessionHandler::HandleControlledEntityEnvironmentSwitch(Packets::Helper::EnvironmentId newEnvironmentId)
+	{
+		Packets::Helper::EnvironmentId rootEnvironmentId = newEnvironmentId;
+		while (EnvironmentData::ChildData* childData = std::get_if<EnvironmentData::ChildData>(&m_environments[rootEnvironmentId]->specData))
+		{
+			NazaraAssert(childData->parentEnvironment < m_environments.size() && m_environments[childData->parentEnvironment]);
+			rootEnvironmentId = childData->parentEnvironment;
+		}
+
+		if (m_rootEnvironmentId != rootEnvironmentId)
+			UpdateRootEnvironment(rootEnvironmentId);
 	}
 
 	void ClientSessionHandler::HandleEntityCreation(Packets::Helper::EntityData&& entityData)
@@ -799,5 +882,31 @@ namespace tsom
 
 		if (playerInfo)
 			playerInfo->textSprite = std::move(textSprite);
+	}
+
+	void ClientSessionHandler::UpdateRootEnvironment(Packets::Helper::EnvironmentId environmentId)
+	{
+		NazaraAssert(environmentId < m_environments.size() && m_environments[environmentId]);
+		NazaraAssert(std::holds_alternative<EnvironmentData::RootData>(m_environments[environmentId]->specData));
+		Nz::Vector3i32 rootIndices = std::get<EnvironmentData::RootData>(m_environments[environmentId]->specData).indices;
+
+		for (auto& envOpt : m_environments)
+		{
+			if (!envOpt)
+				continue;
+
+			auto& envData = *envOpt;
+
+			EnvironmentData::RootData* rootData = std::get_if<EnvironmentData::RootData>(&envData.specData);
+			if (!rootData)
+				continue;
+
+			Nz::Vector3f cellTranslation = Nz::Vector3f(rootData->indices - rootIndices) * Constants::SpaceCellSize;
+
+			auto& rootNode = envData.rootEntity.get<Nz::NodeComponent>();
+			rootNode.SetPosition(cellTranslation);
+		}
+
+		m_rootEnvironmentId = environmentId;
 	}
 }

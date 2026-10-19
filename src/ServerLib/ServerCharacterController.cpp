@@ -23,17 +23,23 @@ namespace tsom
 
 		// TODO: Move back this class to CommonLib once this is fixed
 		Nz::Vector3f playerPos = character.GetPosition();
-		ChunkContainer& chunkContainer = m_environment->GetChunkContainer();
-		BlockIndex waterBlockIndex = chunkContainer.GetBlockLibrary().GetBlockIndex("water");
-		ChunkIndices chunkIndices = chunkContainer.GetChunkIndicesByPosition(playerPos);
-		Chunk* chunk = chunkContainer.GetChunk(chunkIndices);
+		ChunkContainer* chunkContainer = m_environment->GetChunkContainer();
+		if (!chunkContainer)
+		{
+			SetInWater(false);
+			return;
+		}
+
+		BlockIndex waterBlockIndex = chunkContainer->GetBlockLibrary().GetBlockIndex("water");
+		ChunkIndices chunkIndices = chunkContainer->GetChunkIndicesByPosition(playerPos);
+		Chunk* chunk = chunkContainer->GetChunk(chunkIndices);
 		if (!chunk)
 		{
 			SetInWater(false);
 			return;
 		}
 
-		std::optional<Nz::Vector3ui> blockIndices = chunk->ComputeCoordinates(playerPos - chunkContainer.GetChunkOffset(chunkIndices));
+		std::optional<Nz::Vector3ui> blockIndices = chunk->ComputeCoordinates(playerPos - chunkContainer->GetChunkOffset(chunkIndices));
 		if (!blockIndices || chunk->GetBlockContent(*blockIndices) != waterBlockIndex)
 		{
 			SetInWater(false);

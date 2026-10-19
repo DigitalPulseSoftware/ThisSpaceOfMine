@@ -48,8 +48,10 @@ namespace tsom
 			inline entt::handle GetControlledEntity() const;
 			inline EntityRegistry& GetEntityRegistry();
 			inline const EntityRegistry& GetEntityRegistry() const;
-			const Nz::Node* GetEnvironmentNode(std::size_t environmentIndex) const;
-			inline const GravityController* GetGravityController(std::size_t environmentIndex) const;
+			const Nz::Node* GetEnvironmentNode(Packets::Helper::EnvironmentId environmentIndex) const;
+			inline const GravityController* GetGravityController(Packets::Helper::EnvironmentId environmentIndex) const;
+			inline Packets::Helper::EnvironmentId GetParentEnvironmentId(Packets::Helper::EnvironmentId environmentId) const;
+			inline Packets::Helper::EnvironmentId GetRootEnvironmentId() const;
 			inline ScriptingContext& GetScriptingContext();
 
 			void HandlePacket(Packets::S_AuthResponse&& authResponse);
@@ -97,6 +99,7 @@ namespace tsom
 			NazaraSignal(OnPlayerListUpdated);
 
 			static constexpr Packets::Helper::EntityId InvalidEntity = Nz::MaxValue();
+			static constexpr Packets::Helper::EnvironmentId InvalidEnvironment = Nz::MaxValue();
 
 			struct PlayerInfo
 			{
@@ -108,8 +111,10 @@ namespace tsom
 		private:
 			inline PlayerInfo* FetchPlayerInfo(PlayerIndex playerIndex);
 			inline const PlayerInfo* FetchPlayerInfo(PlayerIndex playerIndex) const;
+			void HandleControlledEntityEnvironmentSwitch(Packets::Helper::EnvironmentId newEnvironmentId);
 			void HandleEntityCreation(Packets::Helper::EntityData&& entityData);
 			void SetupEntity(entt::handle entity, Packets::Helper::PlayerControlledData&& entityData);
+			void UpdateRootEnvironment(Packets::Helper::EnvironmentId environmentId);
 
 			struct DebugDrawLines
 			{
@@ -125,9 +130,20 @@ namespace tsom
 
 			struct EnvironmentData
 			{
+				struct ChildData
+				{
+					Packets::Helper::EnvironmentId parentEnvironment;
+				};
+
+				struct RootData
+				{
+					Nz::Vector3i32 indices;
+				};
+
 				Nz::Bitset<Nz::UInt64> entities;
 				entt::handle rootEntity;
 				GravityController* gravityController;
+				std::variant<ChildData, RootData> specData;
 			};
 
 			struct EntityData
@@ -148,6 +164,7 @@ namespace tsom
 			std::vector<std::optional<EnvironmentData>> m_environments; //< FIXME: Nz::SparseVector
 			std::vector<std::optional<PlayerInfo>> m_players; //< FIXME: Nz::SparseVector
 			tsl::hopscotch_map<Packets::Helper::ChunkId, Packets::S_ChunkReset> m_pendingChunkReset;
+			tsl::hopscotch_map<Packets::Helper::EntityId, Packets::Helper::EnvironmentId> m_entityToOwnedEnvironment;
 			Nz::ApplicationBase& m_app;
 			Nz::EnttWorld& m_world;
 			ClientBlockLibrary& m_blockLibrary;
@@ -157,6 +174,7 @@ namespace tsom
 			ScriptingContext m_scriptingContext;
 			EntityRegistry m_entityRegistry;
 			InputIndex m_lastInputIndex;
+			Packets::Helper::EnvironmentId m_rootEnvironmentId;
 	};
 }
 

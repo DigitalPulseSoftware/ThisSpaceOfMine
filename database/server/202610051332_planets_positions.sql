@@ -1,0 +1,4 @@
+ALTER TABLE "planets" ADD COLUMN "position_x" REAL NOT NULL DEFAULT 0.0;
+ALTER TABLE "planets" ADD COLUMN "position_y" REAL NOT NULL DEFAULT 0.0;
+ALTER TABLE "planets" ADD COLUMN "position_z" REAL NOT NULL DEFAULT 0.0;
+DROP TABLE "planet_links";

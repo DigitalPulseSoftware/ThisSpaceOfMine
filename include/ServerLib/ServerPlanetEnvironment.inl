@@ -13,4 +13,9 @@ namespace tsom
 	{
 		return m_planetEntity;
 	}
+
+	inline const Nz::Vector3d& ServerPlanetEnvironment::GetPlanetPosition() const
+	{
+		return m_planetPosition;
+	}
 }

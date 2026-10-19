@@ -28,7 +28,7 @@ namespace tsom
 			if (player->IsInEnvironment(envProxy.targetEnvironment))
 				continue; // break recursion
 
-			player->AddToEnvironment(envProxy.targetEnvironment, entt::handle(m_registry, entity));
+			player->AddToChildEnvironment(envProxy.targetEnvironment, entt::handle(m_registry, entity));
 
 			auto& envProxySystem = envProxy.targetEnvironment->GetWorld().GetSystem<EnvironmentProxySystem>();
 			envProxySystem.AddEnvironmentRecursively(player);
@@ -47,7 +47,7 @@ namespace tsom
 				if (player.IsInEnvironment(envProxy.targetEnvironment))
 					return;
 
-				player.AddToEnvironment(envProxy.targetEnvironment, entt::handle(m_registry, entity));
+				player.AddToChildEnvironment(envProxy.targetEnvironment, entt::handle(m_registry, entity));
 
 				auto& envProxySystem = envProxy.targetEnvironment->GetWorld().GetSystem<EnvironmentProxySystem>();
 				envProxySystem.AddEnvironmentRecursively(&player);

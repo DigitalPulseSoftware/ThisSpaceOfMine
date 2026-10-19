@@ -15,9 +15,9 @@ namespace tsom
 {
 	ServerDatabase::PreparedStatements::PreparedStatements(SQLite::Database& database) :
 	getAllConfigQuery(database, "SELECT name, value FROM configs"),
-	createPlanetQuery(database, "INSERT INTO planets(generator, chunk_count_x, chunk_count_y, chunk_count_z, type, properties) VALUES(?, ?, ?, ?, ?, ?) RETURNING id"),
-	getAllPlanetQuery(database, "SELECT id, generator, chunk_count_x, chunk_count_y, chunk_count_z, type, properties FROM planets"),
-	storePlanetQuery(database, "REPLACE INTO planets(id, generator, chunk_count_x, chunk_count_y, chunk_count_z, type, properties) VALUES(?, ?, ?, ?, ?, ?, ?)"),
+	createPlanetQuery(database, "INSERT INTO planets(generator, chunk_count_x, chunk_count_y, chunk_count_z, type, properties, position_x, position_y, position_z) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id"),
+	getAllPlanetQuery(database, "SELECT id, generator, chunk_count_x, chunk_count_y, chunk_count_z, type, properties, position_x, position_y, position_z FROM planets"),
+	storePlanetQuery(database, "REPLACE INTO planets(id, generator, chunk_count_x, chunk_count_y, chunk_count_z, type, properties, position_x, position_y, position_z) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"),
 	deletePlanetChunkQuery(database, "DELETE FROM planet_chunks WHERE planet_id = ? AND position_x = ? AND position_y = ? AND position_z = ?"),
 	getAllPlanetChunksQuery(database, "SELECT position_x, position_y, position_z, version, chunk_data, cache_state FROM planet_chunks WHERE planet_id = ?"),
 	getPlanetChunkQuery(database, "SELECT version, chunk_data, cache_state FROM planet_chunks WHERE planet_id = ? AND position_x = ? AND position_y = ? AND position_z = ?"),
@@ -25,9 +25,7 @@ namespace tsom
 	createPlanetEntityQuery(database, "INSERT INTO planet_entities(unique_id, planet_id, class_name, class_version, position_x, position_y, position_z, rotation_x, rotation_y, rotation_z, rotation_w, properties, connections, last_update) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime()) RETURNING id"),
 	deletePlanetEntityQuery(database, "DELETE FROM planet_entities WHERE id = ?"),
 	getAllPlanetEntitiesQuery(database, "SELECT id, unique_id, class_name, class_version, position_x, position_y, position_z, rotation_x, rotation_y, rotation_z, rotation_w, properties, connections FROM planet_entities WHERE planet_id = ?"),
-	partialUpdatePlanetEntityQuery(database, "UPDATE planet_entities SET class_version = ?, position_x = ?, position_y = ?, position_z = ?, rotation_x = ?, rotation_y = ?, rotation_z = ?, rotation_w = ?, properties = ?, connections = ?, last_update = datetime() WHERE id = ?"),
-	getAllPlanetLinkQuery(database, "SELECT source_planet_id, destination_planet_id, position_x, position_y, position_z FROM planet_links"),
-	storePlanetLinkQuery(database, "REPLACE INTO planet_links(source_planet_id, destination_planet_id, position_x, position_y, position_z) VALUES(?, ?, ?, ?, ?)")
+	partialUpdatePlanetEntityQuery(database, "UPDATE planet_entities SET class_version = ?, position_x = ?, position_y = ?, position_z = ?, rotation_x = ?, rotation_y = ?, rotation_z = ?, rotation_w = ?, properties = ?, connections = ?, last_update = datetime() WHERE id = ?")
 	{
 	}
 
@@ -51,6 +49,9 @@ namespace tsom
 		m_preparedStatements->createPlanetQuery.bind(5, planet.chunkCount.z);
 		m_preparedStatements->createPlanetQuery.bindNoCopy(6, planet.type.data());
 		m_preparedStatements->createPlanetQuery.bindNoCopy(7, propertiesStr.data());
+		m_preparedStatements->createPlanetQuery.bind(8, planet.position.x);
+		m_preparedStatements->createPlanetQuery.bind(9, planet.position.y);
+		m_preparedStatements->createPlanetQuery.bind(10, planet.position.z);
 
 		try
 		{
@@ -135,6 +136,9 @@ namespace tsom
 			planet.chunkCount.z = m_preparedStatements->getAllPlanetQuery.getColumn(4);
 			planet.type = m_preparedStatements->getAllPlanetQuery.getColumn(5).getText();
 			planet.properties = nlohmann::json::parse(m_preparedStatements->getAllPlanetQuery.getColumn(6).getText());
+			planet.position.x = m_preparedStatements->getAllPlanetQuery.getColumn(7);
+			planet.position.y = m_preparedStatements->getAllPlanetQuery.getColumn(8);
+			planet.position.z = m_preparedStatements->getAllPlanetQuery.getColumn(9);
 
 			if (!callback(std::move(planet)))
 				break;
@@ -167,23 +171,6 @@ namespace tsom
 			planetEntity.connections = nlohmann::json::parse(m_preparedStatements->getAllPlanetEntitiesQuery.getColumn(12).getText());
 
 			if (!callback(std::move(planetEntity)))
-				break;
-		}
-	}
-
-	void ServerDatabase::GetAllPlanetLinks(Nz::FunctionRef<bool(Database::PlanetLink&& /*planetLink*/)> callback) const
-	{
-		NAZARA_DEFER({ m_preparedStatements->getAllPlanetLinkQuery.reset(); });
-		while (m_preparedStatements->getAllPlanetLinkQuery.executeStep())
-		{
-			Database::PlanetLink planetLink;
-			planetLink.sourcePlanet = m_preparedStatements->getAllPlanetLinkQuery.getColumn(0);
-			planetLink.destinationPlanet = m_preparedStatements->getAllPlanetLinkQuery.getColumn(1);
-			planetLink.position.x = Nz::SafeCaster(m_preparedStatements->getAllPlanetLinkQuery.getColumn(2).getDouble());
-			planetLink.position.y = Nz::SafeCaster(m_preparedStatements->getAllPlanetLinkQuery.getColumn(3).getDouble());
-			planetLink.position.z = Nz::SafeCaster(m_preparedStatements->getAllPlanetLinkQuery.getColumn(4).getDouble());
-
-			if (!callback(std::move(planetLink)))
 				break;
 		}
 	}
@@ -345,6 +332,9 @@ namespace tsom
 		m_preparedStatements->storePlanetQuery.bind(5, planet.chunkCount.z);
 		m_preparedStatements->storePlanetQuery.bindNoCopy(6, planet.type.data());
 		m_preparedStatements->storePlanetQuery.bindNoCopy(7, propertiesStr.data());
+		m_preparedStatements->storePlanetQuery.bind(8, planet.position.x);
+		m_preparedStatements->storePlanetQuery.bind(9, planet.position.y);
+		m_preparedStatements->storePlanetQuery.bind(10, planet.position.z);
 
 		try
 		{
@@ -389,26 +379,6 @@ namespace tsom
 
 		if (resultCode != SQLITE_DONE)
 			spdlog::error("storePlanetChunkQuery query failed: {} (error code: {})", m_database.getErrorMsg(), resultCode);
-	}
-
-	void ServerDatabase::StorePlanetLink(const Database::PlanetLink& planetLink)
-	{
-		NAZARA_DEFER({ m_preparedStatements->storePlanetLinkQuery.reset(); });
-
-		m_preparedStatements->storePlanetLinkQuery.bind(1, planetLink.sourcePlanet);
-		m_preparedStatements->storePlanetLinkQuery.bind(2, planetLink.destinationPlanet);
-		m_preparedStatements->storePlanetLinkQuery.bind(3, planetLink.position.x);
-		m_preparedStatements->storePlanetLinkQuery.bind(4, planetLink.position.y);
-		m_preparedStatements->storePlanetLinkQuery.bind(5, planetLink.position.z);
-
-		try
-		{
-			m_preparedStatements->storePlanetLinkQuery.exec();
-		}
-		catch (const std::exception& e)
-		{
-			spdlog::error("store planet link failed: {}", e.what());
-		}
 	}
 
 	void ServerDatabase::Transaction(Nz::FunctionRef<bool(ServerDatabase& database)> callback)

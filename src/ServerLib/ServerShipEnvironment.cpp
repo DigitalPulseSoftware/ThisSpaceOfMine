@@ -196,14 +196,14 @@ namespace tsom
 		ship.Generate(small);
 	}
 
-	ChunkContainer& ServerShipEnvironment::GetChunkContainer()
+	ChunkContainer* ServerShipEnvironment::GetChunkContainer()
 	{
-		return GetShip();
+		return &GetShip();
 	}
 
-	const ChunkContainer& ServerShipEnvironment::GetChunkContainer() const
+	const ChunkContainer* ServerShipEnvironment::GetChunkContainer() const
 	{
-		return GetShip();
+		return &GetShip();
 	}
 
 	ServerAtmosphere* ServerShipEnvironment::GetFallbackAtmosphereAtPosition(const Nz::Vector3f& position)

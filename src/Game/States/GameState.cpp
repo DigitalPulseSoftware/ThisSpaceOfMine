@@ -1165,7 +1165,14 @@ namespace tsom
 				{
 					EnvironmentComponent& characterEnv = m_controlledEntity.get<EnvironmentComponent>();
 
-					m_debugOverlay->textDrawer.AppendText(fmt::format("Current environment: #{}\n", characterEnv.environmentIndex));
+					m_debugOverlay->textDrawer.AppendText(fmt::format("Current environment: #{}", characterEnv.environmentIndex));
+
+					Packets::Helper::EnvironmentId parentEnvId = characterEnv.environmentIndex;
+					while ((parentEnvId = stateData.sessionHandler->GetParentEnvironmentId(parentEnvId)) != ClientSessionHandler::InvalidEnvironment)
+						m_debugOverlay->textDrawer.AppendText(fmt::format(" -> #{}", parentEnvId));
+
+					m_debugOverlay->textDrawer.AppendText("\n");
+
 					if (const GravityController* gravityController = stateData.sessionHandler->GetGravityController(characterEnv.environmentIndex))
 					{
 						GravityForce gravityForce = gravityController->ComputeGravity(localPos);
@@ -1219,7 +1226,7 @@ namespace tsom
 		if (m_cameraMode != CameraMode::ThirdpersonRear && !m_pilotedShip)
 		{
 			raycastHit = RaycastQuery();
-			if (auto raycastHit = RaycastQuery())
+			if (raycastHit)
 			{
 				if (auto* chunkComponent = raycastHit->hitEntity.try_get<ChunkComponent>())
 				{

@@ -197,7 +197,7 @@ namespace tsom
 
 		Nz::Vector3f cameraPos = characterController->GetEyePosition();
 
-		ServerEnvironment* environment = m_player->GetRootEnvironment();
+		ServerEnvironment* environment = m_player->GetControlledEntityEnvironment();
 
 		auto& physSystem = environment->GetWorld().GetSystem<Nz::Physics3DSystem>();
 		if (physSystem.RaycastQueryFirst(cameraPos, cameraPos + cameraRot * Nz::Vector3f::Forward() * 10.f, callback, nullptr, &objectFilter))
@@ -395,7 +395,6 @@ namespace tsom
 		if (message == "/respawn")
 		{
 			const auto& spawnpoint = m_player->GetServerInstance().GetDefaultSpawnpoint();
-			m_player->UpdateRootEnvironment(spawnpoint.env);
 			m_player->Respawn(spawnpoint.env, spawnpoint.position, spawnpoint.rotation);
 			return;
 		}
@@ -442,7 +441,6 @@ namespace tsom
 			auto& physSystem = env->GetWorld().GetSystem<Nz::Physics3DSystem>();
 			physSystem.RaycastQueryFirst(spawnPos, planetCenter, callback, nullptr, &objectFilter);
 
-			m_player->UpdateRootEnvironment(env);
 			m_player->Respawn(env, spawnPos, Nz::Quaternionf::Identity());
 		}
 		else if (message.starts_with("/tpplayer ") && m_player->HasPermission(PlayerPermission::Admin))
@@ -513,7 +511,7 @@ namespace tsom
 			ServerInstance& serverInstance = m_player->GetServerInstance();
 
 			ServerEnvironment* currentEnvironment = m_player->GetControlledEntityEnvironment();
-			if (currentEnvironment != m_player->GetRootEnvironment())
+			if (!currentEnvironment->IsRoot())
 			{
 				spdlog::warn("player {} tried to spawn ship but their entity is not part of their root environment", m_player->GetNickname());
 				return;
@@ -592,7 +590,7 @@ namespace tsom
 						shipEnv->GenerateShip(true);
 
 					ServerEnvironment* currentEnvironment = player->GetControlledEntityEnvironment();
-					if (currentEnvironment != player->GetRootEnvironment())
+					if (!currentEnvironment->IsRoot())
 					{
 						spdlog::error("player {} tried to spawn ship but their entity is not part of their root environment (after database request)", player->GetNickname());
 						return;

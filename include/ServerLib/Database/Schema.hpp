@@ -27,6 +27,7 @@ namespace tsom::Database
 		Nz::UInt32 id;
 		std::string_view generatorName;
 		std::string_view type = "round_cube";
+		Nz::Vector3d position = Nz::Vector3d::Zero();
 		Nz::Vector3ui32 chunkCount;
 		nlohmann::json properties = nlohmann::json::object();
 	};
@@ -65,13 +66,6 @@ namespace tsom::Database
 		Nz::Vector3i32 chunkIndices;
 		Nz::UInt32 chunkDataVersion;
 		std::span<const Nz::UInt8> chunkData;
-	};
-
-	struct PlanetLink
-	{
-		Nz::UInt32 sourcePlanet;
-		Nz::UInt32 destinationPlanet;
-		Nz::Vector3f position;
 	};
 }
 
