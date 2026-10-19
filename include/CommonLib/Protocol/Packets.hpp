@@ -338,9 +338,19 @@ namespace tsom
 
 		struct S_EnvironmentCreate
 		{
+			struct ChildEnvironment
+			{
+				Helper::EntityId ownerEntity;
+			};
+
+			struct RootEnvironment
+			{
+				Nz::Vector3i32 indices;
+			};
+
 			Nz::UInt16 tickIndex;
 			Helper::EnvironmentId id;
-			Helper::EntityId ownerEntity;
+			std::variant<ChildEnvironment, RootEnvironment> environmentData;
 			std::vector<Helper::EntityData> entities;
 		};
 

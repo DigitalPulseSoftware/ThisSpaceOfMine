@@ -17,6 +17,7 @@
 #include <ServerLib/ServerInstance.hpp>
 #include <ServerLib/ServerPlanetEnvironment.hpp>
 #include <ServerLib/ServerShipEnvironment.hpp>
+#include <ServerLib/ServerSpaceEnvironment.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
 #include <ServerLib/Components/ServerPlayerControlledComponent.hpp>
 #include <ServerLib/Scripting/ServerEntityScriptingLibrary.hpp>
@@ -89,7 +90,6 @@ namespace tsom
 	m_respawnTimer(Nz::Time::Zero()),
 	m_inputQueueAdvancement(0),
 	m_session(session),
-	m_rootEnvironment(nullptr),
 	m_visibilityHandler(m_session),
 	m_serverInstance(instance),
 	m_playerIndex(playerIndex),
@@ -106,14 +106,25 @@ namespace tsom
 			environment->UnregisterPlayer(this);
 	}
 
-	void ServerPlayer::AddToEnvironment(ServerEnvironment* environment, entt::handle environmentOwner)
+	void ServerPlayer::AddToChildEnvironment(ServerEnvironment* environment, entt::handle environmentOwner)
 	{
-		assert(m_rootEnvironment);
 		assert(!IsInEnvironment(environment));
 		m_registeredEnvironments.push_back(environment);
 
-		bool shouldCreateEntities = m_visibilityHandler.CreateEnvironment(*environment, environmentOwner);
+		bool shouldCreateEntities = m_visibilityHandler.CreateChildEnvironment(*environment, environmentOwner);
 		environment->RegisterPlayer(this, shouldCreateEntities);
+	}
+
+	void ServerPlayer::AddToRootEnvironment(ServerEnvironment* environment, const Nz::Vector3i32& coordinates)
+	{
+		assert(!IsInEnvironment(environment));
+		m_registeredEnvironments.push_back(environment);
+
+		bool shouldCreateEntities = m_visibilityHandler.CreateRootEnvironment(*environment, coordinates);
+		environment->RegisterPlayer(this, shouldCreateEntities);
+
+		auto& envProxySystem = environment->GetWorld().GetSystem<EnvironmentProxySystem>();
+		envProxySystem.AddEnvironmentRecursively(this);
 	}
 
 	void ServerPlayer::ClearEnvironments()
@@ -257,6 +268,14 @@ namespace tsom
 		if (m_controlledEntity)
 			m_controlledEntity->destroy();
 
+		// Make environments visible
+		ClearEnvironments();
+		m_serverInstance.ForEachSpaceCell([&](const Nz::Vector3i32& coordinates, ServerSpaceEnvironment* spaceEnvironment)
+		{
+			AddToRootEnvironment(spaceEnvironment, coordinates);
+		});
+
+		// Create player entity
 		std::shared_ptr<const EntityClass> playerClass = m_serverInstance.GetEntityRegistry().FindClass("player");
 		NazaraAssert(playerClass);
 
@@ -298,7 +317,6 @@ namespace tsom
 				if (m_respawnTimer <= Nz::Time::Zero())
 				{
 					const auto& spawnpoint = m_serverInstance.GetDefaultSpawnpoint();
-					UpdateRootEnvironment(spawnpoint.env);
 					Respawn(spawnpoint.env, spawnpoint.position, spawnpoint.rotation);
 				}
 			}
@@ -356,21 +374,6 @@ namespace tsom
 	void ServerPlayer::Ungrab()
 	{
 		m_grabConstraint.Reset();
-	}
-
-	void ServerPlayer::UpdateRootEnvironment(ServerEnvironment* environment)
-	{
-		assert(environment);
-		if (m_rootEnvironment == environment)
-			return;
-
-		ClearEnvironments();
-		m_rootEnvironment = environment;
-
-		AddToEnvironment(environment, entt::handle{});
-
-		auto& envProxySystem = m_rootEnvironment->GetWorld().GetSystem<EnvironmentProxySystem>();
-		envProxySystem.AddEnvironmentRecursively(this);
 	}
 
 	void ServerPlayer::UpdateNickname(std::string nickname)

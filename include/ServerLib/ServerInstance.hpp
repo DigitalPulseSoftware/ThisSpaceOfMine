@@ -35,6 +35,7 @@ namespace tsom
 {
 	class ServerPlanetEnvironment;
 	class ServerShipEnvironment;
+	class ServerSpaceEnvironment;
 
 	class TSOM_SERVERLIB_API ServerInstance
 	{
@@ -66,9 +67,12 @@ namespace tsom
 			template<typename F> void ForEachPlayer(F&& functor);
 			template<typename F> void ForEachPlayer(F&& functor) const;
 
+			template<typename F> void ForEachSpaceCell(F&& functor);
+
 			inline Nz::ApplicationBase& GetApplication();
 			inline const BlockLibrary& GetBlockLibrary() const;
 			inline const Config& GetConfig() const;
+			ServerEnvironment* GetOrCreateSpaceEnvironment(const Nz::Vector3i32& coordinates);
 			inline const Spawnpoint& GetDefaultSpawnpoint() const;
 			inline EntityRegistry& GetEntityRegistry();
 			inline const EntityRegistry& GetEntityRegistry() const;
@@ -78,7 +82,6 @@ namespace tsom
 			inline Nz::Time GetTickDuration() const;
 			inline Nz::TimerManager& GetTickedTimerManager();
 
-			void LinkDatabaseEnvironments(Nz::UInt32 sourceDatabaseId, Nz::UInt32 destinationDatabaseId, const Nz::Vector3f& position);
 			void LoadFromDatabase();
 			void LoadScripts(bool isReloading = false);
 
@@ -133,6 +136,7 @@ namespace tsom
 			std::vector<std::function<void()>> m_scheduledTickFunctions;
 			std::vector<std::function<void()>> m_nextScheduledTickFunctions;
 			tsl::hopscotch_map<Nz::UInt32 /*databaseId*/, std::unique_ptr<ServerEnvironment>> m_databaseEnvironments;
+			tsl::hopscotch_map<Nz::Vector3i32 /*coordinates*/, std::unique_ptr<ServerSpaceEnvironment>> m_spaceCellEnvironments;
 			Nz::Bitset<> m_disconnectedPlayers;
 			Nz::Bitset<> m_newPlayers;
 			Nz::MemoryPool<ServerPlayer> m_players;

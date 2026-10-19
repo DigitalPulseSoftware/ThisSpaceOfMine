@@ -19,16 +19,6 @@ namespace tsom
 		return m_controlledEntity;
 	}
 
-	inline ServerEnvironment* ServerPlayer::GetRootEnvironment()
-	{
-		return m_rootEnvironment;
-	}
-
-	inline const ServerEnvironment* ServerPlayer::GetRootEnvironment() const
-	{
-		return m_rootEnvironment;
-	}
-
 	inline const std::string& ServerPlayer::GetNickname() const
 	{
 		return m_nickname;

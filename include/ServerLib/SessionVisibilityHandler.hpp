@@ -38,9 +38,10 @@ namespace tsom
 			SessionVisibilityHandler(SessionVisibilityHandler&&) = delete;
 			~SessionVisibilityHandler() = default;
 
+			bool CreateChildEnvironment(ServerEnvironment& environment, entt::handle environmentOwner);
 			bool CreateChunk(entt::handle entity, Chunk& chunk);
 			void CreateEntity(entt::handle entity, CreateEntityData entityData);
-			bool CreateEnvironment(ServerEnvironment& environment, entt::handle environmentOwner = {});
+			bool CreateRootEnvironment(ServerEnvironment& environment, const Nz::Vector3i32& environmentIndices);
 
 			void DestroyChunk(entt::handle entity, Chunk& chunk);
 			void DestroyEntity(entt::handle entity);
@@ -149,20 +150,30 @@ namespace tsom
 				Nz::HybridVector<EntityProperty, 3> values;
 			};
 
+			struct ChildEnvironmentData
+			{
+				entt::handle owner;
+			};
+
+			struct RootEnvironmentData
+			{
+				Nz::Vector3i32 indices;
+			};
+
 			struct EnvironmentData
 			{
 				ServerEnvironment* environment = nullptr;
-				entt::handle owner;
 				Nz::Bitset<Nz::UInt64> entities;
 				bool isVisible = false;
+				std::variant<std::monostate, ChildEnvironmentData, RootEnvironmentData> envData; //< TODO: Rename
 			};
 
 			struct EnvironmentCreationData
 			{
 				ServerEnvironment* environment;
-				entt::handle owner;
 				tsl::hopscotch_map<entt::handle, CreateEntityData, HandlerHasher> createdEntities;
 				EnvironmentId environmentId;
+				std::variant<std::monostate, ChildEnvironmentData, RootEnvironmentData> envData; //< TODO: Rename
 			};
 
 			struct EnvironmentOwnerUpdate

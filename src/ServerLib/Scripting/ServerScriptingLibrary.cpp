@@ -155,6 +155,10 @@ namespace tsom
 			}),
 
 			"GetAtmosphereAtPosition", LuaFunction(&ServerEnvironment::GetAtmosphereAtPosition),
+			"GetChunkContainer", LuaFunction([](ServerEnvironment* environment)
+			{
+				return environment->GetChunkContainer();
+			}),
 			"GetDebugDrawInterface", LuaFunction(&ServerEnvironment::GetDebugDrawInterface),
 			"GetPhysWorld", LuaFunction([](ServerEnvironment* environment)
 			{
@@ -167,19 +171,17 @@ namespace tsom
 
 		state.new_usertype<ServerPlanetEnvironment>("PlanetEnvironment",
 			sol::base_classes, sol::bases<ServerEnvironment>(),
-			sol::meta_function::construct, sol::factories([this](std::optional<Nz::UInt32> databaseId, std::string generatorName, const Nz::Vector3ui& chunkCount, const std::string& type)
+			/*sol::meta_function::construct, sol::factories([this](std::optional<Nz::UInt32> databaseId, std::string generatorName, const Nz::Vector3ui& chunkCount, const std::string& type)
 			{
 				// TODO: Build properties from Lua table
 				return std::make_unique<ServerPlanetEnvironment>(m_serverInstance, databaseId, std::move(generatorName), chunkCount, type, std::vector<EntityProperty>{});
-			}),
-			"GetDatabaseId", LuaFunction(&ServerPlanetEnvironment::GetDatabaseId),
-			"GetChunkContainer", LuaFunction([](ServerPlanetEnvironment& env) -> ChunkContainer* { return &env.GetPlanet(); })
+			}),*/
+			"GetDatabaseId", LuaFunction(&ServerPlanetEnvironment::GetDatabaseId)
 		);
 
 		state.new_usertype<ServerShipEnvironment>("ShipEnvironment",
 			sol::no_constructor,
 			sol::base_classes, sol::bases<ServerEnvironment>(),
-			"GetChunkContainer", LuaFunction([](ServerShipEnvironment& env) -> ChunkContainer* { return &env.GetShip(); }),
 			"GetExteriorShipEntity", LuaFunction([this](sol::this_state L, ServerShipEnvironment& shipEnvironment)
 			{
 				sol::state_view stateView(L);
@@ -218,10 +220,6 @@ namespace tsom
 			}),
 			"GetName", LuaFunction(&ServerPlayer::GetNickname),
 			"GetPlayerIndex", LuaFunction(&ServerPlayer::GetPlayerIndex),
-			"GetRootEnvironment", LuaFunction([](ServerPlayer& player)
-			{
-				return player.GetRootEnvironment();
-			}),
 			"GetUuid", LuaFunction([](ServerPlayer& player, sol::this_state L) -> sol::object
 			{
 				auto uuidOpt = player.GetUuid();
@@ -303,10 +301,6 @@ namespace tsom
 
 				return players;
 			}),
-			"LinkDatabaseEnvironments", LuaFunction([this](Nz::UInt32 sourceDatabaseId, Nz::UInt32 destinationDatabaseId, const Nz::Vector3f& position)
-			{
-				m_serverInstance.LinkDatabaseEnvironments(sourceDatabaseId, destinationDatabaseId, position);
-			}),
 			"RegisterDatabaseEnvironment", LuaFunction([this](Nz::UInt32 databaseId, std::unique_ptr<ServerPlanetEnvironment>& environment) //< Since we have to take the unique_ptr by reference we can't take the base type
 			{
 				m_serverInstance.RegisterDatabaseEnvironment(databaseId, std::move(environment));
@@ -351,15 +345,6 @@ namespace tsom
 				}*/
 
 				return m_serverInstance.GetThreadServerDatabase().CreatePlanet(planet);
-			}),
-			"StorePlanetLink", LuaFunction([this](sol::stack_table table)
-			{
-				Database::PlanetLink planetLink;
-				planetLink.sourcePlanet = table["sourcePlanet"];
-				planetLink.destinationPlanet = table["destinationPlanet"];
-				planetLink.position = table["position"];
-
-				return m_serverInstance.GetThreadServerDatabase().StorePlanetLink(planetLink);
 			})
 		);
 	}

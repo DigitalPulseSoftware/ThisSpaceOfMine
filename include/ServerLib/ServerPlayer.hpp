@@ -40,7 +40,8 @@ namespace tsom
 			ServerPlayer(ServerPlayer&&) = delete;
 			~ServerPlayer();
 
-			void AddToEnvironment(ServerEnvironment* environment, entt::handle environmentOwner);
+			void AddToChildEnvironment(ServerEnvironment* environment, entt::handle environmentOwner);
+			void AddToRootEnvironment(ServerEnvironment* environment, const Nz::Vector3i32& coordinates);
 
 			void ClearEnvironments();
 
@@ -56,8 +57,6 @@ namespace tsom
 			ServerEnvironment* GetControlledEntityEnvironment();
 			const ServerEnvironment* GetControlledEntityEnvironment() const;
 			EntityReference GetControlledShipEntityReference() const;
-			inline ServerEnvironment* GetRootEnvironment();
-			inline const ServerEnvironment* GetRootEnvironment() const;
 			inline const std::string& GetNickname() const;
 			inline PlayerPermissionFlags GetPermissions() const;
 			inline PlayerIndex GetPlayerIndex() const;
@@ -98,7 +97,6 @@ namespace tsom
 			void Ungrab();
 
 			void UpdateNickname(std::string nickname);
-			void UpdateRootEnvironment(ServerEnvironment* environment);
 
 			ServerPlayer& operator=(const ServerPlayer&) = delete;
 			ServerPlayer& operator=(ServerPlayer&&) = delete;
@@ -118,7 +116,6 @@ namespace tsom
 			Nz::Time m_respawnTimer;
 			Nz::UInt32 m_inputQueueAdvancement;
 			NetworkSession* m_session;
-			ServerEnvironment* m_rootEnvironment;
 			SessionVisibilityHandler m_visibilityHandler;
 			ServerInstance& m_serverInstance;
 			EntityReference m_controlledEntity;

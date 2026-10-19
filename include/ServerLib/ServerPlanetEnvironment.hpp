@@ -29,7 +29,7 @@ namespace tsom
 	class TSOM_SERVERLIB_API ServerPlanetEnvironment final : public ServerEnvironment
 	{
 		public:
-			ServerPlanetEnvironment(ServerInstance& serverInstance, std::optional<Nz::UInt32> databaseId, std::string generatorName, const Nz::Vector3ui& chunkCount, std::string_view planetType, std::vector<EntityProperty>&& properties);
+			ServerPlanetEnvironment(ServerInstance& serverInstance, std::optional<Nz::UInt32> databaseId, std::string generatorName, const Nz::Vector3d& position, const Nz::Vector3ui& chunkCount, std::string_view planetType, std::vector<EntityProperty>&& properties);
 			ServerPlanetEnvironment(const ServerPlanetEnvironment&) = delete;
 			ServerPlanetEnvironment(ServerPlanetEnvironment&&) = delete;
 			~ServerPlanetEnvironment();
@@ -41,15 +41,17 @@ namespace tsom
 			void ForEachAtmosphere(Nz::FunctionRef<void(ServerAtmosphere*)> callback) override;
 			void ForEachAtmosphere(Nz::FunctionRef<void(const ServerAtmosphere*)> callback) const override;
 
-			ChunkContainer& GetChunkContainer() override;
-			const ChunkContainer& GetChunkContainer() const override;
+			ChunkContainer* GetChunkContainer() override;
+			const ChunkContainer* GetChunkContainer() const override;
 			inline std::optional<Nz::UInt32> GetDatabaseId() const;
 			const GravityController* GetGravityController() const override;
 			Planet& GetPlanet();
 			const Planet& GetPlanet() const;
 			inline entt::handle GetPlanetEntity() const;
+			inline const Nz::Vector3d& GetPlanetPosition() const;
 
 			void OnSave() override;
+			void OnTick(Nz::Time elapsedTime) override;
 
 			void Update() override;
 
@@ -60,6 +62,8 @@ namespace tsom
 			ServerAtmosphere* GetFallbackAtmosphereAtPosition(const Nz::Vector3f& position) override;
 			void LoadChunksFromDatabase();
 			void LoadEntitiesFromDatabase();
+			void UpdateChunkLoading();
+			void UpdateEnvironmentSwitch();
 
 			struct ChunkLoadingData
 			{
@@ -83,6 +87,7 @@ namespace tsom
 			std::unordered_set<ChunkIndices /*chunkIndex*/> m_dirtyChunks;
 			std::unordered_map<std::string, EntityProperty> m_planetProperties;
 			entt::handle m_planetEntity;
+			Nz::Vector3d m_planetPosition;
 			Nz::Vector3ui m_chunkCount;
 	};
 }

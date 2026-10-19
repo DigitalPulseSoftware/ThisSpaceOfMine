@@ -146,9 +146,6 @@ namespace tsom
 			newEntity.emplace<ServerPlayerControlledComponent>(player->CreateHandle());
 
 			newEntity.get<ClassInstanceComponent>().GetClass()->ActivateEntity(newEntity);
-
-			if (newEnvironment->IsRoot())
-				player->UpdateRootEnvironment(newEnvironment);
 		};
 	}
 
@@ -212,19 +209,6 @@ namespace tsom
 			newEntity.get<ClassInstanceComponent>().GetClass()->ActivateEntity(newEntity);
 
 			shipEnvironment->UpdateExterior(newEnvironment, newEntity);
-
-			// Change the root environment of players in the ship as well
-			if (newEnvironment->IsRoot())
-			{
-				entt::registry& registry = shipEnvironment->GetWorld().GetRegistry();
-				auto playerView = registry.view<ServerPlayerControlledComponent>();
-				for (entt::entity entity : playerView)
-				{
-					ServerPlayer* player = playerView.get<ServerPlayerControlledComponent>(entity).GetPlayer();
-					if (player)
-						player->UpdateRootEnvironment(newEnvironment);
-				}
-			}
 		};
 	}
 }

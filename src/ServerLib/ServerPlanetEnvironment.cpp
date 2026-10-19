@@ -11,9 +11,12 @@
 #include <CommonLib/Systems/BuoyancySystem.hpp>
 #include <CommonLib/Systems/GravityPhysicsSystem.hpp>
 #include <CommonLib/Systems/PlanetSystem.hpp>
+#include <CommonLib/Utility/SpaceTransformations.hpp>
 #include <ServerLib/ServerInstance.hpp>
+#include <ServerLib/ServerSpaceEnvironment.hpp>
 #include <ServerLib/Components/DatabaseComponent.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
+#include <ServerLib/Components/ServerEnvironmentSwitchComponent.hpp>
 #include <ServerLib/Systems/EnvironmentSwitchSystem.hpp>
 #include <ServerLib/Systems/PlanetDatabaseSystem.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
@@ -70,10 +73,11 @@ namespace tsom
 {
 	constexpr unsigned int s_chunkVersion = 1;
 
-	ServerPlanetEnvironment::ServerPlanetEnvironment(ServerInstance& serverInstance, std::optional<Nz::UInt32> databaseId, std::string generatorName, const Nz::Vector3ui& chunkCount, std::string_view planetType, std::vector<EntityProperty>&& properties) :
+	ServerPlanetEnvironment::ServerPlanetEnvironment(ServerInstance& serverInstance, std::optional<Nz::UInt32> databaseId, std::string generatorName, const Nz::Vector3d& position, const Nz::Vector3ui& chunkCount, std::string_view planetType, std::vector<EntityProperty>&& properties) :
 	ServerEnvironment(serverInstance, ServerEnvironmentType::Planet, true),
 	m_databaseId(databaseId),
 	m_generatorName(std::move(generatorName)),
+	m_planetPosition(position),
 	m_chunkCount(chunkCount)
 	{
 		// Compute generator hash
@@ -197,14 +201,14 @@ namespace tsom
 		callback(&m_atmosphere);
 	}
 
-	ChunkContainer& ServerPlanetEnvironment::GetChunkContainer()
+	ChunkContainer* ServerPlanetEnvironment::GetChunkContainer()
 	{
-		return GetPlanet();
+		return &GetPlanet();
 	}
 
-	const ChunkContainer& ServerPlanetEnvironment::GetChunkContainer() const
+	const ChunkContainer* ServerPlanetEnvironment::GetChunkContainer() const
 	{
-		return GetPlanet();
+		return &GetPlanet();
 	}
 
 	const GravityController* ServerPlanetEnvironment::GetGravityController() const
@@ -286,7 +290,19 @@ namespace tsom
 			databaseSystem->Save();
 	}
 
+	void ServerPlanetEnvironment::OnTick(Nz::Time elapsedTime)
+	{
+		ServerEnvironment::OnTick(elapsedTime);
+
+		UpdateEnvironmentSwitch();
+	}
+
 	void ServerPlanetEnvironment::Update()
+	{
+		UpdateChunkLoading();
+	}
+
+	void ServerPlanetEnvironment::UpdateChunkLoading()
 	{
 		std::unique_lock lock(m_chunkLoadingData->mutex);
 
@@ -364,6 +380,33 @@ namespace tsom
 			m_dirtyChunks = std::move(m_chunkLoadingData->generatedChunks);
 
 		m_chunkLoadingData->generatedChunks.clear();
+	}
+
+	void ServerPlanetEnvironment::UpdateEnvironmentSwitch()
+	{
+		Planet& planet = GetPlanet();
+		Nz::Vector3f planetCenter = planet.GetCenter();
+
+		constexpr float SpaceDistance = 500.0f;
+		constexpr float SpaceDistanceSq = SpaceDistance * SpaceDistance;
+
+		entt::registry& registry = m_world->GetRegistry();
+		auto switchView = registry.view<Nz::NodeComponent, ClassInstanceComponent, ServerEnvironmentSwitchComponent>();
+		for (entt::entity entity : switchView)
+		{
+			auto& entityNode = switchView.get<Nz::NodeComponent>(entity);
+
+			Nz::Vector3f entityPosition = entityNode.GetGlobalPosition();
+			if (entityPosition.SquaredDistance(planetCenter) < SpaceDistanceSq)
+				continue;
+
+			auto [cellCoordinates, localPos] = SpaceTransformations::ToLocalCoordinates(m_planetPosition/* + Nz::Vector3d(entityPosition)*/);
+
+			ServerEnvironment* spaceEnvironment = m_serverInstance.GetOrCreateSpaceEnvironment(cellCoordinates);
+
+			auto& envSwitch = switchView.get<ServerEnvironmentSwitchComponent>(entity);
+			envSwitch.Switch(entt::handle(registry, entity), this, spaceEnvironment, EnvironmentTransform(localPos, Nz::Quaternionf::Identity()));
+		}
 	}
 
 	ServerAtmosphere* ServerPlanetEnvironment::GetFallbackAtmosphereAtPosition(const Nz::Vector3f& position)

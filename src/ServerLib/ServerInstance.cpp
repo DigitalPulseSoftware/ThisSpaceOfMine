@@ -4,6 +4,7 @@
 
 #include <ServerLib/ServerInstance.hpp>
 #include <CommonLib/InternalConstants.hpp>
+#include <CommonLib/Utility/SpaceTransformations.hpp>
 #include <CommonLib/Entities/ChunkClassLibrary.hpp>
 #include <CommonLib/Scripting/BaseScriptingLibrary.hpp>
 #include <CommonLib/Scripting/ChunkScriptingLibrary.hpp>
@@ -11,6 +12,7 @@
 #include <CommonLib/Scripting/SharedScriptingLibrary.hpp>
 #include <ServerLib/ServerConfig.hpp>
 #include <ServerLib/ServerPlanetEnvironment.hpp>
+#include <ServerLib/ServerSpaceEnvironment.hpp>
 #include <ServerLib/Components/EnvironmentEnterTriggerComponent.hpp>
 #include <ServerLib/Components/EnvironmentProxyComponent.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
@@ -104,7 +106,6 @@ namespace tsom
 		ServerPlayer* player = m_players.Allocate(m_players.DeferConstruct, playerIndex);
 		std::construct_at(player, *this, Nz::SafeCast<PlayerIndex>(playerIndex), session, std::nullopt, std::move(nickname), 0);
 
-		player->UpdateRootEnvironment(m_defaultSpawnpoint.env);
 		player->Respawn(m_defaultSpawnpoint.env, m_defaultSpawnpoint.position, m_defaultSpawnpoint.rotation);
 
 		m_newPlayers.UnboundedSet(playerIndex);
@@ -147,7 +148,6 @@ namespace tsom
 		ServerPlayer* player = m_players.Allocate(m_players.DeferConstruct, playerIndex);
 		std::construct_at(player, *this, Nz::SafeCast<PlayerIndex>(playerIndex), session, uuid, std::move(nickname), permissions);
 
-		player->UpdateRootEnvironment(m_defaultSpawnpoint.env);
 		player->Respawn(m_defaultSpawnpoint.env, m_defaultSpawnpoint.position, m_defaultSpawnpoint.rotation);
 
 		m_newPlayers.UnboundedSet(playerIndex);
@@ -165,34 +165,20 @@ namespace tsom
 		m_players.Free(playerIndex);
 	}
 
-	void ServerInstance::LinkDatabaseEnvironments(Nz::UInt32 sourceDatabaseId, Nz::UInt32 destinationDatabaseId, const Nz::Vector3f& position)
+	ServerEnvironment* ServerInstance::GetOrCreateSpaceEnvironment(const Nz::Vector3i32& coordinates)
 	{
-		auto sourceIt = m_databaseEnvironments.find(sourceDatabaseId);
-		if (sourceIt == m_databaseEnvironments.end())
+		if (auto it = m_spaceCellEnvironments.find(coordinates); it != m_spaceCellEnvironments.end())
+			return it->second.get();
+
+		auto p = m_spaceCellEnvironments.emplace(coordinates, std::make_unique<ServerSpaceEnvironment>(*this, coordinates));
+		ServerSpaceEnvironment* environment = p.first->second.get();
+
+		ForEachPlayer([&](ServerPlayer& player)
 		{
-			spdlog::error("LinkDatabaseEnvironments: unknown source database id {}", sourceDatabaseId);
-			return;
-		}
+			player.AddToRootEnvironment(environment, coordinates);
+		});
 
-		auto destinationIt = m_databaseEnvironments.find(destinationDatabaseId);
-		if (destinationIt == m_databaseEnvironments.end())
-		{
-			spdlog::error("LinkDatabaseEnvironments: unknown destination database id {}", destinationDatabaseId);
-			return;
-		}
-
-		ServerEnvironment& sourceEnvironment = *sourceIt->second;
-		ServerEnvironment& destinationEnvironment = *destinationIt->second;
-
-		entt::handle switchTriggerEntity = sourceEnvironment.CreateEntity();
-		switchTriggerEntity.emplace<Nz::NodeComponent>(position);
-		switchTriggerEntity.emplace<EnvironmentProxyComponent>().targetEnvironment = &destinationEnvironment;
-		switchTriggerEntity.emplace<NetworkedComponent>();
-
-		auto& enterTrigger = switchTriggerEntity.emplace<EnvironmentEnterTriggerComponent>();
-		enterTrigger.aabb = destinationEnvironment.ComputeBoundingBox().ScaleAroundCenter(2.f);
-		enterTrigger.targetEnvironment = &destinationEnvironment;
-		enterTrigger.updateRoot = true;
+		return environment;
 	}
 
 	void ServerInstance::LoadFromDatabase()
@@ -204,12 +190,6 @@ namespace tsom
 		serverDatabase.GetAllPlanets([&](Database::Planet&& planetData)
 		{
 			LoadPlanetFromDatabase(std::move(planetData));
-			return true;
-		});
-
-		serverDatabase.GetAllPlanetLinks([&](Database::PlanetLink&& planetLink)
-		{
-			LinkDatabaseEnvironments(planetLink.sourcePlanet, planetLink.destinationPlanet, planetLink.position);
 			return true;
 		});
 
@@ -307,7 +287,28 @@ namespace tsom
 		}
 
 		std::vector<EntityProperty> properties = planetClass->PropertiesFromJson(planetData.properties);
-		RegisterDatabaseEnvironment(planetData.id, std::make_unique<ServerPlanetEnvironment>(*this, planetData.id, std::string(planetData.generatorName), planetData.chunkCount, planetData.type, std::move(properties)));
+
+		auto planetEnvironment = std::make_unique<ServerPlanetEnvironment>(*this, planetData.id, std::string(planetData.generatorName), planetData.position, planetData.chunkCount, planetData.type, std::move(properties));
+		auto [cellCoordinates, localCoordinates] = SpaceTransformations::ToLocalCoordinates(planetData.position);
+
+		ServerEnvironment* spaceEnvironment = GetOrCreateSpaceEnvironment(cellCoordinates);
+
+		entt::handle spaceToPlanetProxy = spaceEnvironment->CreateEntity();
+		spaceToPlanetProxy.emplace<Nz::NodeComponent>(localCoordinates);
+		spaceToPlanetProxy.emplace<EnvironmentProxyComponent>().targetEnvironment = planetEnvironment.get();
+		spaceToPlanetProxy.emplace<NetworkedComponent>();
+
+		auto& enterTrigger = spaceToPlanetProxy.emplace<EnvironmentEnterTriggerComponent>();
+		enterTrigger.aabb = planetEnvironment->ComputeBoundingBox().ScaleAroundCenter(2.f);
+		enterTrigger.targetEnvironment = planetEnvironment.get();
+
+		entt::handle planetToSpaceProxy = planetEnvironment->CreateEntity();
+		planetToSpaceProxy.emplace<Nz::NodeComponent>(-localCoordinates);
+		planetToSpaceProxy.emplace<EnvironmentProxyComponent>().targetEnvironment = spaceEnvironment;
+		planetToSpaceProxy.emplace<NetworkedComponent>();
+
+
+		RegisterDatabaseEnvironment(planetData.id, std::move(planetEnvironment));
 	}
 
 	void ServerInstance::HandleNetworkEvents()

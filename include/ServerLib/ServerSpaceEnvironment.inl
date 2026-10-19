@@ -4,4 +4,8 @@
 
 namespace tsom
 {
+	inline const Nz::Vector3i32& ServerSpaceEnvironment::GetCoordinates() const
+	{
+		return m_coordinates;
+	}
 }

@@ -414,7 +414,18 @@ namespace tsom
 		{
 			serializer &= data.tickIndex;
 			serializer &= data.id;
-			serializer &= data.ownerEntity;
+
+			serializer.Serialize(data.environmentData, Nz::Overloaded
+			{
+				[&](S_EnvironmentCreate::ChildEnvironment& childEnvironment)
+				{
+					serializer &= childEnvironment.ownerEntity;
+				},
+				[&](S_EnvironmentCreate::RootEnvironment& rootEnvironment)
+				{
+					serializer &= rootEnvironment.indices;
+				}
+			});
 
 			serializer.SerializeArraySize(data.entities);
 			for (auto& entity : data.entities)

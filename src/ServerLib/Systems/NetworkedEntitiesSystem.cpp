@@ -67,7 +67,7 @@ namespace tsom
 			for (auto&& [entity, entityData] : m_networkedEntities.each())
 			{
 				// Don't send pending entities as they will be sent to each player next tick
-				if (m_pendingCreatedEntities.find(entity) != m_pendingCreatedEntities.end())
+				if (m_pendingCreatedEntities.contains(entity))
 					continue;
 
 				entt::handle entityHandle(m_registry, entity);
