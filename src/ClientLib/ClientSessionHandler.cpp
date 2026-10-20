@@ -722,7 +722,13 @@ namespace tsom
 			spdlog::error("unknown entity class {}", entityClassName);
 
 		if (entityData.playerControlled)
+		{
 			SetupEntity(entity, std::move(entityData.playerControlled.value()));
+
+			// Ensure our root environment is the one containing this entity
+			if (entityData.playerControlled->controllingPlayerId == m_ownPlayerIndex)
+				HandleControlledEntityEnvironmentSwitch(entityData.environmentId);
+		}
 
 		// TEMP
 		if (PlanetComponent* planetComponent = entity.try_get<PlanetComponent>())
