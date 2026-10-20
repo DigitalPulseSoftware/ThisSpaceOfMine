@@ -1044,6 +1044,16 @@ namespace tsom
 
 		auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
 
+		/*if (std::size_t environmentId = stateData.sessionHandler->GetRootEnvironmentId(); environmentId != ClientSessionHandler::InvalidEnvironment)
+		{
+			constexpr float HalfCellSize = Constants::SpaceCellSize * 0.5f;
+
+			Nz::Boxf aabb(-HalfCellSize, -HalfCellSize, -HalfCellSize, Constants::SpaceCellSize, Constants::SpaceCellSize, Constants::SpaceCellSize);
+			aabb.Translate(stateData.sessionHandler->GetEnvironmentNode(environmentId)->GetGlobalPosition());
+
+			debugDrawer->DrawBox(aabb, Nz::Color::Magenta());
+		}*/
+
 #if 0
 		if (Chunk* chunk = m_planet->GetChunkByPosition(cameraNode.GetPosition()))
 		{
