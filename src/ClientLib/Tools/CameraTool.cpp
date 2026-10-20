@@ -75,6 +75,7 @@ namespace tsom
 	{
 		auto& config = m_gameInterface.GetConfig();
 		float mouseSensitivity = config.GetFloatValue<float>(Config::Input_MouseSensitivity);
+		mouseSensitivity *= m_cameraFOV.value / Constants::DefaultCameraFOV.value;
 
 		m_cameraRotation.pitch -= deltaY * mouseSensitivity;
 		m_cameraRotation.yaw -= deltaX * mouseSensitivity;
