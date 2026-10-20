@@ -268,13 +268,6 @@ namespace tsom
 		if (m_controlledEntity)
 			m_controlledEntity->destroy();
 
-		// Make environments visible
-		ClearEnvironments();
-		m_serverInstance.ForEachSpaceCell([&](const Nz::Vector3i32& coordinates, ServerSpaceEnvironment* spaceEnvironment)
-		{
-			AddToRootEnvironment(spaceEnvironment, coordinates);
-		});
-
 		// Create player entity
 		std::shared_ptr<const EntityClass> playerClass = m_serverInstance.GetEntityRegistry().FindClass("player");
 		NazaraAssert(playerClass);

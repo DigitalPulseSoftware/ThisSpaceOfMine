@@ -105,6 +105,11 @@ namespace tsom
 		// defer construct so player can be constructed with their index
 		ServerPlayer* player = m_players.Allocate(m_players.DeferConstruct, playerIndex);
 		std::construct_at(player, *this, Nz::SafeCast<PlayerIndex>(playerIndex), session, std::nullopt, std::move(nickname), 0);
+		
+		ForEachSpaceCell([&](const Nz::Vector3i32& coordinates, ServerSpaceEnvironment* spaceEnvironment)
+		{
+			player->AddToRootEnvironment(spaceEnvironment, coordinates);
+		});
 
 		player->Respawn(m_defaultSpawnpoint.env, m_defaultSpawnpoint.position, m_defaultSpawnpoint.rotation);
 
@@ -147,6 +152,11 @@ namespace tsom
 		// defer construct so player can be constructed with their index
 		ServerPlayer* player = m_players.Allocate(m_players.DeferConstruct, playerIndex);
 		std::construct_at(player, *this, Nz::SafeCast<PlayerIndex>(playerIndex), session, uuid, std::move(nickname), permissions);
+		
+		ForEachSpaceCell([&](const Nz::Vector3i32& coordinates, ServerSpaceEnvironment* spaceEnvironment)
+		{
+			player->AddToRootEnvironment(spaceEnvironment, coordinates);
+		});
 
 		player->Respawn(m_defaultSpawnpoint.env, m_defaultSpawnpoint.position, m_defaultSpawnpoint.rotation);
 
