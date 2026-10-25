@@ -2,12 +2,14 @@
 // This file is part of the "This Space Of Mine" project
 // For conditions of distribution and use, see copyright notice in LICENSE
 
+#include <AssetCooker/AudioCooker.hpp>
 #include <AssetCooker/BlockCooker.hpp>
 #include <AssetCooker/CopyCooker.hpp>
 #include <AssetCooker/CubemapCooker.hpp>
 #include <AssetCooker/CubemapSplitFacesCooker.hpp>
 #include <AssetCooker/ShaderCooker.hpp>
 #include <AssetCooker/TextureCooker.hpp>
+#include <Nazara/Audio/Audio.hpp>
 #include <Nazara/Core/Application.hpp>
 #include <Nazara/Core/Core.hpp>
 #include <Nazara/Core/ImageCompressor.hpp>
@@ -40,6 +42,7 @@ struct CookMethodData
 };
 
 constexpr auto s_cookMethods = frozen::make_unordered_map<frozen::string, CookMethodData>({
+	{ "Audio", CookMethodData::Build<tsom::AudioCooker>() },
 	{ "Blocks", CookMethodData::Build<tsom::BlockCooker>() },
 	{ "Copy", CookMethodData::Build<tsom::CopyCooker>() },
 	{ "Cubemap", CookMethodData::Build<tsom::CubemapCooker>() },
@@ -50,7 +53,7 @@ constexpr auto s_cookMethods = frozen::make_unordered_map<frozen::string, CookMe
 
 int CookerMain(int argc, char* argv[])
 {
-	Nz::Application<Nz::Core, Nz::Physics3D, Nz::Network> app(argc, argv);
+	Nz::Application<Nz::Audio, Nz::Core, Nz::Physics3D, Nz::Network> app(argc, argv);
 	auto& taskScheduler = app.AddComponent<Nz::TaskSchedulerAppComponent>(4);
 
 	std::filesystem::path sourcePath = Nz::Utf8Path("assets");

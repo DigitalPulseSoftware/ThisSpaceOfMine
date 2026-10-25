@@ -8,6 +8,7 @@
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Rendering/AtmosphereScatteringPipelinePass.hpp>
 #include <ClientLib/Systems/AnimationSystem.hpp>
+#include <ClientLib/Systems/AudioSystem.hpp>
 #include <ClientLib/Systems/CameraFollowerSystem.hpp>
 #include <ClientLib/Systems/NetworkMovementInterpolationSystem.hpp>
 #include <ClientLib/Systems/PhysicsInterpolationSystem.hpp>
@@ -25,6 +26,7 @@
 #include <Game/States/MenuState.hpp>
 #include <Game/States/PlanetEditorState.hpp>
 #include <Game/States/VersionCheckState.hpp>
+#include <Nazara/Audio/Audio.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/Clock.hpp>
 #include <Nazara/Core/EntitySystemAppComponent.hpp>
@@ -133,6 +135,8 @@ namespace tsom
 		{
 			auto& commandLineParams = GetApp().GetCommandLineParameters();
 
+			m_audioEngine = Nz::Audio::Instance()->OpenPlaybackEngine();
+
 			auto& window = SetupWindow();
 			auto& world = SetupWorld();
 			auto& swapchain = SetupSwapchain(world, window);
@@ -142,7 +146,7 @@ namespace tsom
 #endif
 
 			// TODO: Find a better place
-			tsom::AtmosphereScatteringPipelinePass::Register(world);
+			AtmosphereScatteringPipelinePass::Register(world);
 
 			auto renderWindow = std::make_shared<Nz::RenderWindow>(swapchain);
 
@@ -151,7 +155,8 @@ namespace tsom
 
 			auto& gameConfig = GetApp().GetComponent<GameConfigAppComponent>();
 
-			std::shared_ptr<tsom::StateData> stateData = std::make_shared<tsom::StateData>();
+			std::shared_ptr<StateData> stateData = std::make_shared<StateData>();
+			stateData->audioEngine = m_audioEngine;
 			stateData->app = &GetApp();
 			stateData->blockLibrary = &m_blockLibrary.value();
 			stateData->camera2D = camera2D;
@@ -190,19 +195,19 @@ namespace tsom
 
 			if (commandLineParams.HasFlag("planet-editor"))
 			{
-				m_stateMachine.PushState(std::make_shared<tsom::DebugInfoState>(stateData));
-				m_stateMachine.PushState(std::make_shared<tsom::PlanetEditorState>(stateData));
+				m_stateMachine.PushState(std::make_shared<DebugInfoState>(stateData));
+				m_stateMachine.PushState(std::make_shared<PlanetEditorState>(stateData));
 			}
 			else
 			{
-				std::shared_ptr<tsom::ConnectionState> connectionState = std::make_shared<tsom::ConnectionState>(stateData);
+				std::shared_ptr<ConnectionState> connectionState = std::make_shared<ConnectionState>(stateData);
 				stateData->connectionState = connectionState.get();
 
-				m_stateMachine.PushState(std::make_shared<tsom::DebugInfoState>(stateData));
+				m_stateMachine.PushState(std::make_shared<DebugInfoState>(stateData));
 				m_stateMachine.PushState(std::move(connectionState));
-				m_stateMachine.PushState(std::make_shared<tsom::BackgroundState>(stateData));
-				m_stateMachine.PushState(std::make_shared<tsom::VersionCheckState>(stateData));
-				m_stateMachine.PushState(std::make_shared<tsom::MenuState>(stateData));
+				m_stateMachine.PushState(std::make_shared<BackgroundState>(stateData));
+				m_stateMachine.PushState(std::make_shared<VersionCheckState>(stateData));
+				m_stateMachine.PushState(std::make_shared<MenuState>(stateData));
 			}
 		}
 	}
@@ -348,6 +353,7 @@ namespace tsom
 
 		// World systems
 		world.AddSystem<AnimationSystem>();
+		world.AddSystem<AudioSystem>(m_audioEngine);
 		world.AddSystem<CameraFollowerSystem>(500.f);
 		world.AddSystem<NetworkMovementInterpolationSystem>(Constants::TickDuration);
 		world.AddSystem<PlanetSystem>();

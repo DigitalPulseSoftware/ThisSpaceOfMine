@@ -6,6 +6,8 @@
 #include <ClientLib/ClientAssetLibraryAppComponent.hpp>
 #include <ClientLib/ClientSessionHandler.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
+#include <Nazara/Audio/Sound.hpp>
+#include <Nazara/Audio/SoundBuffer.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <Nazara/Graphics/Graphics.hpp>
@@ -19,7 +21,9 @@
 #include <spdlog/spdlog.h>
 
 SOL_BASE_CLASSES(Nz::Model, Nz::InstancedRenderable);
+SOL_BASE_CLASSES(Nz::SoundBuffer, Nz::SoundDataSource);
 SOL_DERIVED_CLASSES(Nz::InstancedRenderable, Nz::Model);
+SOL_DERIVED_CLASSES(Nz::SoundDataSource, Nz::SoundBuffer);
 
 namespace sol
 {
@@ -47,6 +51,8 @@ namespace tsom
 		RegisterMaterialSettings(state);
 		RegisterRenderables(state);
 		RegisterRenderStates(state);
+		RegisterSound(state);
+		RegisterSoundBuffer(state);
 		RegisterTexture(state);
 	}
 
@@ -66,6 +72,12 @@ namespace tsom
 			return clientAsset.GetModel(name);
 		});
 
+		assetLibrary["GetSoundBuffer"] = LuaFunction([this](std::string_view name)
+		{
+			auto& clientAsset = m_app.GetComponent<ClientAssetLibraryAppComponent>();
+			return clientAsset.GetSoundBuffer(name);
+		});
+
 		assetLibrary["RegisterMaterialInstance"] = LuaFunction([this](std::string name, std::shared_ptr<Nz::MaterialInstance> materialInstance)
 		{
 			auto& clientAsset = m_app.GetComponent<ClientAssetLibraryAppComponent>();
@@ -76,6 +88,12 @@ namespace tsom
 		{
 			auto& clientAsset = m_app.GetComponent<ClientAssetLibraryAppComponent>();
 			clientAsset.RegisterModel(std::move(name), std::move(model));
+		});
+
+		assetLibrary["RegisterSoundBuffer"] = LuaFunction([this](std::string name, std::shared_ptr<Nz::SoundBuffer> soundBuffer)
+		{
+			auto& clientAsset = m_app.GetComponent<ClientAssetLibraryAppComponent>();
+			clientAsset.RegisterSoundBuffer(std::move(name), std::move(soundBuffer));
 		});
 	}
 
@@ -390,6 +408,108 @@ namespace tsom
 			"depthBiasSlopeFactor", &Nz::RenderStates::depthBiasSlopeFactor,
 			"lineWidth", &Nz::RenderStates::lineWidth,
 			"pointSize", &Nz::RenderStates::pointSize
+		);
+	}
+
+	void ClientAssetScriptingLibrary::RegisterSound(sol::state& state)
+	{
+		state.new_enum("SoundAttenuationModel",
+			"Exponential", Nz::SoundAttenuationModel::Exponential,
+			"Inverse", Nz::SoundAttenuationModel::Inverse,
+			"Linear", Nz::SoundAttenuationModel::Linear,
+			"None", Nz::SoundAttenuationModel::None
+		);
+
+		state.new_enum("SoundPanMode",
+			"Balance", Nz::SoundPanMode::Balance,
+			"Pan", Nz::SoundPanMode::Pan
+		);
+
+		state.new_enum("SoundPositioning",
+			"Absolute", Nz::SoundPositioning::Absolute,
+			"Relative", Nz::SoundPositioning::Relative
+		);
+
+		state.new_usertype<Nz::Sound>("Sound",
+			sol::no_constructor,
+
+			"EnableLooping", LuaFunction(&Nz::Sound::EnableLooping),
+			"EnableSpatialization", LuaFunction(&Nz::Sound::EnableSpatialization),
+
+			"GetAttenuationModel", LuaFunction(&Nz::Sound::GetAttenuationModel),
+			"GetDirection", LuaFunction(&Nz::Sound::GetDirection),
+			"GetDirectionalAttenuationFactor", LuaFunction(&Nz::Sound::GetDirectionalAttenuationFactor),
+			"GetDopplerFactor", LuaFunction(&Nz::Sound::GetDopplerFactor),
+			"GetFrameCount", LuaFunction(&Nz::Sound::GetFrameCount),
+			"GetMaxDistance", LuaFunction(&Nz::Sound::GetMaxDistance),
+			"GetMaxGain", LuaFunction(&Nz::Sound::GetMaxGain),
+			"GetMinDistance", LuaFunction(&Nz::Sound::GetMinDistance),
+			"GetMinGain", LuaFunction(&Nz::Sound::GetMinGain),
+			"GetPan", LuaFunction(&Nz::Sound::GetPan),
+			"GetPanMode", LuaFunction(&Nz::Sound::GetPanMode),
+			"GetPitch", LuaFunction(&Nz::Sound::GetPitch),
+			"GetPlayingFrame", LuaFunction(&Nz::Sound::GetPlayingFrame),
+			"GetPositioning", LuaFunction(&Nz::Sound::GetPositioning),
+			"GetRolloff", LuaFunction(&Nz::Sound::GetRolloff),
+			"GetListenerIndex", LuaFunction(&Nz::Sound::GetListenerIndex),
+			"GetPosition", LuaFunction(&Nz::Sound::GetPosition),
+			"GetSampleRate", LuaFunction(&Nz::Sound::GetSampleRate),
+			"GetVelocity", LuaFunction(&Nz::Sound::GetVelocity),
+			"GetVolume", LuaFunction(&Nz::Sound::GetVolume),
+
+			"IsLooping", LuaFunction(&Nz::Sound::IsLooping),
+			"IsPlaying", LuaFunction(&Nz::Sound::IsPlaying),
+			"IsSpatializationEnabled", LuaFunction(&Nz::Sound::IsSpatializationEnabled),
+
+			"Play", LuaFunction([](Nz::Sound& sound) { sound.Play(); }),
+			"Pause", LuaFunction([](Nz::Sound& sound) { sound.Pause(); }),
+
+			"SetAttenuationModel", LuaFunction(&Nz::Sound::SetAttenuationModel),
+			"SetDirectionalAttenuationFactor", LuaFunction(&Nz::Sound::SetDirectionalAttenuationFactor),
+			"SetDopplerFactor", LuaFunction(&Nz::Sound::SetDopplerFactor),
+			"SetMaxDistance", LuaFunction(&Nz::Sound::SetMaxDistance),
+			"SetMaxGain", LuaFunction(&Nz::Sound::SetMaxGain),
+			"SetMinDistance", LuaFunction(&Nz::Sound::SetMinDistance),
+			"SetMinGain", LuaFunction(&Nz::Sound::SetMinGain),
+			"SetPan", LuaFunction(&Nz::Sound::SetPan),
+			"SetPanMode", LuaFunction(&Nz::Sound::SetPanMode),
+			"SetPitch", LuaFunction(&Nz::Sound::SetPitch),
+			"SetPosition", LuaFunction(&Nz::Sound::SetPosition),
+			"SetPositioning", LuaFunction(&Nz::Sound::SetPositioning),
+			"SetRolloff", LuaFunction(&Nz::Sound::SetRolloff),
+			"SetVelocity", LuaFunction(&Nz::Sound::SetVelocity),
+			"SetVolume", LuaFunction(&Nz::Sound::SetVolume),
+
+			"Stop", LuaFunction([](Nz::Sound& sound) { sound.Stop(); })
+		);
+	}
+
+	void ClientAssetScriptingLibrary::RegisterSoundBuffer(sol::state& state)
+	{
+		state.new_usertype<Nz::SoundDataSource>("SoundDataSource",
+			sol::no_constructor
+		);
+
+		state.new_usertype<Nz::SoundBuffer>("SoundBuffer",
+			sol::no_constructor,
+			sol::base_classes, sol::bases<Nz::SoundDataSource>(),
+
+			"Load", LuaFunction([this](std::string assetPath, sol::optional<sol::table> paramOpt)
+			{
+				Nz::SoundBuffer::Params params;
+				if (paramOpt)
+				{
+					sol::table& paramTable = *paramOpt;
+					params.mixToMono = paramTable.get_or("mixToMono", params.mixToMono);
+				}
+
+				auto& fs = m_app.GetComponent<Nz::FilesystemAppComponent>();
+				std::shared_ptr<Nz::SoundBuffer> soundBuffer = fs.Load<Nz::SoundBuffer>(assetPath, std::move(params));
+				if (!soundBuffer)
+					throw std::runtime_error("failed to load " + assetPath);
+
+				return soundBuffer;
+			})
 		);
 	}
 

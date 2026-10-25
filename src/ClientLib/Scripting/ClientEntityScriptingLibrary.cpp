@@ -5,6 +5,7 @@
 #include <ClientLib/Scripting/ClientEntityScriptingLibrary.hpp>
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Components/ClientInteractibleComponent.hpp>
+#include <ClientLib/Components/SoundEmitterComponent.hpp>
 #include <CommonLib/Components/DistributionComponent.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
 #include <Nazara/Graphics/PointLight.hpp>
@@ -18,10 +19,14 @@
 namespace Nz
 {
 	class Model;
+	class SoundBuffer;
+	class SoundDataSource;
 }
 
 SOL_BASE_CLASSES(Nz::Model, Nz::InstancedRenderable);
+SOL_BASE_CLASSES(Nz::SoundBuffer, Nz::SoundDataSource);
 SOL_DERIVED_CLASSES(Nz::InstancedRenderable, Nz::Model);
+SOL_DERIVED_CLASSES(Nz::SoundDataSource, Nz::SoundBuffer);
 
 namespace tsom
 {
@@ -33,6 +38,9 @@ namespace tsom
 			},
 			{
 				"light", SharedEntityScriptingLibrary::ComponentEntry::Default<Nz::LightComponent>()
+			},
+			{
+				"soundemitter", SharedEntityScriptingLibrary::ComponentEntry::Default<SoundEmitterComponent>()
 			}
 		});
 	}
@@ -138,6 +146,13 @@ namespace tsom
 			"GetOutputCount", LuaFunction(&DistributionComponent::GetOutputCount),
 			"IsInputConnected", LuaFunction(&DistributionComponent::IsInputConnected),
 			"IsOutputConnected", LuaFunction(&DistributionComponent::IsOutputConnected)
+		);
+
+		state.new_usertype<SoundEmitterComponent>("SoundEmitterComponent",
+			sol::no_constructor,
+
+			"AddSound", LuaFunction(&SoundEmitterComponent::AddSound),
+			"StopAllSounds", LuaFunction(&SoundEmitterComponent::StopAllSounds)
 		);
 	}
 

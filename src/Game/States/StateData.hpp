@@ -13,6 +13,7 @@
 namespace Nz
 {
 	class ApplicationBase;
+	class AudioEngine;
 	class Canvas;
 	class EnttWorld;
 	class RenderTarget;
@@ -32,6 +33,7 @@ namespace tsom
 
 	struct StateData : std::enable_shared_from_this<StateData>
 	{
+		std::shared_ptr<Nz::AudioEngine> audioEngine;
 		std::shared_ptr<Nz::RenderTarget> renderTarget;
 		entt::handle camera2D;
 		Nz::ApplicationBase* app;

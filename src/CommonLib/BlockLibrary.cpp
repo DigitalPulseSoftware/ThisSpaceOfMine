@@ -22,7 +22,7 @@ namespace tsom
 			{ "Player", tsom::Constants::ObjectLayerPlayer },
 			{ "PlayerOnlyTrigger", tsom::Constants::ObjectLayerPlayerOnlyTrigger },
 			{ "Static", tsom::Constants::ObjectLayerStatic },
-			{ "StaticNoplayer", tsom::Constants::ObjectLayerStaticNoPlayer },
+			{ "StaticNoPlayer", tsom::Constants::ObjectLayerStaticNoPlayer },
 			{ "StaticTrigger", tsom::Constants::ObjectLayerStaticTrigger },
 			{ "StaticWater", tsom::Constants::ObjectLayerStaticWater }
 		});
@@ -42,10 +42,16 @@ namespace nlohmann
 			throw std::runtime_error(fmt::format("invalid physics layer \"{}\"", layerName));
 	}
 
+	NLOHMANN_JSON_SERIALIZE_ENUM(tsom::SurfaceType, {
+		{tsom::SurfaceType::Dirt,  "dirt"},
+		{tsom::SurfaceType::Grass, "grass"},
+		{tsom::SurfaceType::Metal, "metal"}
+	});
+
 	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(tsom::BlockLibrary::BlockInfo, \
 		layerName, basePath, hasCollisions, isDoubleSided, \
-		isSmooth, isTransparent, density, \
-		metalness, permeability, roughness \
+		isSmooth, isTransparent, density, metalness, \
+		permeability, roughness, surfaceType \
 	);
 
 	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(tsom::BlockLibrary::LayerInfo, \
@@ -76,16 +82,8 @@ namespace tsom
 		BlockIndex blockIndex = Nz::SafeCast<BlockIndex>(m_blocks.size());
 
 		auto& blockData = m_blocks.emplace_back();
-		blockData.hasCollisions = blockInfo.hasCollisions;
-		blockData.isDoubleSided = blockInfo.isDoubleSided;
-		blockData.isTransparent = blockInfo.isTransparent;
-		blockData.isSmooth = blockInfo.isSmooth;
-		blockData.density = blockInfo.density;
-		blockData.metalness = blockInfo.metalness;
-		blockData.permeability = blockInfo.permeability;
-		blockData.roughness = blockInfo.roughness;
+		static_cast<CommonBlockData&>(blockData) = std::move(blockInfo);
 		blockData.name = name;
-		blockData.basePath = std::move(blockInfo.basePath);
 
 		auto it = m_layerIndices.find(blockInfo.layerName);
 		NazaraAssertMsg(it != m_layerIndices.end(), "Invalid layer %s", blockInfo.layerName.data());
@@ -102,12 +100,8 @@ namespace tsom
 		std::size_t layerIndex = m_layers.size();
 
 		auto& layerData = m_layers.emplace_back();
-		layerData.isBlended = layerInfo.isBlended;
-		layerData.isFluid = layerInfo.isFluid;
-		layerData.isPhysicsTrigger = layerInfo.isPhysicsTrigger;
+		static_cast<CommonLayerData&>(layerData) = std::move(layerInfo);
 		layerData.name = name;
-		layerData.physicsLayer = layerInfo.physicsLayer.layer;
-		layerData.renderLayer = layerInfo.renderLayer;
 
 		assert(!m_layerIndices.contains(name));
 		m_layerIndices.emplace(std::move(name), layerIndex);

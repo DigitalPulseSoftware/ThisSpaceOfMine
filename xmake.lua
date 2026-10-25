@@ -122,7 +122,8 @@ target("CommonLib", function ()
 
 	add_packages("nazaraengine", { components = { "physics3d", "network" }, public = true })
 	add_packages("concurrentqueue", "cppcodec", "cpp-semver", "fast_float", "fmt", "luajit", "hopscotch-map", "nlohmann_json", "ordered_map", "sol2", "spdlog", { public = true })
-	add_packages("cpptrace", "frozen", "libsodium", "lz4", "perlinnoise")
+	add_packages("cpptrace", "libsodium", "lz4", "perlinnoise")
+	add_packages("frozen", { public = true })
 
 	on_config(function (target, opt)
 		import("core.base.semver")
@@ -284,6 +285,7 @@ target("TSOMAssetCooker", function ()
 	set_basename("ThisCookerOfMine")
 	add_deps("CommonLib", "Main")
 	add_packages("frozen", "nzsl", "tiny-process-library")
+	add_packages("nazaraengine", { components = { "audio" }, public = true })
 
 	add_headerfiles("src/AssetCooker/**.hpp", "src/AssetCooker/**.inl")
 	add_files("src/AssetCooker/**.cpp")
@@ -298,7 +300,6 @@ if not has_config("serveronly") then
 		add_files("src/ClientLib/**.cpp")
 
 		add_deps("CommonLib", { public = true })
-		add_packages("frozen")
 		add_rules("inherit_version")
 
 		after_load(function (target)
