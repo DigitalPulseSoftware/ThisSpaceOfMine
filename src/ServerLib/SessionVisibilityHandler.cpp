@@ -7,9 +7,8 @@
 #include <CommonLib/ChunkContainer.hpp>
 #include <CommonLib/EntityClass.hpp>
 #include <CommonLib/NetworkSession.hpp>
+#include <CommonLib/Components/ChunkContainerComponent.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
-#include <CommonLib/Components/PlanetComponent.hpp>
-#include <CommonLib/Components/ShipComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <NazaraUtils/Algorithm.hpp>
 #include <spdlog/spdlog.h>
@@ -124,7 +123,7 @@ namespace tsom
 
 		NazaraAssert(!m_deletedEntities.contains(entity)); //< resurrecting entities shouldn't be possible
 
-		if (entity.try_get<PlanetComponent>() || entity.try_get<ShipComponent>())
+		if (entity.any_of<ChunkContainerComponent>())
 		{
 			NazaraAssert(!m_chunkNetworkMaps.contains(entity));
 			m_chunkNetworkMaps.emplace(entity, ChunkNetworkMap{});

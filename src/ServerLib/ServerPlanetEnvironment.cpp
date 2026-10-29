@@ -6,11 +6,12 @@
 #include <CommonLib/BlockLibrary.hpp>
 #include <CommonLib/ChunkEntities.hpp>
 #include <CommonLib/ChunkLock.hpp>
+#include <CommonLib/Planet.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Components/PlanetComponent.hpp>
 #include <CommonLib/Systems/BuoyancySystem.hpp>
+#include <CommonLib/Systems/ChunkEntitiesSystem.hpp>
 #include <CommonLib/Systems/GravityPhysicsSystem.hpp>
-#include <CommonLib/Systems/PlanetSystem.hpp>
 #include <CommonLib/Utility/SpaceTransformations.hpp>
 #include <ServerLib/ServerInstance.hpp>
 #include <ServerLib/ServerSpaceEnvironment.hpp>
@@ -24,6 +25,7 @@
 #include <Nazara/Core/ByteStream.hpp>
 #include <Nazara/Core/FilesystemAppComponent.hpp>
 #include <Nazara/Core/TaskSchedulerAppComponent.hpp>
+#include <Nazara/Core/Components/DisabledComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Core/Hash/SHA256.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
@@ -38,12 +40,12 @@ struct fmt::formatter<tsom::Direction> : formatter<string_view>
 	{
 		string_view name = "unknown";
 		switch (dir) {
-			case tsom::Direction::Back: name = "Back"; break;
-			case tsom::Direction::Down: name = "Down"; break;
+			case tsom::Direction::Back:  name = "Back"; break;
+			case tsom::Direction::Down:  name = "Down"; break;
 			case tsom::Direction::Front: name = "Front"; break;
-			case tsom::Direction::Left: name = "Left"; break;
+			case tsom::Direction::Left:  name = "Left"; break;
 			case tsom::Direction::Right: name = "Right"; break;
-			case tsom::Direction::Up: name = "Up"; break;
+			case tsom::Direction::Up:    name = "Up"; break;
 		}
 		return formatter<string_view>::format(name, ctx);
 	}
@@ -158,7 +160,7 @@ namespace tsom
 		auto& physicsSystem = m_world->GetSystem<Nz::Physics3DSystem>();
 		m_world->AddSystem<BuoyancySystem>(*planetComponent.planet, physicsSystem.GetPhysWorld(), m_debugDrawer.get());
 		m_world->AddSystem<GravityPhysicsSystem>(*planetComponent.planet, physicsSystem.GetPhysWorld());
-		m_world->AddSystem<PlanetSystem>();
+		m_world->AddSystem<ChunkEntitiesSystem>();
 
 		if (m_databaseId)
 		{
@@ -391,7 +393,7 @@ namespace tsom
 		constexpr float SpaceDistanceSq = SpaceDistance * SpaceDistance;
 
 		entt::registry& registry = m_world->GetRegistry();
-		auto switchView = registry.view<Nz::NodeComponent, ClassInstanceComponent, ServerEnvironmentSwitchComponent>();
+		auto switchView = registry.view<Nz::NodeComponent, ClassInstanceComponent, ServerEnvironmentSwitchComponent>(entt::exclude<Nz::DisabledComponent>);
 		for (entt::entity entity : switchView)
 		{
 			auto& entityNode = switchView.get<Nz::NodeComponent>(entity);

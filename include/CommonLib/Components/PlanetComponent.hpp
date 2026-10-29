@@ -7,18 +7,15 @@
 #ifndef TSOM_COMMONLIB_COMPONENTS_PLANETCOMPONENT_HPP
 #define TSOM_COMMONLIB_COMPONENTS_PLANETCOMPONENT_HPP
 
-#include <CommonLib/Export.hpp>
-#include <CommonLib/ChunkEntities.hpp>
-#include <CommonLib/InternalConstants.hpp>
-#include <CommonLib/Planet.hpp>
 #include <memory>
 
 namespace tsom
 {
+	class Planet;
+
 	struct PlanetComponent
 	{
 		std::shared_ptr<Planet> planet;
-		std::array<std::unique_ptr<ChunkEntities>, Constants::MaxChunkLayerCount> planetEntities;
 	};
 }
 

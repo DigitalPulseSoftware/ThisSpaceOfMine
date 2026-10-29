@@ -21,11 +21,16 @@ namespace tsom
 	{
 	}
 
-	PlanetComponent& ClientChunkClassLibrary::InitializePlanetEntity(entt::handle entity, std::shared_ptr<Planet>&& planet)
+	ChunkContainerComponent& ClientChunkClassLibrary::InitializeChunkEntity(entt::handle entity, bool isStatic, std::shared_ptr<ChunkContainer>&& chunkContainer)
 	{
-		PlanetComponent& planetComponent = ChunkClassLibrary::InitializePlanetEntity(entity, std::move(planet));
-
 		entity.emplace<ChunkNetworkMapComponent>();
+
+		return ChunkClassLibrary::InitializeChunkEntity(entity, isStatic, std::move(chunkContainer));
+	}
+
+	void ClientChunkClassLibrary::InitializePlanetEntity(entt::handle entity, std::shared_ptr<Planet>&& planet)
+	{
+		ChunkClassLibrary::InitializePlanetEntity(entity, std::move(planet));
 
 		auto& entityInstance = entity.get<ClassInstanceComponent>();
 
@@ -51,21 +56,10 @@ namespace tsom
 				entity.erase<AtmosphereScattering>();
 			}
 		}
-
-		return planetComponent;
 	}
 
-	ShipComponent& ClientChunkClassLibrary::InitializeShipEntity(entt::handle entity, std::unique_ptr<Ship>&& ship)
+	std::unique_ptr<ChunkEntities> ClientChunkClassLibrary::SetupChunkEntities(Nz::EnttWorld& world, ChunkContainer& chunkContainer, std::size_t layerIndex, bool isStatic)
 	{
-		ShipComponent& shipComponent = ChunkClassLibrary::InitializeShipEntity(entity, std::move(ship));
-
-		entity.emplace<ChunkNetworkMapComponent>();
-
-		return shipComponent;
-	}
-
-	std::unique_ptr<ChunkEntities> ClientChunkClassLibrary::SetupChunkEntities(Nz::EnttWorld& world, ChunkContainer& chunkContainer, std::size_t layerIndex)
-	{
-		return std::make_unique<ClientChunkEntities>(m_app, m_config, world, chunkContainer, Nz::SafeCast<const ClientBlockLibrary&>(m_blockLibrary), layerIndex);
+		return std::make_unique<ClientChunkEntities>(m_app, m_config, world, chunkContainer, Nz::SafeCast<const ClientBlockLibrary&>(m_blockLibrary), layerIndex, isStatic);
 	}
 }

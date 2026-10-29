@@ -14,8 +14,7 @@
 #include <ClientLib/Systems/TransformCopySystem.hpp>
 #include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/Physics/PhysicsSettings.hpp>
-#include <CommonLib/Systems/PlanetSystem.hpp>
-#include <CommonLib/Systems/ShipSystem.hpp>
+#include <CommonLib/Systems/ChunkEntitiesSystem.hpp>
 #include <CommonLib/Systems/TickSystem.hpp>
 #include <Game/GameConfigAppComponent.hpp>
 #include <Game/GameConfigs.hpp>
@@ -350,8 +349,7 @@ namespace tsom
 		world.AddSystem<AnimationSystem>();
 		world.AddSystem<CameraFollowerSystem>(500.f);
 		world.AddSystem<NetworkMovementInterpolationSystem>(Constants::TickDuration);
-		world.AddSystem<PlanetSystem>();
-		world.AddSystem<ShipSystem>();
+		world.AddSystem<ChunkEntitiesSystem>();
 		world.AddSystem<TickSystem>();
 		world.AddSystem<TransformCopySystem>();
 		world.AddSystem<Nz::LifetimeSystem>();

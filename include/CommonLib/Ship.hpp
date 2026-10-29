@@ -29,7 +29,7 @@ namespace tsom
 			Ship(Ship&&) = delete;
 			~Ship() = default;
 
-			FlatChunk& AddChunk(const ChunkIndices& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback = nullptr);
+			FlatChunk& AddChunk(const ChunkIndices& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback = nullptr) override;
 
 			std::shared_ptr<Nz::Collider3D> BuildHullCollider() const;
 

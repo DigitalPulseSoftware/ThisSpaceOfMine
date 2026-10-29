@@ -10,8 +10,8 @@
 #include <CommonLib/Components/DistributionComponent.hpp>
 #include <CommonLib/Components/ShipComponent.hpp>
 #include <CommonLib/Systems/BuoyancySystem.hpp>
+#include <CommonLib/Systems/ChunkEntitiesSystem.hpp>
 #include <CommonLib/Systems/GravityPhysicsSystem.hpp>
-#include <CommonLib/Systems/ShipSystem.hpp>
 #include <CommonLib/Utility/JsonSerialization.hpp>
 #include <ServerLib/PlayerTokenAppComponent.hpp>
 #include <ServerLib/ServerInstance.hpp>
@@ -97,7 +97,7 @@ namespace tsom
 		auto& physicsSystem = m_world->GetSystem<Nz::Physics3DSystem>();
 		m_world->AddSystem<BuoyancySystem>(*shipComponent.ship, physicsSystem.GetPhysWorld(), m_debugDrawer.get());
 		m_world->AddSystem<GravityPhysicsSystem>(*shipComponent.ship, physicsSystem.GetPhysWorld());
-		m_world->AddSystem<ShipSystem>();
+		m_world->AddSystem<ChunkEntitiesSystem>();
 	}
 
 	ServerShipEnvironment::~ServerShipEnvironment()

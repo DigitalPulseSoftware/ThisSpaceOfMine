@@ -7,6 +7,10 @@
 #include <CommonLib/EntityClass.hpp>
 #include <CommonLib/EntityProperties.hpp>
 #include <CommonLib/EntityRegistry.hpp>
+#include <CommonLib/InternalConstants.hpp>
+#include <CommonLib/Planet.hpp>
+#include <CommonLib/Ship.hpp>
+#include <CommonLib/Components/ChunkContainerComponent.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Components/PlanetComponent.hpp>
 #include <CommonLib/Components/ShipComponent.hpp>
@@ -94,50 +98,41 @@ namespace tsom
 
 				float cellSize = entityInstance.GetProperty<EntityPropertyType::Float>(0);
 
-				InitializeShipEntity(entity, std::make_unique<Ship>(m_blockLibrary, cellSize));
+				InitializeShipEntity(entity, std::make_shared<Ship>(m_blockLibrary, cellSize));
 			}
 		},
 		{}, {}));
 	}
 
-	PlanetComponent& ChunkClassLibrary::InitializePlanetEntity(entt::handle entity, std::shared_ptr<Planet>&& planet)
+	ChunkContainerComponent& ChunkClassLibrary::InitializeChunkEntity(entt::handle entity, bool isStatic, std::shared_ptr<ChunkContainer>&& chunkContainer)
 	{
-		auto& planetComponent = entity.emplace<PlanetComponent>();
-		planetComponent.planet = std::move(planet);
+		auto& chunkContainerComponent = entity.emplace<ChunkContainerComponent>();
+		chunkContainerComponent.chunkContainer = std::move(chunkContainer);
 
 		Nz::EnttWorld* world = entity.registry()->ctx().get<Nz::EnttWorld*>();
-		for (std::size_t layerIndex = 0; layerIndex < planetComponent.planetEntities.size(); ++layerIndex)
+		for (std::size_t layerIndex = 0; layerIndex < chunkContainerComponent.chunkEntities.size(); ++layerIndex)
 		{
 			if (!m_blockLibrary.IsValidLayer(layerIndex))
 				continue;
 
-			planetComponent.planetEntities[layerIndex] = SetupChunkEntities(*world, *planetComponent.planet, layerIndex);
-			planetComponent.planetEntities[layerIndex]->SetParentEntity(entity);
+			chunkContainerComponent.chunkEntities[layerIndex] = SetupChunkEntities(*world, *chunkContainerComponent.chunkContainer, layerIndex, isStatic);
+			chunkContainerComponent.chunkEntities[layerIndex]->SetParentEntity(entity);
 		}
 
-		return planetComponent;
+		return chunkContainerComponent;
 	}
 
-	ShipComponent& ChunkClassLibrary::InitializeShipEntity(entt::handle entity, std::unique_ptr<Ship>&& ship)
+	void ChunkClassLibrary::InitializePlanetEntity(entt::handle entity, std::shared_ptr<Planet>&& planet)
 	{
-		auto& shipComponent = entity.emplace<ShipComponent>();
-		shipComponent.ship = std::move(ship);
+		entity.emplace<PlanetComponent>().planet = planet;
 
-		Nz::EnttWorld* world = entity.registry()->ctx().get<Nz::EnttWorld*>();
-		for (std::size_t layerIndex = 0; layerIndex < shipComponent.shipEntities.size(); ++layerIndex)
-		{
-			if (!m_blockLibrary.IsValidLayer(layerIndex))
-				continue;
-
-			shipComponent.shipEntities[layerIndex] = SetupChunkEntities(*world, *shipComponent.ship, layerIndex);
-			shipComponent.shipEntities[layerIndex]->SetParentEntity(entity);
-		}
-
-		return shipComponent;
+		InitializeChunkEntity(entity, true, std::move(planet));
 	}
 
-	std::unique_ptr<ChunkEntities> ChunkClassLibrary::SetupChunkEntities(Nz::EnttWorld& world, ChunkContainer& chunkContainer, std::size_t layerIndex)
+	void ChunkClassLibrary::InitializeShipEntity(entt::handle entity, std::shared_ptr<Ship>&& ship)
 	{
-		return std::make_unique<ChunkEntities>(m_app, world, chunkContainer, m_blockLibrary, layerIndex);
+		entity.emplace<ShipComponent>().ship = ship;
+
+		InitializeChunkEntity(entity, true, std::move(ship)); //< Ship chunk entities are static in their own environment, it's the ship environment that's moving!
 	}
 }

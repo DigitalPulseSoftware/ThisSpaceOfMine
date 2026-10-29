@@ -4,18 +4,17 @@
 
 #include <ServerLib/ServerInstance.hpp>
 #include <CommonLib/InternalConstants.hpp>
-#include <CommonLib/Utility/SpaceTransformations.hpp>
-#include <CommonLib/Entities/ChunkClassLibrary.hpp>
 #include <CommonLib/Scripting/BaseScriptingLibrary.hpp>
 #include <CommonLib/Scripting/ChunkScriptingLibrary.hpp>
 #include <CommonLib/Scripting/MathScriptingLibrary.hpp>
-#include <CommonLib/Scripting/SharedScriptingLibrary.hpp>
+#include <CommonLib/Utility/SpaceTransformations.hpp>
 #include <ServerLib/ServerConfig.hpp>
 #include <ServerLib/ServerPlanetEnvironment.hpp>
 #include <ServerLib/ServerSpaceEnvironment.hpp>
 #include <ServerLib/Components/EnvironmentEnterTriggerComponent.hpp>
 #include <ServerLib/Components/EnvironmentProxyComponent.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
+#include <ServerLib/Entities/ServerChunkClassLibrary.hpp>
 #include <ServerLib/Entities/ServerEntityClassLibrary.hpp>
 #include <ServerLib/Scripting/ServerEntityScriptingLibrary.hpp>
 #include <ServerLib/Scripting/ServerScriptingLibrary.hpp>
@@ -45,7 +44,7 @@ namespace tsom
 			return true;
 		});
 
-		m_entityRegistry.RegisterClassLibrary<ChunkClassLibrary>(m_application, m_blockLibrary);
+		m_entityRegistry.RegisterClassLibrary<ServerChunkClassLibrary>(m_application, m_blockLibrary);
 		m_entityRegistry.RegisterClassLibrary<ServerEntityClassLibrary>(m_application);
 
 		m_scriptingContext.RegisterLibrary<BaseScriptingLibrary>();
@@ -105,7 +104,7 @@ namespace tsom
 		// defer construct so player can be constructed with their index
 		ServerPlayer* player = m_players.Allocate(m_players.DeferConstruct, playerIndex);
 		std::construct_at(player, *this, Nz::SafeCast<PlayerIndex>(playerIndex), session, std::nullopt, std::move(nickname), 0);
-		
+
 		ForEachSpaceCell([&](const Nz::Vector3i32& coordinates, ServerSpaceEnvironment* spaceEnvironment)
 		{
 			player->AddToRootEnvironment(spaceEnvironment, coordinates);
@@ -152,7 +151,7 @@ namespace tsom
 		// defer construct so player can be constructed with their index
 		ServerPlayer* player = m_players.Allocate(m_players.DeferConstruct, playerIndex);
 		std::construct_at(player, *this, Nz::SafeCast<PlayerIndex>(playerIndex), session, uuid, std::move(nickname), permissions);
-		
+
 		ForEachSpaceCell([&](const Nz::Vector3i32& coordinates, ServerSpaceEnvironment* spaceEnvironment)
 		{
 			player->AddToRootEnvironment(spaceEnvironment, coordinates);

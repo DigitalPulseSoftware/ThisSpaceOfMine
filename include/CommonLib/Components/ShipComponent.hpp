@@ -7,18 +7,15 @@
 #ifndef TSOM_COMMONLIB_COMPONENTS_SHIPCOMPONENT_HPP
 #define TSOM_COMMONLIB_COMPONENTS_SHIPCOMPONENT_HPP
 
-#include <CommonLib/Export.hpp>
-#include <CommonLib/ChunkEntities.hpp>
-#include <CommonLib/InternalConstants.hpp>
-#include <CommonLib/Ship.hpp>
 #include <memory>
 
 namespace tsom
 {
+	class Ship;
+
 	struct ShipComponent
 	{
-		std::unique_ptr<Ship> ship;
-		std::array<std::unique_ptr<ChunkEntities>, Constants::MaxChunkLayerCount> shipEntities;
+		std::shared_ptr<Ship> ship;
 	};
 }
 

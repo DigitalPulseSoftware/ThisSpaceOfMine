@@ -22,6 +22,7 @@ namespace tsom
 {
 	class BlockLibrary;
 	class ChunkContainer;
+	struct ChunkContainerComponent;
 	class ChunkEntities;
 	class Planet;
 	struct PlanetComponent;
@@ -42,9 +43,10 @@ namespace tsom
 			ChunkClassLibrary& operator=(ChunkClassLibrary&&) = delete;
 
 		protected:
-			virtual PlanetComponent& InitializePlanetEntity(entt::handle entity, std::shared_ptr<Planet>&& planet);
-			virtual ShipComponent& InitializeShipEntity(entt::handle entity, std::unique_ptr<Ship>&& ship);
-			virtual std::unique_ptr<ChunkEntities> SetupChunkEntities(Nz::EnttWorld& world, ChunkContainer& chunkContainer, std::size_t layerIndex);
+			virtual ChunkContainerComponent& InitializeChunkEntity(entt::handle entity, bool isStatic, std::shared_ptr<ChunkContainer>&& chunkContainer);
+			virtual void InitializePlanetEntity(entt::handle entity, std::shared_ptr<Planet>&& planet);
+			virtual void InitializeShipEntity(entt::handle entity, std::shared_ptr<Ship>&& ship);
+			virtual std::unique_ptr<ChunkEntities> SetupChunkEntities(Nz::EnttWorld& world, ChunkContainer& chunkContainer, std::size_t layerIndex, bool isStatic) = 0;
 
 			Nz::ApplicationBase& m_app;
 			const BlockLibrary& m_blockLibrary;

@@ -35,7 +35,7 @@ namespace tsom
 			Planet(Planet&&) = delete;
 			~Planet() = default;
 
-			Chunk& AddChunk(const ChunkIndices& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback = nullptr);
+			Chunk& AddChunk(const ChunkIndices& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback = nullptr) override;
 			void AddChunks(const Nz::Vector3ui& chunkCount);
 
 			void ClearChunks() override;

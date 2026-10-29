@@ -4,8 +4,4 @@
 
 namespace tsom
 {
-	inline PlanetSystem::PlanetSystem(entt::registry& registry) :
-	m_registry(registry)
-	{
-	}
 }

@@ -4,8 +4,8 @@
 
 #pragma once
 
-#ifndef TSOM_COMMONLIB_SYSTEMS_PLANETSYSTEM_HPP
-#define TSOM_COMMONLIB_SYSTEMS_PLANETSYSTEM_HPP
+#ifndef TSOM_COMMONLIB_SYSTEMS_CHUNKENTITIESSYSTEM_HPP
+#define TSOM_COMMONLIB_SYSTEMS_CHUNKENTITIESSYSTEM_HPP
 
 #include <CommonLib/Export.hpp>
 #include <Nazara/Core/Time.hpp>
@@ -14,28 +14,28 @@
 
 namespace tsom
 {
-	class TSOM_COMMONLIB_API PlanetSystem
+	class TSOM_COMMONLIB_API ChunkEntitiesSystem
 	{
 		public:
 			static constexpr bool AllowConcurrent = true;
 			static constexpr Nz::Int64 ExecutionOrder = -1'000'000;
 			using Components = Nz::TypeList<class PlanetComponent>;
 
-			inline PlanetSystem(entt::registry& registry);
-			PlanetSystem(const PlanetSystem&) = delete;
-			PlanetSystem(PlanetSystem&&) = delete;
-			~PlanetSystem() = default;
+			inline ChunkEntitiesSystem(entt::registry& registry);
+			ChunkEntitiesSystem(const ChunkEntitiesSystem&) = delete;
+			ChunkEntitiesSystem(ChunkEntitiesSystem&&) = delete;
+			~ChunkEntitiesSystem() = default;
 
 			void Update(Nz::Time elapsedTime);
 
-			PlanetSystem& operator=(const PlanetSystem&) = delete;
-			PlanetSystem& operator=(PlanetSystem&&) = delete;
+			ChunkEntitiesSystem& operator=(const ChunkEntitiesSystem&) = delete;
+			ChunkEntitiesSystem& operator=(ChunkEntitiesSystem&&) = delete;
 
 		private:
 			entt::registry& m_registry;
 	};
 }
 
-#include <CommonLib/Systems/PlanetSystem.inl>
+#include <CommonLib/Systems/ChunkEntitiesSystem.inl>
 
-#endif // TSOM_COMMONLIB_SYSTEMS_PLANETSYSTEM_HPP
+#endif // TSOM_COMMONLIB_SYSTEMS_CHUNKENTITIESSYSTEM_HPP

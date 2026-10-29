@@ -27,15 +27,15 @@
 #include <ClientLib/Tools/RemoveEntityTool.hpp>
 #include <CommonLib/AtmosphereScattering.hpp>
 #include <CommonLib/GameConstants.hpp>
+#include <CommonLib/GravityController.hpp>
 #include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/NetworkSession.hpp>
 #include <CommonLib/PhysicsConstants.hpp>
 #include <CommonLib/PlayerInputs.hpp>
 #include <CommonLib/Utils.hpp>
 #include <CommonLib/Components/ChunkComponent.hpp>
+#include <CommonLib/Components/ChunkContainerComponent.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
-#include <CommonLib/Components/PlanetComponent.hpp>
-#include <CommonLib/Components/ShipComponent.hpp>
 #include <Game/GameConfigAppComponent.hpp>
 #include <Game/GameConfigs.hpp>
 #include <Game/States/ConnectionState.hpp>
@@ -744,9 +744,9 @@ namespace tsom
 			m_shipAABB = Nz::Boxf::Invalid();
 			m_shipReferenceRotation = referenceRotation;
 
-			if (auto* shipComponent = shipEntity.try_get<ShipComponent>())
+			if (auto* chunkContainerComponent = shipEntity.try_get<ChunkContainerComponent>())
 			{
-				for (auto& chunkEntitiesPtr : shipComponent->shipEntities)
+				for (auto& chunkEntitiesPtr : chunkContainerComponent->chunkEntities)
 				{
 					if (!chunkEntitiesPtr)
 						continue;

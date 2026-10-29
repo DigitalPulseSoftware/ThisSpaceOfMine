@@ -4,10 +4,8 @@
 
 #include <ServerLib/Systems/NetworkedEntitiesSystem.hpp>
 #include <CommonLib/EntityClass.hpp>
-#include <CommonLib/Planet.hpp>
+#include <CommonLib/Components/ChunkContainerComponent.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
-#include <CommonLib/Components/PlanetComponent.hpp>
-#include <CommonLib/Components/ShipComponent.hpp>
 #include <ServerLib/ServerEnvironment.hpp>
 #include <ServerLib/Components/NetworkedComponent.hpp>
 #include <ServerLib/Components/ServerPlayerControlledComponent.hpp>
@@ -133,10 +131,9 @@ namespace tsom
 			}
 
 
-			if (PlanetComponent* planetComponent = m_registry.try_get<PlanetComponent>(entity))
+			if (ChunkContainerComponent* chunkContainerComponent = m_registry.try_get<ChunkContainerComponent>(entity))
 			{
-				// FIXME: Deduplicate code (maybe by merging components)
-				entityData.onChunkAdded.Connect(planetComponent->planet->OnChunkAdded, [this, entity](ChunkContainer* /*container*/, Chunk* chunk)
+				entityData.onChunkAdded.Connect(chunkContainerComponent->chunkContainer->OnChunkAdded, [this, entity](ChunkContainer* /*container*/, Chunk* chunk)
 				{
 					entt::handle handle(m_registry, entity);
 					ForEachVisibility([&](SessionVisibilityHandler& visibility)
@@ -145,29 +142,7 @@ namespace tsom
 					});
 				});
 
-				entityData.onChunkRemove.Connect(planetComponent->planet->OnChunkRemove, [this, entity](ChunkContainer* /*container*/, Chunk* chunk)
-				{
-					entt::handle handle(m_registry, entity);
-					ForEachVisibility([&](SessionVisibilityHandler& visibility)
-					{
-						visibility.DestroyChunk(handle, *chunk);
-					});
-				});
-			}
-
-			if (ShipComponent* shipComponent = m_registry.try_get<ShipComponent>(entity))
-			{
-				// FIXME: Deduplicate code (maybe by merging components)
-				entityData.onChunkAdded.Connect(shipComponent->ship->OnChunkAdded, [this, entity](ChunkContainer* /*container*/, Chunk* chunk)
-				{
-					entt::handle handle(m_registry, entity);
-					ForEachVisibility([&](SessionVisibilityHandler& visibility)
-					{
-						visibility.CreateChunk(handle, *chunk);
-					});
-				});
-
-				entityData.onChunkRemove.Connect(shipComponent->ship->OnChunkRemove, [this, entity](ChunkContainer* /*container*/, Chunk* chunk)
+				entityData.onChunkRemove.Connect(chunkContainerComponent->chunkContainer->OnChunkRemove, [this, entity](ChunkContainer* /*container*/, Chunk* chunk)
 				{
 					entt::handle handle(m_registry, entity);
 					ForEachVisibility([&](SessionVisibilityHandler& visibility)
@@ -247,17 +222,9 @@ namespace tsom
 			}
 		}
 
-		if (PlanetComponent* planetComponent = entity.try_get<PlanetComponent>())
+		if (ChunkContainerComponent* chunkContainerComponent = entity.try_get<ChunkContainerComponent>())
 		{
-			planetComponent->planet->ForEachChunk([&](const ChunkIndices& /*chunkIndices*/, Chunk& chunk)
-			{
-				visibility.CreateChunk(entity, chunk);
-			});
-		}
-
-		if (ShipComponent* shipComponent = entity.try_get<ShipComponent>())
-		{
-			shipComponent->ship->ForEachChunk([&](const ChunkIndices& /*chunkIndices*/, Chunk& chunk)
+			chunkContainerComponent->chunkContainer->ForEachChunk([&](const ChunkIndices& /*chunkIndices*/, Chunk& chunk)
 			{
 				visibility.CreateChunk(entity, chunk);
 			});

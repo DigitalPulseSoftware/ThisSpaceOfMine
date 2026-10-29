@@ -25,7 +25,9 @@
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/NetworkSession.hpp>
 #include <CommonLib/PhysicsConstants.hpp>
+#include <CommonLib/Planet.hpp>
 #include <CommonLib/Ship.hpp>
+#include <CommonLib/Components/ChunkContainerComponent.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Components/DistributionComponent.hpp>
 #include <CommonLib/Components/EntityOwnerComponent.hpp>
@@ -164,10 +166,13 @@ namespace tsom
 		entt::handle& entity = m_entities[chunkCreate.entityId]->entity;
 
 		Chunk* chunk;
-		if (PlanetComponent* planetComponent = entity.try_get<PlanetComponent>())
-			chunk = &planetComponent->planet->AddChunk(indices);
-		else if (ShipComponent* shipComponent = entity.try_get<ShipComponent>())
-			chunk = &shipComponent->ship->AddChunk(indices);
+		if (ChunkContainerComponent* chunkContainerComponent = entity.try_get<ChunkContainerComponent>())
+			chunk = &chunkContainerComponent->chunkContainer->AddChunk(indices);
+		else
+		{
+			spdlog::error("received chunk create packet for non-chunk container entity {}", chunkCreate.entityId);
+			return;
+		}
 
 		auto& chunkNetworkMap = entity.get<ChunkNetworkMapComponent>();
 		chunkNetworkMap.chunkByNetworkIndex.emplace(chunkCreate.chunkId, chunk);

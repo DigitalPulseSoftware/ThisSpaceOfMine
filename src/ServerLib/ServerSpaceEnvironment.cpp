@@ -5,6 +5,7 @@
 #include <ServerLib/ServerSpaceEnvironment.hpp>
 #include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
+#include <CommonLib/Systems/ChunkEntitiesSystem.hpp>
 #include <ServerLib/Components/ServerEnvironmentSwitchComponent.hpp>
 #include <ServerLib/Systems/EnvironmentSwitchSystem.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
@@ -16,6 +17,7 @@ namespace tsom
 	m_coordinates(coordinates)
 	{
 		m_world->GetRegistry().ctx().emplace<ServerSpaceEnvironment*>(this);
+		m_world->AddSystem<ChunkEntitiesSystem>();
 		m_world->AddSystem<EnvironmentSwitchSystem>();
 	}
 
