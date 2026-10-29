@@ -1321,7 +1321,6 @@ namespace tsom
 			m_currentShipRotation = Nz::Quaternionf::Slerp(m_currentShipRotation, m_targetShipRotation, factor);
 		}
 
-		GetStateData().world->GetSystem<CameraFollowerSystem>().SetCameraPosition(m_cameraEntity.get<Nz::NodeComponent>().GetGlobalPosition());
 
 		/*entt::registry& registry = GetStateData().world->GetRegistry();
 		auto view = registry.view<Nz::NodeComponent, Nz::GraphicsComponent, ClassInstanceComponent>(entt::exclude<AnimationComponent>);

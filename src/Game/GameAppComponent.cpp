@@ -8,7 +8,6 @@
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Rendering/AtmosphereScatteringPipelinePass.hpp>
 #include <ClientLib/Systems/AnimationSystem.hpp>
-#include <ClientLib/Systems/CameraFollowerSystem.hpp>
 #include <ClientLib/Systems/NetworkMovementInterpolationSystem.hpp>
 #include <ClientLib/Systems/PhysicsInterpolationSystem.hpp>
 #include <ClientLib/Systems/TransformCopySystem.hpp>
@@ -347,7 +346,6 @@ namespace tsom
 
 		// World systems
 		world.AddSystem<AnimationSystem>();
-		world.AddSystem<CameraFollowerSystem>(500.f);
 		world.AddSystem<NetworkMovementInterpolationSystem>(Constants::TickDuration);
 		world.AddSystem<ChunkEntitiesSystem>();
 		world.AddSystem<TickSystem>();
