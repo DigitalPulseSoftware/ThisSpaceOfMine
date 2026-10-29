@@ -45,6 +45,7 @@ namespace tsom
 			Nz::EulerAnglesf m_cameraRotation;
 			Nz::Quaternionf m_initialCameraRotation;
 			Nz::Vector2ui32 m_screenshotSize;
+			bool m_showSettingsPopup;
 			bool m_screenshotCubemap;
 	};
 }

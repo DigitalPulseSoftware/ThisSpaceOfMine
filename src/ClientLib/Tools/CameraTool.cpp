@@ -30,6 +30,7 @@ namespace tsom
 	ToolBase(gameInterface, "Camera tool"),
 	m_exitCallback(std::move(exitCallback)),
 	m_cameraRotation(Nz::EulerAnglesf::Zero()),
+	m_showSettingsPopup(true),
 	m_screenshotCubemap(false)
 	{
 		auto& config = m_gameInterface.GetConfig();
@@ -89,6 +90,9 @@ namespace tsom
 		if (triggerType == ToolBase::TriggerType::Secondary)
 		{
 			m_isCursorUnlocked = !m_isCursorUnlocked;
+			if (m_isCursorUnlocked)
+				m_showSettingsPopup = true;
+
 			m_gameInterface.UpdateMouseLock();
 		}
 	}
@@ -138,89 +142,98 @@ namespace tsom
 #if defined(TSOM_DEV_TOOLS)
 		auto& camera = m_cameraEntity.get<Nz::CameraComponent>();
 
-		if (ImGui::Begin("Camera mode", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+		if (m_showSettingsPopup)
 		{
-			ImGui::Text("Press right click to lock/unlock mouse");
-			ImGui::Separator();
-
-			if (ImGui::Button("Close"))
+			if (ImGui::Begin("Camera mode", &m_showSettingsPopup, ImGuiWindowFlags_AlwaysAutoResize))
 			{
-				m_exitCallback(); //< Instance will be invalided after this call
-				ImGui::End();
-				return;
-			}
-
-			if (ImGui::DragFloat("Camera FOV", &m_cameraFOV.value, 0.5f, 0.001f, 179.999f))
-				camera.UpdateFOV(m_cameraFOV);
-
-			ImGui::SameLine();
-			if (ImGui::Button("Reset##FOV"))
-			{
-				m_cameraFOV = Constants::DefaultCameraFOV;
-				camera.UpdateFOV(m_cameraFOV);
-			}
-
-			entt::handle controlledEntity = m_gameInterface.GetControlledEntity();
-
-			bool isCharacterVisible = camera.GetRenderMask() & Constants::RenderMaskLocalPlayer;
-			bool arePlayerNameVisible = camera.GetRenderMask() & Constants::RenderMaskPlayerNames;
-
-			if (ImGui::Checkbox("Show character", &isCharacterVisible))
-			{
-				if (controlledEntity)
+				if (!m_showSettingsPopup)
 				{
-					if (isCharacterVisible)
-					{
-						controlledEntity.erase<Nz::DisabledComponent>();
+					m_isCursorUnlocked = false;
+					m_gameInterface.UpdateMouseLock();
+				}
 
-						Nz::UInt32 newMask = camera.GetRenderMask();
-						newMask |= Constants::RenderMaskLocalPlayer;
-						if (arePlayerNameVisible)
-							newMask |= Constants::RenderMaskLocalPlayerName;
+				ImGui::Text("Press right click to lock/unlock mouse");
+				ImGui::Separator();
 
-						camera.UpdateRenderMask(newMask);
-					}
-					else
+				if (ImGui::Button("Close"))
+				{
+					m_exitCallback(); //< Instance will be invalided after this call
+					ImGui::End();
+					return;
+				}
+
+				if (ImGui::DragFloat("Camera FOV", &m_cameraFOV.value, 0.5f, 0.001f, 179.999f))
+					camera.UpdateFOV(m_cameraFOV);
+
+				ImGui::SameLine();
+				if (ImGui::Button("Reset##FOV"))
+				{
+					m_cameraFOV = Constants::DefaultCameraFOV;
+					camera.UpdateFOV(m_cameraFOV);
+				}
+
+				entt::handle controlledEntity = m_gameInterface.GetControlledEntity();
+
+				bool isCharacterVisible = camera.GetRenderMask() & Constants::RenderMaskLocalPlayer;
+				bool arePlayerNameVisible = camera.GetRenderMask() & Constants::RenderMaskPlayerNames;
+
+				if (ImGui::Checkbox("Show character", &isCharacterVisible))
+				{
+					if (controlledEntity)
 					{
-						// Disable the player entity to make their shadow disappear
-						controlledEntity.emplace<Nz::DisabledComponent>();
-						// and mask other entities (such as player name) too
-						camera.UpdateRenderMask(camera.GetRenderMask() & ~(Constants::RenderMaskLocalPlayer | Constants::RenderMaskLocalPlayerName));
+						if (isCharacterVisible)
+						{
+							controlledEntity.erase<Nz::DisabledComponent>();
+
+							Nz::UInt32 newMask = camera.GetRenderMask();
+							newMask |= Constants::RenderMaskLocalPlayer;
+							if (arePlayerNameVisible)
+								newMask |= Constants::RenderMaskLocalPlayerName;
+
+							camera.UpdateRenderMask(newMask);
+						}
+						else
+						{
+							// Disable the player entity to make their shadow disappear
+							controlledEntity.emplace<Nz::DisabledComponent>();
+							// and mask other entities (such as player name) too
+							camera.UpdateRenderMask(camera.GetRenderMask() & ~(Constants::RenderMaskLocalPlayer | Constants::RenderMaskLocalPlayerName));
+						}
 					}
 				}
+
+				if (ImGui::Checkbox("Show player names", &arePlayerNameVisible))
+				{
+					if (arePlayerNameVisible)
+						camera.UpdateRenderMask(camera.GetRenderMask() | ((isCharacterVisible) ? Constants::RenderMaskPlayerNames : Constants::RenderMaskOtherPlayersName));
+					else
+						camera.UpdateRenderMask(camera.GetRenderMask() & ~Constants::RenderMaskPlayerNames);
+				}
+
+				ImGui::Separator();
+
+				ImGui::Checkbox("Cubemap", &m_screenshotCubemap);
+
+				ImGui::DragScalar("Width", ImGuiDataType_U32, &m_screenshotSize.x);
+				if (!m_screenshotCubemap)
+				{
+					ImGui::SameLine();
+					ImGui::Text("x");
+					ImGui::SameLine();
+					ImGui::DragScalar("Height", ImGuiDataType_U32, &m_screenshotSize.y);
+				}
+
+				if (ImGui::Button("Screenshot"))
+				{
+					auto& taskScheduler = m_gameInterface.GetApplication().GetComponent<Nz::TaskSchedulerAppComponent>();
+					if (m_screenshotCubemap)
+						TakeCubemapScreenshot(taskScheduler, m_gameInterface.GetWorld(), m_cameraEntity, m_screenshotSize.x);
+					else
+						TakeScreenshot(taskScheduler, m_gameInterface.GetWorld(), m_cameraEntity, m_screenshotSize);
+				}
 			}
-
-			if (ImGui::Checkbox("Show player names", &arePlayerNameVisible))
-			{
-				if (arePlayerNameVisible)
-					camera.UpdateRenderMask(camera.GetRenderMask() | ((isCharacterVisible) ? Constants::RenderMaskPlayerNames : Constants::RenderMaskOtherPlayersName));
-				else
-					camera.UpdateRenderMask(camera.GetRenderMask() & ~Constants::RenderMaskPlayerNames);
-			}
-
-			ImGui::Separator();
-
-			ImGui::Checkbox("Cubemap", &m_screenshotCubemap);
-
-			ImGui::DragScalar("Width", ImGuiDataType_U32, &m_screenshotSize.x);
-			if (!m_screenshotCubemap)
-			{
-				ImGui::SameLine();
-				ImGui::Text("x");
-				ImGui::SameLine();
-				ImGui::DragScalar("Height", ImGuiDataType_U32, &m_screenshotSize.y);
-			}
-
-			if (ImGui::Button("Screenshot"))
-			{
-				auto& taskScheduler = m_gameInterface.GetApplication().GetComponent<Nz::TaskSchedulerAppComponent>();
-				if (m_screenshotCubemap)
-					TakeCubemapScreenshot(taskScheduler, m_gameInterface.GetWorld(), m_cameraEntity, m_screenshotSize.x);
-				else
-					TakeScreenshot(taskScheduler, m_gameInterface.GetWorld(), m_cameraEntity, m_screenshotSize);
-			}
+			ImGui::End();
 		}
-		ImGui::End();
 #endif
 
 		cameraNode.SetTransform(cameraPos, cameraRot);
