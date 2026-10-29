@@ -27,7 +27,7 @@ namespace tsom
 			void BuildMesh(std::size_t layerIndex, std::vector<Nz::UInt32>& indices, const Nz::Vector3f& center, const Nz::FunctionRef<VertexAttributes(const Nz::Vector3ui& blockIndices, Direction direction)>& addFace) const override;
 
 			Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> ComputeBlockCorners(const Nz::Vector3ui& indices) const override;
-			std::optional<Nz::Vector3ui> ComputeCoordinates(const Nz::Vector3f& position) const;
+			std::optional<Nz::Vector3ui> ComputeCoordinates(const Nz::Vector3f& position) const override;
 			std::optional<HitBlock> ComputeHitCoordinates(const Nz::Vector3f& hitPos, const Nz::Vector3f& hitNormal, const Nz::Collider3D& collider, std::uint32_t hitSubshapeId) const override;
 
 			SurfaceNetsChunk& operator=(const SurfaceNetsChunk&) = delete;
