@@ -15,6 +15,7 @@
 #include <ServerLib/Components/NetworkedComponent.hpp>
 #include <ServerLib/Systems/NetworkedEntitiesSystem.hpp>
 #include <Nazara/Core/Components/DisabledComponent.hpp>
+#include <Nazara/Core/Components/LifetimeComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/RigidBody3D.hpp>
 #include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
@@ -101,6 +102,9 @@ namespace tsom
 
 		if (DatabaseComponent* databaseComponent = oldEntity.try_get<DatabaseComponent>())
 			newEntity.emplace<DatabaseComponent>(databaseComponent->uniqueId); // don't copy database planet id!
+
+		if (Nz::LifetimeComponent* lifetimeComponent = oldEntity.try_get<Nz::LifetimeComponent>())
+			newEntity.emplace<Nz::LifetimeComponent>(lifetimeComponent->GetRemainingLifeTime());
 
 		// Disable old entity to not take it into account in the callbacks (for example when changing root environment)
 		oldEntity.emplace<Nz::DisabledComponent>();

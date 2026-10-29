@@ -16,6 +16,7 @@
 #include <CommonLib/Scripting/ScriptingProperties.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
 #include <ServerLib/ServerPlayer.hpp>
+#include <Nazara/Core/Components/LifetimeComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Collider3D.hpp>
 #include <Nazara/Physics3D/Components/PhysCharacter3DComponent.hpp>
@@ -245,6 +246,12 @@ namespace tsom
 
 			sol::state_view state(L);
 			return TranslatePropertyToLua(state, classComponent.GetProperty(propertyIndex));
+		});
+
+		entityMetatable["SetLifetime"] = LuaFunction([this](sol::this_state L, sol::table entityTable, float seconds)
+		{
+			entt::handle entity = AssertScriptEntity(entityTable);
+			entity.emplace_or_replace<Nz::LifetimeComponent>(Nz::Time::Seconds(seconds));
 		});
 
 		entityMetatable["SetTickInterval"] = LuaFunction([this](sol::this_state L, sol::table entityTable, Nz::UInt32 milliseconds)

@@ -13,6 +13,7 @@
 #include <ServerLib/Systems/NetworkedEntitiesSystem.hpp>
 #include <Nazara/Core/Components/DisabledComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
+#include <Nazara/Core/Systems/LifetimeSystem.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 
 namespace tsom
@@ -36,6 +37,7 @@ namespace tsom
 		m_world->AddSystem<EnvironmentProxySystem>();
 		m_world->AddSystem<NetworkedEntitiesSystem>(*this);
 		m_world->AddSystem<TickSystem>();
+		m_world->AddSystem<Nz::LifetimeSystem>();
 
 		// Setup physics
 		Nz::Physics3DSystem::Settings physSettings = Physics::BuildSettings();
