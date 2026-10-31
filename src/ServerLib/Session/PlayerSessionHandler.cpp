@@ -771,10 +771,10 @@ namespace tsom
 		else if (message == "/links")
 		{
 			m_player->SendChatMessage("--- Game ressources ---");
-			m_player->SendChatMessage("Join our community on Discord : http://discord.gg/2WUU6Sp");
-			m_player->SendChatMessage("Check out the wiki : https://tsom.fandom.com/fr");
-			m_player->SendChatMessage("To suggest a new feature or an idea : https://tsom-idea.digitalpulse.software");
-			m_player->SendChatMessage("To report an issue : https://github.com/DigitalPulseSoftware/ThisSpaceOfMine/issues");
+			m_player->SendChatMessage("Join our community on Discord: https://discord.sirlynix.be");
+			m_player->SendChatMessage("Check out the wiki: https://tsom.fandom.com/fr");
+			m_player->SendChatMessage("To suggest a new feature or an idea: https://tsom-idea.digitalpulse.software");
+			m_player->SendChatMessage("To report an issue: https://github.com/DigitalPulseSoftware/ThisSpaceOfMine/issues");
 			return;
 		}
 		else if (message == "/help")
