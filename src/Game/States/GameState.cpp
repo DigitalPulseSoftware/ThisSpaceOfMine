@@ -1181,7 +1181,9 @@ namespace tsom
 					while ((parentEnvId = stateData.sessionHandler->GetParentEnvironmentId(parentEnvId)) != ClientSessionHandler::InvalidEnvironment)
 						m_debugOverlay->textDrawer.AppendText(fmt::format(" -> #{}", parentEnvId));
 
-					m_debugOverlay->textDrawer.AppendText("\n");
+					Packets::Helper::EnvironmentId rootEnvId = stateData.sessionHandler->GetRootEnvironmentId();
+					const Nz::Vector3i32& rootIndices = stateData.sessionHandler->GetRootEnvironmentIndices(rootEnvId);
+					m_debugOverlay->textDrawer.AppendText(fmt::format(" (root indices: {};{};{})\n", rootIndices.x, rootIndices.y, rootIndices.z));
 
 					if (const GravityController* gravityController = stateData.sessionHandler->GetGravityController(characterEnv.environmentIndex))
 					{

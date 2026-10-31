@@ -34,7 +34,7 @@ namespace tsom
 
 	inline const GravityController* ClientSessionHandler::GetGravityController(Packets::Helper::EnvironmentId environmentIndex) const
 	{
-		if (environmentIndex > m_environments.size() || !m_environments[environmentIndex])
+		if (environmentIndex >= m_environments.size() || !m_environments[environmentIndex])
 			return nullptr;
 
 		return m_environments[environmentIndex]->gravityController;
@@ -43,6 +43,25 @@ namespace tsom
 	inline Packets::Helper::EnvironmentId ClientSessionHandler::GetRootEnvironmentId() const
 	{
 		return m_rootEnvironmentId;
+	}
+
+	inline Packets::Helper::EnvironmentId ClientSessionHandler::GetRootEnvironmentId(Packets::Helper::EnvironmentId environmentId) const
+	{
+		Packets::Helper::EnvironmentId rootEnvironmentId = environmentId;
+		while (const EnvironmentData::ChildData* childData = std::get_if<EnvironmentData::ChildData>(&m_environments[rootEnvironmentId]->specData))
+		{
+			NazaraAssert(childData->parentEnvironment < m_environments.size() && m_environments[childData->parentEnvironment]);
+			rootEnvironmentId = childData->parentEnvironment;
+		}
+
+		return rootEnvironmentId;
+	}
+
+	inline const Nz::Vector3i32& ClientSessionHandler::GetRootEnvironmentIndices(Packets::Helper::EnvironmentId rootEnvironmentId) const
+	{
+		NazaraAssert(rootEnvironmentId < m_environments.size() && m_environments[rootEnvironmentId]);
+		NazaraAssertMsg(std::holds_alternative<EnvironmentData::RootData>(m_environments[rootEnvironmentId]->specData), "not a root environment");
+		return std::get<EnvironmentData::RootData>(m_environments[rootEnvironmentId]->specData).indices;
 	}
 
 	inline ScriptingContext& ClientSessionHandler::GetScriptingContext()

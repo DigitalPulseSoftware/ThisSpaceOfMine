@@ -52,6 +52,8 @@ namespace tsom
 			inline const GravityController* GetGravityController(Packets::Helper::EnvironmentId environmentIndex) const;
 			inline Packets::Helper::EnvironmentId GetParentEnvironmentId(Packets::Helper::EnvironmentId environmentId) const;
 			inline Packets::Helper::EnvironmentId GetRootEnvironmentId() const;
+			inline Packets::Helper::EnvironmentId GetRootEnvironmentId(Packets::Helper::EnvironmentId environmentId) const;
+			inline const Nz::Vector3i32& GetRootEnvironmentIndices(Packets::Helper::EnvironmentId rootEnvironmentId) const;
 			inline ScriptingContext& GetScriptingContext();
 
 			void HandlePacket(Packets::S_AuthResponse&& authResponse);
@@ -132,6 +134,7 @@ namespace tsom
 			{
 				struct ChildData
 				{
+					Packets::Helper::EntityId ownerEntityId;
 					Packets::Helper::EnvironmentId parentEnvironment;
 				};
 
