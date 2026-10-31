@@ -459,9 +459,9 @@ namespace tsom
 				auto& ownerNode = ownerEntity.entity.get<Nz::NodeComponent>();
 				rootNode.SetParent(ownerNode);
 
-				environment.specData = EnvironmentData::ChildData{ ownerEntity.environmentIndex };
+				environment.specData = EnvironmentData::ChildData{ childEnvironment.ownerEntity, ownerEntity.environmentIndex };
 
-				m_entityToOwnedEnvironment.emplace(childEnvironment.ownerEntity, envCreate.id);
+				m_entityToOwnedEnvironment.insert_or_assign(childEnvironment.ownerEntity, envCreate.id);
 			},
 			[&](Packets::S_EnvironmentCreate::RootEnvironment& rootEnvironment)
 			{
@@ -478,7 +478,10 @@ namespace tsom
 					rootIndices = std::get<EnvironmentData::RootData>(m_environments[m_rootEnvironmentId]->specData).indices;
 				}
 				else
+				{
 					m_rootEnvironmentId = envCreate.id;
+					rootIndices = rootEnvironment.indices;
+				}
 
 				Nz::Vector3f cellTranslation = Nz::Vector3f(rootEnvironment.indices - rootIndices) * Constants::SpaceCellSize;
 				rootNode.SetPosition(cellTranslation);
@@ -505,6 +508,9 @@ namespace tsom
 			m_entityToOwnedEnvironment.erase(entityIndex);
 			m_entities[entityIndex].reset();
 		}
+
+		if (EnvironmentData::ChildData* childData = std::get_if<EnvironmentData::ChildData>(&m_environments[envDestroy.id]->specData))
+			m_entityToOwnedEnvironment.erase(childData->ownerEntityId);
 
 		m_environments[envDestroy.id].reset();
 		if (m_rootEnvironmentId == envDestroy.id)
@@ -671,13 +677,7 @@ namespace tsom
 
 	void ClientSessionHandler::HandleControlledEntityEnvironmentSwitch(Packets::Helper::EnvironmentId newEnvironmentId)
 	{
-		Packets::Helper::EnvironmentId rootEnvironmentId = newEnvironmentId;
-		while (EnvironmentData::ChildData* childData = std::get_if<EnvironmentData::ChildData>(&m_environments[rootEnvironmentId]->specData))
-		{
-			NazaraAssert(childData->parentEnvironment < m_environments.size() && m_environments[childData->parentEnvironment]);
-			rootEnvironmentId = childData->parentEnvironment;
-		}
-
+		Packets::Helper::EnvironmentId rootEnvironmentId = GetRootEnvironmentId(newEnvironmentId);
 		if (m_rootEnvironmentId != rootEnvironmentId)
 			UpdateRootEnvironment(rootEnvironmentId);
 	}
