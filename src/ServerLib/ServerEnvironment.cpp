@@ -35,7 +35,6 @@ namespace tsom
 		m_world->AddSystem<AtmosphereSystem>();
 		m_world->AddSystem<DistributionSystem>();
 		m_world->AddSystem<EnvironmentProxySystem>();
-		m_world->AddSystem<NetworkedEntitiesSystem>(*this);
 		m_world->AddSystem<TickSystem>();
 		m_world->AddSystem<Nz::LifetimeSystem>();
 
@@ -45,6 +44,8 @@ namespace tsom
 
 		auto& physicsSystem = m_world->AddSystem<Nz::Physics3DSystem>(std::move(physSettings));
 		physicsSystem.SetContactListener(Physics::BuildContactListener());
+
+		m_world->AddSystem<NetworkedEntitiesSystem>(*this, physicsSystem);
 	}
 
 	ServerEnvironment::~ServerEnvironment()

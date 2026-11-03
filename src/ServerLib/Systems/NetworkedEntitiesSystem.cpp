@@ -13,15 +13,33 @@
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Components/PhysCharacter3DComponent.hpp>
 #include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
+#include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 
 namespace tsom
 {
-	NetworkedEntitiesSystem::NetworkedEntitiesSystem(entt::registry& registry, ServerEnvironment& environment) :
+	NetworkedEntitiesSystem::NetworkedEntitiesSystem(entt::registry& registry, ServerEnvironment& environment, Nz::Physics3DSystem& physicsSytem) :
 	m_networkedEntities(registry),
+	m_physicsSytem(physicsSytem),
 	m_registry(registry),
 	m_environment(environment),
 	m_players(environment.GetServerInstance())
 	{
+		m_physicsSytem.OnEntityActivated.Connect([&](entt::handle entity, Nz::UInt32 /*bodyIndex*/)
+		{
+			ForEachVisibility([&](SessionVisibilityHandler& visibility)
+			{
+				visibility.UpdateEntityMovement(entt::handle(m_registry, entity), true);
+			});
+		});
+		
+		m_physicsSytem.OnEntityDeactivated.Connect([&](entt::handle entity, Nz::UInt32 /*bodyIndex*/)
+		{
+			ForEachVisibility([&](SessionVisibilityHandler& visibility)
+			{
+				visibility.UpdateEntityMovement(entt::handle(m_registry, entity), false);
+			});
+		});
+
 		m_networkedEntities.OnEntityAdded.Connect([&](entt::entity entity)
 		{
 			// Handle entities in Update to let all components initialize themselves
@@ -167,8 +185,6 @@ namespace tsom
 
 	SessionVisibilityHandler::CreateEntityData NetworkedEntitiesSystem::BuildCreateEntityData(entt::entity entity) const
 	{
-		bool isMoving = m_registry.any_of<Nz::PhysCharacter3DComponent, Nz::RigidBody3DComponent>(entity);
-
 		auto& entityNode = m_registry.get<Nz::NodeComponent>(entity);
 
 		auto& entityNet = m_registry.get<NetworkedComponent>(entity);
@@ -180,7 +196,11 @@ namespace tsom
 		createData.environment = &m_environment;
 		createData.initialPosition = entityNode.GetPosition();
 		createData.initialRotation = entityNode.GetRotation();
-		createData.isMoving = isMoving;
+
+		if (auto* physCharacter = m_registry.try_get<Nz::PhysCharacter3DComponent>(entity))
+			createData.isMoving = !physCharacter->IsSleeping();
+		else if (auto* rigidBody = m_registry.try_get<Nz::RigidBody3DComponent>(entity))
+			createData.isMoving = !rigidBody->IsSleeping();
 
 		if (entityInstance)
 		{

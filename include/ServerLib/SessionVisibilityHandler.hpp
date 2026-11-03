@@ -59,6 +59,7 @@ namespace tsom
 
 			inline void UpdateControlledEntity(entt::handle entity, CharacterController* controller);
 			inline void UpdateEntityDistributionConnection(entt::handle entity, Nz::UInt8 outputIndex, entt::handle targetEntity, Nz::UInt8 inputIndex);
+			inline void UpdateEntityMovement(entt::handle entity, bool isMoving);
 			inline void UpdateEntityProperty(entt::handle entity, Nz::UInt32 propertyIndex, const EntityProperty& newValue);
 			void UpdateEntityEnvironment(ServerEnvironment& newEnvironment, entt::handle oldEntity, entt::handle newEntity);
 			inline void UpdateLastInputIndex(InputIndex inputIndex);
@@ -74,7 +75,7 @@ namespace tsom
 				Nz::Vector3f initialPosition;
 				std::optional<Packets::Helper::PlayerControlledData> playerControlledData;
 				std::vector<EntityProperty> entityProperties;
-				bool isMoving;
+				bool isMoving = false;
 			};
 
 		private:

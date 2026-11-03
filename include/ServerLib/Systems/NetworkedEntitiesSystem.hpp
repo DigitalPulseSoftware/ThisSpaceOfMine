@@ -23,6 +23,7 @@
 namespace Nz
 {
 	class DisabledComponent;
+	class Physics3DSystem;
 }
 
 namespace tsom
@@ -37,7 +38,7 @@ namespace tsom
 			static constexpr Nz::Int64 ExecutionOrder = 10'000'000;
 			using Components = Nz::TypeList<class NetworkedComponent>;
 
-			NetworkedEntitiesSystem(entt::registry& registry, ServerEnvironment& environment);
+			NetworkedEntitiesSystem(entt::registry& registry, ServerEnvironment& environment, Nz::Physics3DSystem& physicsSytem);
 			NetworkedEntitiesSystem(const NetworkedEntitiesSystem&) = delete;
 			NetworkedEntitiesSystem(NetworkedEntitiesSystem&&) = delete;
 			~NetworkedEntitiesSystem() = default;
@@ -68,6 +69,7 @@ namespace tsom
 
 			entt::storage<void> m_pendingCreatedEntities;
 			Nz::EnttObserver<Nz::TypeList<class NetworkedComponent>, Nz::TypeList<Nz::DisabledComponent>, EntityData> m_networkedEntities;
+			Nz::Physics3DSystem& m_physicsSytem;
 			entt::registry& m_registry;
 			ServerEnvironment& m_environment;
 			ServerPlayerList m_players;

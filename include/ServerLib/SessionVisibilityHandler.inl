@@ -96,6 +96,17 @@ namespace tsom
 		}
 	}
 
+	inline void SessionVisibilityHandler::UpdateEntityMovement(entt::handle entity, bool isMoving)
+	{
+		if (isMoving)
+		{
+			if (m_controlledEntity != entity) //< Controlled entity it always sent separatly
+				m_movingEntities.insert(entity);
+		}
+		else
+			m_movingEntities.erase(entity);
+	}
+
 	inline void SessionVisibilityHandler::UpdateEntityProperty(entt::handle entity, Nz::UInt32 propertyIndex, const EntityProperty& newValue)
 	{
 		Nz::UInt32 propertyMask = 1u << propertyIndex;
