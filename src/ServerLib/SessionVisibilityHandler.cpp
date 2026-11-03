@@ -293,7 +293,56 @@ namespace tsom
 	{
 		auto it = m_entityIndices.find(oldEntity);
 		if (it == m_entityIndices.end())
+		{
+			// Entity not created yet, update its environment
+			if (auto createdIt = m_createdEntities.find(oldEntity); createdIt != m_createdEntities.end())
+			{
+				CreateEntityData& createEntityData = createdIt.value();
+				createEntityData.environment = &newEnvironment;
+
+				// Check if target environment has been created yet
+				auto it = std::find_if(m_createdEnvironments.begin(), m_createdEnvironments.end(), [&](const EnvironmentCreationData& envCreation) { return envCreation.environment == &newEnvironment; });
+				if (it != m_createdEnvironments.end())
+				{
+					EnvironmentCreationData& creationData = *it;
+					creationData.createdEntities.emplace(newEntity, std::move(createEntityData));
+				}
+				else
+					m_createdEntities.emplace(newEntity, std::move(createEntityData));
+
+				m_createdEntities.erase(createdIt);
+			}
+			else
+			{
+				// Entity is part of a yet to be created environment
+				bool found = false;
+				for (EnvironmentCreationData& oldEnvCreationData : m_createdEnvironments)
+				{
+					auto entityIt = oldEnvCreationData.createdEntities.find(oldEntity);
+					if (entityIt != oldEnvCreationData.createdEntities.end())
+					{
+						CreateEntityData& createEntityData = entityIt.value();
+						createEntityData.environment = &newEnvironment;
+
+						// Found the entity, move it to the new environment (which may not be created too)
+						auto it = std::find_if(m_createdEnvironments.begin(), m_createdEnvironments.end(), [&](const EnvironmentCreationData& envCreation) { return envCreation.environment == &newEnvironment; });
+						if (it != m_createdEnvironments.end())
+						{
+							EnvironmentCreationData& newEnvCreationData = *it;
+							newEnvCreationData.createdEntities.emplace(newEntity, std::move(createEntityData));
+						}
+						else
+							m_createdEntities.emplace(newEntity, std::move(createEntityData));
+
+						found = true;
+						break;
+					}
+				}
+
+				NazaraAssertMsg(found, "entity moved but not found in any environment");
+			}
 			return;
+		}
 
 		// Don't remove from created entities as client will need it to update its environment
 		// TODO: Create entity directly in the right environment if it wasn't send yet
@@ -320,7 +369,7 @@ namespace tsom
 		m_entityIndices.erase(it);
 		m_entityIndices.emplace(newEntity, entityIndex);
 
-		// Switch entity to new environmenet
+		// Switch entity to new environment
 		auto& entityData = m_visibleEntities[entityIndex];
 
 		auto& previousEnv = m_environments[entityData.envIndex];
@@ -907,6 +956,8 @@ namespace tsom
 
 	void SessionVisibilityHandler::HandleEntityCreation(std::vector<Packets::Helper::EntityData>& entities, entt::handle entity, CreateEntityData&& createEntityData)
 	{
+		NazaraAssert(entity);
+
 		std::size_t entityIndex = m_freeEntityIds.FindFirst();
 		if (entityIndex == m_freeEntityIds.npos)
 		{
