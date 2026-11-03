@@ -33,8 +33,8 @@
 
 namespace tsom
 {
-	ClientChunkEntities::ClientChunkEntities(Nz::ApplicationBase& app, ConfigFile& config, Nz::EnttWorld& world, ChunkContainer& chunkContainer, const ClientBlockLibrary& blockLibrary, std::size_t layerIndex) :
-	ChunkEntities(app, world, chunkContainer, blockLibrary, layerIndex, NoInit{}),
+	ClientChunkEntities::ClientChunkEntities(Nz::ApplicationBase& app, ConfigFile& config, Nz::EnttWorld& world, std::shared_ptr<ChunkContainer> chunkContainer, const ClientBlockLibrary& blockLibrary, std::size_t layerIndex) :
+	ChunkEntities(app, world, std::move(chunkContainer), blockLibrary, layerIndex, NoInit{}),
 	m_configFile(config),
 	m_isCollisionGenerationEnabled(true)
 	{
@@ -193,7 +193,7 @@ namespace tsom
 			return vertexAttributes;
 		};
 
-		chunk.BuildMesh(m_layerIndex, indices, m_chunkContainer.GetCenter() - m_chunkContainer.GetChunkOffset(chunk.GetIndices()), AddVertices);
+		chunk.BuildMesh(m_layerIndex, indices, m_chunkContainer->GetCenter() - m_chunkContainer->GetChunkOffset(chunk.GetIndices()), AddVertices);
 		if (indices.empty())
 			return nullptr;
 
@@ -262,6 +262,9 @@ namespace tsom
 		}
 
 		std::shared_ptr<ColliderModelUpdateJob> updateJob = std::make_shared<ColliderModelUpdateJob>();
+		updateJob->chunk = chunk.shared_from_this();
+		updateJob->chunkContainer = m_chunkContainer;
+
 		updateJob->applyFunc = [this](const ChunkIndices& chunkIndices, UpdateJob&& job)
 		{
 			ColliderModelUpdateJob&& colliderUpdateJob = static_cast<ColliderModelUpdateJob&&>(job);
@@ -315,14 +318,14 @@ namespace tsom
 			auto& taskScheduler = m_application.GetComponent<Nz::TaskSchedulerAppComponent>();
 			if (m_isCollisionGenerationEnabled)
 			{
-				taskScheduler.AddTask([this, updateJob, chunkPtr = chunk.shared_from_this()]
+				taskScheduler.AddTask([this, updateJob]
 				{
 					if (updateJob->cancelled)
 						return;
 
-					ChunkReadLock lock(chunkPtr.get());
-					if (chunkPtr->HasContent()) //< We need to re-check because the chunk may have lost its content (become full empty) since task was scheduled
-						updateJob->collider = chunkPtr->BuildCollider(m_layerIndex);
+					ChunkReadLock lock(updateJob->chunk.get());
+					if (updateJob->chunk->HasContent()) //< We need to re-check because the chunk may have lost its content (become full empty) since task was scheduled
+						updateJob->collider = updateJob->chunk->BuildCollider(m_layerIndex);
 
 					updateJob->jobDone++;
 				});
@@ -330,15 +333,15 @@ namespace tsom
 				updateJob->taskCount++;
 			}
 
-			taskScheduler.AddTask([this, updateJob, chunkPtr = chunk.shared_from_this()]
+			taskScheduler.AddTask([this, updateJob]
 			{
 				if (updateJob->cancelled)
 					return;
 
 				// FIXME: If ClientChunkEntities is deleted before job finished, it can result in a crash
-				ChunkReadLock lock(chunkPtr.get());
-				if (chunkPtr->HasContent()) //< We need to re-check because the chunk may have lost its content (become full empty) since task was scheduled
-					updateJob->mesh = BuildMesh(*chunkPtr);
+				ChunkReadLock lock(updateJob->chunk.get());
+				if (updateJob->chunk->HasContent()) //< We need to re-check because the chunk may have lost its content (become full empty) since task was scheduled
+					updateJob->mesh = BuildMesh(*updateJob->chunk);
 
 				updateJob->jobDone++;
 			});
@@ -349,7 +352,7 @@ namespace tsom
 		for (NeighborChunk neighborChunk : neighborMask)
 		{
 			ChunkIndices neighborIndices = chunk.GetIndices() + s_neighborChunkOffset[neighborChunk];
-			const Chunk* neighborChunkPtr = m_chunkContainer.GetChunk(neighborIndices);
+			const Chunk* neighborChunkPtr = m_chunkContainer->GetChunk(neighborIndices);
 			if (!neighborChunkPtr || !neighborChunkPtr->HasContent() || !neighborChunkPtr->IsLayerRegistered(m_layerIndex))
 				continue;
 

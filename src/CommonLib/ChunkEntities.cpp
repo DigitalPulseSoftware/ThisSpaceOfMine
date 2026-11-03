@@ -19,20 +19,20 @@
 
 namespace tsom
 {
-	ChunkEntities::ChunkEntities(Nz::ApplicationBase& application, Nz::EnttWorld& world, ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary, std::size_t layerIndex) :
-	ChunkEntities(application, world, chunkContainer, blockLibrary, layerIndex, NoInit{})
+	ChunkEntities::ChunkEntities(Nz::ApplicationBase& application, Nz::EnttWorld& world, std::shared_ptr<ChunkContainer> chunkContainer, const BlockLibrary& blockLibrary, std::size_t layerIndex) :
+	ChunkEntities(application, world, std::move(chunkContainer), blockLibrary, layerIndex, NoInit{})
 	{
 		FillChunks();
 	}
 
-	ChunkEntities::ChunkEntities(Nz::ApplicationBase& application, Nz::EnttWorld& world, ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary, std::size_t layerIndex, NoInit) :
+	ChunkEntities::ChunkEntities(Nz::ApplicationBase& application, Nz::EnttWorld& world, std::shared_ptr<ChunkContainer> chunkContainer, const BlockLibrary& blockLibrary, std::size_t layerIndex, NoInit) :
 	m_layerIndex(layerIndex),
+	m_chunkContainer(std::move(chunkContainer)),
 	m_application(application),
 	m_world(world),
 	m_blockLibrary(blockLibrary),
-	m_chunkContainer(chunkContainer)
 	{
-		m_onChunkAdded.Connect(chunkContainer.OnChunkLayerAdded, [this](ChunkContainer* /*emitter*/, Chunk* chunk, std::size_t layerIndex)
+		m_onChunkAdded.Connect(m_chunkContainer->OnChunkLayerAdded, [this](ChunkContainer* /*emitter*/, Chunk* chunk, std::size_t layerIndex)
 		{
 			if (m_layerIndex != layerIndex)
 				return;
@@ -42,7 +42,7 @@ namespace tsom
 			m_createdDestroyedChunks[chunk->GetIndices()] = true;
 		});
 
-		m_onChunkRemove.Connect(chunkContainer.OnChunkLayerRemove, [this](ChunkContainer* /*emitter*/, Chunk* chunk, std::size_t layerIndex)
+		m_onChunkRemove.Connect(m_chunkContainer->OnChunkLayerRemove, [this](ChunkContainer* /*emitter*/, Chunk* chunk, std::size_t layerIndex)
 		{
 			if (m_layerIndex != layerIndex)
 				return;
@@ -52,7 +52,7 @@ namespace tsom
 			m_createdDestroyedChunks[chunk->GetIndices()] = false;
 		});
 
-		m_onChunkUpdated.Connect(chunkContainer.OnChunkUpdated, [this](ChunkContainer* /*emitter*/, Chunk* chunk, NeighborChunkMask neighborMask, Nz::UInt32 layerMask)
+		m_onChunkUpdated.Connect(m_chunkContainer->OnChunkUpdated, [this](ChunkContainer* /*emitter*/, Chunk* chunk, NeighborChunkMask neighborMask, Nz::UInt32 layerMask)
 		{
 			if ((layerMask & (1u << m_layerIndex)) == 0)
 				return;
@@ -160,14 +160,14 @@ namespace tsom
 			m_chunkEntities.emplace(chunkIndices, chunkEntity);
 		}
 
-		auto& nodeComponent = chunkEntity.emplace<Nz::NodeComponent>(m_chunkContainer.GetChunkOffset(chunkIndices));
+		auto& nodeComponent = chunkEntity.emplace<Nz::NodeComponent>(m_chunkContainer->GetChunkOffset(chunkIndices));
 		if (m_parentEntity)
 		{
 			m_parentEntity.get_or_emplace<EntityOwnerComponent>().Register(chunkEntity);
 			nodeComponent.SetParent(m_parentEntity);
 		}
 
-		Chunk* chunk = m_chunkContainer.GetChunk(chunkIndices);
+		Chunk* chunk = m_chunkContainer->GetChunk(chunkIndices);
 		NazaraAssert(chunk);
 
 		auto& chunkComponent = chunkEntity.emplace<ChunkComponent>();
@@ -214,7 +214,7 @@ namespace tsom
 
 	void ChunkEntities::FillChunks()
 	{
-		m_chunkContainer.ForEachChunk([this](const ChunkIndices& chunkIndices, Chunk& chunk)
+		m_chunkContainer->ForEachChunk([this](const ChunkIndices& chunkIndices, Chunk& chunk)
 		{
 			if (chunk.IsLayerRegistered(m_layerIndex))
 				CreateChunkEntity(chunkIndices);
@@ -233,6 +233,8 @@ namespace tsom
 		}
 
 		std::shared_ptr<ColliderUpdateJob> updateJob = std::make_shared<ColliderUpdateJob>();
+		updateJob->chunk = chunk.shared_from_this();
+		updateJob->chunkContainer = m_chunkContainer;
 
 		updateJob->applyFunc = [this](const ChunkIndices& chunkIndices, UpdateJob&& job)
 		{
@@ -247,14 +249,14 @@ namespace tsom
 		if (chunk.HasContent())
 		{
 			auto& taskScheduler = m_application.GetComponent<Nz::TaskSchedulerAppComponent>();
-			taskScheduler.AddTask([this, updateJob, chunkPtr = chunk.shared_from_this()]
+			taskScheduler.AddTask([this, updateJob]
 			{
 				if (updateJob->cancelled)
 					return;
 
-				ChunkReadLock lock(chunkPtr.get());
-				if (chunkPtr->HasContent()) //< We need to re-check because the chunk may have lost its content (become full empty) since task was scheduled
-					updateJob->collider = chunkPtr->BuildCollider(m_layerIndex);
+				ChunkReadLock lock(updateJob->chunk.get());
+				if (updateJob->chunk->HasContent()) //< We need to re-check because the chunk may have lost its content (become full empty) since task was scheduled
+					updateJob->collider = updateJob->chunk->BuildCollider(m_layerIndex);
 
 				updateJob->jobDone++;
 			});
@@ -265,7 +267,7 @@ namespace tsom
 		for (NeighborChunk neighborChunk : neighborMask)
 		{
 			ChunkIndices neighborIndices = chunk.GetIndices() + s_neighborChunkOffset[neighborChunk];
-			const Chunk* neighborChunkPtr = m_chunkContainer.GetChunk(neighborIndices);
+			const Chunk* neighborChunkPtr = m_chunkContainer->GetChunk(neighborIndices);
 
 			// We only need to regenerate collisions for neighbor chunks having per-face collisions (like deformed chunks)
 			if (!neighborChunkPtr || !neighborChunkPtr->HasContent() || !neighborChunkPtr->HasPerFaceCollisions() || !neighborChunkPtr->IsLayerRegistered(m_layerIndex))

@@ -31,7 +31,7 @@ namespace tsom
 	class TSOM_COMMONLIB_API ChunkEntities
 	{
 		public:
-			ChunkEntities(Nz::ApplicationBase& app, Nz::EnttWorld& world, ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary, std::size_t layerIndex);
+			ChunkEntities(Nz::ApplicationBase& app, Nz::EnttWorld& world, std::shared_ptr<ChunkContainer> chunkContainer, const BlockLibrary& blockLibrary, std::size_t layerIndex, bool isStatic);
 			ChunkEntities(const ChunkEntities&) = delete;
 			ChunkEntities(ChunkEntities&&) = delete;
 			~ChunkEntities();
@@ -49,7 +49,7 @@ namespace tsom
 			struct NoInit {};
 			struct UpdateJob;
 
-			ChunkEntities(Nz::ApplicationBase& app, Nz::EnttWorld& world, ChunkContainer& chunkContainer, const BlockLibrary& blockLibrary, std::size_t layerIndex, NoInit);
+			ChunkEntities(Nz::ApplicationBase& app, Nz::EnttWorld& world, std::shared_ptr<ChunkContainer> chunkContainer, const BlockLibrary& blockLibrary, std::size_t layerIndex, bool isStatic, NoInit);
 
 			void CreateChunkEntity(const ChunkIndices& chunkIndices);
 			void DestroyChunkEntity(const ChunkIndices& chunkIndices);
@@ -66,6 +66,10 @@ namespace tsom
 				std::atomic_uint jobDone = 0;
 				Nz::FixedVector<ChunkIndices, 3 * 3 * 3> chunkDependencies; //< 27 to be able to have all neighbor
 				unsigned int taskCount;
+
+				// prevent the chunk (and its container) destruction while they are processed
+				std::shared_ptr<const Chunk> chunk;
+				std::shared_ptr<const ChunkContainer> chunkContainer;
 
 				inline bool HasFinished() const
 				{
@@ -92,6 +96,7 @@ namespace tsom
 			std::mutex m_chunkLock;
 			std::mutex m_invalidatedChunkMutex;
 			std::size_t m_layerIndex;
+			std::shared_ptr<ChunkContainer> m_chunkContainer;
 			std::vector<FinishedJob> m_finishedJobs;
 			entt::handle m_parentEntity;
 			tsl::hopscotch_map<ChunkIndices, NeighborChunkMask> m_invalidatedChunks;

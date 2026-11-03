@@ -13,10 +13,11 @@
 #include <Nazara/Math/Vector3.hpp>
 #include <NazaraUtils/FunctionRef.hpp>
 #include <NazaraUtils/Signal.hpp>
+#include <memory>
 
 namespace tsom
 {
-	class TSOM_COMMONLIB_API ChunkContainer
+	class TSOM_COMMONLIB_API ChunkContainer : public std::enable_shared_from_this<ChunkContainer>
 	{
 		public:
 			inline ChunkContainer(const BlockLibrary& blockLibrary, float tileSize);

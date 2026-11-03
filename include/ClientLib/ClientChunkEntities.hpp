@@ -37,7 +37,7 @@ namespace tsom
 	class TSOM_CLIENTLIB_API ClientChunkEntities final : public ChunkEntities
 	{
 		public:
-			ClientChunkEntities(Nz::ApplicationBase& app, ConfigFile& config, Nz::EnttWorld& world, ChunkContainer& chunkContainer, const ClientBlockLibrary& blockLibrary, std::size_t layerIndex);
+			ClientChunkEntities(Nz::ApplicationBase& app, ConfigFile& config, Nz::EnttWorld& world, std::shared_ptr<ChunkContainer> chunkContainer, const ClientBlockLibrary& blockLibrary, std::size_t layerIndex);
 			ClientChunkEntities(const ClientChunkEntities&) = delete;
 			ClientChunkEntities(ClientChunkEntities&&) = delete;
 			~ClientChunkEntities();
