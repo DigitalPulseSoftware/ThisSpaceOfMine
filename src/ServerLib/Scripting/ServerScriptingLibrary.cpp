@@ -8,6 +8,7 @@
 #include <CommonLib/Ship.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Components/DistributionComponent.hpp>
+#include <CommonLib/Scripting/ScriptingProperties.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
 #include <ServerLib/ServerAtmosphere.hpp>
 #include <ServerLib/ServerInstance.hpp>
@@ -123,17 +124,39 @@ namespace tsom
 				Nz::Vector3f position = Nz::Vector3f::Zero();
 				Nz::Quaternionf rotation = Nz::Quaternionf::Identity();
 
+
+				std::vector<EntityProperty> properties;
+				properties.reserve(entityClass->GetPropertyCount());
+				for (Nz::UInt32 propertyIndex = 0; propertyIndex < entityClass->GetPropertyCount(); ++propertyIndex)
+					properties.push_back(entityClass->GetProperty(propertyIndex).defaultValue);
+
 				if (parameters)
 				{
-					position = parameters->get_or("position", position);
-					rotation = parameters->get_or("rotation", rotation);
+					for (const auto& kv : *parameters)
+					{
+						const sol::object& key = kv.first;
+						const sol::object& value = kv.second;
+
+						std::string propertyName = key.as<std::string>();
+						if (propertyName == "position")
+							position = value.as<Nz::Vector3f>();
+						else if (propertyName == "rotation")
+							rotation = value.as<Nz::Quaternionf>();
+						else if (Nz::UInt32 propertyIndex = entityClass->FindProperty(propertyName); propertyIndex != EntityClass::InvalidIndex)
+						{
+							const auto& propertyData = entityClass->GetProperty(propertyIndex);
+							properties[propertyIndex] = TranslatePropertyFromLua(value, propertyData.type, propertyData.isArray);
+						}
+						else
+							spdlog::warn("unknown property \"{}\"", propertyName);
+					}
 				}
 
 				entt::handle entity = environment->CreateEntity();
 
 				entity.emplace<Nz::NodeComponent>(position, rotation);
 				entity.emplace<NetworkedComponent>();
-				entity.emplace<ClassInstanceComponent>(entityClass);
+				entity.emplace<ClassInstanceComponent>(entityClass, std::move(properties));
 
 				entityClass->InitAndActivateEntity(entity);
 
