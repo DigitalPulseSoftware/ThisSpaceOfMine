@@ -78,6 +78,8 @@ namespace tsom
 		for (entt::entity entity : m_updatedEntities)
 		{
 			DatabaseComponent& entityDatabase = m_registry.get<DatabaseComponent>(entity);
+			if (!entityDatabase.planetDatabaseId)
+				continue;
 
 			m_pendingUpdates.push_back({
 				.operation = DatabaseOperation::Update,
