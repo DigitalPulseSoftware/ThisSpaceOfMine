@@ -26,7 +26,7 @@ local meshParams = {
 
 for i = 1, 4 do
 	local treeMesh = Mesh.Load("CookedAssets/Models/Trees/Tree" .. i .. ".obj", meshParams)
-	treeMesh:GetSubMesh(1):GenerateTangents()
+	treeMesh:GetSubmesh(1):GenerateTangents()
 
     local treeModel = Model.BuildFromMesh(treeMesh)
     treeModel:SetMaterial(0, barkMaterial)

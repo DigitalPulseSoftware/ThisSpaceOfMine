@@ -835,7 +835,7 @@ namespace tsom
 				std::shared_ptr<Nz::GraphicalMesh> colliderGraphicalMesh = Nz::GraphicalMesh::BuildFromMesh(*mesh);
 
 				m_playerModel->model = std::make_shared<Nz::Model>(colliderGraphicalMesh);
-				for (std::size_t i = 0; i < m_playerModel->model->GetSubMeshCount(); ++i)
+				for (std::size_t i = 0; i < m_playerModel->model->GetSubmeshCount(); ++i)
 					m_playerModel->model->SetMaterial(i, colliderMat);
 			}
 		}

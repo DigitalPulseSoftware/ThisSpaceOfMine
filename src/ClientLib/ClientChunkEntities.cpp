@@ -247,7 +247,7 @@ namespace tsom
 
 		std::shared_ptr<Nz::Mesh> chunkMesh = std::make_shared<Nz::Mesh>();
 		chunkMesh->CreateStatic();
-		chunkMesh->AddSubMesh(std::move(staticMesh));
+		chunkMesh->AddSubmesh(std::move(staticMesh));
 
 		return chunkMesh;
 	}
@@ -294,6 +294,11 @@ namespace tsom
 					model->UpdateRenderLayer(m_blockLibrary.GetLayerData(m_layerIndex).renderLayer);
 
 					gfxComponent.AttachRenderable(std::move(model), tsom::Constants::RenderMask3D);
+
+#if 0
+					if (m_isCollisionGenerationEnabled)
+						UpdateChunkDebugCollider(chunkEntity);
+#endif
 				});
 			}
 			else
@@ -302,8 +307,6 @@ namespace tsom
 				if (auto* gfxComponent = chunkEntity.try_get<Nz::GraphicsComponent>())
 					gfxComponent->Clear();
 			}
-
-			UpdateChunkDebugCollider(chunkIndices);
 		};
 
 		updateJob->taskCount = 0;
@@ -363,41 +366,37 @@ namespace tsom
 		return jobPtr;
 	}
 
-	void ClientChunkEntities::UpdateChunkDebugCollider(const ChunkIndices& chunkIndices)
+	void ClientChunkEntities::UpdateChunkDebugCollider(entt::handle chunkEntity)
 	{
-#if 0
-		std::shared_ptr<Nz::Model> colliderModel;
+		auto& rigidBodyComponent = chunkEntity.get<Nz::RigidBody3DComponent>();
+		const std::shared_ptr<Nz::Collider3D>& collider = rigidBodyComponent.GetCollider();
+		if (collider->GetType() == Nz::ColliderType3D::Empty)
+			return;
+
+		if (!m_debugColliderMat)
 		{
-			entt::handle chunkEntity = Nz::Retrieve(m_chunkEntities, chunkIndices);
-
-			auto& rigidBodyComponent = chunkEntity.get<Nz::RigidBody3DComponent>();
-			const std::shared_ptr<Nz::Collider3D>& collider = rigidBodyComponent.GetCollider();
-			if (collider->GetType() == Nz::ColliderType3D::Empty)
-				return;
-
-			std::shared_ptr<Nz::MaterialInstance> colliderMat = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic);
-			colliderMat->ApplyPreset(Nz::MaterialInstancePreset::ReverseZ);
-			colliderMat->SetValueProperty("BaseColor", Nz::Color::Green());
-			colliderMat->UpdatePassesStates([](Nz::RenderStates& states)
+			m_debugColliderMat = Nz::MaterialInstance::Instantiate(Nz::MaterialType::Basic);
+			m_debugColliderMat->ApplyPreset(Nz::MaterialInstancePreset::ReverseZ);
+			m_debugColliderMat->SetValueProperty("BaseColor", Nz::Color::Green());
+			m_debugColliderMat->UpdatePassesStates([](Nz::RenderStates& states)
 			{
 				states.primitiveMode = Nz::PrimitiveMode::LineList;
 				return true;
 			});
+		}
 
-			std::shared_ptr<Nz::StaticMesh> colliderSubmesh = collider->GenerateDebugMesh();
-			if (!colliderSubmesh)
-				return;
+		std::shared_ptr<Nz::StaticMesh> colliderSubmesh = collider->GenerateDebugMesh();
+		if (!colliderSubmesh)
+			return;
 
-			std::shared_ptr<Nz::Mesh> colliderMesh = Nz::Mesh::Build(std::move(colliderSubmesh));
-			std::shared_ptr<Nz::GraphicalMesh> colliderGraphicalMesh = Nz::GraphicalMesh::BuildFromMesh(*colliderMesh);
+		std::shared_ptr<Nz::Mesh> colliderMesh = Nz::Mesh::Build(std::move(colliderSubmesh));
+		std::shared_ptr<Nz::GraphicalMesh> colliderGraphicalMesh = Nz::GraphicalMesh::BuildFromMesh(*colliderMesh);
 
-			colliderModel = std::make_shared<Nz::Model>(colliderGraphicalMesh);
-			for (std::size_t i = 0; i < colliderModel->GetSubMeshCount(); ++i)
-				colliderModel->SetMaterial(i, colliderMat);
+		std::shared_ptr<Nz::Model> colliderModel = std::make_shared<Nz::Model>(colliderGraphicalMesh);
+		for (std::size_t i = 0; i < colliderModel->GetSubmeshCount(); ++i)
+			colliderModel->SetMaterial(i, m_debugColliderMat);
 
-			auto& gfxComponent = chunkEntity.get_or_emplace<Nz::GraphicsComponent>();
-			gfxComponent.AttachRenderable(std::move(colliderModel), tsom::Constants::RenderMask3D);
-	}
-#endif
+		auto& gfxComponent = chunkEntity.get_or_emplace<Nz::GraphicsComponent>();
+		gfxComponent.AttachRenderable(std::move(colliderModel), tsom::Constants::RenderMask3D);
 	}
 }

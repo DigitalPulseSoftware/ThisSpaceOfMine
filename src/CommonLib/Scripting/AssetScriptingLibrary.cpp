@@ -12,9 +12,9 @@
 #include <Nazara/Core/StaticMesh.hpp>
 #include <NazaraUtils/FunctionTraits.hpp>
 
-SOL_BASE_CLASSES(Nz::SkeletalMesh, Nz::SubMesh);
-SOL_BASE_CLASSES(Nz::StaticMesh, Nz::SubMesh);
-SOL_DERIVED_CLASSES(Nz::SubMesh, Nz::SkeletalMesh, Nz::StaticMesh);
+SOL_BASE_CLASSES(Nz::SkeletalMesh, Nz::Submesh);
+SOL_BASE_CLASSES(Nz::StaticMesh, Nz::Submesh);
+SOL_DERIVED_CLASSES(Nz::Submesh, Nz::SkeletalMesh, Nz::StaticMesh);
 
 namespace tsom
 {
@@ -22,18 +22,18 @@ namespace tsom
 	{
 		RegisterMesh(state);
 		RegisterPrimitive(state);
-		RegisterSubMesh(state);
+		RegisterSubmesh(state);
 	}
 
 	void AssetScriptingLibrary::RegisterMesh(sol::state& state)
 	{
 		state.new_usertype<Nz::Mesh>("Mesh",
 			sol::no_constructor,
-			"AddSubMesh", sol::overload(
-				LuaFunction(Nz::Overload<std::shared_ptr<Nz::SubMesh>>(&Nz::Mesh::AddSubMesh)),
-				LuaFunction(Nz::Overload<std::string, std::shared_ptr<Nz::SubMesh>>(&Nz::Mesh::AddSubMesh))
+			"AddSubmesh", sol::overload(
+				LuaFunction(Nz::Overload<std::shared_ptr<Nz::Submesh>>(&Nz::Mesh::AddSubmesh)),
+				LuaFunction(Nz::Overload<std::string, std::shared_ptr<Nz::Submesh>>(&Nz::Mesh::AddSubmesh))
 			),
-			"BuildSubMesh", sol::overload(
+			"BuildSubmesh", sol::overload(
 				LuaFunction([](Nz::Mesh& mesh, const Nz::Primitive& primitive, sol::optional<sol::table> paramOpt)
 				{
 					Nz::Mesh::Params params;
@@ -49,7 +49,7 @@ namespace tsom
 						params.vertexScale = meshParams.get_or("vertexScale", params.vertexScale);
 					}
 
-					return mesh.BuildSubMesh(primitive, params);
+					return mesh.BuildSubmesh(primitive, params);
 				})
 			),
 			"GetAABB", LuaFunction(&Nz::Mesh::GetAABB),
@@ -57,11 +57,11 @@ namespace tsom
 			{
 				return mesh.GetMaterialData(index);
 			}),
-			"GetSubMesh", sol::overload(
-				LuaFunction(Nz::Overload<std::string_view>(&Nz::Mesh::GetSubMesh)),
-				LuaFunction(Nz::Overload<std::size_t>(&Nz::Mesh::GetSubMesh))
+			"GetSubmesh", sol::overload(
+				LuaFunction(Nz::Overload<std::string_view>(&Nz::Mesh::GetSubmesh)),
+				LuaFunction(Nz::Overload<std::size_t>(&Nz::Mesh::GetSubmesh))
 			),
-			"GetSubMeshCount", LuaFunction(&Nz::Mesh::GetSubMeshCount),
+			"GetSubmeshCount", LuaFunction(&Nz::Mesh::GetSubmeshCount),
 			"Recenter", LuaFunction(&Nz::Mesh::Recenter),
 			"SetMaterialCount", LuaFunction(&Nz::Mesh::SetMaterialCount),
 			"SetMaterialData", LuaFunction(&Nz::Mesh::SetMaterialData),
@@ -136,25 +136,25 @@ namespace tsom
 		);
 	}
 
-	void AssetScriptingLibrary::RegisterSubMesh(sol::state& state)
+	void AssetScriptingLibrary::RegisterSubmesh(sol::state& state)
 	{
-		state.new_usertype<Nz::SubMesh>("SubMesh",
+		state.new_usertype<Nz::Submesh>("Submesh",
 			sol::no_constructor,
-			"GenerateNormals",            LuaFunction(&Nz::SubMesh::GenerateNormals),
-			"GenerateNormalsAndTangents", LuaFunction(&Nz::SubMesh::GenerateNormalsAndTangents),
-			"GenerateTangents",           LuaFunction(&Nz::SubMesh::GenerateTangents),
-			"GetMaterialIndex",           LuaFunction(&Nz::SubMesh::GetMaterialIndex),
-			"SetMaterialIndex",           LuaFunction(&Nz::SubMesh::SetMaterialIndex)
+			"GenerateNormals",            LuaFunction(&Nz::Submesh::GenerateNormals),
+			"GenerateNormalsAndTangents", LuaFunction(&Nz::Submesh::GenerateNormalsAndTangents),
+			"GenerateTangents",           LuaFunction(&Nz::Submesh::GenerateTangents),
+			"GetMaterialIndex",           LuaFunction(&Nz::Submesh::GetMaterialIndex),
+			"SetMaterialIndex",           LuaFunction(&Nz::Submesh::SetMaterialIndex)
 		);
 
 		state.new_usertype<Nz::SkeletalMesh>("SkeletalMesh",
 			sol::no_constructor,
-			sol::base_classes, sol::bases<Nz::SubMesh>()
+			sol::base_classes, sol::bases<Nz::Submesh>()
 		);
 
 		state.new_usertype<Nz::StaticMesh>("StaticMesh",
 			sol::no_constructor,
-			sol::base_classes, sol::bases<Nz::SubMesh>()
+			sol::base_classes, sol::bases<Nz::Submesh>()
 		);
 	}
 }

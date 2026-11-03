@@ -19,10 +19,10 @@ for treeName, treeData in pairs(trees) do
     local treeMesh = Mesh.CreateStatic()
     treeMesh:SetMaterialCount(#treeData.submeshes)
     for idx, submeshIndex in ipairs(treeData.submeshes) do
-        local submesh = allTreeMesh:GetSubMesh(submeshIndex)
+        local submesh = allTreeMesh:GetSubmesh(submeshIndex)
         submesh:SetMaterialIndex(idx - 1)
 
-        treeMesh:AddSubMesh(submesh)
+        treeMesh:AddSubmesh(submesh)
         treeMesh:SetMaterialData(idx - 1, allTreeMesh:GetMaterialData(submesh:GetMaterialIndex()))
     end
 

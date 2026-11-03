@@ -58,9 +58,10 @@ namespace tsom
 
 			std::shared_ptr<Nz::Mesh> BuildMesh(const Chunk& chunk);
 			ColliderModelUpdateJob* ProcessChunkUpdate(const Chunk& chunk, NeighborChunkMask neighborMask) override;
-			void UpdateChunkDebugCollider(const ChunkIndices& chunkIndices);
+			void UpdateChunkDebugCollider(entt::handle chunkEntity);
 
 			std::shared_ptr<Nz::MaterialInstance> m_chunkMaterial;
+			std::shared_ptr<Nz::MaterialInstance> m_debugColliderMat;
 			std::shared_ptr<Nz::VertexDeclaration> m_chunkVertexDeclaration;
 			std::unique_ptr<Nz::GpuAsyncCommands> m_asyncTransfer;
 			Nz::Signal<double>::ConnectionGuard m_onChunkNormalSmoothAngleUpdatedSlot;
