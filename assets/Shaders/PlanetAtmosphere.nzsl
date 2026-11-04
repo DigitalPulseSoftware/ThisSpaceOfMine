@@ -42,6 +42,7 @@ struct PassData
 	viewerPosition: vec3[f32],
 	zNear: f32,
 	sunDir: vec3[f32],
+	mieScattering: f32,
 
 	atmosphereCount: u32,
 	atmospheres: array[AtmosphereScatteringData, MaxAtmosphereCount]
@@ -113,9 +114,11 @@ fn main(input: VertOut) -> FragOut
 	let sundir = passData.sunDir;
     let mu = dot(viewVector, sundir);
     let mumu = mu * mu;
-	let mieScattering = 0.999;
-	let gg = mieScattering * mieScattering;
-    let phaseMie = select(allowMie, 3.0 / (25.1327412287 /* (8 * pi) */) * ((1.0 - gg) * (mumu + 1.0)) / (pow(1.0 + gg - 2.0 * mu * mieScattering, 1.5) * (2.0 + gg)), 0.0);
+
+	let gg = passData.mieScattering * passData.mieScattering;
+    let phaseMie = select(allowMie, 
+		3.0 / (25.1327412287 /* (8 * pi) */) * ((1.0 - gg) * (mumu + 1.0)) / (pow(1.0 + gg - 2.0 * mu * passData.mieScattering, 1.5) * (2.0 + gg)), 
+		0.0);
 
 	let output: FragOut;
 	output.color = vec4[f32](color + phaseMie.xxx, 1.0);

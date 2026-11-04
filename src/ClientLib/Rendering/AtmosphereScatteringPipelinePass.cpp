@@ -68,6 +68,7 @@ namespace tsom
 			std::size_t viewerPositionOffset;
 			std::size_t zNearOffset;
 			std::size_t sunDirOffset;
+			std::size_t mieScatteringOffset;
 
 			std::size_t atmosphereCountOffset;
 			std::size_t atmospheresOffset;
@@ -84,6 +85,7 @@ namespace tsom
 				atmosphereScatteringPassData.viewerPositionOffset = fieldOffsets.AddField(nzsl::StructFieldType::Float3);
 				atmosphereScatteringPassData.zNearOffset = fieldOffsets.AddField(nzsl::StructFieldType::Float1);
 				atmosphereScatteringPassData.sunDirOffset = fieldOffsets.AddField(nzsl::StructFieldType::Float3);
+				atmosphereScatteringPassData.mieScatteringOffset = fieldOffsets.AddField(nzsl::StructFieldType::Float1);
 
 				atmosphereScatteringPassData.atmosphereCountOffset = fieldOffsets.AddField(nzsl::StructFieldType::UInt1);
 				atmosphereScatteringPassData.atmospheresOffset = fieldOffsets.AddStructArray(AtmosphereScatteringFields.fieldOffsets, MaxAtmosphereCount);
@@ -164,7 +166,10 @@ namespace tsom
 
 		auto atmosphereCameraView = m_registry.view<AtmosphereScatteringCameraSettings>(entt::exclude<Nz::DisabledComponent>);
 		for (auto&& [entity, atmosphereScatteringCameraSettings] : atmosphereCameraView.each())
+		{
 			Nz::AccessByOffset<Nz::Vector3f&>(allocation.mappedPtr, AtmosphereScatteringPassFields.sunDirOffset) = atmosphereScatteringCameraSettings.sunDir;
+			Nz::AccessByOffset<float&>(allocation.mappedPtr, AtmosphereScatteringPassFields.mieScatteringOffset) = atmosphereScatteringCameraSettings.mieScattering;
+		}
 
 		m_cachedAtmospheres.clear();
 

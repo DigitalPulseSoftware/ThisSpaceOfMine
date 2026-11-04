@@ -150,7 +150,7 @@ namespace tsom
 
 		m_sunLightEntity = CreateEntity();
 		{
-			m_sunLightEntity.emplace<Nz::NodeComponent>(Nz::Vector3f::Zero(), Nz::EulerAnglesf(-30.f, 80.f, 0.f));
+			m_sunLightEntity.emplace<Nz::NodeComponent>();
 
 			auto& atmosphereScatteringCameraSettings = m_cameraEntity.get_or_emplace<AtmosphereScatteringCameraSettings>();
 			atmosphereScatteringCameraSettings.sunDir = m_sunLightEntity.get<Nz::NodeComponent>().GetBackward();
@@ -1071,6 +1071,7 @@ namespace tsom
 		}
 #endif
 
+		// Handle camera position/rotation
 		if (m_controlledEntity)
 		{
 			Nz::NodeComponent& characterNode = m_controlledEntity.get<Nz::NodeComponent>();
@@ -1162,6 +1163,7 @@ namespace tsom
 				cameraComponent.UpdateFOV(Nz::Lerp(cameraFov, m_targetCameraFOV, factor));
 			}
 
+			// Debug overlay for our player
 			if (m_debugOverlay)
 			{
 				Nz::Vector3f localPos = characterNode.GetPosition();
@@ -1291,6 +1293,7 @@ namespace tsom
 			}
 		}
 
+		// Handle tools
 #ifdef TSOM_DEV_TOOLS
 		if (m_cameraTool)
 			m_cameraTool->Update(elapsedTime, raycastHit ? &*raycastHit : nullptr);
@@ -1298,6 +1301,7 @@ namespace tsom
 #endif
 			m_tools[m_toolIndex]->Update(elapsedTime, raycastHit ? &*raycastHit : nullptr);
 
+		// Interactible text
 		if (interactibleEntity)
 		{
 			auto& interactible = interactibleEntity.get<ClientInteractibleComponent>();
@@ -1323,6 +1327,43 @@ namespace tsom
 			m_currentShipRotation = Nz::Quaternionf::Slerp(m_currentShipRotation, m_targetShipRotation, factor);
 		}
 
+		// Handle sunlight based on our absolute-ish position
+		constexpr Nz::Vector3d sunAbsolutePosition = Nz::Vector3d::Zero();
+		constexpr double sunRadius = 500.0f;
+
+		if (Packets::Helper::EnvironmentId rootEnvironmentId = stateData.sessionHandler->GetRootEnvironmentId(); rootEnvironmentId != ClientSessionHandler::InvalidEnvironment)
+		{
+			const Nz::Vector3i32& rootIndices = stateData.sessionHandler->GetRootEnvironmentIndices(rootEnvironmentId);
+
+			Nz::Vector3d cameraAbsolutePosition = SpaceTransformations::ToGlobalCoordinates(rootIndices, cameraNode.GetPosition());
+
+			Nz::Vector3d cameraToSun = cameraAbsolutePosition - sunAbsolutePosition;
+			double mieScattering = 1.0 / std::sqrt(1.0 + (4.0 * sunRadius * sunRadius) / cameraToSun.GetSquaredLength());
+
+			auto& sunLightNode = m_sunLightEntity.get<Nz::NodeComponent>();
+			sunLightNode.SetRotation(Nz::Quaternionf::RotationBetween(Nz::Vector3f::Forward(), Nz::Vector3f(cameraToSun.GetNormal())));
+
+			auto& atmosphereScatteringCameraSettings = m_cameraEntity.get<AtmosphereScatteringCameraSettings>();
+			atmosphereScatteringCameraSettings.sunDir = m_sunLightEntity.get<Nz::NodeComponent>().GetBackward();
+			atmosphereScatteringCameraSettings.mieScattering = static_cast<float>(mieScattering);
+		}
+
+		// Compute sun direction for all atmospheres
+		entt::registry& registry = GetStateData().world->GetRegistry();
+		auto view = registry.view<Nz::NodeComponent, EnvironmentComponent, AtmosphereScattering>(entt::exclude<Nz::DisabledComponent>);
+		for (auto [entity, entityNode, entityEnvironment, atmosphereScattering] : view.each())
+		{
+			Packets::Helper::EnvironmentId rootEnvironmentId = stateData.sessionHandler->GetRootEnvironmentId(entityEnvironment.environmentIndex);
+			const Nz::Vector3i32& rootIndices = stateData.sessionHandler->GetRootEnvironmentIndices(rootEnvironmentId);
+			const Nz::Node* rootNode = stateData.sessionHandler->GetEnvironmentNode(rootEnvironmentId);
+
+			Nz::Vector3d atmosphereAbsolutePosition = SpaceTransformations::ToGlobalCoordinates(rootIndices, rootNode->ToLocalPosition(entityNode.GetGlobalPosition()));
+			Nz::Vector3d atmosphereToSun = atmosphereAbsolutePosition - sunAbsolutePosition;
+			double mieScattering = 1.0 / std::sqrt(1.0 + (4.0 * sunRadius * sunRadius) / atmosphereToSun.GetSquaredLength());
+
+			atmosphereScattering.sunDir = Nz::Vector3f(-atmosphereToSun.GetNormal());
+			atmosphereScattering.mieScattering = static_cast<float>(mieScattering);
+		}
 
 		/*entt::registry& registry = GetStateData().world->GetRegistry();
 		auto view = registry.view<Nz::NodeComponent, Nz::GraphicsComponent, ClassInstanceComponent>(entt::exclude<AnimationComponent>);
