@@ -248,9 +248,12 @@ namespace tsom
 		else
 		{
 			ChunkWriteLock lock(chunk);
+			chunk->BeginBatchUpdate();
 
 			for (auto&& [blockPos, blockIndex] : chunkUpdate.updates)
 				chunk->UpdateBlock({ blockPos.x, blockPos.y, blockPos.z }, Nz::SafeCast<BlockIndex>(blockIndex));
+
+			chunk->EndBatchUpdate();
 		}
 	}
 
