@@ -17,13 +17,13 @@ namespace tsom
 			if (luaL_newmetatable(L, metaname) == 0)
 			{
 				lua_pop(L, 1);
-				TriggerLuaArgError(L, 1, fmt::format("Metatable %s already exists", metaname));
+				TriggerLuaArgError(L, 1, fmt::format("Metatable {} already exists", metaname));
 			}
 
 			return sol::stack_table(L);
 		};
 
-		state["GetMetatable"]= [](sol::this_state L, const char* metaname)
+		state["GetMetatable"] = [](sol::this_state L, const char* metaname)
 		{
 			luaL_getmetatable(L, metaname);
 			return sol::stack_table(L);

@@ -13,7 +13,7 @@
 namespace tsom::Constants
 {
 	// Broadphase layers (next free id: 2)
-	static constexpr Nz::PhysBroadphase3D BroadphaseStatic = 0;
+	static constexpr Nz::PhysBroadphase3D BroadphaseStatic  = 0;
 	static constexpr Nz::PhysBroadphase3D BroadphaseDynamic = 1;
 
 	// Object layers (next free id: 10)

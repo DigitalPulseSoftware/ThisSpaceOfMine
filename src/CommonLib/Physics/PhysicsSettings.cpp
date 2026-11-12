@@ -59,6 +59,7 @@ namespace tsom::Physics
 		{
 			bool ShouldCollide(Nz::PhysObjectLayer3D object1, Nz::PhysObjectLayer3D object2) const override
 			{
+				// TODO: Turn into a big 2D array
 				if (object1 == Constants::ObjectLayerPlayer)
 				{
 					if (object2 == Constants::ObjectLayerDynamicNoPlayer || object2 == Constants::ObjectLayerStaticNoPlayer)

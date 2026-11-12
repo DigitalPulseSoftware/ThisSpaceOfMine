@@ -22,7 +22,7 @@ namespace tsom
 			{ "Player", tsom::Constants::ObjectLayerPlayer },
 			{ "PlayerOnlyTrigger", tsom::Constants::ObjectLayerPlayerOnlyTrigger },
 			{ "Static", tsom::Constants::ObjectLayerStatic },
-			{ "StaticNoplayer", tsom::Constants::ObjectLayerStaticNoPlayer },
+			{ "StaticNoPlayer", tsom::Constants::ObjectLayerStaticNoPlayer },
 			{ "StaticTrigger", tsom::Constants::ObjectLayerStaticTrigger },
 			{ "StaticWater", tsom::Constants::ObjectLayerStaticWater }
 		});

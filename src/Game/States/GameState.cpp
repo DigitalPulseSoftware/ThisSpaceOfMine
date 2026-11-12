@@ -17,7 +17,6 @@
 #include <ClientLib/Components/ClientInteractibleComponent.hpp>
 #include <ClientLib/Components/EnvironmentComponent.hpp>
 #include <ClientLib/Systems/AnimationSystem.hpp>
-#include <ClientLib/Systems/CameraFollowerSystem.hpp>
 #include <ClientLib/Tools/BlockTool.hpp>
 #include <ClientLib/Tools/CameraTool.hpp>
 #include <ClientLib/Tools/ConnectTool.hpp>
@@ -342,7 +341,9 @@ namespace tsom
 			m_cameraTool = std::make_unique<CameraTool>(*this, [this]
 			{
 				m_cameraTool->OnDeactivate();
+				auto cameraTool = std::move(m_cameraTool); //< keep the lambda memory alive
 				m_cameraTool.reset();
+
 				UpdateMouseLock();
 			});
 			m_cameraTool->OnActivate();
@@ -752,7 +753,7 @@ namespace tsom
 					if (!chunkEntitiesPtr)
 						continue;
 
-					chunkEntitiesPtr->ForEachChunk([&](const ChunkIndices& chunkIndices, entt::handle chunkEntity)
+					chunkEntitiesPtr->ForEachChunk([&](const ChunkIndices& /*chunkIndices*/, entt::handle chunkEntity)
 					{
 						auto& chunkGfx = chunkEntity.get<Nz::GraphicsComponent>();
 						if (m_shipAABB.IsValid())
