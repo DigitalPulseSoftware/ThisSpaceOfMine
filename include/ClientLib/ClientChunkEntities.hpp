@@ -12,14 +12,16 @@
 #include <CommonLib/ChunkEntities.hpp>
 #include <Nazara/Core/Color.hpp>
 #include <tsl/hopscotch_map.h>
+#include <mutex>
 
 namespace Nz
 {
 	class ApplicationBase;
 	class EnttWorld;
 	class GpuAsyncCommands;
-	class MaterialInstance;
+	class GraphicalMesh;
 	class Mesh;
+	class MaterialInstance;
 	class TaskScheduler;
 	class VertexDeclaration;
 }
@@ -45,8 +47,6 @@ namespace tsom
 
 			inline void EnableCollisionGeneration(bool enable);
 
-			void Update() override;
-
 			ClientChunkEntities& operator=(const ClientChunkEntities&) = delete;
 			ClientChunkEntities& operator=(ClientChunkEntities&&) = delete;
 
@@ -54,17 +54,17 @@ namespace tsom
 			struct ColliderModelUpdateJob : UpdateJob
 			{
 				Chunk::ColliderData collider;
-				std::shared_ptr<Nz::Mesh> mesh;
+				std::shared_ptr<Nz::GraphicalMesh> mesh;
 			};
 
 			std::shared_ptr<Nz::Mesh> BuildMesh(const Chunk& chunk);
 			ColliderModelUpdateJob* ProcessChunkUpdate(const Chunk& chunk, NeighborChunkMask neighborMask) override;
 			void UpdateChunkDebugCollider(entt::handle chunkEntity);
 
+			std::mutex m_asyncTransferMutex;
 			std::shared_ptr<Nz::MaterialInstance> m_chunkMaterial;
 			std::shared_ptr<Nz::MaterialInstance> m_debugColliderMat;
 			std::shared_ptr<Nz::VertexDeclaration> m_chunkVertexDeclaration;
-			std::unique_ptr<Nz::GpuAsyncCommands> m_asyncTransfer;
 			Nz::Signal<double>::ConnectionGuard m_onChunkNormalSmoothAngleUpdatedSlot;
 			ConfigFile& m_configFile;
 			bool m_isCollisionGenerationEnabled;

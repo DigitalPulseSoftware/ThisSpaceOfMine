@@ -5,6 +5,7 @@
 #include <ClientLib/ClientChunkEntities.hpp>
 #include <ClientLib/ClientAssetLibraryAppComponent.hpp>
 #include <ClientLib/ClientConfigs.hpp>
+#include <ClientLib/GpuTransferAppComponent.hpp>
 #include <ClientLib/RenderConstants.hpp>
 #include <CommonLib/ChunkLock.hpp>
 #include <CommonLib/ConfigFile.hpp>
@@ -164,18 +165,6 @@ namespace tsom
 
 	ClientChunkEntities::~ClientChunkEntities() = default;
 
-	void ClientChunkEntities::Update()
-	{
-		ChunkEntities::Update();
-
-		if (m_asyncTransfer)
-		{
-			Nz::GpuDevice& gpuDevice = *Nz::Graphics::Instance()->GetGpuDevice();
-			gpuDevice.SubmitAsyncCommands(std::move(m_asyncTransfer));
-			m_asyncTransfer = nullptr;
-		}
-	}
-
 	std::shared_ptr<Nz::Mesh> ClientChunkEntities::BuildMesh(const Chunk& chunk)
 	{
 		std::vector<Nz::UInt32> indices;
@@ -264,6 +253,8 @@ namespace tsom
 			job.cancelled = true;
 		}
 
+		auto& gpuTransfers = m_application.GetComponent<GpuTransferAppComponent>();
+
 		std::shared_ptr<ColliderModelUpdateJob> updateJob = std::make_shared<ColliderModelUpdateJob>();
 		updateJob->chunk = chunk.shared_from_this();
 		updateJob->chunkContainer = m_chunkContainer;
@@ -279,30 +270,19 @@ namespace tsom
 
 			if (colliderUpdateJob.mesh)
 			{
-				if (!m_asyncTransfer)
-				{
-					Nz::GpuDevice& gpuDevice = *Nz::Graphics::Instance()->GetGpuDevice();
-					m_asyncTransfer = gpuDevice.InstantiateAsyncCommands(Nz::QueueType::Transfer);
-				}
+				auto& gfxComponent = chunkEntity.get_or_emplace<Nz::GraphicsComponent>();
+				gfxComponent.Clear();
 
-				std::shared_ptr<Nz::GraphicalMesh> gfxMesh = Nz::GraphicalMesh::BuildFromMesh(*m_asyncTransfer, *colliderUpdateJob.mesh);
+				std::shared_ptr<Nz::Model> model = std::make_shared<Nz::Model>(std::move(colliderUpdateJob.mesh));
+				model->SetMaterial(0, m_chunkMaterial);
+				model->UpdateRenderLayer(m_blockLibrary.GetLayerData(m_layerIndex).renderLayer);
 
-				m_asyncTransfer->AddCompletionCallback([this, gfxMesh, chunkEntity]() mutable
-				{
-					auto& gfxComponent = chunkEntity.get_or_emplace<Nz::GraphicsComponent>();
-					gfxComponent.Clear();
-
-					std::shared_ptr<Nz::Model> model = std::make_shared<Nz::Model>(std::move(gfxMesh));
-					model->SetMaterial(0, m_chunkMaterial);
-					model->UpdateRenderLayer(m_blockLibrary.GetLayerData(m_layerIndex).renderLayer);
-
-					gfxComponent.AttachRenderable(std::move(model), tsom::Constants::RenderMask3D);
+				gfxComponent.AttachRenderable(std::move(model), tsom::Constants::RenderMask3D);
 
 #if 0
-					if (m_isCollisionGenerationEnabled)
-						UpdateChunkDebugCollider(chunkEntity);
+				if (m_isCollisionGenerationEnabled)
+					UpdateChunkDebugCollider(chunkEntity);
 #endif
-				});
 			}
 			else
 			{
@@ -333,7 +313,7 @@ namespace tsom
 				updateJob->taskCount++;
 			}
 
-			taskScheduler.AddTask([this, updateJob]
+			taskScheduler.AddTask([this, &gpuTransfers, updateJob]
 			{
 				if (updateJob->cancelled)
 					return;
@@ -341,7 +321,22 @@ namespace tsom
 				// FIXME: If ClientChunkEntities is deleted before job finished, it can result in a crash
 				ChunkReadLock lock(updateJob->chunk.get());
 				if (updateJob->chunk->HasContent()) //< We need to re-check because the chunk may have lost its content (become full empty) since task was scheduled
-					updateJob->mesh = BuildMesh(*updateJob->chunk);
+				{
+					std::shared_ptr<Nz::Mesh> mesh = BuildMesh(*updateJob->chunk);
+					if (mesh)
+					{
+						gpuTransfers.RecordAsyncCommands([updateJob, mesh](Nz::GpuAsyncCommands& asyncTransfer)
+						{
+							updateJob->mesh = Nz::GraphicalMesh::BuildFromMesh(asyncTransfer, *mesh);
+							asyncTransfer.AddCompletionCallback([updateJob]
+							{
+								updateJob->jobDone++;
+							});
+						});
+
+						updateJob->taskCount++;
+					}
+				}
 
 				updateJob->jobDone++;
 			});

@@ -3,6 +3,7 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <ClientLib/ClientAssetLibraryAppComponent.hpp>
+#include <ClientLib/GpuTransferAppComponent.hpp>
 #include <CommonLib/UpdaterAppComponent.hpp>
 #include <Game/GameAppComponent.hpp>
 #include <Game/GameConfigAppComponent.hpp>
@@ -38,6 +39,8 @@ int GameMain(int argc, char* argv[])
 	app.AddComponent<Nz::WindowingAppComponent>();
 
 	// Game setup
+	app.AddComponent<tsom::GpuTransferAppComponent>(*Nz::Graphics::Instance()->GetGpuDevice());
+
 	auto& assets = app.AddComponent<tsom::ClientAssetLibraryAppComponent>();
 	auto& gameConfig = app.AddComponent<tsom::GameConfigAppComponent>();
 
