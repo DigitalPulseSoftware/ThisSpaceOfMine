@@ -142,6 +142,9 @@ namespace tsom
 			PrepareForContent();
 		}
 
+		if (newBlock == GetBlockContent(indices))
+			return;
+
 		const auto& blockLibrary = m_owner.GetBlockLibrary();
 		const auto& newBlockData = blockLibrary.GetBlockData(newBlock);
 
