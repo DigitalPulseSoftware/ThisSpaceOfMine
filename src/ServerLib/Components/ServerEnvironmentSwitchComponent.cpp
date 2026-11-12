@@ -43,12 +43,14 @@ namespace tsom
 			bool shouldCreate = networkedSystem.ForgetEntity(oldEntity);
 
 			newEntity.emplace<NetworkedComponent>(shouldCreate);
-
-			previousEnvironment->ForEachPlayer([&](ServerPlayer& serverPlayer)
+			if (!shouldCreate)
 			{
-				auto& visibilityHandler = serverPlayer.GetVisibilityHandler();
-				visibilityHandler.UpdateEntityEnvironment(*newEnvironment, oldEntity, newEntity);
-			});
+				previousEnvironment->ForEachPlayer([&](ServerPlayer& serverPlayer)
+				{
+					auto& visibilityHandler = serverPlayer.GetVisibilityHandler();
+					visibilityHandler.UpdateEntityEnvironment(*newEnvironment, oldEntity, newEntity);
+				});
+			}
 		}
 
 		if (Nz::RigidBody3DComponent* rigidBodyComponent = oldEntity.try_get<Nz::RigidBody3DComponent>())
