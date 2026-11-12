@@ -65,7 +65,7 @@ namespace tsom
 			const EntityRegistry& GetEntityRegistry() const override;
 			NetworkSession* GetNetworkSession() override;
 			Nz::EnttWorld& GetWorld() override;
-			std::optional<RaycastResult> RaycastQuery() const override;
+			std::optional<Physics::RaycastHit> RaycastQuery() const override;
 			void UpdateMouseLock() override;
 
 			// StateMachine

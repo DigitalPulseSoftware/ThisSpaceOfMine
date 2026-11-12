@@ -22,7 +22,7 @@ namespace tsom
 			void OnTrigger(TriggerType triggerType) override;
 			void OnWheel(float delta) override;
 
-			void Update(Nz::Time elapsedTime, const GameInterface::RaycastResult* previewRaycast) override;
+			void Update(Nz::Time elapsedTime, const Physics::RaycastHit* previewRaycast) override;
 	};
 }
 

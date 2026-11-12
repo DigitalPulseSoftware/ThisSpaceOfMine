@@ -58,8 +58,8 @@ namespace tsom
 		}
 	}
 
-	std::unique_ptr<ChunkEntities> ClientChunkClassLibrary::SetupChunkEntities(Nz::EnttWorld& world, ChunkContainer& chunkContainer, std::size_t layerIndex, bool isStatic)
+	std::unique_ptr<ChunkEntities> ClientChunkClassLibrary::SetupChunkEntities(Nz::EnttWorld& world, std::shared_ptr<ChunkContainer> chunkContainer, std::size_t layerIndex, bool isStatic)
 	{
-		return std::make_unique<ClientChunkEntities>(m_app, m_config, world, chunkContainer, Nz::SafeCast<const ClientBlockLibrary&>(m_blockLibrary), layerIndex, isStatic);
+		return std::make_unique<ClientChunkEntities>(m_app, m_config, world, std::move(chunkContainer), Nz::SafeCast<const ClientBlockLibrary&>(m_blockLibrary), layerIndex, isStatic);
 	}
 }

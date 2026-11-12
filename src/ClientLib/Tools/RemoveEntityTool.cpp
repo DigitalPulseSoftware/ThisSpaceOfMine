@@ -30,7 +30,7 @@ namespace tsom
 		}
 	}
 
-	void RemoveEntityTool::Update(Nz::Time /*elapsedTime*/, const GameInterface::RaycastResult* previewRaycast)
+	void RemoveEntityTool::Update(Nz::Time /*elapsedTime*/, const Physics::RaycastHit* previewRaycast)
 	{
 		m_targetEntity = {};
 		if (!previewRaycast || !previewRaycast->hitEntity)

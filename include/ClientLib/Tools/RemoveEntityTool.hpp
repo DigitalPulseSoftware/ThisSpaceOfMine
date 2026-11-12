@@ -20,7 +20,7 @@ namespace tsom
 
 			void OnTrigger(TriggerType triggerType) override;
 
-			void Update(Nz::Time elapsedTime, const GameInterface::RaycastResult* previewRaycast) override;
+			void Update(Nz::Time elapsedTime, const Physics::RaycastHit* previewRaycast) override;
 
 		private:
 			entt::handle m_targetEntity;

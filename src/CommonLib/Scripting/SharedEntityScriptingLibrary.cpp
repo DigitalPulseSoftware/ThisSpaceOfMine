@@ -28,10 +28,13 @@
 SOL_BASE_CLASSES(Nz::BoxCollider3D, Nz::Collider3D);
 SOL_BASE_CLASSES(Nz::TranslatedRotatedCollider3D, Nz::Collider3D);
 SOL_BASE_CLASSES(Nz::NodeComponent, Nz::Node);
+SOL_BASE_CLASSES(Nz::PhysCharacter3D, Nz::PhysBody3D);
 SOL_BASE_CLASSES(Nz::PhysCharacter3DComponent, Nz::PhysCharacter3D);
+SOL_BASE_CLASSES(Nz::RigidBody3D, Nz::PhysBody3D);
 SOL_BASE_CLASSES(Nz::RigidBody3DComponent, Nz::RigidBody3D);
 SOL_DERIVED_CLASSES(Nz::Collider3D, Nz::BoxCollider3D, Nz::TranslatedRotatedCollider3D);
 SOL_DERIVED_CLASSES(Nz::Node, Nz::NodeComponent);
+SOL_DERIVED_CLASSES(Nz::PhysBody3D, Nz::PhysCharacter3D, Nz::RigidBody3D);
 SOL_DERIVED_CLASSES(Nz::PhysCharacter3D, Nz::PhysCharacter3DComponent);
 SOL_DERIVED_CLASSES(Nz::RigidBody3D, Nz::RigidBody3DComponent);
 
@@ -321,7 +324,7 @@ namespace tsom
 
 	void SharedEntityScriptingLibrary::RegisterComponents(sol::state& state)
 	{
-		state.new_usertype<Nz::NodeComponent>("NodeComponent",
+		state.new_usertype<Nz::Node>("Node",
 			sol::no_constructor,
 			"GetPosition", LuaFunction(&Nz::Node::GetPosition),
 			"GetRotation", LuaFunction(&Nz::Node::GetRotation),
@@ -329,86 +332,98 @@ namespace tsom
 			"GetRight", LuaFunction(&Nz::Node::GetRight),
 			"GetUp", LuaFunction(&Nz::Node::GetUp),
 			"Scale", sol::overload(
-				LuaFunction([](Nz::NodeComponent& nodeComponent, float scale)
+				LuaFunction([](Nz::Node& nodeComponent, float scale)
 				{
 					return nodeComponent.Scale(scale);
 				}),
-				LuaFunction([](Nz::NodeComponent& nodeComponent, const Nz::Vector3f& scale)
+				LuaFunction([](Nz::Node& nodeComponent, const Nz::Vector3f& scale)
 				{
 					return nodeComponent.Scale(scale);
 				})
 			),
-			"SetPosition", LuaFunction([](Nz::NodeComponent& nodeComponent, const Nz::Vector3f& position)
+			"SetPosition", LuaFunction([](Nz::Node& nodeComponent, const Nz::Vector3f& position)
 			{
 				return nodeComponent.SetPosition(position);
 			}),
-			"SetRotation", LuaFunction([](Nz::NodeComponent& nodeComponent, const Nz::Quaternionf& rotation)
+			"SetRotation", LuaFunction([](Nz::Node& nodeComponent, const Nz::Quaternionf& rotation)
 			{
 				return nodeComponent.SetRotation(rotation);
 			}),
 			"SetScale", sol::overload(
-				LuaFunction([](Nz::NodeComponent& nodeComponent, float scale)
+				LuaFunction([](Nz::Node& nodeComponent, float scale)
 				{
 					return nodeComponent.SetScale(scale);
 				}),
-				LuaFunction([](Nz::NodeComponent& nodeComponent, const Nz::Vector3f& position)
+				LuaFunction([](Nz::Node& nodeComponent, const Nz::Vector3f& position)
 				{
 					return nodeComponent.SetPosition(position);
 				})
 			),
-			"SetTransform", LuaFunction([](Nz::NodeComponent& nodeComponent, const Nz::Vector3f& position, const Nz::Quaternionf& rotation, const Nz::Vector3f& scale)
+			"SetTransform", LuaFunction([](Nz::Node& nodeComponent, const Nz::Vector3f& position, const Nz::Quaternionf& rotation, const Nz::Vector3f& scale)
 			{
 				return nodeComponent.SetTransform(position, rotation, scale);
 			}),
-			"ToGlobalDirection", LuaFunction(&Nz::NodeComponent::ToGlobalDirection),
-			"ToGlobalPosition", LuaFunction(&Nz::NodeComponent::ToGlobalPosition),
-			"ToGlobalRotation", LuaFunction(&Nz::NodeComponent::ToGlobalRotation),
-			"ToGlobalScale", LuaFunction(&Nz::NodeComponent::ToGlobalScale),
-			"ToLocalDirection", LuaFunction(&Nz::NodeComponent::ToLocalDirection),
-			"ToLocalPosition", LuaFunction(&Nz::NodeComponent::ToLocalPosition),
-			"ToLocalRotation", LuaFunction(&Nz::NodeComponent::ToLocalRotation),
-			"ToLocalScale", LuaFunction(&Nz::NodeComponent::ToLocalScale)
+			"ToGlobalDirection", LuaFunction(&Nz::Node::ToGlobalDirection),
+			"ToGlobalPosition", LuaFunction(&Nz::Node::ToGlobalPosition),
+			"ToGlobalRotation", LuaFunction(&Nz::Node::ToGlobalRotation),
+			"ToGlobalScale", LuaFunction(&Nz::Node::ToGlobalScale),
+			"ToLocalDirection", LuaFunction(&Nz::Node::ToLocalDirection),
+			"ToLocalPosition", LuaFunction(&Nz::Node::ToLocalPosition),
+			"ToLocalRotation", LuaFunction(&Nz::Node::ToLocalRotation),
+			"ToLocalScale", LuaFunction(&Nz::Node::ToLocalScale)
+		);
+		
+		state.new_usertype<Nz::NodeComponent>("NodeComponent",
+			sol::no_constructor,
+			sol::base_classes, sol::bases<Nz::Node>()
+		);
+		
+		state.new_usertype<Nz::PhysBody3D>("PhysBody3D",
+			"GetAngularVelocity", LuaFunction(&Nz::PhysBody3D::GetAngularVelocity),
+			"GetCollider", LuaFunction(&Nz::PhysBody3D::GetCollider),
+			"GetLinearVelocity", LuaFunction(&Nz::PhysBody3D::GetLinearVelocity),
+			"GetPosition", LuaFunction(&Nz::PhysBody3D::GetPosition),
+			"GetObjectLayer", LuaFunction(&Nz::PhysBody3D::GetObjectLayer),
+			"GetRotation", LuaFunction(&Nz::PhysBody3D::GetRotation)
+		);
+
+		state.new_usertype<Nz::PhysCharacter3D>("PhysCharacter3D",
+			sol::no_constructor,
+			sol::base_classes, sol::bases<Nz::PhysBody3D>(),
+			"SetAngularVelocity", LuaFunction(&Nz::PhysCharacter3D::SetAngularVelocity),
+			"SetLinearVelocity", LuaFunction(&Nz::PhysCharacter3D::SetLinearVelocity),
+			"SetObjectLayer", LuaFunction(&Nz::PhysCharacter3D::SetObjectLayer),
+			"SetRotation", LuaFunction(&Nz::PhysCharacter3D::SetRotation),
+			"TeleportTo", LuaFunction(&Nz::PhysCharacter3D::TeleportTo)
 		);
 
 		state.new_usertype<Nz::PhysCharacter3DComponent>("PhysCharacter3DComponent",
 			sol::no_constructor,
-			sol::base_classes, sol::bases<Nz::PhysCharacter3D>(),
-			"GetAngularVelocity", LuaFunction(&Nz::PhysCharacter3DComponent::GetAngularVelocity),
-			"GetCollider", LuaFunction(&Nz::PhysCharacter3DComponent::GetCollider),
-			"GetLinearVelocity", LuaFunction(&Nz::PhysCharacter3DComponent::GetLinearVelocity),
-			"GetPosition", LuaFunction(&Nz::PhysCharacter3DComponent::GetPosition),
-			"GetObjectLayer", LuaFunction(&Nz::PhysCharacter3DComponent::GetObjectLayer),
-			"GetRotation", LuaFunction(&Nz::PhysCharacter3DComponent::GetRotation),
-			"SetAngularVelocity", LuaFunction(&Nz::PhysCharacter3DComponent::SetAngularVelocity),
-			"SetLinearVelocity", LuaFunction(&Nz::PhysCharacter3DComponent::SetLinearVelocity),
-			"SetObjectLayer", LuaFunction(&Nz::PhysCharacter3DComponent::SetObjectLayer),
-			"SetRotation", LuaFunction(&Nz::PhysCharacter3DComponent::SetRotation),
-			"TeleportTo", LuaFunction(&Nz::PhysCharacter3DComponent::TeleportTo)
+			sol::base_classes, sol::bases<Nz::PhysCharacter3D>()
 		);
 
-		state.new_usertype<Nz::RigidBody3DComponent>("Rigidbody3DComponent",
+		state.new_usertype<Nz::RigidBody3D>("RigidBody3D",
 			sol::no_constructor,
-			sol::base_classes, sol::bases<Nz::RigidBody3D>(),
-			"GetAABB", LuaFunction(&Nz::RigidBody3DComponent::GetAABB),
-			"GetAngularDamping", LuaFunction(&Nz::RigidBody3DComponent::GetAngularDamping),
-			"GetAngularVelocity", LuaFunction(&Nz::RigidBody3DComponent::GetAngularVelocity),
-			"GetCollider", LuaFunction(&Nz::RigidBody3DComponent::GetCollider),
-			"GetLinearDamping", LuaFunction(&Nz::RigidBody3DComponent::GetLinearDamping),
-			"GetLinearVelocity", LuaFunction(&Nz::RigidBody3DComponent::GetLinearVelocity),
-			"GetMass", LuaFunction(&Nz::RigidBody3DComponent::GetMass),
-			"GetObjectLayer", LuaFunction(&Nz::RigidBody3DComponent::GetObjectLayer),
-			"GetPosition", LuaFunction(&Nz::RigidBody3DComponent::GetPosition),
-			"GetRotation", LuaFunction(&Nz::RigidBody3DComponent::GetRotation),
-			"SetAngularDamping", LuaFunction(&Nz::RigidBody3DComponent::SetAngularDamping),
-			"SetAngularVelocity", LuaFunction(&Nz::RigidBody3DComponent::SetAngularVelocity),
-			"SetCollider", LuaFunction(&Nz::RigidBody3DComponent::SetCollider),
-			"SetLinearDamping", LuaFunction(&Nz::RigidBody3DComponent::SetLinearDamping),
-			"SetLinearVelocity", LuaFunction(&Nz::RigidBody3DComponent::SetLinearVelocity),
-			"SetMass", LuaFunction(&Nz::RigidBody3DComponent::SetMass),
-			"SetObjectLayer", LuaFunction(&Nz::RigidBody3DComponent::SetObjectLayer),
-			"SetPosition", LuaFunction(&Nz::RigidBody3DComponent::SetPosition),
-			"SetRotation", LuaFunction(&Nz::RigidBody3DComponent::SetRotation),
-			"TeleportTo", LuaFunction(&Nz::RigidBody3DComponent::TeleportTo)
+			sol::base_classes, sol::bases<Nz::PhysBody3D>(),
+			"GetAABB", LuaFunction(&Nz::RigidBody3D::GetAABB),
+			"GetAngularDamping", LuaFunction(&Nz::RigidBody3D::GetAngularDamping),
+			"GetLinearDamping", LuaFunction(&Nz::RigidBody3D::GetLinearDamping),
+			"GetMass", LuaFunction(&Nz::RigidBody3D::GetMass),
+			"SetAngularDamping", LuaFunction(&Nz::RigidBody3D::SetAngularDamping),
+			"SetAngularVelocity", LuaFunction(&Nz::RigidBody3D::SetAngularVelocity),
+			"SetCollider", LuaFunction(&Nz::RigidBody3D::SetCollider),
+			"SetLinearDamping", LuaFunction(&Nz::RigidBody3D::SetLinearDamping),
+			"SetLinearVelocity", LuaFunction(&Nz::RigidBody3D::SetLinearVelocity),
+			"SetMass", LuaFunction(&Nz::RigidBody3D::SetMass),
+			"SetObjectLayer", LuaFunction(&Nz::RigidBody3D::SetObjectLayer),
+			"SetPosition", LuaFunction(&Nz::RigidBody3D::SetPosition),
+			"SetRotation", LuaFunction(&Nz::RigidBody3D::SetRotation),
+			"TeleportTo", LuaFunction(&Nz::RigidBody3D::TeleportTo)
+		);
+
+		state.new_usertype<Nz::RigidBody3DComponent>("RigidBody3DComponent",
+			sol::no_constructor,
+			sol::base_classes, sol::bases<Nz::RigidBody3D>()
 		);
 
 		state.new_enum("DistributionType",

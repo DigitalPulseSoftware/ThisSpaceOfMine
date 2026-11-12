@@ -33,7 +33,7 @@ namespace tsom
 			void OnMouseMoved(float deltaX, float deltaY) override;
 			void OnTrigger(TriggerType triggerType) override;
 
-			void Update(Nz::Time elapsedTime, const GameInterface::RaycastResult* previewRaycast) override;
+			void Update(Nz::Time elapsedTime, const Physics::RaycastHit* previewRaycast) override;
 
 			static void TakeCubemapScreenshot(Nz::TaskScheduler& taskScheduler, Nz::EnttWorld& world, entt::handle referenceCamera, Nz::UInt32 size);
 			static void TakeScreenshot(Nz::TaskScheduler& taskScheduler, Nz::EnttWorld& world, entt::handle referenceCamera, const Nz::Vector2ui32& size);

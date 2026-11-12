@@ -8,6 +8,7 @@
 #define TSOM_CLIENTLIB_GAMEINTERFACE_HPP
 
 #include <ClientLib/Export.hpp>
+#include <CommonLib/Physics/QueryUtils.hpp>
 #include <Nazara/Math/Vector3.hpp>
 #include <entt/entt.hpp>
 #include <optional>
@@ -30,8 +31,6 @@ namespace tsom
 	class TSOM_CLIENTLIB_API GameInterface
 	{
 		public:
-			struct RaycastResult;
-
 			GameInterface() = default;
 			GameInterface(const GameInterface&) = delete;
 			GameInterface(GameInterface&&) = delete;
@@ -49,20 +48,12 @@ namespace tsom
 			virtual NetworkSession* GetNetworkSession() = 0;
 			virtual Nz::EnttWorld& GetWorld() = 0;
 
-			virtual std::optional<RaycastResult> RaycastQuery() const = 0;
+			virtual std::optional<Physics::RaycastHit> RaycastQuery() const = 0;
 
 			virtual void UpdateMouseLock() = 0;
 
 			GameInterface& operator=(const GameInterface&) = delete;
 			GameInterface& operator=(GameInterface&&) = delete;
-
-			struct RaycastResult
-			{
-				entt::handle hitEntity;
-				Nz::Vector3f hitPos;
-				Nz::Vector3f hitNormal;
-				Nz::UInt32 subShapeID;
-			};
 
 		private:
 	};

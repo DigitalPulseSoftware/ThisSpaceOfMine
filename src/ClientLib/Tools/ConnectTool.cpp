@@ -101,7 +101,7 @@ namespace tsom
 		}
 	}
 
-	void ConnectTool::Update(Nz::Time /*elapsedTime*/, const GameInterface::RaycastResult* previewRaycast)
+	void ConnectTool::Update(Nz::Time /*elapsedTime*/, const Physics::RaycastHit* previewRaycast)
 	{
 		Nz::DebugDrawer* debugDrawer = m_gameInterface.GetDebugDrawer();
 
@@ -113,7 +113,7 @@ namespace tsom
 			{
 				Nz::NodeComponent& entityNode = m_selectedSourceEntity.get<Nz::NodeComponent>();
 
-				debugDrawer->DrawLine(entityNode.GetGlobalPosition(), previewRaycast->hitPos, Nz::Color::Blue());
+				debugDrawer->DrawLine(entityNode.GetGlobalPosition(), previewRaycast->hitPosition, Nz::Color::Blue());
 			}
 		}
 

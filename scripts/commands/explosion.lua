@@ -4,18 +4,18 @@ local function Explode(physWorld, controller, radius)
 	local eyePos = controller:GetEyePosition()
 	local cameraRot = controller:GetCameraRotation()
 
-	local result = physWorld:RaycastQueryFirst(eyePos, eyePos + cameraRot * Vec3(0, 0, -1000), { IgnorePlayers = true })
-	if not result or not result.hitEntity or not result.hitChunk then
+	local result = physWorld:RaycastQueryClosest(eyePos, eyePos + cameraRot * Vec3(0, 0, -1000), { IgnorePlayers = true })
+	if not result or not result.hitChunkEntity or not result.hitChunk then
 		return
 	end
 
-	local chunkNode = result.hitEntity:GetComponent("node")
-	local chunkRigidbody = result.hitEntity:GetComponent("rigidbody3d")
+	local chunkNode = result.hitChunkEntity:GetComponent("node")
+	local chunkRigidbody = result.hitChunkEntity:GetComponent("rigidbody3d")
 
 	local localPos = chunkNode:ToLocalPosition(result.hitPosition)
 	local localRot = chunkNode:ToLocalDirection(result.hitNormal)
 
-	local hitBlock = result.hitChunk:ComputeHitCoordinates(localPos, localRot, chunkRigidbody:GetCollider(), result.subShapeID)
+	local hitBlock = result.hitChunk:ComputeHitCoordinates(localPos, localRot, result.hitCollider, result.subShapeID)
 	if not hitBlock then
 		return
 	end

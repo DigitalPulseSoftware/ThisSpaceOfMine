@@ -24,7 +24,7 @@ namespace tsom
 	{
 	}
 
-	void ToolBase::Update(Nz::Time /*elapsedTime*/, const GameInterface::RaycastResult* /*previewRaycast*/)
+	void ToolBase::Update(Nz::Time /*elapsedTime*/, const Physics::RaycastHit* /*previewRaycast*/)
 	{
 	}
 }

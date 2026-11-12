@@ -12,7 +12,7 @@ return function (opt)
 	local eyePos = controller:GetEyePosition()
 	local cameraRot = controller:GetCameraRotation()
 
-	local result = physWorld:RaycastQueryFirst(eyePos, eyePos + cameraRot * Vec3(0, 0, -10), { IgnorePlayers = true })
+	local result = physWorld:RaycastQueryClosest(eyePos, eyePos + cameraRot * Vec3(0, 0, -10), { IgnorePlayers = true })
 	if not result.hitEntity then
 		return
 	end

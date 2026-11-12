@@ -11,6 +11,7 @@
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/PhysicsConstants.hpp>
 #include <CommonLib/Planet.hpp>
+#include <CommonLib/Physics/QueryUtils.hpp>
 #include <CommonLib/Components/ChunkComponent.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Components/DistributionComponent.hpp>
@@ -173,17 +174,6 @@ namespace tsom
 		const auto& characterController = m_player->GetCharacterController();
 		Nz::Quaternionf cameraRot = characterController->GetCameraRotation();
 
-		Nz::Vector3f hitPos;
-		entt::handle hitEntity;
-		auto callback = [&](const Nz::Physics3DSystem::RaycastHit& hitInfo)
-		{
-			if (hitInfo.hitEntity.try_get<Nz::RigidBody3DComponent>())
-			{
-				hitPos = hitInfo.hitPosition;
-				hitEntity = hitInfo.hitEntity;
-			}
-		};
-
 		struct ObjectFilter : Nz::PhysObjectLayerFilter3D
 		{
 			bool ShouldCollide(Nz::PhysObjectLayer3D layer) const override
@@ -199,11 +189,16 @@ namespace tsom
 
 		ServerEnvironment* environment = m_player->GetControlledEntityEnvironment();
 
+		Nz::Physics3DSystem::RaycastHit hitInfo;
+
 		auto& physSystem = environment->GetWorld().GetSystem<Nz::Physics3DSystem>();
-		if (physSystem.RaycastQueryFirst(cameraPos, cameraPos + cameraRot * Nz::Vector3f::Forward() * 10.f, callback, nullptr, &objectFilter))
+		if (physSystem.RaycastQueryClosest(cameraPos, cameraPos + cameraRot * Nz::Vector3f::Forward() * 10.f, &hitInfo, nullptr, &objectFilter))
 		{
-			Nz::Vector3f localPos = cameraRot.GetConjugate() * (hitPos - cameraPos);
-			m_player->GrabEntity(hitEntity, localPos);
+			if (hitInfo.hitEntity.try_get<Nz::RigidBody3DComponent>())
+			{
+				Nz::Vector3f localPos = cameraRot.GetConjugate() * (hitInfo.hitPosition - cameraPos);
+				m_player->GrabEntity(hitInfo.hitEntity, localPos);
+			}
 		}
 	}
 
@@ -421,14 +416,6 @@ namespace tsom
 
 			Nz::Boxf planetAABB = env->ComputeBoundingBox();
 
-			Nz::Vector3f planetCenter = planetAABB.GetCenter();
-			Nz::Vector3f spawnPos = planetCenter + (planetAABB.GetRadius() + Constants::PlayerColliderHeight * 2.f) * Nz::Vector3f::Up();
-
-			auto callback = [&](const Nz::Physics3DSystem::RaycastHit& hitInfo)
-			{
-				spawnPos = hitInfo.hitPosition + hitInfo.hitNormal * Constants::PlayerColliderHeight;
-			};
-
 			struct IgnorePlayer : Nz::PhysObjectLayerFilter3D
 			{
 				bool ShouldCollide(Nz::PhysObjectLayer3D layer) const override
@@ -438,8 +425,14 @@ namespace tsom
 			};
 			IgnorePlayer objectFilter;
 
+			Nz::Physics3DSystem::RaycastHit hitInfo;
+
 			auto& physSystem = env->GetWorld().GetSystem<Nz::Physics3DSystem>();
-			physSystem.RaycastQueryFirst(spawnPos, planetCenter, callback, nullptr, &objectFilter);
+
+			Nz::Vector3f planetCenter = planetAABB.GetCenter();
+			Nz::Vector3f spawnPos = planetCenter + (planetAABB.GetRadius() + Constants::PlayerColliderHeight * 2.f) * Nz::Vector3f::Up();
+			if (physSystem.RaycastQueryClosest(spawnPos, planetCenter, &hitInfo, nullptr, &objectFilter))
+				spawnPos = hitInfo.hitPosition + hitInfo.hitNormal * Constants::PlayerColliderHeight;
 
 			m_player->Respawn(env, spawnPos, Nz::Quaternionf::Identity());
 		}
@@ -664,17 +657,6 @@ namespace tsom
 			const auto& characterController = m_player->GetCharacterController();
 			Nz::Quaternionf cameraRot = characterController->GetCameraRotation();
 
-			Nz::Vector3f hitPos, hitNormal;
-			entt::handle hitEntity;
-			std::uint32_t hitSubshapeID;
-			auto callback = [&](const Nz::Physics3DSystem::RaycastHit& hitInfo)
-			{
-				hitPos = hitInfo.hitPosition;
-				hitNormal = hitInfo.hitNormal;
-				hitEntity = hitInfo.hitEntity;
-				hitSubshapeID = hitInfo.subShapeID;
-			};
-
 			struct IgnorePlayer : Nz::PhysObjectLayerFilter3D
 			{
 				bool ShouldCollide(Nz::PhysObjectLayer3D layer) const override
@@ -688,11 +670,13 @@ namespace tsom
 
 			Nz::Vector3f cameraPos = characterController->GetEyePosition();
 
+			Nz::Physics3DSystem::RaycastHit hitInfo;
+
 			auto& physSystem = currentEnvironment->GetWorld().GetSystem<Nz::Physics3DSystem>();
-			if (physSystem.RaycastQueryFirst(cameraPos, cameraPos + cameraRot * Nz::Vector3f::Forward() * 100.f, callback, nullptr, &objectFilter))
+			if (physSystem.RaycastQueryClosest(cameraPos, cameraPos + cameraRot * Nz::Vector3f::Forward() * 100.f, &hitInfo, nullptr, &objectFilter))
 			{
 				entt::handle entity = currentEnvironment->CreateEntity();
-				entity.emplace<Nz::NodeComponent>(hitPos, Nz::Quaternionf::RotationBetween(Nz::Vector3f::Forward(), hitNormal));
+				entity.emplace<Nz::NodeComponent>(hitInfo.hitPosition, Nz::Quaternionf::RotationBetween(Nz::Vector3f::Forward(), hitInfo.hitNormal));
 				entity.emplace<NetworkedComponent>();
 				entity.emplace<DatabaseComponent>();
 
@@ -721,12 +705,6 @@ namespace tsom
 			const auto& characterController = m_player->GetCharacterController();
 			Nz::Quaternionf cameraRot = characterController->GetCameraRotation();
 
-			Nz::Vector3f hitPos;
-			auto callback = [&](const Nz::Physics3DSystem::RaycastHit& hitInfo)
-			{
-				hitPos = hitInfo.hitPosition;
-			};
-
 			struct IgnorePlayer : Nz::PhysObjectLayerFilter3D
 			{
 				bool ShouldCollide(Nz::PhysObjectLayer3D layer) const override
@@ -740,14 +718,16 @@ namespace tsom
 
 			Nz::Vector3f cameraPos = characterController->GetEyePosition();
 
+			Nz::Physics3DSystem::RaycastHit hitInfo;
+
 			auto& physSystem = currentEnvironment->GetWorld().GetSystem<Nz::Physics3DSystem>();
-			if (physSystem.RaycastQueryFirst(cameraPos, cameraPos + cameraRot * Nz::Vector3f::Forward() * 10.f, callback, nullptr, &objectFilter))
+			if (physSystem.RaycastQueryClosest(cameraPos, cameraPos + cameraRot * Nz::Vector3f::Forward() * 10.f, &hitInfo, nullptr, &objectFilter))
 			{
 				entt::registry& environmentRegistry = currentEnvironment->GetWorld().GetRegistry();
 				auto classInstanceView = environmentRegistry.view<Nz::NodeComponent, ClassInstanceComponent>();
 				for (auto&& [entity, entityNode, classInstance] : classInstanceView.each())
 				{
-					if (classInstance.GetClass() == treeClass && entityNode.GetPosition().SquaredDistance(hitPos) < Nz::IntegralPow(0.5f, 2))
+					if (classInstance.GetClass() == treeClass && entityNode.GetPosition().SquaredDistance(hitInfo.hitPosition) < Nz::IntegralPow(0.5f, 2))
 					{
 						environmentRegistry.destroy(entity);
 						m_player->SendChatMessage("Tree removed");
@@ -893,16 +873,13 @@ namespace tsom
 		IgnoreTrigger physObjectLayerFilter;
 
 		auto& physicsSystem = environment->GetWorld().GetSystem<Nz::Physics3DSystem>();
-		bool doesCollide = physicsSystem.CollisionQuery(*blockCollider, Nz::Matrix4f::Translate(offset), [&](const Nz::Physics3DSystem::ShapeCollisionInfo& hitInfo) -> std::optional<float>
+		bool doesCollide = Physics::CollisionQuery(physicsSystem, *blockCollider, Nz::Matrix4f::Transform(globalOffset, chunkContainerNode.GetGlobalRotation()), [&](const Physics::ShapeCollisionInfo& hitInfo) -> std::optional<float>
 		{
 			// Ignore collisions between the chunk from the same container
-			if (hitInfo.hitEntity)
+			if (hitInfo.hitChunk)
 			{
-				if (const ChunkComponent* entityChunk = hitInfo.hitEntity.try_get<ChunkComponent>())
-				{
-					if (&entityChunk->chunk->GetContainer() == &chunkContainer)
-						return std::nullopt; //< Ignore collision
-				}
+				if (&hitInfo.hitChunk->GetContainer() == &chunkContainer)
+					return std::nullopt; //< Ignore collision
 			}
 
 			return hitInfo.penetrationDepth;
@@ -912,9 +889,7 @@ namespace tsom
 		debugDrawLineList.uniqueHash = 42;
 		debugDrawLineList.color = (doesCollide) ? Nz::Color::Red() : Nz::Color::Green();
 		debugDrawLineList.duration = 5.f;
-		blockCollider->BuildDebugMesh(debugDrawLineList.vertices, debugDrawLineList.indices, Nz::Matrix4f::Identity());
-		for (Nz::Vector3f& vertex : debugDrawLineList.vertices)
-			vertex += offset;
+		blockCollider->BuildDebugMesh(debugDrawLineList.vertices, debugDrawLineList.indices, Nz::Matrix4f::Transform(globalOffset, chunkContainerNode.GetGlobalRotation()));
 
 		auto& visibility = m_player->GetVisibilityHandler();
 
@@ -943,7 +918,7 @@ namespace tsom
 		IgnoreTrigger physObjectLayerFilter;
 
 		auto& physicsSystem = environment->GetWorld().GetSystem<Nz::Physics3DSystem>();
-		bool doesCollide = physicsSystem.CollisionQuery(colliderBox, Nz::Matrix4f::Transform(position, rotation), [&](const Nz::Physics3DSystem::ShapeCollisionInfo& hitInfo) -> std::optional<float>
+		bool doesCollide = Physics::CollisionQuery(physicsSystem, colliderBox, Nz::Matrix4f::Transform(position, rotation), [&](const Physics::ShapeCollisionInfo& hitInfo) -> std::optional<float>
 		{
 			return hitInfo.penetrationDepth;
 		}, nullptr, &physObjectLayerFilter);

@@ -24,20 +24,20 @@ return function ()
 	local eyePos = controller:GetEyePosition()
 	local cameraRot = controller:GetCameraRotation()
 
-	local result = physWorld:RaycastQueryFirst(eyePos, eyePos + cameraRot * Vec3(0, 0, -10), { IgnorePlayers = true })
+	local result = physWorld:RaycastQueryClosest(eyePos, eyePos + cameraRot * Vec3(0, 0, -10), { IgnorePlayers = true })
 
-	if not result.hitEntity or not result.hitChunk then
+	if not result.hitChunkEntity or not result.hitChunk then
 		print("no chunk hit")
 		return
 	end
 
-	local chunkNode = result.hitEntity:GetComponent("node")
-	local chunkRigidbody = result.hitEntity:GetComponent("rigidbody3d")
+	local chunkNode = result.hitChunkEntity:GetComponent("node")
+	local chunkRigidbody = result.hitChunkEntity:GetComponent("rigidbody3d")
 
 	local localPos = chunkNode:ToLocalPosition(result.hitPosition)
 	local localRot = chunkNode:ToLocalDirection(result.hitNormal)
 
-	local hitBlock = result.hitChunk:ComputeHitCoordinates(localPos, localRot, chunkRigidbody:GetCollider(), result.subShapeID)
+	local hitBlock = result.hitChunk:ComputeHitCoordinates(localPos, localRot, result.hitCollider, result.subShapeID)
 	if not hitBlock then
 		print("no block hit")
 		return

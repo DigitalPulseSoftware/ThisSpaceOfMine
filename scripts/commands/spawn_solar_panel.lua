@@ -7,10 +7,9 @@ return function ()
 	local eyePos = controller:GetEyePosition()
 	local cameraRot = controller:GetCameraRotation()
 
-	local result = physWorld:RaycastQueryFirst(eyePos, eyePos + cameraRot * Vec3(0, 0, -10), { IgnorePlayers = true })
-
-	if not result.hitEntity or not result.hitChunk then
-		print("no chunk hit")
+	local result = physWorld:RaycastQueryClosest(eyePos, eyePos + cameraRot * Vec3(0, 0, -10), { IgnorePlayers = true })
+	if not result then
+		print("nothing hit")
 		return
 	end
 

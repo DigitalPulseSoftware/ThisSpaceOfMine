@@ -22,24 +22,6 @@ namespace tsom
 		if (!raycastHit)
 			return;
 
-		auto* chunkComponent = raycastHit->hitEntity.try_get<ChunkComponent>();
-		if (!chunkComponent)
-			return;
-
-		auto& chunkNetworkMap = chunkComponent->parentEntity.get<ChunkNetworkMapComponent>();
-		auto& chunkRigidBody = raycastHit->hitEntity.get<Nz::RigidBody3DComponent>();
-		auto& chunkNode = raycastHit->hitEntity.get<Nz::NodeComponent>();
-
-		const Chunk& hitChunk = *chunkComponent->chunk;
-		const ChunkContainer& chunkContainer = hitChunk.GetContainer();
-
-		Nz::Vector3f localPos = chunkNode.ToLocalPosition(raycastHit->hitPos);
-		Nz::Vector3f localNormal = chunkNode.ToLocalDirection(raycastHit->hitNormal);
-
-		auto hitCoordinates = hitChunk.ComputeHitCoordinates(localPos, localNormal, *chunkRigidBody.GetCollider(), raycastHit->subShapeID);
-		if (!hitCoordinates)
-			return;
-
 		const ClientEntityNetworkIndex* entityNetwork = raycastHit->hitEntity.try_get<const ClientEntityNetworkIndex>();
 		if (entityNetwork)
 		{

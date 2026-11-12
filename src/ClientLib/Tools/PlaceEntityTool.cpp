@@ -62,24 +62,18 @@ namespace tsom
 			return;
 
 		auto raycastHit = m_gameInterface.RaycastQuery();
-		if (!raycastHit)
+		if (!raycastHit || !raycastHit->hitChunk)
 			return;
 
-		auto* chunkComponent = raycastHit->hitEntity.try_get<ChunkComponent>();
-		if (!chunkComponent)
-			return;
+		auto& chunkNetworkMap = raycastHit->hitEntity.get<ChunkNetworkMapComponent>();
+		auto& chunkNode = raycastHit->hitChunkEntity.get<Nz::NodeComponent>();
 
-		auto& chunkNetworkMap = chunkComponent->parentEntity.get<ChunkNetworkMapComponent>();
-		auto& chunkRigidBody = raycastHit->hitEntity.get<Nz::RigidBody3DComponent>();
-		auto& chunkNode = raycastHit->hitEntity.get<Nz::NodeComponent>();
+		const ChunkContainer& chunkContainer = raycastHit->hitChunk->GetContainer();
 
-		const Chunk& hitChunk = *chunkComponent->chunk;
-		const ChunkContainer& chunkContainer = hitChunk.GetContainer();
-
-		Nz::Vector3f localPos = chunkNode.ToLocalPosition(raycastHit->hitPos);
+		Nz::Vector3f localPos = chunkNode.ToLocalPosition(raycastHit->hitPosition);
 		Nz::Vector3f localNormal = chunkNode.ToLocalDirection(raycastHit->hitNormal);
 
-		auto hitCoordinates = hitChunk.ComputeHitCoordinates(localPos, localNormal, *chunkRigidBody.GetCollider(), raycastHit->subShapeID);
+		auto hitCoordinates = raycastHit->hitChunk->ComputeHitCoordinates(localPos, localNormal, *raycastHit->hitCollider, raycastHit->subShapeID);
 		if (!hitCoordinates)
 			return;
 
@@ -88,7 +82,7 @@ namespace tsom
 			NetworkSession* networkSession = m_gameInterface.GetNetworkSession();
 
 			Packets::C_PlaceEntity placeEntity;
-			placeEntity.chunkId = Nz::Retrieve(chunkNetworkMap.chunkNetworkIndices, &hitChunk);
+			placeEntity.chunkId = Nz::Retrieve(chunkNetworkMap.chunkNetworkIndices, raycastHit->hitChunk);
 			placeEntity.voxelLoc.x = hitCoordinates->blockIndices.x;
 			placeEntity.voxelLoc.y = hitCoordinates->blockIndices.y;
 			placeEntity.voxelLoc.z = hitCoordinates->blockIndices.z;
@@ -96,7 +90,7 @@ namespace tsom
 			placeEntity.entityRotation = m_preview->rotationMultiplier;
 			placeEntity.entityClass = networkSession->GetStringStore().CheckStringIndex(m_selectedEntityClass);
 
-			std::tie(placeEntity.xPos, placeEntity.zPos) = ComputeTargetPosition(hitChunk.ComputeBlockCorners(hitCoordinates->blockIndices), hitCoordinates->direction, localPos, nullptr);
+			std::tie(placeEntity.xPos, placeEntity.zPos) = ComputeTargetPosition(raycastHit->hitChunk->ComputeBlockCorners(hitCoordinates->blockIndices), hitCoordinates->direction, localPos, nullptr);
 
 			networkSession->SendPacket(placeEntity);
 		}
@@ -126,128 +120,123 @@ namespace tsom
 		}
 	}
 
-	void PlaceEntityTool::Update(Nz::Time /*elapsedTime*/, const GameInterface::RaycastResult* previewRaycast)
+	void PlaceEntityTool::Update(Nz::Time /*elapsedTime*/, const Physics::RaycastHit* previewRaycast)
 	{
-		if (previewRaycast)
+		if (previewRaycast && previewRaycast->hitChunk)
 		{
-			if (auto* chunkComponent = previewRaycast->hitEntity.try_get<ChunkComponent>())
+			auto& chunkNode = previewRaycast->hitChunkEntity.get<Nz::NodeComponent>();
+
+			const ChunkContainer& chunkContainer = previewRaycast->hitChunk->GetContainer();
+
+			Nz::Vector3f localPos = chunkNode.ToLocalPosition(previewRaycast->hitPosition);
+			Nz::Vector3f localNormal = chunkNode.ToLocalDirection(previewRaycast->hitNormal);
+
+			auto hitCoordinates = previewRaycast->hitChunk->ComputeHitCoordinates(localPos, localNormal, *previewRaycast->hitCollider, previewRaycast->subShapeID);
+			if (hitCoordinates)
 			{
-				auto& chunkRigidBody = previewRaycast->hitEntity.get<Nz::RigidBody3DComponent>();
-				auto& chunkNode = previewRaycast->hitEntity.get<Nz::NodeComponent>();
-
-				const Chunk& hitChunk = *chunkComponent->chunk;
-				const ChunkContainer& chunkContainer = hitChunk.GetContainer();
-
-				Nz::Vector3f localPos = chunkNode.ToLocalPosition(previewRaycast->hitPos);
-				Nz::Vector3f localNormal = chunkNode.ToLocalDirection(previewRaycast->hitNormal);
-
-				auto hitCoordinates = hitChunk.ComputeHitCoordinates(localPos, localNormal, *chunkRigidBody.GetCollider(), previewRaycast->subShapeID);
-				if (hitCoordinates)
+				NazaraAssert(m_preview);
+				if (!m_preview->entity)
 				{
-					NazaraAssert(m_preview);
-					if (!m_preview->entity)
+					const EntityRegistry& entityRegistry = m_gameInterface.GetEntityRegistry();
+
+					const auto& entityClass = entityRegistry.FindClass(m_selectedEntityClass);
+					if (entityClass)
 					{
-						const EntityRegistry& entityRegistry = m_gameInterface.GetEntityRegistry();
-
-						const auto& entityClass = entityRegistry.FindClass(m_selectedEntityClass);
-						if (entityClass)
+						const Nz::ParameterList& metadata = entityClass->GetMetadata();
+						if (auto result = metadata.GetStringViewParameter("spawnable_model"))
 						{
-							const Nz::ParameterList& metadata = entityClass->GetMetadata();
-							if (auto result = metadata.GetStringViewParameter("spawnable_model"))
+							std::shared_ptr<Nz::Model> previewModel = m_assetLibrary.GetModel(*result);
+							if (previewModel)
 							{
-								std::shared_ptr<Nz::Model> previewModel = m_assetLibrary.GetModel(*result);
-								if (previewModel)
-								{
-									previewModel = previewModel->Clone();
+								previewModel = previewModel->Clone();
 
-									for (std::size_t i = 0; i < previewModel->GetMaterialCount(); ++i)
-										previewModel->SetMaterial(i, m_preview->material);
-								}
-								else
-									spdlog::warn("invalid model {} (no preview)", *result);
-
-								m_preview->entity = m_gameInterface.GetWorld().CreateEntity();
-								m_preview->entity.emplace<Nz::NodeComponent>();
-								m_preview->entity.emplace<Nz::GraphicsComponent>(std::move(previewModel));
-
-								m_preview->collider.x = static_cast<float>(metadata.GetDoubleParameter("spawnable_collider.x").GetValueOr(1.0));
-								m_preview->collider.y = static_cast<float>(metadata.GetDoubleParameter("spawnable_collider.y").GetValueOr(1.0));
-								m_preview->collider.z = static_cast<float>(metadata.GetDoubleParameter("spawnable_collider.z").GetValueOr(1.0));
-
-								m_preview->offset.x = static_cast<float>(metadata.GetDoubleParameter("spawnable_offset.x").GetValueOr(0.0));
-								m_preview->offset.y = static_cast<float>(metadata.GetDoubleParameter("spawnable_offset.y").GetValueOr(0.0));
-								m_preview->offset.z = static_cast<float>(metadata.GetDoubleParameter("spawnable_offset.z").GetValueOr(0.0));
-
-								m_preview->rotationAxis.x = static_cast<float>(metadata.GetDoubleParameter("spawnable_rotationaxis.x").GetValueOr(0.0));
-								m_preview->rotationAxis.y = static_cast<float>(metadata.GetDoubleParameter("spawnable_rotationaxis.y").GetValueOr(1.0));
-								m_preview->rotationAxis.z = static_cast<float>(metadata.GetDoubleParameter("spawnable_rotationaxis.z").GetValueOr(0.0));
-
-								m_preview->keepUpright = metadata.GetBooleanParameter("spawnable_keepupright").GetValueOr(false);
+								for (std::size_t i = 0; i < previewModel->GetMaterialCount(); ++i)
+									previewModel->SetMaterial(i, m_preview->material);
 							}
+							else
+								spdlog::warn("invalid model {} (no preview)", *result);
+
+							m_preview->entity = m_gameInterface.GetWorld().CreateEntity();
+							m_preview->entity.emplace<Nz::NodeComponent>();
+							m_preview->entity.emplace<Nz::GraphicsComponent>(std::move(previewModel));
+
+							m_preview->collider.x = static_cast<float>(metadata.GetDoubleParameter("spawnable_collider.x").GetValueOr(1.0));
+							m_preview->collider.y = static_cast<float>(metadata.GetDoubleParameter("spawnable_collider.y").GetValueOr(1.0));
+							m_preview->collider.z = static_cast<float>(metadata.GetDoubleParameter("spawnable_collider.z").GetValueOr(1.0));
+
+							m_preview->offset.x = static_cast<float>(metadata.GetDoubleParameter("spawnable_offset.x").GetValueOr(0.0));
+							m_preview->offset.y = static_cast<float>(metadata.GetDoubleParameter("spawnable_offset.y").GetValueOr(0.0));
+							m_preview->offset.z = static_cast<float>(metadata.GetDoubleParameter("spawnable_offset.z").GetValueOr(0.0));
+
+							m_preview->rotationAxis.x = static_cast<float>(metadata.GetDoubleParameter("spawnable_rotationaxis.x").GetValueOr(0.0));
+							m_preview->rotationAxis.y = static_cast<float>(metadata.GetDoubleParameter("spawnable_rotationaxis.y").GetValueOr(1.0));
+							m_preview->rotationAxis.z = static_cast<float>(metadata.GetDoubleParameter("spawnable_rotationaxis.z").GetValueOr(0.0));
+
+							m_preview->keepUpright = metadata.GetBooleanParameter("spawnable_keepupright").GetValueOr(false);
 						}
 					}
+				}
 
-					if (m_preview->entity)
+				if (m_preview->entity)
+				{
+					Nz::Vector3f entityPos;
+					ComputeTargetPosition(previewRaycast->hitChunk->ComputeBlockCorners(hitCoordinates->blockIndices), hitCoordinates->direction, localPos, &entityPos);
+
+					entityPos = chunkNode.ToGlobalPosition(entityPos);
+
+					auto& previewNode = m_preview->entity.get<Nz::NodeComponent>();
+
+					Nz::Quaternionf localRotation = Nz::Quaternionf(Nz::DegreeAnglef(45.f) * m_preview->rotationMultiplier, m_preview->rotationAxis);
+					Nz::Quaternionf surfaceRotation = Nz::Quaternionf::Identity();
+					Nz::Vector3f normal = s_dirNormals[hitCoordinates->direction];
+
+					if (m_preview->keepUpright)
+						entityPos += chunkNode.ToGlobalDirection(normal * m_preview->collider * 0.5f);
+					else
 					{
-						Nz::Vector3f entityPos;
-						ComputeTargetPosition(hitChunk.ComputeBlockCorners(hitCoordinates->blockIndices), hitCoordinates->direction, localPos, &entityPos);
+						entityPos += chunkNode.ToGlobalDirection(normal * m_preview->collider.y * 0.5f);
 
-						entityPos = chunkNode.ToGlobalPosition(entityPos);
+						Nz::Quaternionf correctionRotation = Nz::Quaternionf::RotationBetween(Nz::Vector3f::Up(), Nz::Vector3f::Forward());
+						surfaceRotation = Nz::Quaternionf::CombineRotations(correctionRotation, Nz::Quaternionf::RotationBetween(Nz::Vector3f::Forward(), normal));
+					}
 
-						auto& previewNode = m_preview->entity.get<Nz::NodeComponent>();
+					Nz::Quaternionf entityRotation = chunkNode.ToGlobalRotation(Nz::Quaternionf::CombineRotations(localRotation, surfaceRotation));
+					previewNode.SetTransform(entityPos - entityRotation * m_preview->offset, entityRotation);
 
-						Nz::Quaternionf localRotation = Nz::Quaternionf(Nz::DegreeAnglef(45.f) * m_preview->rotationMultiplier, m_preview->rotationAxis);
-						Nz::Quaternionf surfaceRotation = Nz::Quaternionf::Identity();
-						Nz::Vector3f normal = s_dirNormals[hitCoordinates->direction];
+					Nz::Matrix4f physicsMatrix = Nz::Matrix4f::Transform(entityPos, entityRotation);
 
-						if (m_preview->keepUpright)
-							entityPos += chunkNode.ToGlobalDirection(normal * m_preview->collider * 0.5f);
-						else
+					struct IgnoreTrigger : Nz::PhysObjectLayerFilter3D
+					{
+						bool ShouldCollide(Nz::PhysObjectLayer3D objectLayer) const override
 						{
-							entityPos += chunkNode.ToGlobalDirection(normal * m_preview->collider.y * 0.5f);
-
-							Nz::Quaternionf correctionRotation = Nz::Quaternionf::RotationBetween(Nz::Vector3f::Up(), Nz::Vector3f::Forward());
-							surfaceRotation = Nz::Quaternionf::CombineRotations(correctionRotation, Nz::Quaternionf::RotationBetween(Nz::Vector3f::Forward(), normal));
+							return objectLayer != Constants::ObjectLayerStaticTrigger;
 						}
+					};
 
-						Nz::Quaternionf entityRotation = chunkNode.ToGlobalRotation(Nz::Quaternionf::CombineRotations(localRotation, surfaceRotation));
-						previewNode.SetTransform(entityPos - entityRotation * m_preview->offset, entityRotation);
+					IgnoreTrigger physObjectLayerFilter;
 
-						Nz::Matrix4f physicsMatrix = Nz::Matrix4f::Transform(entityPos, entityRotation);
+					Nz::OrientedBoxf obb(Nz::Boxf(m_preview->collider * -0.5f, m_preview->collider));
+					obb.Update(physicsMatrix);
 
-						struct IgnoreTrigger : Nz::PhysObjectLayerFilter3D
-						{
-							bool ShouldCollide(Nz::PhysObjectLayer3D objectLayer) const override
-							{
-								return objectLayer != Constants::ObjectLayerStaticTrigger;
-							}
-						};
+					m_gameInterface.GetDebugDrawer()->DrawBoxCorners(obb.GetCorners(), Nz::Color::Cyan());
 
-						IgnoreTrigger physObjectLayerFilter;
+					Nz::BoxCollider3D collider(m_preview->collider * 0.9f);
 
-						Nz::OrientedBoxf obb(Nz::Boxf(m_preview->collider * -0.5f, m_preview->collider));
-						obb.Update(physicsMatrix);
+					Nz::Physics3DSystem::ShapeCollisionInfo closestCollisionInfo;
 
-						m_gameInterface.GetDebugDrawer()->DrawBoxCorners(obb.GetCorners(), Nz::Color::Cyan());
+					auto& physSystem = m_gameInterface.GetWorld().GetSystem<Nz::Physics3DSystem>();
+					bool doesCollide = physSystem.CollisionQuery(collider, physicsMatrix, [&](const Nz::Physics3DSystem::ShapeCollisionInfo& hitInfo) -> std::optional<float>
+					{
+						closestCollisionInfo = hitInfo;
+						return hitInfo.penetrationDepth;
+					}, nullptr, &physObjectLayerFilter);
 
-						Nz::BoxCollider3D collider(m_preview->collider * 0.9f);
+					m_preview->material->SetValueProperty("BaseColor", doesCollide ? Nz::Color(0.8f, 0.2f, 0.2f, 0.5f) : Nz::Color(1.f, 1.f, 1.f, 0.5f));
 
-						Nz::Physics3DSystem::ShapeCollisionInfo closestCollisionInfo;
-
-						auto& physSystem = m_gameInterface.GetWorld().GetSystem<Nz::Physics3DSystem>();
-						bool doesCollide = physSystem.CollisionQuery(collider, physicsMatrix, [&](const Nz::Physics3DSystem::ShapeCollisionInfo& hitInfo) -> std::optional<float>
-						{
-							closestCollisionInfo = hitInfo;
-							return hitInfo.penetrationDepth;
-						}, nullptr, &physObjectLayerFilter);
-
-						m_preview->material->SetValueProperty("BaseColor", doesCollide ? Nz::Color(0.8f, 0.2f, 0.2f, 0.5f) : Nz::Color(1.f, 1.f, 1.f, 0.5f));
-
-						if (doesCollide)
-						{
-							// Draw a visual line to show where collision happens
-							m_gameInterface.GetDebugDrawer()->DrawLine(entityPos, closestCollisionInfo.collisionPosition1, Nz::Color::Red());
-						}
+					if (doesCollide)
+					{
+						// Draw a visual line to show where collision happens
+						m_gameInterface.GetDebugDrawer()->DrawLine(entityPos, closestCollisionInfo.collisionPosition1, Nz::Color::Red());
 					}
 				}
 			}

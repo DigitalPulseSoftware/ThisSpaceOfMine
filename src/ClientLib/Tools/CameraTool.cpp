@@ -97,7 +97,7 @@ namespace tsom
 		}
 	}
 
-	void CameraTool::Update(Nz::Time elapsedTime, const GameInterface::RaycastResult* /*previewRaycast*/)
+	void CameraTool::Update(Nz::Time elapsedTime, const Physics::RaycastHit* /*previewRaycast*/)
 	{
 		float cameraSpeed = 5.f * elapsedTime.AsSeconds();
 		float cameraRotationSpeed = 90.f * elapsedTime.AsSeconds();

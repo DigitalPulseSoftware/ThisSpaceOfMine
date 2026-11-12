@@ -9,6 +9,7 @@
 
 #include <ClientLib/Export.hpp>
 #include <ClientLib/GameInterface.hpp>
+#include <CommonLib/Physics/QueryUtils.hpp>
 #include <Nazara/Core/Time.hpp>
 #include <NazaraUtils/Prerequisites.hpp>
 #include <string_view>
@@ -41,7 +42,7 @@ namespace tsom
 			virtual void OnTrigger(TriggerType triggerType) = 0;
 			virtual void OnWheel(float delta);
 
-			virtual void Update(Nz::Time elapsedTime, const GameInterface::RaycastResult* previewRaycast);
+			virtual void Update(Nz::Time elapsedTime, const Physics::RaycastHit* previewRaycast);
 
 			ToolBase& operator=(const ToolBase&) = delete;
 			ToolBase& operator=(ToolBase&&) = delete;

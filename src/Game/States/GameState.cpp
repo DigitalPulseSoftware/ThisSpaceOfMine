@@ -830,18 +830,13 @@ namespace tsom
 		return *GetStateData().world;
 	}
 
-	auto GameState::RaycastQuery() const -> std::optional<RaycastResult>
+	auto GameState::RaycastQuery() const -> std::optional<Physics::RaycastHit>
 	{
 		auto& physSystem = GetStateData().world->GetSystem<Nz::Physics3DSystem>();
 
-		RaycastResult raycastResult;
-		auto callback = [&](const Nz::Physics3DSystem::RaycastHit& hitInfo)
-		{
-			raycastResult.hitEntity = hitInfo.hitEntity;
-			raycastResult.hitPos = hitInfo.hitPosition;
-			raycastResult.hitNormal = hitInfo.hitNormal;
-			raycastResult.subShapeID = hitInfo.subShapeID;
-		};
+		auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
+		Nz::Vector3f rayOrigin = cameraNode.GetPosition();
+		Nz::Vector3f rayDir = cameraNode.GetForward() * 10.0f;
 
 		struct IgnoreSelf : Nz::PhysBodyFilter3D
 		{
@@ -862,8 +857,8 @@ namespace tsom
 		if (m_controlledEntity)
 			ignoreSelf.playerBodyIndex = m_controlledEntity.get<Nz::RigidBody3DComponent>().GetBodyIndex();
 
-		auto& cameraNode = m_cameraEntity.get<Nz::NodeComponent>();
-		if (!physSystem.RaycastQueryFirst(cameraNode.GetPosition(), cameraNode.GetPosition() + cameraNode.GetForward() * 10.f, callback, nullptr, nullptr, (m_controlledEntity) ? &ignoreSelf : nullptr))
+		Physics::RaycastHit raycastResult;
+		if (!Physics::RaycastClosest(physSystem, rayOrigin, rayOrigin + rayDir, &raycastResult, nullptr, nullptr, (m_controlledEntity) ? &ignoreSelf : nullptr))
 			return {};
 
 		return raycastResult;
@@ -1236,53 +1231,40 @@ namespace tsom
 
 		// Raycast
 		entt::handle interactibleEntity;
-		std::optional<RaycastResult> raycastHit;
+		std::optional<Physics::RaycastHit> raycastHit;
 		if (m_cameraMode != CameraMode::ThirdpersonRear && !m_pilotedShip)
 		{
 			raycastHit = RaycastQuery();
 			if (raycastHit)
 			{
-				if (auto* chunkComponent = raycastHit->hitEntity.try_get<ChunkComponent>())
+				if (raycastHit->hitChunk)
 				{
-					auto& chunkRigidBody = raycastHit->hitEntity.get<Nz::RigidBody3DComponent>();
-					auto& chunkNode = raycastHit->hitEntity.get<Nz::NodeComponent>();
+					auto& chunkNode = raycastHit->hitChunkEntity.get<Nz::NodeComponent>();
 
-					const Chunk& hitChunk = *chunkComponent->chunk;
-					const ChunkContainer& chunkContainer = hitChunk.GetContainer();
+					const ChunkContainer& chunkContainer = raycastHit->hitChunk->GetContainer();
 
-					debugDrawer->DrawLine(raycastHit->hitPos, raycastHit->hitPos + raycastHit->hitNormal * 0.2f, Nz::Color::Cyan());
+					debugDrawer->DrawLine(raycastHit->hitPosition, raycastHit->hitPosition + raycastHit->hitNormal * 0.2f, Nz::Color::Cyan());
 
 					if (m_debugOverlay && m_debugOverlay->mode >= 1)
 					{
-						const ChunkIndices& chunkIndices = hitChunk.GetIndices();
+						const ChunkIndices& chunkIndices = raycastHit->hitChunk->GetIndices();
 						m_debugOverlay->textDrawer.AppendText(fmt::format("{0:-^{1}}\n", "Target", 20));
 						m_debugOverlay->textDrawer.AppendText(fmt::format("Target chunk: {0};{1};{2}\n", chunkIndices.x, chunkIndices.y, chunkIndices.z));
 					}
 
-					Nz::Vector3f localPos = chunkNode.ToLocalPosition(raycastHit->hitPos);
+					Nz::Vector3f localPos = chunkNode.ToLocalPosition(raycastHit->hitPosition);
 					Nz::Vector3f localNormal = chunkNode.ToLocalDirection(raycastHit->hitNormal);
 
-					auto hitCoordinates = hitChunk.ComputeHitCoordinates(localPos, localNormal, *chunkRigidBody.GetCollider(), raycastHit->subShapeID);
-					if (hitCoordinates && hitChunk.HasContent()) //< It's possible for a chunk without content to have physics while physics update
+					auto hitCoordinates = raycastHit->hitChunk->ComputeHitCoordinates(localPos, localNormal, *raycastHit->hitCollider, raycastHit->subShapeID);
+					if (hitCoordinates && raycastHit->hitChunk->HasContent()) //< It's possible for a chunk without content to have physics while physics update
 					{
 						if (m_debugOverlay && m_debugOverlay->mode >= 1)
 						{
 							m_debugOverlay->textDrawer.AppendText(fmt::format("Target chunk block: {0};{1};{2}\n", hitCoordinates->blockIndices.x, hitCoordinates->blockIndices.y, hitCoordinates->blockIndices.z));
 
-							Nz::Vector3ui chunkCount(5);
-
-							Nz::Vector3i maxHeight((Nz::Vector3i(chunkCount) + Nz::Vector3i(1)) / 2);
-							maxHeight *= int(Planet::ChunkSize);
-
-							const ChunkIndices& chunkIndices = hitChunk.GetIndices();
-							Nz::Vector3i blockIndices = chunkIndices * int(Planet::ChunkSize) + Nz::Vector3i(hitCoordinates->blockIndices.x, hitCoordinates->blockIndices.z, hitCoordinates->blockIndices.y) - Nz::Vector3i(int(Planet::ChunkSize)) / 2;
+							const ChunkIndices& chunkIndices = raycastHit->hitChunk->GetIndices();
+							BlockIndices blockIndices = chunkContainer.GetBlockIndices(chunkIndices, hitCoordinates->blockIndices);
 							m_debugOverlay->textDrawer.AppendText(fmt::format("Target block global indices: {0};{1};{2}\n", blockIndices.x, blockIndices.y, blockIndices.z));
-							unsigned int depth = Nz::SafeCaster(std::min({
-								maxHeight.x - std::abs(blockIndices.x),
-								maxHeight.y - std::abs(blockIndices.z),
-								maxHeight.z - std::abs(blockIndices.y)
-							}));
-							m_debugOverlay->textDrawer.AppendText(fmt::format("Target block depth: {0}\n", depth));
 						}
 					}
 				}
@@ -1495,12 +1477,6 @@ namespace tsom
 	{
 		auto& physSystem = GetStateData().world->GetSystem<Nz::Physics3DSystem>();
 
-		Nz::Vector3f targetPos = to;
-		auto callback = [&](const Nz::Physics3DSystem::RaycastHit& hitInfo)
-		{
-			targetPos = hitInfo.hitPosition + hitInfo.hitNormal * 0.2f;
-		};
-
 		struct OnlyStatic : Nz::PhysBroadphaseLayerFilter3D
 		{
 			bool ShouldCollide(Nz::PhysBroadphase3D layer) const override
@@ -1541,9 +1517,11 @@ namespace tsom
 			ignoreShip.physicsSystem = &physSystem;
 		}
 
-		physSystem.RaycastQueryFirst(from, to, callback, &onlyStatic, nullptr, (m_pilotedShip) ? &ignoreShip : nullptr);
-
-		return targetPos;
+		Nz::Physics3DSystem::RaycastHit hitInfo;
+		if (physSystem.RaycastQueryClosest(from, to, &hitInfo, &onlyStatic, nullptr, (m_pilotedShip) ? &ignoreShip : nullptr))
+			return hitInfo.hitPosition + hitInfo.hitNormal * 0.2f;
+		else
+			return to;
 	}
 
 	void GameState::OnTick(Nz::Time elapsedTime, bool lastTick)

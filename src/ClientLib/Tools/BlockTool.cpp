@@ -18,24 +18,19 @@ namespace tsom
 	void BlockTool::OnTrigger(TriggerType triggerType)
 	{
 		auto raycastHit = m_gameInterface.RaycastQuery();
-		if (!raycastHit)
+		if (!raycastHit || !raycastHit->hitChunk)
 			return;
 
-		auto* chunkComponent = raycastHit->hitEntity.try_get<ChunkComponent>();
-		if (!chunkComponent)
-			return;
+		auto& chunkNetworkMap = raycastHit->hitEntity.get<ChunkNetworkMapComponent>();
+		auto& chunkNode = raycastHit->hitChunkEntity.get<Nz::NodeComponent>();
 
-		auto& chunkNetworkMap = chunkComponent->parentEntity.get<ChunkNetworkMapComponent>();
-		auto& chunkRigidBody = raycastHit->hitEntity.get<Nz::RigidBody3DComponent>();
-		auto& chunkNode = raycastHit->hitEntity.get<Nz::NodeComponent>();
+		const Chunk& hitChunk = *raycastHit->hitChunk;
+		const ChunkContainer& chunkContainer = raycastHit->hitChunk->GetContainer();
 
-		const Chunk& hitChunk = *chunkComponent->chunk;
-		const ChunkContainer& chunkContainer = hitChunk.GetContainer();
-
-		Nz::Vector3f localPos = chunkNode.ToLocalPosition(raycastHit->hitPos);
+		Nz::Vector3f localPos = chunkNode.ToLocalPosition(raycastHit->hitPosition);
 		Nz::Vector3f localNormal = chunkNode.ToLocalDirection(raycastHit->hitNormal);
 
-		auto hitCoordinates = hitChunk.ComputeHitCoordinates(localPos, localNormal, *chunkRigidBody.GetCollider(), raycastHit->subShapeID);
+		auto hitCoordinates = raycastHit->hitChunk->ComputeHitCoordinates(localPos, localNormal, *raycastHit->hitCollider, raycastHit->subShapeID);
 		if (!hitCoordinates)
 			return;
 
@@ -76,7 +71,7 @@ namespace tsom
 		else if (triggerType == ToolBase::TriggerType::Tertiary)
 		{
 			// Pick block
-			BlockIndex pickedBlockIndex = chunkComponent->chunk.Get()->GetBlockContent(hitCoordinates->blockIndices);
+			BlockIndex pickedBlockIndex = raycastHit->hitChunk->GetBlockContent(hitCoordinates->blockIndices);
 			m_gameInterface.GetBlockSelectionBar()->SelectPickedBlock(pickedBlockIndex);
 		}
 	}
@@ -93,29 +88,23 @@ namespace tsom
 		}
 	}
 
-	void BlockTool::Update(Nz::Time /*elapsedTime*/, const GameInterface::RaycastResult* previewRaycast)
+	void BlockTool::Update(Nz::Time /*elapsedTime*/, const Physics::RaycastHit* previewRaycast)
 	{
-		if (!previewRaycast)
+		if (!previewRaycast || !previewRaycast->hitChunk)
 			return;
 
-		auto* chunkComponent = previewRaycast->hitEntity.try_get<ChunkComponent>();
-		if (!chunkComponent)
-			return;
+		auto& chunkNode = previewRaycast->hitChunkEntity.get<Nz::NodeComponent>();
 
-		auto& chunkRigidBody = previewRaycast->hitEntity.get<Nz::RigidBody3DComponent>();
-		auto& chunkNode = previewRaycast->hitEntity.get<Nz::NodeComponent>();
+		const ChunkContainer& chunkContainer = previewRaycast->hitChunk->GetContainer();
 
-		const Chunk& hitChunk = *chunkComponent->chunk;
-		const ChunkContainer& chunkContainer = hitChunk.GetContainer();
-
-		Nz::Vector3f localPos = chunkNode.ToLocalPosition(previewRaycast->hitPos);
+		Nz::Vector3f localPos = chunkNode.ToLocalPosition(previewRaycast->hitPosition);
 		Nz::Vector3f localNormal = chunkNode.ToLocalDirection(previewRaycast->hitNormal);
 
-		auto hitCoordinates = hitChunk.ComputeHitCoordinates(localPos, localNormal, *chunkRigidBody.GetCollider(), previewRaycast->subShapeID);
+		auto hitCoordinates = previewRaycast->hitChunk->ComputeHitCoordinates(localPos, localNormal, *previewRaycast->hitCollider, previewRaycast->subShapeID);
 		if (!hitCoordinates)
 			return;
 
-		auto cornerPos = hitChunk.ComputeBlockCorners(hitCoordinates->blockIndices);
+		auto cornerPos = previewRaycast->hitChunk->ComputeBlockCorners(hitCoordinates->blockIndices);
 		auto& corners = s_faceCorners[hitCoordinates->direction];
 
 		Nz::Vector3f offset = previewRaycast->hitNormal * 0.03f;

@@ -9,6 +9,7 @@
 #include <CommonLib/ShipController.hpp>
 #include <CommonLib/Components/ChunkComponent.hpp>
 #include <CommonLib/Components/ScriptedEntityComponent.hpp>
+#include <CommonLib/Physics/QueryUtils.hpp>
 #include <CommonLib/Scripting/ScriptingUtils.hpp>
 #include <CommonLib/Scripting/SharedEntityScriptingLibrary.hpp>
 #include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
@@ -60,34 +61,9 @@ namespace tsom
 	{
 		state.new_usertype<Nz::Physics3DSystem>("PhysWorld",
 			sol::no_constructor,
-			"RaycastQueryFirst", LuaFunction([this](sol::this_state L, Nz::Physics3DSystem& physSystem, const Nz::Vector3f& startPos, const Nz::Vector3f& endPos, sol::optional<sol::table> parameters)
+			"RaycastQueryClosest", LuaFunction([this](sol::this_state L, Nz::Physics3DSystem& physSystem, const Nz::Vector3f& startPos, const Nz::Vector3f& endPos, sol::optional<sol::table> parameters) -> sol::object
 			{
 				sol::state_view state(L);
-
-				sol::object retVal = sol::lua_nil;
-				auto callback = [&](const Nz::Physics3DSystem::RaycastHit& hitInfo)
-				{
-					ScriptedEntityComponent* scriptedEntity = nullptr;
-					if (hitInfo.hitEntity)
-						scriptedEntity = hitInfo.hitEntity.try_get<ScriptedEntityComponent>();
-
-					sol::table result = state.create_table_with(
-						"fraction", hitInfo.fraction,
-						"hitPosition", hitInfo.hitPosition,
-						"hitNormal", hitInfo.hitNormal,
-						"subShapeID", hitInfo.subShapeID
-					);
-
-					if (hitInfo.hitEntity)
-					{
-						result["hitEntity"] = m_entityScriptingLibrary.ToEntityTable(state, hitInfo.hitEntity);
-
-						if (auto* chunkComponent = hitInfo.hitEntity.try_get<ChunkComponent>())
-							result["hitChunk"] = chunkComponent->chunk->shared_from_this();
-					}
-
-					retVal = result;
-				};
 
 				Nz::PhysObjectLayerFilter3D* objectFilter = nullptr;
 
@@ -109,8 +85,21 @@ namespace tsom
 						objectFilter = &ignorePlayerFilter;
 				}
 
-				physSystem.RaycastQueryFirst(startPos, endPos, callback, nullptr, objectFilter);
-				return retVal;
+				Physics::RaycastHit hitInfo;
+				if (!Physics::RaycastClosest(physSystem, startPos, endPos, &hitInfo, nullptr, objectFilter))
+					return sol::lua_nil;
+
+				return state.create_table_with(
+					"fraction", hitInfo.fraction,
+					"hitBody", hitInfo.hitBody,
+					"hitCollider", hitInfo.hitCollider,
+					"hitEntity", m_entityScriptingLibrary.ToEntityTable(state, hitInfo.hitEntity),
+					"hitPosition", hitInfo.hitPosition,
+					"hitNormal", hitInfo.hitNormal,
+					"subShapeID", hitInfo.subShapeID,
+					"hitChunk", hitInfo.hitChunk,
+					"hitChunkEntity", m_entityScriptingLibrary.ToEntityTable(state, hitInfo.hitChunkEntity)
+				);
 			})
 		);
 	}
