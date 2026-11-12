@@ -54,6 +54,7 @@ namespace tsom
 	class TSOM_COMMONLIB_API Chunk : public std::enable_shared_from_this<Chunk>
 	{
 		public:
+			struct ColliderData;
 			struct Layer;
 			struct HitBlock;
 			struct VertexAttributes;
@@ -66,8 +67,8 @@ namespace tsom
 			inline void BeginBatchUpdate();
 
 			virtual std::pair<std::shared_ptr<Nz::Collider3D>, Nz::Vector3f> BuildBlockCollider(const Nz::Vector3ui& blockIndices, float scale = 1.f) const = 0;
-			virtual std::shared_ptr<Nz::Collider3D> BuildCollider(std::size_t layerIndex) const = 0;
-			virtual void BuildMesh(std::size_t layerIndex, std::vector<Nz::UInt32>& indices, const Nz::Vector3f& center, const Nz::FunctionRef<VertexAttributes(const Nz::Vector3ui& blockIndices, Direction direction)>& addFace) const;
+			virtual ColliderData BuildCollider(std::size_t layerIndex) const = 0;
+			virtual void BuildMesh(std::size_t layerIndex, std::vector<Nz::UInt32>& indices, const Nz::Vector3f& center, const Nz::FunctionRef<VertexAttributes(const Nz::Vector3ui& blockIndices, Direction direction)>& addFace) const = 0;
 
 			inline void ClearContent();
 
@@ -130,6 +131,12 @@ namespace tsom
 			NazaraSignal(OnLayerUnregistered, Chunk* /*emitter*/, std::size_t /*layerIndex*/);
 			NazaraSignal(OnReset, Chunk* /*emitter*/);
 			NazaraSignal(OnVisibilityMaskUpdated, Chunk* /*emitter*/, DirectionMask /*oldVisibilityMask*/, DirectionMask /*newVisibilityMask*/);
+
+			struct ColliderData
+			{
+				std::shared_ptr<Nz::Collider3D> simplifiedCollisions;
+				std::shared_ptr<Nz::Collider3D> complexCollisions;
+			};
 
 			struct Layer
 			{

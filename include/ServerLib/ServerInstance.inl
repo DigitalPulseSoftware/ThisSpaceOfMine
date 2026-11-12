@@ -64,6 +64,15 @@ namespace tsom
 	}
 
 	template<typename F>
+	void ServerInstance::ForEachEnvironment(F&& functor)
+	{
+		for (m_currentEnvironmentIteration = 0; m_currentEnvironmentIteration < m_environments.size(); ++m_currentEnvironmentIteration)
+			functor(m_environments[m_currentEnvironmentIteration]);
+
+		m_currentEnvironmentIteration = Nz::MaxValue();
+	}
+
+	template<typename F>
 	void ServerInstance::ForEachPlayer(F&& functor)
 	{
 		for (ServerPlayer& serverPlayer : m_players)

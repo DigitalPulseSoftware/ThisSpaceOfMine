@@ -64,6 +64,8 @@ namespace tsom
 			inline ServerPlayer* FindPlayerByUuid(const Nz::Uuid& uuid);
 			inline const ServerPlayer* FindPlayerByUuid(const Nz::Uuid& uuid) const;
 
+			template<typename F> void ForEachEnvironment(F&& functor);
+
 			template<typename F> void ForEachPlayer(F&& functor);
 			template<typename F> void ForEachPlayer(F&& functor) const;
 
@@ -122,6 +124,7 @@ namespace tsom
 			void OnNetworkTick();
 			void OnSave();
 			void OnTick(Nz::Time elapsedTime);
+			void UpdateEnvironments();
 
 			struct PlayerRename
 			{
@@ -129,6 +132,7 @@ namespace tsom
 				std::string newNickname;
 			};
 
+			std::size_t m_currentEnvironmentIteration;
 			std::vector<std::unique_ptr<NetworkSessionManager>> m_sessionManagers;
 			std::vector<PlayerRename> m_pendingPlayerRename;
 			std::vector<ServerEnvironment*> m_environments;

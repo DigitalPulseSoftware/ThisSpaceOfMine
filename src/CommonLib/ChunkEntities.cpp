@@ -7,6 +7,7 @@
 #include <CommonLib/ChunkLock.hpp>
 #include <CommonLib/PhysicsConstants.hpp>
 #include <CommonLib/Components/ChunkComponent.hpp>
+#include <CommonLib/Components/ComplexCollisionComponent.hpp>
 #include <CommonLib/Components/EntityOwnerComponent.hpp>
 #include <CommonLib/Physics/ContactCallbackComponents.hpp>
 #include <CommonLib/Systems/BuoyancySystem.hpp>
@@ -19,18 +20,20 @@
 
 namespace tsom
 {
-	ChunkEntities::ChunkEntities(Nz::ApplicationBase& application, Nz::EnttWorld& world, std::shared_ptr<ChunkContainer> chunkContainer, const BlockLibrary& blockLibrary, std::size_t layerIndex) :
-	ChunkEntities(application, world, std::move(chunkContainer), blockLibrary, layerIndex, NoInit{})
+	ChunkEntities::ChunkEntities(Nz::ApplicationBase& application, Nz::EnttWorld& world, std::shared_ptr<ChunkContainer> chunkContainer, const BlockLibrary& blockLibrary, std::size_t layerIndex, bool isStatic) :
+	ChunkEntities(application, world, std::move(chunkContainer), blockLibrary, layerIndex, isStatic, NoInit{})
 	{
 		FillChunks();
 	}
 
-	ChunkEntities::ChunkEntities(Nz::ApplicationBase& application, Nz::EnttWorld& world, std::shared_ptr<ChunkContainer> chunkContainer, const BlockLibrary& blockLibrary, std::size_t layerIndex, NoInit) :
+	ChunkEntities::ChunkEntities(Nz::ApplicationBase& application, Nz::EnttWorld& world, std::shared_ptr<ChunkContainer> chunkContainer, const BlockLibrary& blockLibrary, std::size_t layerIndex, bool isStatic, NoInit) :
 	m_layerIndex(layerIndex),
 	m_chunkContainer(std::move(chunkContainer)),
 	m_application(application),
 	m_world(world),
 	m_blockLibrary(blockLibrary),
+	m_isDynamicColliderUpdated(true),
+	m_isStatic(isStatic)
 	{
 		m_onChunkAdded.Connect(m_chunkContainer->OnChunkLayerAdded, [this](ChunkContainer* /*emitter*/, Chunk* chunk, std::size_t layerIndex)
 		{
@@ -82,13 +85,16 @@ namespace tsom
 	void ChunkEntities::SetParentEntity(entt::handle entity)
 	{
 		m_parentEntity = entity;
-		if (m_parentEntity)
+		if (m_isStatic)
 		{
-			auto& parentNode = m_parentEntity.get<Nz::NodeComponent>();
-			m_onParentNodeInvalidated.Connect(parentNode.OnNodeInvalidation, this, &ChunkEntities::OnParentNodeInvalidated);
+			if (m_parentEntity)
+			{
+				auto& parentNode = m_parentEntity.get<Nz::NodeComponent>();
+				m_onParentNodeInvalidated.Connect(parentNode.OnNodeInvalidation, this, &ChunkEntities::OnParentNodeInvalidated);
+			}
+			else
+				m_onParentNodeInvalidated.Disconnect();
 		}
-		else
-			m_onParentNodeInvalidated.Disconnect();
 	}
 
 	void ChunkEntities::Update()
@@ -146,6 +152,48 @@ namespace tsom
 
 			m_invalidatedChunks.clear();
 		}
+
+		if (!m_isDynamicColliderUpdated)
+		{
+			NazaraAssert(!m_isStatic);
+
+			std::vector<Nz::CompoundCollider3D::ChildCollider> childDynamicColliders;
+			childDynamicColliders.reserve(m_chunkColliders.size());
+
+			std::vector<ComplexChunkCollisionComponent::ChunkEntry> chunkEntries;
+			chunkEntries.reserve(m_chunkColliders.size());
+
+			for (auto&& [chunkIndices, chunkColliders] : m_chunkColliders)
+			{
+				if (!chunkColliders.simplifiedCollisions)
+					continue; //< can happen with empty chunks
+
+				auto& childDynamicCollider = childDynamicColliders.emplace_back();
+				childDynamicCollider.collider = chunkColliders.simplifiedCollisions;
+				childDynamicCollider.offset = m_chunkContainer->GetChunkOffset(chunkIndices);
+
+				auto& chunkEntry = chunkEntries.emplace_back();
+				chunkEntry.chunkCollider = chunkColliders.complexCollisions;
+				chunkEntry.chunkEntity = Nz::Retrieve(m_chunkEntities, chunkIndices);
+				chunkEntry.chunkOffset = childDynamicCollider.offset;
+			}
+
+			auto& rigidBody = m_parentEntity.get<Nz::RigidBody3DComponent>();
+			if (!childDynamicColliders.empty())
+			{
+				rigidBody.SetCollider(std::make_shared<Nz::CompoundCollider3D>(std::move(childDynamicColliders)));
+
+				auto& complexChunkCollisions = m_parentEntity.get_or_emplace<ComplexChunkCollisionComponent>();
+				complexChunkCollisions.chunkEntries = std::move(chunkEntries);
+			}
+			else
+			{
+				rigidBody.SetCollider(nullptr);
+				m_parentEntity.remove<ComplexChunkCollisionComponent>();
+			}
+
+			m_isDynamicColliderUpdated = true;
+		}
 	}
 
 	void ChunkEntities::CreateChunkEntity(const ChunkIndices& chunkIndices)
@@ -176,11 +224,15 @@ namespace tsom
 
 		auto& layerData = m_blockLibrary.GetLayerData(m_layerIndex);
 
-		Nz::RigidBody3D::StaticSettings physicsSettings(nullptr);
-		physicsSettings.objectLayer = layerData.physicsLayer;
-		physicsSettings.isTrigger = layerData.isPhysicsTrigger;
+		if (m_isStatic)
+		{
+			// For static collisions, keep a collider per chunk to facilitate updates
+			Nz::RigidBody3D::StaticSettings physicsSettings(nullptr);
+			physicsSettings.objectLayer = layerData.physicsLayer;
+			physicsSettings.isTrigger = layerData.isPhysicsTrigger;
 
-		chunkEntity.emplace<Nz::RigidBody3DComponent>(physicsSettings);
+			chunkEntity.emplace<Nz::RigidBody3DComponent>(physicsSettings);
+		}
 
 		if (layerData.isFluid)
 		{
@@ -210,6 +262,11 @@ namespace tsom
 		}
 
 		m_invalidatedChunks.erase(chunkIndices);
+		if (!m_isStatic)
+		{
+			if (m_chunkColliders.erase(chunkIndices) > 0)
+				m_isDynamicColliderUpdated = true;
+		}
 	}
 
 	void ChunkEntities::FillChunks()
@@ -240,9 +297,7 @@ namespace tsom
 		{
 			ColliderUpdateJob&& colliderUpdateJob = static_cast<ColliderUpdateJob&&>(job);
 
-			entt::handle chunkEntity = Nz::Retrieve(m_chunkEntities, chunkIndices);
-			auto& rigidBody = chunkEntity.get<Nz::RigidBody3DComponent>();
-			rigidBody.SetCollider(std::move(colliderUpdateJob.collider), false);
+			UpdateChunkCollider(chunkIndices, std::move(colliderUpdateJob.collider));
 		};
 
 		updateJob->taskCount = 0;
@@ -316,6 +371,26 @@ namespace tsom
 		{
 			NazaraUnused(entity);
 			m_invalidatedChunks[chunkIndices] = 0;
+		}
+	}
+
+	void ChunkEntities::UpdateChunkCollider(const ChunkIndices& chunkIndices, Chunk::ColliderData&& colliderData)
+	{
+		if (m_isStatic)
+		{
+			entt::handle chunkEntity = Nz::Retrieve(m_chunkEntities, chunkIndices);
+			auto& rigidBody = chunkEntity.get<Nz::RigidBody3DComponent>();
+			rigidBody.SetCollider(std::move(colliderData.simplifiedCollisions), false);
+
+			if (colliderData.complexCollisions)
+				chunkEntity.get_or_emplace<ComplexCollisionComponent>().complexCollisionCollider = std::move(colliderData.complexCollisions);
+			else
+				chunkEntity.remove<ComplexCollisionComponent>();
+		}
+		else
+		{
+			m_chunkColliders[chunkIndices] = std::move(colliderData);
+			m_isDynamicColliderUpdated = false;
 		}
 	}
 }

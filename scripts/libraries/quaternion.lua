@@ -56,6 +56,16 @@ end
 Quaternion = {}
 Quaternion.Metatable = QuaternionMt
 
+function Quaternion.AngleAxis(angle, axis)
+    angle = angle * 0.5
+
+    local normalizedAxis = axis:GetNormal()
+
+    local sin = math.sin(angle)
+    local cos = math.cos(angle)
+    return Quaternion(cos, sin * normalizedAxis.x, sin * normalizedAxis.y, sin * normalizedAxis.z):Normalize()
+end
+
 function Quaternion.CombineRotations(...)
     local count = select("#", ...)
     local rotation = select(-1, ...)

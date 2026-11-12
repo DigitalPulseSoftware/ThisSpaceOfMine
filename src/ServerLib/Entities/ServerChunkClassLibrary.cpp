@@ -10,8 +10,17 @@
 
 namespace tsom
 {
-	std::unique_ptr<ChunkEntities> ServerChunkClassLibrary::SetupChunkEntities(Nz::EnttWorld& world, ChunkContainer& chunkContainer, std::size_t layerIndex, bool isStatic)
+	void ServerChunkClassLibrary::InitializeAsteroidEntity(entt::handle entity, std::shared_ptr<Asteroid>&& asteroid)
 	{
-		return std::make_unique<ChunkEntities>(m_app, world, chunkContainer, m_blockLibrary, layerIndex, isStatic);
+		asteroid->GenerateChunks();
+
+		entity.emplace<ServerEnvironmentSwitchComponent>();
+
+		return ChunkClassLibrary::InitializeAsteroidEntity(entity, std::move(asteroid));
+	}
+
+	std::unique_ptr<ChunkEntities> ServerChunkClassLibrary::SetupChunkEntities(Nz::EnttWorld& world, std::shared_ptr<ChunkContainer> chunkContainer, std::size_t layerIndex, bool isStatic)
+	{
+		return std::make_unique<ChunkEntities>(m_app, world, std::move(chunkContainer), m_blockLibrary, layerIndex, isStatic);
 	}
 }

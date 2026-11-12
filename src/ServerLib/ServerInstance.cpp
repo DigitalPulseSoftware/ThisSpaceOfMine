@@ -28,6 +28,7 @@
 namespace tsom
 {
 	ServerInstance::ServerInstance(Nz::ApplicationBase& application, Config config) :
+	m_currentEnvironmentIteration(Nz::MaxValue()),
 	m_players(256),
 	m_tickAccumulator(Nz::Time::Zero()),
 	m_tickDuration(Constants::TickDuration),
@@ -236,7 +237,7 @@ namespace tsom
 
 	std::unique_ptr<Nz::EnttWorld> ServerInstance::RegisterEnvironment(ServerEnvironment* environment)
 	{
-		assert(std::find(m_environments.begin(), m_environments.end(), environment) == m_environments.end());
+		NazaraAssert(std::find(m_environments.begin(), m_environments.end(), environment) == m_environments.end());
 		m_environments.push_back(environment);
 
 		if (!m_envWorldPool.empty())
@@ -254,6 +255,11 @@ namespace tsom
 	{
 		auto it = std::find(m_environments.begin(), m_environments.end(), environment);
 		assert(it != m_environments.end());
+
+		// If we're currently iterating past the environment we're removing, we need to decrease the iteration index to avoid missing an environment
+		if (m_currentEnvironmentIteration > std::distance(m_environments.begin(), it))
+			m_currentEnvironmentIteration--;
+
 		m_environments.erase(it);
 
 		m_envWorldPool.push_back(std::move(world));
@@ -267,8 +273,10 @@ namespace tsom
 		for (auto&& sessionManagerPtr : m_sessionManagers)
 			sessionManagerPtr->Poll();
 
-		for (ServerEnvironment* env : m_environments)
+		ForEachEnvironment([](ServerEnvironment* env)
+		{
 			env->Update();
+		});
 
 		// No player? Pause instance for 50ms
 		if (m_config.pauseWhenEmpty && m_players.begin() == m_players.end())
@@ -410,8 +418,10 @@ namespace tsom
 
 	void ServerInstance::OnSave()
 	{
-		for (ServerEnvironment* env : m_environments)
+		ForEachEnvironment([](ServerEnvironment* env)
+		{
 			env->OnSave();
+		});
 	}
 
 	void ServerInstance::OnTick(Nz::Time elapsedTime)
@@ -430,8 +440,10 @@ namespace tsom
 			serverPlayer.Tick();
 		});
 
-		for (ServerEnvironment* env : m_environments)
+		ForEachEnvironment([elapsedTime](ServerEnvironment* env)
+		{
 			env->OnTick(elapsedTime);
+		});
 
 		HandleNetworkEvents();
 	}

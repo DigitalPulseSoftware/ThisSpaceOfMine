@@ -3,11 +3,11 @@
 // For conditions of distribution and use, see copyright notice in LICENSE
 
 #include <CommonLib/Physics/QueryUtils.hpp>
-#include <NazaraUtils/Assert.hpp>
-#include <Nazara/Core/Components/NodeComponent.hpp>
-#include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
 #include <CommonLib/Components/ChunkComponent.hpp>
 #include <CommonLib/Components/ComplexCollisionComponent.hpp>
+#include <Nazara/Core/Components/NodeComponent.hpp>
+#include <Nazara/Physics3D/Systems/Physics3DSystem.hpp>
+#include <NazaraUtils/Assert.hpp>
 
 namespace tsom::Physics
 {
@@ -17,6 +17,75 @@ namespace tsom::Physics
 		{
 			Nz::Collider3D* hitCollider = hitInfo.hitBody->GetCollider().get();
 
+			// Handle complex collisions
+			if (hitInfo.hitEntity)
+			{
+				Nz::NodeComponent* entityNode = hitInfo.hitEntity.try_get<Nz::NodeComponent>();
+				ComplexCollisionComponent* complexCollision = hitInfo.hitEntity.try_get<ComplexCollisionComponent>();
+				ComplexChunkCollisionComponent* chunkComplexCollision = hitInfo.hitEntity.try_get<ComplexChunkCollisionComponent>();
+
+				if (entityNode)
+				{
+					if (chunkComplexCollision)
+					{
+						NazaraAssert(hitCollider->GetType() == Nz::ColliderType3D::Compound);
+
+						const Nz::CompoundCollider3D* hitCompoundCollider = Nz::SafeCast<const Nz::CompoundCollider3D*>(hitCollider);
+						Nz::UInt32 colliderIndex = hitCompoundCollider->GetChildColliderIndexFromID(hitInfo.subShapeID);
+
+						NazaraAssert(colliderIndex < chunkComplexCollision->chunkEntries.size());
+						Nz::Collider3D* complexCollider = chunkComplexCollision->chunkEntries[colliderIndex].chunkCollider.get();
+						const Nz::Vector3f& chunkOffset = chunkComplexCollision->chunkEntries[colliderIndex].chunkOffset;
+
+						auto shapeCallback = [&](const Nz::Collider3D::RaycastHit& colliderHitInfo)
+						{
+							raycastHit->hitEntity = hitInfo.hitEntity;
+							raycastHit->hitPosition = entityNode->ToGlobalPosition(colliderHitInfo.hitPosition + chunkOffset + complexCollider->GetCenterOfMass());
+							raycastHit->hitNormal = entityNode->ToGlobalDirection(colliderHitInfo.hitNormal);
+							raycastHit->subShapeID = colliderHitInfo.subShapeID;
+							raycastHit->fraction = hitInfo.fraction;
+							raycastHit->hitCollider = complexCollider;
+							raycastHit->hitChunkEntity = chunkComplexCollision->chunkEntries[colliderIndex].chunkEntity;
+							NazaraAssert(raycastHit->hitChunkEntity.all_of<ChunkComponent>());
+							raycastHit->hitChunk = raycastHit->hitChunkEntity.get<ChunkComponent>().chunk;
+						};
+
+						// If there's a complex collider but we didn't hit it, ignore the whole entity
+						Nz::Vector3f localOrigin = entityNode->ToLocalPosition(start) - chunkOffset - complexCollider->GetCenterOfMass();
+						Nz::Vector3f localDestination = localOrigin + entityNode->ToLocalDirection(rayDir);
+						return complexCollider->RaycastQuery(localOrigin, localDestination, shapeCallback);
+					}
+					else if (complexCollision)
+					{
+						Nz::Collider3D* complexCollider = complexCollision->complexCollisionCollider.get();
+
+						auto shapeCallback = [&](const Nz::Collider3D::RaycastHit& colliderHitInfo)
+						{
+							raycastHit->hitPosition = entityNode->ToGlobalPosition(colliderHitInfo.hitPosition + complexCollider->GetCenterOfMass());
+							raycastHit->hitNormal = entityNode->ToGlobalDirection(colliderHitInfo.hitNormal);
+							raycastHit->subShapeID = colliderHitInfo.subShapeID;
+							raycastHit->hitCollider = complexCollider;
+							raycastHit->fraction = hitInfo.fraction;
+
+							if (ChunkComponent* hitChunkComponent = hitInfo.hitEntity.try_get<ChunkComponent>())
+							{
+								raycastHit->hitChunk = hitChunkComponent->chunk;
+								raycastHit->hitChunkEntity = hitInfo.hitEntity;
+								raycastHit->hitEntity = hitChunkComponent->parentEntity;
+							}
+							else
+								raycastHit->hitEntity = hitInfo.hitEntity;
+						};
+
+						// If there's a complex collider but we didn't hit it, ignore the whole entity
+						Nz::Vector3f localOrigin = entityNode->ToLocalPosition(start) - complexCollider->GetCenterOfMass();
+						Nz::Vector3f localDestination = localOrigin + entityNode->ToLocalDirection(rayDir);
+						return complexCollider->RaycastQuery(localOrigin, localDestination, shapeCallback);
+					}
+				}
+			}
+
+			// No complex collisions
 			raycastHit->hitEntity = hitInfo.hitEntity;
 			raycastHit->hitPosition = hitInfo.hitPosition;
 			raycastHit->hitNormal = hitInfo.hitNormal;
@@ -45,6 +114,92 @@ namespace tsom::Physics
 		auto internalCallback = [&](const Nz::Physics3DSystem::ShapeCollisionInfo& hitInfo) -> std::optional<float>
 		{
 			Nz::Collider3D* hitCollider = hitInfo.hitBody->GetCollider().get();
+
+			// Handle complex collisions
+			if (hitInfo.hitEntity)
+			{
+				Nz::NodeComponent* entityNode = hitInfo.hitEntity.try_get<Nz::NodeComponent>();
+				ComplexCollisionComponent* complexCollision = hitInfo.hitEntity.try_get<ComplexCollisionComponent>();
+				ComplexChunkCollisionComponent* chunkComplexCollision = hitInfo.hitEntity.try_get<ComplexChunkCollisionComponent>();
+
+				if (entityNode)
+				{
+					if (chunkComplexCollision)
+					{
+						NazaraAssert(hitCollider->GetType() == Nz::ColliderType3D::Compound);
+
+						const Nz::CompoundCollider3D* hitCompoundCollider = Nz::SafeCast<const Nz::CompoundCollider3D*>(hitCollider);
+						Nz::UInt32 colliderIndex = hitCompoundCollider->GetChildColliderIndexFromID(hitInfo.subShapeID2);
+
+						NazaraAssert(colliderIndex < chunkComplexCollision->chunkEntries.size());
+						Nz::Collider3D* complexCollider = chunkComplexCollision->chunkEntries[colliderIndex].chunkCollider.get();
+						const Nz::Vector3f& chunkOffset = chunkComplexCollision->chunkEntries[colliderIndex].chunkOffset;
+
+						ShapeCollisionInfo collisionInfo;
+
+						auto shapeCallback = [&](const Nz::Collider3D::ShapeCollisionInfo& shapeCollisionInfo) -> std::optional<float>
+						{
+							collisionInfo.collisionPosition1 = shapeCollisionInfo.collisionPosition1;
+							collisionInfo.collisionPosition2 = shapeCollisionInfo.collisionPosition2;
+							collisionInfo.penetrationAxis = shapeCollisionInfo.penetrationAxis;
+							collisionInfo.penetrationDepth = shapeCollisionInfo.penetrationDepth;
+							collisionInfo.hitCollider = complexCollider;
+							collisionInfo.hitBody = hitInfo.hitBody;
+							collisionInfo.subShapeID1 = shapeCollisionInfo.subShapeID1;
+							collisionInfo.subShapeID2 = shapeCollisionInfo.subShapeID2;
+							collisionInfo.hitChunkEntity = chunkComplexCollision->chunkEntries[colliderIndex].chunkEntity;
+							NazaraAssert(collisionInfo.hitChunkEntity.all_of<ChunkComponent>());
+							collisionInfo.hitChunk = collisionInfo.hitChunkEntity.get<ChunkComponent>().chunk;
+
+							return shapeCollisionInfo.penetrationDepth;
+						};
+
+						// If there's a complex collider but we didn't hit it, ignore the whole entity
+						Nz::Matrix4f complexColliderTransform = entityNode->GetTransformMatrix();
+						complexColliderTransform.Translate(entityNode->GetGlobalRotation() * chunkOffset);
+
+						if (!Nz::Collider3D::CollideShapes(collider, colliderTransform, *complexCollider, complexColliderTransform, shapeCallback))
+							return {};
+
+						return callback(collisionInfo);
+					}
+					else if (complexCollision)
+					{
+						Nz::Collider3D* complexCollider = complexCollision->complexCollisionCollider.get();
+
+						ShapeCollisionInfo collisionInfo;
+
+						auto shapeCallback = [&](const Nz::Collider3D::ShapeCollisionInfo& shapeCollisionInfo) -> std::optional<float>
+						{
+							collisionInfo.collisionPosition1 = shapeCollisionInfo.collisionPosition1;
+							collisionInfo.collisionPosition2 = shapeCollisionInfo.collisionPosition2;
+							collisionInfo.penetrationAxis = shapeCollisionInfo.penetrationAxis;
+							collisionInfo.penetrationDepth = shapeCollisionInfo.penetrationDepth;
+							collisionInfo.hitCollider = complexCollider;
+							collisionInfo.hitBody = hitInfo.hitBody;
+							collisionInfo.subShapeID1 = shapeCollisionInfo.subShapeID1;
+							collisionInfo.subShapeID2 = shapeCollisionInfo.subShapeID2;
+
+							if (ChunkComponent* hitChunkComponent = hitInfo.hitEntity.try_get<ChunkComponent>())
+							{
+								collisionInfo.hitChunk = hitChunkComponent->chunk;
+								collisionInfo.hitChunkEntity = hitInfo.hitEntity;
+								collisionInfo.hitEntity = hitChunkComponent->parentEntity;
+							}
+							else
+								collisionInfo.hitEntity = hitInfo.hitEntity;
+
+							return shapeCollisionInfo.penetrationDepth;
+						};
+
+						// If there's a complex collider but we didn't hit it, ignore the whole entity
+						if (!Nz::Collider3D::CollideShapes(collider, colliderTransform, *complexCollider, entityNode->GetTransformMatrix(), shapeCallback))
+							return {};
+
+						return callback(collisionInfo);
+					}
+				}
+			}
 
 			ShapeCollisionInfo collisionInfo;
 			collisionInfo.hitBody = hitInfo.hitBody;

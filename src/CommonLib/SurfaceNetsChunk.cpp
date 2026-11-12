@@ -136,7 +136,56 @@ namespace tsom
 		return { std::make_shared<Nz::ConvexHullCollider3D>(corners.data(), corners.size()), blockOffset };
 	}
 
-	std::shared_ptr<Nz::Collider3D> SurfaceNetsChunk::BuildCollider(std::size_t layerIndex) const
+	auto SurfaceNetsChunk::BuildCollider(std::size_t layerIndex) const -> ColliderData
+	{
+		// Find and lock all neighbor chunks to avoid discrepancies between chunks
+		NeighborChunkArray neighborChunks;
+
+		MultiChunkReadLock chunkLock;
+		for (const ChunkIndices& dir : s_neighborChunkOffset)
+		{
+			if (dir.x == 0 && dir.y == 0 && dir.z == 0)
+				continue; //< Our own chunk is already locked
+
+			const Chunk* chunk = m_owner.GetChunk(m_indices + dir);
+
+			neighborChunks[ToNeighborChunk(dir)] = chunk;
+			if (chunk)
+				chunkLock.AddChunk(chunk);
+		}
+
+		chunkLock.Lock();
+
+		std::shared_ptr<Nz::Collider3D> complexCollider = BuildComplexCollider(layerIndex, neighborChunks);
+		std::shared_ptr<Nz::Collider3D> simplifiedCollider = BuildSimplifiedCollider(layerIndex, neighborChunks);
+
+		return { std::move(simplifiedCollider), std::move(complexCollider) };
+	}
+
+	void SurfaceNetsChunk::BuildMesh(std::size_t layerIndex, std::vector<Nz::UInt32>& indices, const Nz::Vector3f& gravityCenter, const Nz::FunctionRef<VertexAttributes(const Nz::Vector3ui& blockIndices, Direction direction)>& addFace) const
+	{
+		// Find and lock all neighbor chunks to avoid discrepancies between chunks
+		NeighborChunkArray neighborChunks;
+
+		MultiChunkReadLock chunkLock;
+		for (const ChunkIndices& dir : s_neighborChunkOffset)
+		{
+			if (dir.x == 0 && dir.y == 0 && dir.z == 0)
+				continue; //< Our own chunk is already locked
+
+			const Chunk* chunk = m_owner.GetChunk(m_indices + dir);
+
+			neighborChunks[ToNeighborChunk(dir)] = chunk;
+			if (chunk)
+				chunkLock.AddChunk(chunk);
+		}
+
+		chunkLock.Lock();
+
+		BuildMesh(layerIndex, indices, addFace, true, neighborChunks);
+	}
+
+	std::shared_ptr<Nz::Collider3D> SurfaceNetsChunk::BuildComplexCollider(std::size_t layerIndex, const NeighborChunkArray& neighborChunks) const
 	{
 		std::vector<Nz::UInt32> indices;
 		std::vector<Nz::Vector3f> positions;
@@ -157,7 +206,7 @@ namespace tsom
 			return vertexAttributes;
 		};
 
-		BuildMesh(layerIndex, indices, AddVertices, false);
+		BuildMesh(layerIndex, indices, AddVertices, false, neighborChunks);
 		if (indices.empty())
 			return nullptr;
 
@@ -171,9 +220,129 @@ namespace tsom
 		return std::make_shared<Nz::MeshCollider3D>(meshSettings);
 	}
 
-	void SurfaceNetsChunk::BuildMesh(std::size_t layerIndex, std::vector<Nz::UInt32>& indices, const Nz::Vector3f& gravityCenter, const Nz::FunctionRef<VertexAttributes(const Nz::Vector3ui& blockIndices, Direction direction)>& addFace) const
+	std::shared_ptr<Nz::Collider3D> SurfaceNetsChunk::BuildSimplifiedCollider(std::size_t layerIndex, const NeighborChunkArray& neighborChunks) const
 	{
-		BuildMesh(layerIndex, indices, addFace, true);
+		if (!IsLayerRegistered(layerIndex))
+			return nullptr;
+
+		std::vector<Nz::CompoundCollider3D::ChildCollider> childColliders;
+
+		auto AddBox = [&](const Nz::Boxui& colliderIndices)
+		{
+			//fmt::print("Box({};{};{};{};{};{})\n", colliderIndices.x, colliderIndices.y, colliderIndices.z, colliderIndices.width, colliderIndices.height, colliderIndices.depth);
+			std::array<Nz::Vector3f, 8 * 8> positions;
+
+			auto corners = colliderIndices.GetCorners();
+			for (const auto& [corner, indices] : corners.iter_kv())
+			{
+				//fmt::print("{};{};{}\n", indices.x, indices.y, indices.z);
+				auto corners = BuildCorners(indices, neighborChunks);
+				std::copy(corners.begin(), corners.end(), &positions[Nz::UnderlyingCast(corner) * 8]);
+			}
+
+			auto& childCollider = childColliders.emplace_back();
+			childCollider.collider = std::make_shared<Nz::ConvexHullCollider3D>(positions.data(), positions.size());
+		};
+
+		Nz::Bitset collisionCellMask = GetCollisionCellMask(layerIndex);
+
+		auto GetBlockLocalIndex = [&](const Nz::Vector3ui& indices)
+		{
+			return m_size.x * (m_size.y * indices.z + indices.y) + indices.x;
+		};
+
+		Nz::Vector3f halfDims = Nz::Vector3f(m_size) * 0.5f;
+
+		std::optional<Nz::Vector3ui> startPos;
+		auto CommitCollider = [&](unsigned int endX)
+		{
+			if (!startPos)
+				return;
+
+			unsigned int endY = startPos->y;
+			unsigned int endZ = startPos->z;
+
+			// Try to grow on Y
+			for (endY += 1; endY < m_size.y; ++endY)
+			{
+				auto CheckX = [&]
+				{
+					for (unsigned int x = startPos->x; x <= endX; ++x)
+					{
+						if (!collisionCellMask[GetBlockLocalIndex({ x, endY, endZ })])
+							return false;
+					}
+
+					return true;
+				};
+
+				if (!CheckX())
+					break;
+			}
+			endY--;
+
+			// Try to grow on Z
+			for (endZ += 1; endZ < m_size.z; ++endZ)
+			{
+				auto CheckXY = [&]
+				{
+					for (unsigned int y = startPos->y; y <= endY; ++y)
+					{
+						for (unsigned int x = startPos->x; x <= endX; ++x)
+						{
+							if (!collisionCellMask[GetBlockLocalIndex({ x, y, endZ })])
+								return false;
+						}
+					}
+
+					return true;
+				};
+
+				if (!CheckXY())
+					break;
+			}
+			endZ--;
+
+			for (unsigned int z = startPos->z; z <= endZ; ++z)
+			{
+				for (unsigned int y = startPos->y; y <= endY; ++y)
+				{
+					for (unsigned int x = startPos->x; x <= endX; ++x)
+						collisionCellMask[GetBlockLocalIndex({ x, y, z })] = false;
+				}
+			}
+
+			Nz::Vector3ui startOffset(startPos->x, startPos->y, startPos->z);
+			Nz::Vector3ui endOffset(endX, endY, endZ);
+
+			AddBox(Nz::Boxui::FromExtents(startOffset, endOffset));
+
+			startPos.reset();
+		};
+
+		for (unsigned int z = 0; z < m_size.z; ++z)
+		{
+			for (unsigned int y = 0; y < m_size.y; ++y)
+			{
+				for (unsigned int x = 0; x < m_size.x; ++x)
+				{
+					if (!collisionCellMask[GetBlockLocalIndex({x, y, z})])
+					{
+						CommitCollider(x - 1);
+						continue;
+					}
+
+					if (!startPos)
+						startPos = { x, y, z };
+				}
+				CommitCollider(m_size.x - 1);
+			}
+		}
+
+		if (childColliders.empty())
+			return nullptr;
+
+		return std::make_shared<Nz::CompoundCollider3D>(std::move(childColliders));
 	}
 
 	Nz::EnumArray<Nz::BoxCorner, Nz::Vector3f> SurfaceNetsChunk::ComputeBlockCorners(const Nz::Vector3ui& indices) const
@@ -254,6 +423,11 @@ namespace tsom
 			return std::nullopt;
 
 		Nz::UInt32 userdata = SafeCast<const Nz::MeshCollider3D*>(subCollider)->GetTriangleUserData(remainder);
+
+		Nz::Vector3f blockPos = hitPos - hitNormal * m_blockSize * 0.25f;
+		std::optional<Nz::Vector3ui> blockIndices = ComputeCoordinates(blockPos);
+		if (!blockIndices)
+			return std::nullopt;
 
 		return HitBlock{
 			.direction = static_cast<Direction>(userdata % 6),
@@ -370,26 +544,8 @@ namespace tsom
 		return corners;
 	}
 
-	void SurfaceNetsChunk::BuildMesh(std::size_t layerIndex, std::vector<Nz::UInt32>& indices, const Nz::FunctionRef<VertexAttributes(const Nz::Vector3ui& blockIndices, Direction direction)>& addFace, bool generateVisualMesh) const
+	void SurfaceNetsChunk::BuildMesh(std::size_t layerIndex, std::vector<Nz::UInt32>& indices, const Nz::FunctionRef<VertexAttributes(const Nz::Vector3ui& blockIndices, Direction direction)>& addFace, bool generateVisualMesh, const NeighborChunkArray& neighborChunks) const
 	{
-		// Find and lock all neighbor chunks to avoid discrepancies between chunks
-		NeighborChunkArray neighborChunks;
-
-		MultiChunkReadLock chunkLock;
-		for (const ChunkIndices& dir : s_neighborChunkOffset)
-		{
-			if (dir.x == 0 && dir.y == 0 && dir.z == 0)
-				continue; //< Our own chunk is already locked
-
-			const Chunk* chunk = m_owner.GetChunk(m_indices + dir);
-
-			neighborChunks[ToNeighborChunk(dir)] = chunk;
-			if (chunk)
-				chunkLock.AddChunk(chunk);
-		}
-
-		chunkLock.Lock();
-
 		const auto& blockLibrary = m_owner.GetBlockLibrary();
 
 		Nz::HighPrecisionClock clock;

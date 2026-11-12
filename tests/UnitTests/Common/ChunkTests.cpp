@@ -14,7 +14,7 @@ TEST_CASE("Block positions", "[Chunks]")
 
 	Nz::ApplicationBase app;
 	BlockLibrary blockLibrary;
-	RoundCubePlanet planet(app, blockLibrary, 1.f, 42, 0.f, 9.81f);
+	RoundCubePlanet planet(app, blockLibrary, 1.f, 100.f, 42, 0.f, 9.81f);
 
 	SECTION("Testing block indices")
 	{

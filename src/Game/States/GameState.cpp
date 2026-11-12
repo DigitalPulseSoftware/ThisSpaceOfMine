@@ -36,6 +36,7 @@
 #include <CommonLib/Components/ChunkComponent.hpp>
 #include <CommonLib/Components/ChunkContainerComponent.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
+#include <CommonLib/Utility/SpaceTransformations.hpp>
 #include <Game/GameConfigAppComponent.hpp>
 #include <Game/GameConfigs.hpp>
 #include <Game/States/ConnectionState.hpp>

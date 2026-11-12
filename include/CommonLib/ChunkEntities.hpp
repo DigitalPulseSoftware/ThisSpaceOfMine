@@ -7,6 +7,7 @@
 #ifndef TSOM_COMMONLIB_CHUNKENTITIES_HPP
 #define TSOM_COMMONLIB_CHUNKENTITIES_HPP
 
+#include <CommonLib/Chunk.hpp>
 #include <CommonLib/ChunkContainer.hpp>
 #include <Nazara/Core/Node.hpp>
 #include <NazaraUtils/FixedVector.hpp>
@@ -55,8 +56,10 @@ namespace tsom
 			void DestroyChunkEntity(const ChunkIndices& chunkIndices);
 			void FillChunks();
 			virtual UpdateJob* ProcessChunkUpdate(const Chunk& chunk, NeighborChunkMask neighborMask);
+
 			void OnParentNodeInvalidated(const Nz::Node* node);
 			void RebuildAllChunks();
+			void UpdateChunkCollider(const ChunkIndices& chunkIndices, Chunk::ColliderData&& colliderData);
 			inline void UpdateChunkEntity(const ChunkIndices& chunkIndices, NeighborChunkMask neighborMask);
 
 			struct UpdateJob
@@ -79,7 +82,7 @@ namespace tsom
 
 			struct ColliderUpdateJob : UpdateJob
 			{
-				std::shared_ptr<Nz::Collider3D> collider;
+				Chunk::ColliderData collider;
 			};
 
 			struct FinishedJob
@@ -102,11 +105,13 @@ namespace tsom
 			tsl::hopscotch_map<ChunkIndices, NeighborChunkMask> m_invalidatedChunks;
 			tsl::hopscotch_map<ChunkIndices, std::shared_ptr<UpdateJob>> m_updateJobs;
 			tsl::hopscotch_map<ChunkIndices, entt::handle> m_chunkEntities;
+			tsl::hopscotch_map<ChunkIndices, Chunk::ColliderData> m_chunkColliders; //< For dynamic colliders
 			tsl::hopscotch_map<ChunkIndices, bool /*created*/> m_createdDestroyedChunks;
 			Nz::ApplicationBase& m_application;
 			Nz::EnttWorld& m_world;
 			const BlockLibrary& m_blockLibrary;
-			ChunkContainer& m_chunkContainer;
+			bool m_isDynamicColliderUpdated;
+			bool m_isStatic;
 	};
 }
 

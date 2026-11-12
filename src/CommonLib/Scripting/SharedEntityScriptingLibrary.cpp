@@ -372,12 +372,12 @@ namespace tsom
 			"ToLocalRotation", LuaFunction(&Nz::Node::ToLocalRotation),
 			"ToLocalScale", LuaFunction(&Nz::Node::ToLocalScale)
 		);
-		
+
 		state.new_usertype<Nz::NodeComponent>("NodeComponent",
 			sol::no_constructor,
 			sol::base_classes, sol::bases<Nz::Node>()
 		);
-		
+
 		state.new_usertype<Nz::PhysBody3D>("PhysBody3D",
 			"GetAngularVelocity", LuaFunction(&Nz::PhysBody3D::GetAngularVelocity),
 			"GetCollider", LuaFunction(&Nz::PhysBody3D::GetCollider),

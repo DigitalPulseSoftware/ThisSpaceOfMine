@@ -8,6 +8,7 @@
 #include <ClientLib/RenderConstants.hpp>
 #include <CommonLib/ChunkLock.hpp>
 #include <CommonLib/ConfigFile.hpp>
+#include <CommonLib/Components/ComplexCollisionComponent.hpp>
 #include <CommonLib/Components/EntityOwnerComponent.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
 #include <Nazara/Core/Clock.hpp>
@@ -33,8 +34,8 @@
 
 namespace tsom
 {
-	ClientChunkEntities::ClientChunkEntities(Nz::ApplicationBase& app, ConfigFile& config, Nz::EnttWorld& world, std::shared_ptr<ChunkContainer> chunkContainer, const ClientBlockLibrary& blockLibrary, std::size_t layerIndex) :
-	ChunkEntities(app, world, std::move(chunkContainer), blockLibrary, layerIndex, NoInit{}),
+	ClientChunkEntities::ClientChunkEntities(Nz::ApplicationBase& app, ConfigFile& config, Nz::EnttWorld& world, std::shared_ptr<ChunkContainer> chunkContainer, const ClientBlockLibrary& blockLibrary, std::size_t layerIndex, bool isStatic) :
+	ChunkEntities(app, world, std::move(chunkContainer), blockLibrary, layerIndex, isStatic, NoInit{}),
 	m_configFile(config),
 	m_isCollisionGenerationEnabled(true)
 	{
@@ -203,6 +204,7 @@ namespace tsom
 		std::shared_ptr<Nz::StaticMesh> staticMesh = std::make_shared<Nz::StaticMesh>(std::move(vertexBuffer), std::move(indexBuffer));
 		staticMesh->GenerateAABB();
 
+#ifndef NAZARA_DEBUG
 		Nz::DegreeAnglef smoothLimitAngle = m_configFile.GetFloatValue<float>(Config::Chunk_NormalSmoothAngle);
 		if (smoothLimitAngle > 0.0f)
 		{
@@ -244,6 +246,7 @@ namespace tsom
 			for (Nz::UInt32 vertexIndex = 0; vertexIndex < vertexCount; ++vertexIndex)
 				normals[vertexIndex] = newNormals[vertexIndex];
 		}
+#endif
 
 		std::shared_ptr<Nz::Mesh> chunkMesh = std::make_shared<Nz::Mesh>();
 		chunkMesh->CreateStatic();
@@ -272,10 +275,7 @@ namespace tsom
 			entt::handle chunkEntity = Nz::Retrieve(m_chunkEntities, chunkIndices);
 
 			if (m_isCollisionGenerationEnabled)
-			{
-				auto& rigidBody = chunkEntity.get<Nz::RigidBody3DComponent>();
-				rigidBody.SetCollider(std::move(colliderUpdateJob.collider), false);
-			}
+				UpdateChunkCollider(chunkIndices, std::move(colliderUpdateJob.collider));
 
 			if (colliderUpdateJob.mesh)
 			{

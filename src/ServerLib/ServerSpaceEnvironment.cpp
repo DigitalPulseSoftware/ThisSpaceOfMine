@@ -6,9 +6,13 @@
 #include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Systems/ChunkEntitiesSystem.hpp>
+#include <CommonLib/Utility/SpaceTransformations.hpp>
+#include <ServerLib/Components/NetworkedComponent.hpp>
 #include <ServerLib/Components/ServerEnvironmentSwitchComponent.hpp>
 #include <ServerLib/Systems/EnvironmentSwitchSystem.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
+#include <PerlinNoise.hpp>
+#include <spdlog/spdlog.h>
 
 namespace tsom
 {
@@ -19,6 +23,43 @@ namespace tsom
 		m_world->GetRegistry().ctx().emplace<ServerSpaceEnvironment*>(this);
 		m_world->AddSystem<ChunkEntitiesSystem>();
 		m_world->AddSystem<EnvironmentSwitchSystem>();
+
+		std::shared_ptr<const EntityClass> asteroidEntityClass = serverInstance.GetEntityRegistry().FindClass("asteroid");
+		if (!asteroidEntityClass)
+			return;
+
+		constexpr std::size_t SampleSize = 16;
+
+		siv::PerlinNoise asteroidProbabilityNoise;
+		constexpr double NoiseScale = 0.005;
+
+		for (std::size_t z = 1; z < SampleSize - 1; ++z)
+		{
+			for (std::size_t y = 1; y < SampleSize - 1; ++y)
+			{
+				for (std::size_t x = 1; x < SampleSize - 1; ++x)
+				{
+					Nz::Vector3f spawnPosition(x / float(SampleSize), y / float(SampleSize), z / float(SampleSize));
+					spawnPosition *= Constants::SpaceCellSize;
+					spawnPosition -= Nz::Vector3f(Constants::SpaceCellSize * 0.5f);
+
+					Nz::Vector3d samplePos = SpaceTransformations::ToGlobalCoordinates(m_coordinates, spawnPosition) * NoiseScale;
+
+					double value = asteroidProbabilityNoise.normalizedOctave3D_01(samplePos.x, samplePos.y, samplePos.z, 4, 0.1);
+					if (value >= 0.6)
+					{
+						spdlog::info("created asteroid at {};{};{}", spawnPosition.x, spawnPosition.y, spawnPosition.z);
+
+						entt::handle entity = CreateEntity();
+						entity.emplace<Nz::NodeComponent>(spawnPosition, Nz::Quaternionf::Identity());
+						entity.emplace<NetworkedComponent>();
+						entity.emplace<ClassInstanceComponent>(asteroidEntityClass);
+
+						asteroidEntityClass->InitAndActivateEntity(entity);
+					}
+				}
+			}
+		}
 	}
 
 	Nz::Boxf ServerSpaceEnvironment::ComputeBoundingBox() const
@@ -81,4 +122,3 @@ namespace tsom
 		return nullptr;
 	}
 }
-

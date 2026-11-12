@@ -18,7 +18,9 @@ namespace tsom
 			using ChunkClassLibrary::ChunkClassLibrary;
 
 		private:
-			std::unique_ptr<ChunkEntities> SetupChunkEntities(Nz::EnttWorld& world, ChunkContainer& chunkContainer, std::size_t layerIndex, bool isStatic) override;
+			void InitializeAsteroidEntity(entt::handle entity, std::shared_ptr<Asteroid>&& asteroid) override;
+
+			std::unique_ptr<ChunkEntities> SetupChunkEntities(Nz::EnttWorld& world, std::shared_ptr<ChunkContainer> chunkContainer, std::size_t layerIndex, bool isStatic) override;
 	};
 }
 

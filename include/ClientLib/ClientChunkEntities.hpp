@@ -8,6 +8,7 @@
 #define TSOM_CLIENTLIB_CLIENTCHUNKENTITIES_HPP
 
 #include <ClientLib/ClientBlockLibrary.hpp>
+#include <CommonLib/Chunk.hpp>
 #include <CommonLib/ChunkEntities.hpp>
 #include <Nazara/Core/Color.hpp>
 #include <tsl/hopscotch_map.h>
@@ -37,7 +38,7 @@ namespace tsom
 	class TSOM_CLIENTLIB_API ClientChunkEntities final : public ChunkEntities
 	{
 		public:
-			ClientChunkEntities(Nz::ApplicationBase& app, ConfigFile& config, Nz::EnttWorld& world, std::shared_ptr<ChunkContainer> chunkContainer, const ClientBlockLibrary& blockLibrary, std::size_t layerIndex);
+			ClientChunkEntities(Nz::ApplicationBase& app, ConfigFile& config, Nz::EnttWorld& world, std::shared_ptr<ChunkContainer> chunkContainer, const ClientBlockLibrary& blockLibrary, std::size_t layerIndex, bool isStatic);
 			ClientChunkEntities(const ClientChunkEntities&) = delete;
 			ClientChunkEntities(ClientChunkEntities&&) = delete;
 			~ClientChunkEntities();
@@ -52,7 +53,7 @@ namespace tsom
 		private:
 			struct ColliderModelUpdateJob : UpdateJob
 			{
-				std::shared_ptr<Nz::Collider3D> collider;
+				Chunk::ColliderData collider;
 				std::shared_ptr<Nz::Mesh> mesh;
 			};
 

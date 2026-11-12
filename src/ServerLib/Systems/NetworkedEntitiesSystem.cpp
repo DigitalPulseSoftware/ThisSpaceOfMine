@@ -31,7 +31,7 @@ namespace tsom
 				visibility.UpdateEntityMovement(entt::handle(m_registry, entity), true);
 			});
 		});
-		
+
 		m_physicsSytem.OnEntityDeactivated.Connect([&](entt::handle entity, Nz::UInt32 /*bodyIndex*/)
 		{
 			ForEachVisibility([&](SessionVisibilityHandler& visibility)

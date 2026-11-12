@@ -186,13 +186,13 @@ namespace tsom
 		m_planetParentEntity = stateData.world->CreateEntity();
 		m_planetParentEntity.emplace<Nz::NodeComponent>();
 
-		m_planet = std::make_unique<RoundCubePlanet>(*stateData.app, *stateData.blockLibrary, 0.5f, 0, 16.f, 9.81f);
+		m_planet = std::make_shared<RoundCubePlanet>(*stateData.app, *stateData.blockLibrary, 0.5f, 0, 16.f, 9.81f);
 		for (std::size_t layerIndex = 0; layerIndex < m_planetEntities.size(); ++layerIndex)
 		{
 			if (!stateData.blockLibrary->IsValidLayer(layerIndex))
 				continue;
 
-			m_planetEntities[layerIndex] = std::make_unique<ClientChunkEntities>(*stateData.app, *stateData.config, *stateData.world, *m_planet, *stateData.blockLibrary, layerIndex);
+			m_planetEntities[layerIndex] = std::make_unique<ClientChunkEntities>(*stateData.app, *stateData.config, *stateData.world, m_planet, *stateData.blockLibrary, layerIndex, false);
 			m_planetEntities[layerIndex]->SetParentEntity(m_planetParentEntity);
 			m_planetEntities[layerIndex]->EnableCollisionGeneration(false);
 		}

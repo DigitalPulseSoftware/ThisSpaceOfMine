@@ -10,6 +10,7 @@
 #include <CommonLib/Export.hpp>
 #include <CommonLib/Chunk.hpp>
 #include <NazaraUtils/FixedVector.hpp>
+#include <span>
 #include <utility>
 
 namespace tsom
@@ -26,6 +27,9 @@ namespace tsom
 			ChunkLock(const ChunkLock&) = delete;
 			ChunkLock(ChunkLock&& chunkLock) noexcept;
 			~ChunkLock();
+
+			ChunkType GetChunk();
+			const Chunk* GetChunk() const;
 
 			void Lock();
 			bool TryLock();
@@ -52,6 +56,9 @@ namespace tsom
 
 			void AddChunk(ChunkType chunk);
 
+			std::span<ChunkType> GetChunks();
+			std::span<const Chunk> GetChunks() const;
+
 			void Lock();
 			void Unlock();
 
@@ -66,8 +73,8 @@ namespace tsom
 	using ChunkReadLock = ChunkLock<false>;
 	using ChunkWriteLock = ChunkLock<true>;
 
-	using MultiChunkReadLock = MultiChunkLock<false>;
-	using MultiChunkWriteLock = MultiChunkLock<true>;
+	template<std::size_t Max = 3 * 3 * 3> using MultiChunkReadLock = MultiChunkLock<false, Max>;
+	template<std::size_t Max = 3 * 3 * 3> using MultiChunkWriteLock = MultiChunkLock<true, Max>;
 }
 
 #include <CommonLib/ChunkLock.inl>

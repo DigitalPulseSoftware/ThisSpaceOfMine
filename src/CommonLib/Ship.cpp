@@ -126,14 +126,16 @@ namespace tsom
 		if (m_chunks.size() > 1)
 		{
 			std::vector<Nz::CompoundCollider3D::ChildCollider> childColliders;
+			childColliders.reserve(m_chunks.size());
+
 			for (auto&& [ChunkIndices, chunkData] : m_chunks)
 			{
 				auto chunkCollider = chunkData.chunk->BuildCollider(0);
-				if (!chunkCollider)
+				if (!chunkCollider.simplifiedCollisions)
 					continue;
 
 				auto& childCollider = childColliders.emplace_back();
-				childCollider.collider = chunkData.chunk->BuildCollider(0);
+				childCollider.collider = chunkCollider.simplifiedCollisions;
 				childCollider.offset = GetChunkOffset(chunkData.chunk->GetIndices());
 			}
 
@@ -147,7 +149,7 @@ namespace tsom
 			if (m_chunks.empty())
 				return nullptr;
 
-			return m_chunks.begin().value().chunk->BuildCollider(0);
+			return m_chunks.begin().value().chunk->BuildCollider(0).simplifiedCollisions;
 		}
 	}
 

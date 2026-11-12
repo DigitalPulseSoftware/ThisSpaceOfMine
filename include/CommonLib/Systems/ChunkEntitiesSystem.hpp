@@ -19,7 +19,7 @@ namespace tsom
 		public:
 			static constexpr bool AllowConcurrent = true;
 			static constexpr Nz::Int64 ExecutionOrder = -1'000'000;
-			using Components = Nz::TypeList<class PlanetComponent>;
+			using Components = Nz::TypeList<class ChunkContainerComponent>;
 
 			inline ChunkEntitiesSystem(entt::registry& registry);
 			ChunkEntitiesSystem(const ChunkEntitiesSystem&) = delete;

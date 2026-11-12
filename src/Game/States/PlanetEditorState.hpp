@@ -78,7 +78,7 @@ namespace tsom
 			std::array<std::unique_ptr<ClientChunkEntities>, Constants::MaxChunkLayerCount> m_planetEntities;
 			std::optional<ConsoleExecutor> m_consoleExecutor;
 			std::shared_ptr<const EntityClass> m_planetClass;
-			std::unique_ptr<Planet> m_planet;
+			std::shared_ptr<Planet> m_planet;
 			entt::handle m_atmosphereEntity;
 			entt::handle m_cameraEntity;
 			entt::handle m_planetParentEntity;

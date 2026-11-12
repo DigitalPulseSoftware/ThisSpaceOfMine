@@ -73,6 +73,18 @@ namespace tsom
 	}
 
 	template<bool Write>
+	auto ChunkLock<Write>::GetChunk() -> ChunkType
+	{
+		return m_chunk;
+	}
+
+	template<bool Write>
+	auto ChunkLock<Write>::GetChunk() const -> const Chunk*
+	{
+		return m_chunk;
+	}
+
+	template<bool Write>
 	void ChunkLock<Write>::Lock()
 	{
 		NazaraAssertMsg(!m_isLocked, "ChunkLock is already locked");
@@ -131,6 +143,18 @@ namespace tsom
 		NazaraAssertMsg(!m_isLocked, "ChunkLock is already locked");
 		NazaraAssertMsg(std::find(m_chunks.begin(), m_chunks.end(), chunk) == m_chunks.end(), "Chunk is already in the list");
 		m_chunks.push_back(chunk);
+	}
+
+	template<bool Write, std::size_t Max>
+	auto MultiChunkLock<Write, Max>::GetChunks() -> std::span<ChunkType>
+	{
+		return std::span(m_chunks.data(), m_chunks.size());
+	}
+
+	template<bool Write, std::size_t Max>
+	std::span<const Chunk> MultiChunkLock<Write, Max>::GetChunks() const
+	{
+		return std::span(m_chunks.data(), m_chunks.size());
 	}
 
 	template<bool Write, std::size_t Max>

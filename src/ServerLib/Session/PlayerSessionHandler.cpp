@@ -11,12 +11,12 @@
 #include <CommonLib/GameConstants.hpp>
 #include <CommonLib/PhysicsConstants.hpp>
 #include <CommonLib/Planet.hpp>
-#include <CommonLib/Physics/QueryUtils.hpp>
 #include <CommonLib/Components/ChunkComponent.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Components/DistributionComponent.hpp>
 #include <CommonLib/Components/PlanetComponent.hpp>
 #include <CommonLib/Components/TickComponent.hpp>
+#include <CommonLib/Physics/QueryUtils.hpp>
 #include <ServerLib/PlayerTokenAppComponent.hpp>
 #include <ServerLib/ServerEnvironment.hpp>
 #include <ServerLib/ServerInstance.hpp>
@@ -267,7 +267,7 @@ namespace tsom
 		ServerEnvironment* environment = ServerEnvironment::GetEnvironment(entityOwner);
 
 		Nz::Vector3ui voxelLoc(placeBlock.voxelLoc.x, placeBlock.voxelLoc.y, placeBlock.voxelLoc.z);
-		if (!CheckCanPlaceBlock(environment, chunk, voxelLoc))
+		if (!CheckCanPlaceBlock(environment, entityOwner, chunk, voxelLoc))
 			return;
 
 		ChunkWriteLock lock(chunk);
@@ -844,7 +844,7 @@ namespace tsom
 		return true;
 	}
 
-	bool PlayerSessionHandler::CheckCanPlaceBlock(ServerEnvironment* environment, const Chunk* chunk, const Nz::Vector3ui& blockIndices) const
+	bool PlayerSessionHandler::CheckCanPlaceBlock(ServerEnvironment* environment, entt::handle chunkContainerEntity, const Chunk* chunk, const Nz::Vector3ui& blockIndices) const
 	{
 		Nz::Vector3ui chunkSize = chunk->GetSize();
 		if (blockIndices.x >= chunkSize.x || blockIndices.y >= chunkSize.y || blockIndices.z >= chunkSize.z)
@@ -859,8 +859,11 @@ namespace tsom
 
 		const ChunkContainer& chunkContainer = chunk->GetContainer();
 
-		Nz::Vector3f offset = chunkContainer.GetChunkOffset(chunk->GetIndices());
-		offset += colliderOffset;
+		Nz::Vector3f localOffset = chunkContainer.GetChunkOffset(chunk->GetIndices());
+		localOffset += colliderOffset;
+
+		auto& chunkContainerNode = chunkContainerEntity.get<Nz::NodeComponent>();
+		Nz::Vector3f globalOffset = chunkContainerNode.ToGlobalPosition(localOffset);
 
 		struct IgnoreTrigger : Nz::PhysObjectLayerFilter3D
 		{

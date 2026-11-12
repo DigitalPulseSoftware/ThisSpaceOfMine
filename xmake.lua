@@ -232,7 +232,7 @@ target("ServerLib", function ()
 	add_files("src/ServerLib/**.cpp")
 
 	add_deps("CommonLib", { public = true })
-	add_packages("frozen")
+	add_packages("frozen", "perlinnoise")
 	add_packages("libcurl", { links = {}, public = true })
 	add_packages("sqlitecpp", { public = true })
 	add_rules("inherit_version")

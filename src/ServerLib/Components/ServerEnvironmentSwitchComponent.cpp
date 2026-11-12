@@ -4,6 +4,7 @@
 
 #include <ServerLib/Components/ServerEnvironmentSwitchComponent.hpp>
 #include <CommonLib/EntityReference.hpp>
+#include <CommonLib/Components/ChunkContainerComponent.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
 #include <CommonLib/Components/DistributionComponent.hpp>
 #include <CommonLib/Components/ScriptedEntityComponent.hpp>
@@ -78,6 +79,16 @@ namespace tsom
 
 		if (AtmosphereMonitor* atmosphereMonitor = oldEntity.try_get<AtmosphereMonitor>())
 			newEntity.emplace<AtmosphereMonitor>(*atmosphereMonitor);
+
+		if (ChunkContainerComponent* chunkContainer = oldEntity.try_get<ChunkContainerComponent>())
+		{
+			auto& newChunkContainer = newEntity.emplace<ChunkContainerComponent>(std::move(*chunkContainer));
+			for (auto& chunkEntitiesPtr : newChunkContainer.chunkEntities)
+			{
+				if (chunkEntitiesPtr)
+					chunkEntitiesPtr->SetParentEntity(newEntity);
+			}
+		}
 
 		if (DistributionComponent* distributionComponent = oldEntity.try_get<DistributionComponent>())
 			newEntity.emplace<DistributionComponent>(std::move(*distributionComponent));
