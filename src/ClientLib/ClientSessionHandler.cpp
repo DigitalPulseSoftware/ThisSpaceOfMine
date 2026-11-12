@@ -9,7 +9,6 @@
 #include <ClientLib/PlayerAnimationController.hpp>
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Components/AnimationComponent.hpp>
-#include <ClientLib/Components/CameraFollowerComponent.hpp>
 #include <ClientLib/Components/ChunkNetworkMapComponent.hpp>
 #include <ClientLib/Components/ClientEntityNetworkIndex.hpp>
 #include <ClientLib/Components/EnvironmentComponent.hpp>
@@ -430,7 +429,7 @@ namespace tsom
 
 	void ClientSessionHandler::HandlePacket(Packets::S_EntityPropertiesUpdate&& propertyUpdate)
 	{
-		assert(m_entities[propertyUpdate.entity]);
+		NazaraAssert(propertyUpdate.entity < m_entities.size() && m_entities[propertyUpdate.entity]);
 		EntityData& entityData = *m_entities[propertyUpdate.entity];
 
 		auto& classInstance = entityData.entity.get<ClassInstanceComponent>();
@@ -916,6 +915,20 @@ namespace tsom
 
 			auto& rootNode = envData.rootEntity.get<Nz::NodeComponent>();
 			rootNode.SetPosition(cellTranslation);
+
+			// We need to teleport dynamic rigid bodies as well (as NodeComponent receive their position from them)
+			for (std::size_t entityIndex : envData.entities.IterBits())
+			{
+				assert(entityIndex < m_entities.size() && m_entities[entityIndex]);
+				EntityData& entityData = *m_entities[entityIndex];
+
+				if (auto* entityRigidBody = entityData.entity.try_get<Nz::RigidBody3DComponent>())
+				{
+					auto& entityNode = entityData.entity.get<Nz::NodeComponent>();
+					if (!entityRigidBody->IsStatic()) //< static entities are already teleported when their node component is updated
+						entityRigidBody->TeleportTo(entityNode.GetGlobalPosition(), entityNode.GetGlobalRotation());
+				}
+			}
 		}
 
 		m_rootEnvironmentId = environmentId;
