@@ -50,7 +50,7 @@ namespace tsom
 			inline const EntityRegistry& GetEntityRegistry() const;
 			const Nz::Node* GetEnvironmentNode(Packets::Helper::EnvironmentId environmentIndex) const;
 			inline const GravityController* GetGravityController(Packets::Helper::EnvironmentId environmentIndex) const;
-			inline Packets::Helper::EnvironmentId GetParentEnvironmentId(Packets::Helper::EnvironmentId environmentId) const;
+			Packets::Helper::EnvironmentId GetParentEnvironmentId(Packets::Helper::EnvironmentId environmentId) const;
 			inline Packets::Helper::EnvironmentId GetRootEnvironmentId() const;
 			inline Packets::Helper::EnvironmentId GetRootEnvironmentId(Packets::Helper::EnvironmentId environmentId) const;
 			inline const Nz::Vector3i32& GetRootEnvironmentIndices(Packets::Helper::EnvironmentId rootEnvironmentId) const;
