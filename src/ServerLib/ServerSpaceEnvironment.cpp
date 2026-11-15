@@ -46,7 +46,7 @@ namespace tsom
 					Nz::Vector3d samplePos = SpaceTransformations::ToGlobalCoordinates(m_coordinates, spawnPosition) * NoiseScale;
 
 					double value = asteroidProbabilityNoise.normalizedOctave3D_01(samplePos.x, samplePos.y, samplePos.z, 4, 0.1);
-					if (value >= 0.6)
+					if (value >= 0.8)
 					{
 						spdlog::info("created asteroid at {};{};{}", spawnPosition.x, spawnPosition.y, spawnPosition.z);
 
