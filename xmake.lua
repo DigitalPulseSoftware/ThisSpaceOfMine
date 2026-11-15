@@ -122,7 +122,8 @@ target("CommonLib", function ()
 
 	add_packages("nazaraengine", { components = { "physics3d", "network" }, public = true })
 	add_packages("concurrentqueue", "cppcodec", "cpp-semver", "fast_float", "fmt", "luajit", "hopscotch-map", "nlohmann_json", "ordered_map", "sol2", "spdlog", { public = true })
-	add_packages("cpptrace", "frozen", "libsodium", "lz4", "perlinnoise")
+	add_packages("frozen", "libsodium", "lz4", "perlinnoise")
+	add_packages("cpptrace", { public = true }) -- for some reason this needs to be public
 
 	on_config(function (target, opt)
 		import("core.base.semver")
@@ -276,7 +277,7 @@ target("TSOMServer", function ()
 	add_installfiles("(database/**.sql)", { prefixdir = "bin" })
 	add_installfiles("(scripts/**.lua)", { prefixdir = "bin" })
 
-	add_rpathdirs("@executable_path")
+	add_rpathdirs("$ORIGIN")
 end)
 
 target("TSOMAssetCooker", function ()
@@ -329,7 +330,7 @@ if not has_config("serveronly") then
 			add_files("src/Game/resources.rc")
 		end
 
-		add_rpathdirs("@executable_path")
+		add_rpathdirs("$ORIGIN")
 
 		add_packages("nazaraengine", { components = { "widgets" }, public = true })
 		add_packages("libcurl", { links = {} })
