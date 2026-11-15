@@ -278,7 +278,7 @@ namespace tsom
 		playerEntity.emplace<NetworkedComponent>();
 		playerEntity.emplace<ServerPlayerControlledComponent>(CreateHandle());
 
-		m_controller = std::make_shared<ServerCharacterController>(environment);
+		m_controller = std::make_shared<ServerCharacterController>();
 		m_controller->SetGravityController(environment->GetGravityController());
 
 		playerClass->InitAndActivateEntity(playerEntity);

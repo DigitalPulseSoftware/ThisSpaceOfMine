@@ -126,8 +126,6 @@ namespace tsom
 			characterController->SetGravityController(newEnvironment->GetGravityController());
 			characterController->RotateInstantaneously(envTransform.rotation);
 
-			Nz::SafeCast<ServerCharacterController&>(*characterController).UpdateEnvironment(newEnvironment);
-
 			Nz::PhysCharacter3DComponent::Settings characterSettings;
 			characterSettings.collider = previousCharacter.GetCollider();
 			characterSettings.objectLayer = previousCharacter.GetObjectLayer();

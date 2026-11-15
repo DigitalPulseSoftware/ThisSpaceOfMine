@@ -12,25 +12,10 @@
 
 namespace tsom
 {
-	class ServerEnvironment;
-
 	class TSOM_SERVERLIB_API ServerCharacterController : public CharacterController
 	{
 		public:
-			ServerCharacterController(ServerEnvironment* environment);
-			ServerCharacterController(const ServerCharacterController&) = delete;
-			ServerCharacterController(ServerCharacterController&&) = delete;
-			~ServerCharacterController() = default;
-
-			void PreSimulate(Nz::PhysCharacter3D& character, float elapsedTime) override;
-
-			void UpdateEnvironment(ServerEnvironment* environment);
-
-			ServerCharacterController& operator=(const ServerCharacterController&) = delete;
-			ServerCharacterController& operator=(ServerCharacterController&&) = delete;
-
-		private:
-			ServerEnvironment* m_environment;
+			using CharacterController::CharacterController;
 	};
 }
 
