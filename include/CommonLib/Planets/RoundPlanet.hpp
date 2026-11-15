@@ -1,0 +1,36 @@
+// Copyright (C) 2026 Jérôme "SirLynix" Leclercq (lynix680@gmail.com)
+// This file is part of the "This Space Of Mine" project
+// For conditions of distribution and use, see copyright notice in LICENSE
+
+#pragma once
+
+#ifndef TSOM_COMMONLIB_PLANETS_ROUNDPLANET_HPP
+#define TSOM_COMMONLIB_PLANETS_ROUNDPLANET_HPP
+
+#include <CommonLib/Export.hpp>
+#include <CommonLib/Planet.hpp>
+
+namespace tsom
+{
+	class TSOM_COMMONLIB_API RoundPlanet final : public Planet
+	{
+		public:
+			inline RoundPlanet(Nz::ApplicationBase& app, const BlockLibrary& blockLibrary, float blockSize, float radius, Nz::UInt32 seed, float gravity);
+
+			GravityForce ComputeGravity(const Nz::Vector3f& position) const override;
+			Nz::Vector3f ComputeUpDirection(const Nz::Vector3f& position) const;
+
+			inline float GetGravity() const;
+			inline Nz::UInt32 GetSeed() const;
+
+			inline void UpdateGravity(float gravity);
+
+		private:
+			Nz::UInt32 m_seed;
+			float m_gravity;
+	};
+}
+
+#include <CommonLib/Planets/RoundPlanet.inl>
+
+#endif // TSOM_COMMONLIB_PLANETS_ROUNDPLANET_HPP
