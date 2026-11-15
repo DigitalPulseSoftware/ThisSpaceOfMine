@@ -75,6 +75,7 @@ namespace tsom
 			inline const BlockLibrary& GetBlockLibrary() const;
 			inline const Config& GetConfig() const;
 			ServerEnvironment* GetOrCreateSpaceEnvironment(const Nz::Vector3i32& coordinates);
+			const ServerEnvironment* GetSpaceEnvironment(const Nz::Vector3i32& coordinates) const;
 			inline const Spawnpoint& GetDefaultSpawnpoint() const;
 			inline EntityRegistry& GetEntityRegistry();
 			inline const EntityRegistry& GetEntityRegistry() const;

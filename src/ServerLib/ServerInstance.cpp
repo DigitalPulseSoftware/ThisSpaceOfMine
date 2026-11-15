@@ -191,6 +191,15 @@ namespace tsom
 		return environment;
 	}
 
+	const ServerEnvironment* ServerInstance::GetSpaceEnvironment(const Nz::Vector3i32& coordinates) const
+	{
+		auto it = m_spaceCellEnvironments.find(coordinates);
+		if (it == m_spaceCellEnvironments.end())
+			return nullptr;
+
+		return it->second.get();
+	}
+
 	void ServerInstance::LoadFromDatabase()
 	{
 		ServerDatabase& serverDatabase = GetThreadServerDatabase();
