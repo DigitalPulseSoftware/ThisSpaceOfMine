@@ -183,7 +183,7 @@ namespace tsom
 			return vertexAttributes;
 		};
 
-		chunk.BuildMesh(m_layerIndex, indices, m_chunkContainer->GetCenter() - m_chunkContainer->GetChunkOffset(chunk.GetIndices()), AddVertices);
+		chunk.BuildMesh(m_layerIndex, indices, m_chunkContainer->GetCenter() - m_chunkContainer->GetChunkPosition(chunk.GetIndices()), AddVertices);
 		if (indices.empty())
 			return nullptr;
 
@@ -305,7 +305,7 @@ namespace tsom
 
 					ChunkReadLock lock(updateJob->chunk.get());
 					if (updateJob->chunk->HasContent()) //< We need to re-check because the chunk may have lost its content (become full empty) since task was scheduled
-						updateJob->collider = updateJob->chunk->BuildCollider(m_layerIndex);
+						updateJob->collider = updateJob->chunk->BuildCollider(m_layerIndex, m_requiresDynamicColliders);
 
 					updateJob->jobDone++;
 				});

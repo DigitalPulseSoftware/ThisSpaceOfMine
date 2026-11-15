@@ -156,7 +156,7 @@ namespace tsom
 				return std::make_pair(chunkIndices, localIndices);
 			}),
 			"GetChunkIndicesByPosition", LuaFunction(&ChunkContainer::GetChunkIndicesByPosition),
-			"GetChunkOffset", LuaFunction(&ChunkContainer::GetChunkOffset),
+			"GetChunkPosition", LuaFunction(&ChunkContainer::GetChunkPosition),
 			"GetTileSize", LuaFunction(&ChunkContainer::GetTileSize)
 		);
 	}

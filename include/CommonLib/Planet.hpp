@@ -30,7 +30,7 @@ namespace tsom
 	class TSOM_COMMONLIB_API Planet : public ChunkContainer, public GravityController
 	{
 		public:
-			Planet(Nz::ApplicationBase& app, const BlockLibrary& blockLibrary, float blockSize);
+			Planet(Nz::ApplicationBase& app, const BlockLibrary& blockLibrary, float blockSize, float radius);
 			Planet(const Planet&) = delete;
 			Planet(Planet&&) = delete;
 			~Planet() = default;
@@ -51,6 +51,7 @@ namespace tsom
 			inline Chunk* GetChunk(const ChunkIndices& chunkIndices) override;
 			inline const Chunk* GetChunk(const ChunkIndices& chunkIndices) const override;
 			inline std::size_t GetChunkCount() const override;
+			inline float GetRadius() const;
 
 			void RemoveChunk(const ChunkIndices& indices) override;
 
@@ -77,6 +78,7 @@ namespace tsom
 			tsl::hopscotch_map<ChunkIndices, ChunkData> m_chunks;
 			Nz::ThreadLocalData<ChunkGenerator> m_chunkGenerators;
 			Nz::ApplicationBase& m_app;
+			float m_radius;
 	};
 }
 

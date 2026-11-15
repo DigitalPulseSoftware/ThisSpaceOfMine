@@ -4,8 +4,8 @@
 
 namespace tsom
 {
-	inline RoundCubePlanet::RoundCubePlanet(Nz::ApplicationBase& app, const BlockLibrary& blockLibrary, float blockSize, Nz::UInt32 seed, float gravity, float cornerRadius) :
-	Planet(app, blockLibrary, blockSize),
+	inline RoundCubePlanet::RoundCubePlanet(Nz::ApplicationBase& app, const BlockLibrary& blockLibrary, float blockSize, float radius, Nz::UInt32 seed, float gravity, float cornerRadius) :
+	Planet(app, blockLibrary, blockSize, radius),
 	m_seed(seed),
 	m_cornerRadius(cornerRadius),
 	m_gravity(gravity)

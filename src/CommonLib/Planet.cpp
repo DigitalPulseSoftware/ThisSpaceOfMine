@@ -20,9 +20,10 @@
 
 namespace tsom
 {
-	Planet::Planet(Nz::ApplicationBase& app, const BlockLibrary& blockLibrary, float tileSize) :
+	Planet::Planet(Nz::ApplicationBase& app, const BlockLibrary& blockLibrary, float tileSize, float radius) :
 	ChunkContainer(blockLibrary, tileSize),
-	m_app(app)
+	m_app(app),
+	m_radius(radius)
 	{
 	}
 

@@ -12,8 +12,11 @@
 #include <CommonLib/Physics/ContactCallbackComponents.hpp>
 #include <CommonLib/Systems/BuoyancySystem.hpp>
 #include <Nazara/Core/ApplicationBase.hpp>
+#include <Nazara/Core/Core.hpp>
 #include <Nazara/Core/EnttWorld.hpp>
+#include <Nazara/Core/HardwareInfo.hpp>
 #include <Nazara/Core/TaskSchedulerAppComponent.hpp>
+#include <Nazara/Core/Components/DisabledComponent.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <Nazara/Physics3D/Components/RigidBody3DComponent.hpp>
 #include <cassert>
@@ -33,7 +36,25 @@ namespace tsom
 	m_world(world),
 	m_blockLibrary(blockLibrary),
 	m_isDynamicColliderUpdated(true),
-	m_isStatic(isStatic)
+	m_isStatic(isStatic),
+	m_isSwitchingContainer(false)
+	{
+		auto& layerData = m_blockLibrary.GetLayerData(m_layerIndex);
+
+		// Fluids require dynamic colliders to properly detect entities inside of them
+		m_requiresDynamicColliders = !m_isStatic || layerData.isFluid;
+
+		m_maxConcurrentJobs = std::max(Nz::Core::Instance()->GetHardwareInfo().GetCpuThreadCount() * 2, 4u);
+
+		BindChunkContainerSignals();
+	}
+
+	ChunkEntities::~ChunkEntities()
+	{
+		Clear();
+	}
+
+	void ChunkEntities::BindChunkContainerSignals()
 	{
 		m_onChunkAdded.Connect(m_chunkContainer->OnChunkLayerAdded, [this](ChunkContainer* /*emitter*/, Chunk* chunk, std::size_t layerIndex)
 		{
@@ -66,16 +87,6 @@ namespace tsom
 		});
 	}
 
-	ChunkEntities::~ChunkEntities()
-	{
-		for (auto it = m_chunkEntities.begin(); it != m_chunkEntities.end(); ++it)
-		{
-			entt::handle entity = it.value();
-			if (entity)
-				entity.destroy();
-		}
-	}
-
 	void ChunkEntities::ForEachChunk(Nz::FunctionRef<void(const ChunkIndices& chunkIndices, entt::handle chunkEntity)> callback)
 	{
 		for (auto it = m_chunkEntities.begin(); it != m_chunkEntities.end(); ++it)
@@ -99,6 +110,9 @@ namespace tsom
 
 	void ChunkEntities::Update()
 	{
+		if (!m_chunkContainer)
+			return;
+
 		for (auto it = m_updateJobs.begin(); it != m_updateJobs.end(); ++it)
 		{
 			UpdateJob& job = *it->second;
@@ -131,6 +145,7 @@ namespace tsom
 			job->applyFunc(indices, std::move(*job));
 			m_updateJobs.erase(indices);
 		}
+
 		m_finishedJobs.clear();
 
 		{
@@ -147,10 +162,41 @@ namespace tsom
 
 			std::lock_guard lock2(m_invalidatedChunkMutex);
 
-			for (auto&& [chunkIndices, neighborMask] : m_invalidatedChunks)
-				UpdateChunkEntity(chunkIndices, neighborMask);
+			if (m_updateJobs.size() + m_invalidatedChunks.size() > m_maxConcurrentJobs)
+			{
+				for (auto it = m_invalidatedChunks.begin(); it != m_invalidatedChunks.end(); ++it)
+				{
+					UpdateChunkEntity(it.key(), it.value());
+					if (m_updateJobs.size() >= m_maxConcurrentJobs)
+					{
+						m_invalidatedChunks.erase(m_invalidatedChunks.begin(), it);
+						break;
+					}
+				}
 
-			m_invalidatedChunks.clear();
+				m_invalidatedChunks.clear(); //< just in case
+			}
+			else
+			{
+				for (auto&& [chunkIndices, neighborMask] : m_invalidatedChunks)
+					UpdateChunkEntity(chunkIndices, neighborMask);
+
+				m_invalidatedChunks.clear();
+			}
+		}
+
+		if (m_isSwitchingContainer && m_updateJobs.empty())
+		{
+			ClearChunkEntities(m_previousChunkEntities);
+			m_previousChunkEntities = decltype(m_previousChunkEntities){}; //< force the map to release its memory
+			for (auto it = m_chunkEntities.begin(); it != m_chunkEntities.end(); ++it)
+			{
+				entt::handle entity = it.value();
+				if (entity)
+					entity.remove<Nz::DisabledComponent>();
+			}
+
+			m_isSwitchingContainer = false;
 		}
 
 		if (!m_isDynamicColliderUpdated)
@@ -165,15 +211,15 @@ namespace tsom
 
 			for (auto&& [chunkIndices, chunkColliders] : m_chunkColliders)
 			{
-				if (!chunkColliders.simplifiedCollisions)
+				if (!chunkColliders.dynamicCollider)
 					continue; //< can happen with empty chunks
 
 				auto& childDynamicCollider = childDynamicColliders.emplace_back();
-				childDynamicCollider.collider = chunkColliders.simplifiedCollisions;
-				childDynamicCollider.offset = m_chunkContainer->GetChunkOffset(chunkIndices);
+				childDynamicCollider.collider = chunkColliders.dynamicCollider;
+				childDynamicCollider.offset = m_chunkContainer->GetChunkPosition(chunkIndices);
 
 				auto& chunkEntry = chunkEntries.emplace_back();
-				chunkEntry.chunkCollider = chunkColliders.complexCollisions;
+				chunkEntry.chunkCollider = chunkColliders.complexCollider;
 				chunkEntry.chunkEntity = Nz::Retrieve(m_chunkEntities, chunkIndices);
 				chunkEntry.chunkOffset = childDynamicCollider.offset;
 			}
@@ -196,6 +242,51 @@ namespace tsom
 		}
 	}
 
+	void ChunkEntities::UpdateChunkContainer(std::shared_ptr<ChunkContainer> chunkContainer)
+	{
+		m_chunkContainer = std::move(chunkContainer);
+
+		// When switching containers, keep previous chunk entities alive until the switch is complete (e.g. until every chunk has been processed)
+		if (!m_isSwitchingContainer)
+		{
+			m_isSwitchingContainer = true;
+			m_previousChunkEntities = std::move(m_chunkEntities);
+		}
+
+		Clear();
+
+		if (m_chunkContainer)
+		{
+			BindChunkContainerSignals();
+			FillChunks();
+		}
+	}
+
+	void ChunkEntities::Clear()
+	{
+		ClearChunkEntities(m_chunkEntities);
+		m_invalidatedChunks.clear();
+		m_finishedJobs.clear();
+
+		for (auto it = m_updateJobs.begin(); it != m_updateJobs.end(); ++it)
+			it->second->cancelled = true;
+
+		m_updateJobs.clear();
+		m_chunkColliders.clear();
+		m_createdDestroyedChunks.clear();
+	}
+
+	void ChunkEntities::ClearChunkEntities(tsl::hopscotch_map<ChunkIndices, entt::handle>& chunkEntities)
+	{
+		for (auto it = chunkEntities.begin(); it != chunkEntities.end(); ++it)
+		{
+			entt::handle entity = it.value();
+			if (entity)
+				entity.destroy();
+		}
+		chunkEntities.clear();
+	}
+
 	void ChunkEntities::CreateChunkEntity(const ChunkIndices& chunkIndices)
 	{
 		// Entity may still exist if the chunk was destroyed and re-created in a row
@@ -208,7 +299,10 @@ namespace tsom
 			m_chunkEntities.emplace(chunkIndices, chunkEntity);
 		}
 
-		auto& nodeComponent = chunkEntity.emplace<Nz::NodeComponent>(m_chunkContainer->GetChunkOffset(chunkIndices));
+		if (m_isSwitchingContainer)
+			chunkEntity.emplace<Nz::DisabledComponent>();
+
+		auto& nodeComponent = chunkEntity.emplace<Nz::NodeComponent>(m_chunkContainer->GetChunkPosition(chunkIndices));
 		if (m_parentEntity)
 		{
 			m_parentEntity.get_or_emplace<EntityOwnerComponent>().Register(chunkEntity);
@@ -311,7 +405,7 @@ namespace tsom
 
 				ChunkReadLock lock(updateJob->chunk.get());
 				if (updateJob->chunk->HasContent()) //< We need to re-check because the chunk may have lost its content (become full empty) since task was scheduled
-					updateJob->collider = updateJob->chunk->BuildCollider(m_layerIndex);
+					updateJob->collider = updateJob->chunk->BuildCollider(m_layerIndex, m_requiresDynamicColliders);
 
 				updateJob->jobDone++;
 			});
@@ -380,12 +474,17 @@ namespace tsom
 		{
 			entt::handle chunkEntity = Nz::Retrieve(m_chunkEntities, chunkIndices);
 			auto& rigidBody = chunkEntity.get<Nz::RigidBody3DComponent>();
-			rigidBody.SetCollider(std::move(colliderData.simplifiedCollisions), false);
+			if (colliderData.dynamicCollider)
+			{
+				rigidBody.SetCollider(std::move(colliderData.dynamicCollider), false);
 
-			if (colliderData.complexCollisions)
-				chunkEntity.get_or_emplace<ComplexCollisionComponent>().complexCollisionCollider = std::move(colliderData.complexCollisions);
+				if (colliderData.complexCollider)
+					chunkEntity.get_or_emplace<ComplexCollisionComponent>().complexCollisionCollider = std::move(colliderData.complexCollider);
+				else
+					chunkEntity.remove<ComplexCollisionComponent>();
+			}
 			else
-				chunkEntity.remove<ComplexCollisionComponent>();
+				rigidBody.SetCollider(std::move(colliderData.complexCollider), false);
 		}
 		else
 		{

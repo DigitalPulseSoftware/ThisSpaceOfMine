@@ -49,8 +49,9 @@ namespace tsom
 				float cornerRadius = entityInstance.GetProperty<EntityPropertyType::Float>(1);
 				float gravity = entityInstance.GetProperty<EntityPropertyType::Float>(2);
 				Nz::Int64 seed = entityInstance.GetProperty<EntityPropertyType::Integer>(3);
+				float atmosphereRadius = entityInstance.GetProperty<EntityPropertyType::Float>(6);
 
-				InitializePlanetEntity(entity, std::make_shared<RoundCubePlanet>(m_app, m_blockLibrary, blockSize, Nz::SafeCaster(seed), gravity, cornerRadius));
+				InitializePlanetEntity(entity, std::make_shared<RoundCubePlanet>(m_app, m_blockLibrary, blockSize, atmosphereRadius, Nz::SafeCaster(seed), gravity, cornerRadius));
 			}
 		},
 		{}, {}));

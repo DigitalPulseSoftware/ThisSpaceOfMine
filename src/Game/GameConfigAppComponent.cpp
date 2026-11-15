@@ -5,6 +5,7 @@
 #include <Game/GameConfigAppComponent.hpp>
 #include <ClientLib/ClientConfigs.hpp>
 #include <CommonLib/CommonConfigs.hpp>
+#include <CommonLib/InternalConstants.hpp>
 #include <CommonLib/Version.hpp>
 #include <Game/GameConfigs.hpp>
 #include <Nazara/Core/SystemDirectory.hpp>
@@ -44,6 +45,8 @@ namespace tsom
 		RegisterIntegerOption(Config::Server_Port, 1, 0xFFFF, 29536);
 
 		RegisterFloatOption(Config::Chunk_NormalSmoothAngle, 0.0, 180.0, 60.0);
+		RegisterIntegerOption(Config::Chunk_MinLevelOfDetail, 0, Nz::SafeCaster(Constants::MaxChunkLevelOfDetail), 0);
+
 		RegisterIntegerOption(Config::Graphics_SunShadowMapSize, 128, 4096, 1024, [](long long shadowMapSize) -> Nz::Result<long long, std::string>
 		{
 			if (!Nz::IsPow2(shadowMapSize))

@@ -67,7 +67,7 @@ namespace tsom
 			inline void BeginBatchUpdate();
 
 			virtual std::pair<std::shared_ptr<Nz::Collider3D>, Nz::Vector3f> BuildBlockCollider(const Nz::Vector3ui& blockIndices, float scale = 1.f) const = 0;
-			virtual ColliderData BuildCollider(std::size_t layerIndex) const = 0;
+			virtual ColliderData BuildCollider(std::size_t layerIndex, bool buildDynamicCollider) const = 0;
 			virtual void BuildMesh(std::size_t layerIndex, std::vector<Nz::UInt32>& indices, const Nz::Vector3f& center, const Nz::FunctionRef<VertexAttributes(const Nz::Vector3ui& blockIndices, Direction direction)>& addFace) const = 0;
 
 			inline void ClearContent();
@@ -134,8 +134,8 @@ namespace tsom
 
 			struct ColliderData
 			{
-				std::shared_ptr<Nz::Collider3D> simplifiedCollisions;
-				std::shared_ptr<Nz::Collider3D> complexCollisions;
+				std::shared_ptr<Nz::Collider3D> dynamicCollider;
+				std::shared_ptr<Nz::Collider3D> complexCollider;
 			};
 
 			struct Layer

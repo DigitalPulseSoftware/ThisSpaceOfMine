@@ -43,6 +43,8 @@ namespace tsom
 
 			virtual void Update();
 
+			void UpdateChunkContainer(std::shared_ptr<ChunkContainer> chunkContainer);
+
 			ChunkEntities& operator=(const ChunkEntities&) = delete;
 			ChunkEntities& operator=(ChunkEntities&&) = delete;
 
@@ -52,6 +54,9 @@ namespace tsom
 
 			ChunkEntities(Nz::ApplicationBase& app, Nz::EnttWorld& world, std::shared_ptr<ChunkContainer> chunkContainer, const BlockLibrary& blockLibrary, std::size_t layerIndex, bool isStatic, NoInit);
 
+			void BindChunkContainerSignals();
+			void Clear();
+			void ClearChunkEntities(tsl::hopscotch_map<ChunkIndices, entt::handle>& chunkEntities);
 			void CreateChunkEntity(const ChunkIndices& chunkIndices);
 			void DestroyChunkEntity(const ChunkIndices& chunkIndices);
 			void FillChunks();
@@ -105,13 +110,17 @@ namespace tsom
 			tsl::hopscotch_map<ChunkIndices, NeighborChunkMask> m_invalidatedChunks;
 			tsl::hopscotch_map<ChunkIndices, std::shared_ptr<UpdateJob>> m_updateJobs;
 			tsl::hopscotch_map<ChunkIndices, entt::handle> m_chunkEntities;
+			tsl::hopscotch_map<ChunkIndices, entt::handle> m_previousChunkEntities;
 			tsl::hopscotch_map<ChunkIndices, Chunk::ColliderData> m_chunkColliders; //< For dynamic colliders
 			tsl::hopscotch_map<ChunkIndices, bool /*created*/> m_createdDestroyedChunks;
 			Nz::ApplicationBase& m_application;
 			Nz::EnttWorld& m_world;
 			const BlockLibrary& m_blockLibrary;
 			bool m_isDynamicColliderUpdated;
+			bool m_requiresDynamicColliders;
 			bool m_isStatic;
+			bool m_isSwitchingContainer;
+			Nz::UInt32 m_maxConcurrentJobs;
 	};
 }
 

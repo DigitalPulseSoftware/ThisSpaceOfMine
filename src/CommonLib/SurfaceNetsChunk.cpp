@@ -136,12 +136,12 @@ namespace tsom
 		return { std::make_shared<Nz::ConvexHullCollider3D>(corners.data(), corners.size()), blockOffset };
 	}
 
-	auto SurfaceNetsChunk::BuildCollider(std::size_t layerIndex) const -> ColliderData
+	auto SurfaceNetsChunk::BuildCollider(std::size_t layerIndex, bool buildDynamicCollider) const -> ColliderData
 	{
 		// Find and lock all neighbor chunks to avoid discrepancies between chunks
 		NeighborChunkArray neighborChunks;
 
-		MultiChunkReadLock chunkLock;
+		MultiChunkReadLock<s_neighborChunkOffset.size()> chunkLock;
 		for (const ChunkIndices& dir : s_neighborChunkOffset)
 		{
 			if (dir.x == 0 && dir.y == 0 && dir.z == 0)
@@ -157,9 +157,11 @@ namespace tsom
 		chunkLock.Lock();
 
 		std::shared_ptr<Nz::Collider3D> complexCollider = BuildComplexCollider(layerIndex, neighborChunks);
-		std::shared_ptr<Nz::Collider3D> simplifiedCollider = BuildSimplifiedCollider(layerIndex, neighborChunks);
+		std::shared_ptr<Nz::Collider3D> dynamicCollider;
+		if (buildDynamicCollider)
+			dynamicCollider = BuildSimplifiedCollider(layerIndex, neighborChunks);
 
-		return { std::move(simplifiedCollider), std::move(complexCollider) };
+		return { std::move(dynamicCollider), std::move(complexCollider) };
 	}
 
 	void SurfaceNetsChunk::BuildMesh(std::size_t layerIndex, std::vector<Nz::UInt32>& indices, const Nz::Vector3f& gravityCenter, const Nz::FunctionRef<VertexAttributes(const Nz::Vector3ui& blockIndices, Direction direction)>& addFace) const
@@ -167,7 +169,7 @@ namespace tsom
 		// Find and lock all neighbor chunks to avoid discrepancies between chunks
 		NeighborChunkArray neighborChunks;
 
-		MultiChunkReadLock chunkLock;
+		MultiChunkReadLock<s_neighborChunkOffset.size()> chunkLock;
 		for (const ChunkIndices& dir : s_neighborChunkOffset)
 		{
 			if (dir.x == 0 && dir.y == 0 && dir.z == 0)
@@ -229,13 +231,11 @@ namespace tsom
 
 		auto AddBox = [&](const Nz::Boxui& colliderIndices)
 		{
-			//fmt::print("Box({};{};{};{};{};{})\n", colliderIndices.x, colliderIndices.y, colliderIndices.z, colliderIndices.width, colliderIndices.height, colliderIndices.depth);
 			std::array<Nz::Vector3f, 8 * 8> positions;
 
 			auto corners = colliderIndices.GetCorners();
 			for (const auto& [corner, indices] : corners.iter_kv())
 			{
-				//fmt::print("{};{};{}\n", indices.x, indices.y, indices.z);
 				auto corners = BuildCorners(indices, neighborChunks);
 				std::copy(corners.begin(), corners.end(), &positions[Nz::UnderlyingCast(corner) * 8]);
 			}
@@ -371,7 +371,7 @@ namespace tsom
 		else if (indices.z == m_size.z - 1)
 			ys[ny++] = 1;
 
-		MultiChunkReadLock chunkLock;
+		MultiChunkReadLock<s_neighborChunkOffset.size()> chunkLock;
 		for (std::size_t ix = 0; ix < nx; ++ix)
 		{
 			for (std::size_t iy = 0; iy < ny; ++iy)
@@ -550,11 +550,11 @@ namespace tsom
 
 		Nz::HighPrecisionClock clock;
 
-		for (unsigned int z = 0; z < m_size.z; ++z)
+		for (Nz::UInt32 z = 0; z < m_size.z; ++z)
 		{
-			for (unsigned int y = 0; y < m_size.y; ++y)
+			for (Nz::UInt32 y = 0; y < m_size.y; ++y)
 			{
-				for (unsigned int x = 0; x < m_size.x; ++x)
+				for (Nz::UInt32 x = 0; x < m_size.x; ++x)
 				{
 					Nz::Vector3ui blockIndices(x, y, z);
 

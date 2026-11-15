@@ -8,6 +8,7 @@ namespace tsom
 {
 	inline ChunkContainer::ChunkContainer(const BlockLibrary& blockLibrary, float tileSize) :
 	m_blockLibrary(blockLibrary),
+	m_chunkOffset(Nz::Vector3f::Zero()),
 	m_tileSize(tileSize)
 	{
 	}
@@ -53,12 +54,17 @@ namespace tsom
 		Nz::Vector3f chunkSize(ChunkSize * m_tileSize);
 
 		Nz::Vector3f indices = Nz::Vector3f::Apply((relativePos + chunkSize * 0.5f) / chunkSize - Nz::Vector3f(0.5f), std::roundf);
-		return ChunkIndices(indices.x, indices.y, indices.z);
+		return ChunkIndices(indices);
 	}
 
-	inline Nz::Vector3f ChunkContainer::GetChunkOffset(const ChunkIndices& indices) const
+	inline const Nz::Vector3f& ChunkContainer::GetChunkOffset() const
 	{
-		return Nz::Vector3f(indices.x, indices.y, indices.z) * ChunkSize * m_tileSize;
+		return m_chunkOffset;
+	}
+
+	inline Nz::Vector3f ChunkContainer::GetChunkPosition(const ChunkIndices& indices) const
+	{
+		return m_chunkOffset + Nz::Vector3f(indices) * ChunkSize * m_tileSize;
 	}
 
 	inline float ChunkContainer::GetTileSize() const

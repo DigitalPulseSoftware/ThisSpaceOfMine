@@ -46,6 +46,7 @@ namespace tsom
 			inline Chunk* GetChunk(const ChunkIndices& chunkIndices) override;
 			inline const Chunk* GetChunk(const ChunkIndices& chunkIndices) const override;
 			inline std::size_t GetChunkCount() const override;
+			inline float GetRadius() const;
 
 			void RemoveChunk(const ChunkIndices& indices) override;
 

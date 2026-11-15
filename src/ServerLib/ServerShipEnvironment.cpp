@@ -172,7 +172,7 @@ namespace tsom
 		ship.ForEachChunk([&](const ChunkIndices& chunkIndices, Chunk& chunk)
 		{
 			Nz::Boxf chunkBox(Nz::Vector3f(chunk.GetBlockSize() * Ship::ChunkSize));
-			chunkBox.Translate(ship.GetChunkOffset(chunkIndices));
+			chunkBox.Translate(ship.GetChunkPosition(chunkIndices));
 
 			if (boundingBox.IsValid())
 				boundingBox.ExtendTo(chunkBox);
@@ -219,7 +219,7 @@ namespace tsom
 			if (!chunkData.hullCollider)
 				continue;
 
-			Nz::Vector3f relativePos = position - ship.GetChunkOffset(chunkIndices);
+			Nz::Vector3f relativePos = position - ship.GetChunkPosition(chunkIndices);
 			relativePos -= chunkData.hullCollider->GetCenterOfMass(); //< https://jrouwe.github.io/JoltPhysics/index.html#center-of-mass
 			if (chunkData.hullCollider->CollisionQuery(relativePos))
 			{
@@ -579,7 +579,7 @@ namespace tsom
 					if (!chunkData.hullCollider)
 						continue;
 
-					Nz::Vector3f relativePos = entityPos - ship.GetChunkOffset(chunkIndices);
+					Nz::Vector3f relativePos = entityPos - ship.GetChunkPosition(chunkIndices);
 					relativePos -= chunkData.hullCollider->GetCenterOfMass(); //< https://jrouwe.github.io/JoltPhysics/index.html#center-of-mass
 					if (chunkData.hullCollider->CollisionQuery(relativePos))
 					{
@@ -813,7 +813,7 @@ namespace tsom
 				{
 					std::vector<Nz::UInt16> indices;
 					std::vector<Nz::Vector3f> positions;
-					area.collider->BuildDebugMesh(positions, indices, Nz::Matrix4f::Translate(GetShip().GetChunkOffset(chunkIndices)));
+					area.collider->BuildDebugMesh(positions, indices, Nz::Matrix4f::Translate(GetShip().GetChunkPosition(chunkIndices)));
 
 					m_debugDrawer->DrawLines(seed + areaIndex, 5.f, indices, positions, Nz::Color::FromHSV(dis(colorGen), 1.f, 1.f));
 					areaIndex++;
@@ -859,7 +859,7 @@ namespace tsom
 
 			auto& childCollider = childColliders.emplace_back();
 			childCollider.collider = chunkData.areaCollider;
-			childCollider.offset = ship.GetChunkOffset(chunkIndices);
+			childCollider.offset = ship.GetChunkPosition(chunkIndices);
 		}
 
 		if (childColliders.empty())

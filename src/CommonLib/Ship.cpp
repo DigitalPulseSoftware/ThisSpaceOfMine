@@ -130,13 +130,13 @@ namespace tsom
 
 			for (auto&& [ChunkIndices, chunkData] : m_chunks)
 			{
-				auto chunkCollider = chunkData.chunk->BuildCollider(0);
-				if (!chunkCollider.simplifiedCollisions)
+				auto chunkCollider = chunkData.chunk->BuildCollider(0, true);
+				if (!chunkCollider.dynamicCollider)
 					continue;
 
 				auto& childCollider = childColliders.emplace_back();
-				childCollider.collider = chunkCollider.simplifiedCollisions;
-				childCollider.offset = GetChunkOffset(chunkData.chunk->GetIndices());
+				childCollider.collider = std::move(chunkCollider.dynamicCollider);
+				childCollider.offset = GetChunkPosition(chunkData.chunk->GetIndices());
 			}
 
 			if (childColliders.empty())
@@ -149,7 +149,7 @@ namespace tsom
 			if (m_chunks.empty())
 				return nullptr;
 
-			return m_chunks.begin().value().chunk->BuildCollider(0).simplifiedCollisions;
+			return m_chunks.begin().value().chunk->BuildCollider(0, true).dynamicCollider;
 		}
 	}
 

@@ -31,4 +31,9 @@ namespace tsom
 	{
 		return m_chunks.size();
 	}
+
+	inline float Planet::GetRadius() const
+	{
+		return m_radius;
+	}
 }

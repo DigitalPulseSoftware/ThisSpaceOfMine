@@ -9,7 +9,7 @@
 
 namespace tsom
 {
-	void ChunkEntitiesSystem::Update(Nz::Time elapsedTime)
+	void ChunkEntitiesSystem::Update(Nz::Time /*elapsedTime*/)
 	{
 		auto chunkContainerView = m_registry.view<ChunkContainerComponent>(entt::exclude<Nz::DisabledComponent>);
 		for (entt::entity entity : chunkContainerView)

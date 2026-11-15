@@ -5,7 +5,7 @@
 namespace tsom
 {
 	inline TorusPlanet::TorusPlanet(Nz::ApplicationBase& app, const BlockLibrary& blockLibrary, float blockSize, Nz::UInt32 seed, float gravity, float radius, float thickness) :
-	Planet(app, blockLibrary, blockSize),
+	Planet(app, blockLibrary, blockSize, radius),
 	m_seed(seed),
 	m_gravity(gravity),
 	m_radius(radius),

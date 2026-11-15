@@ -186,7 +186,7 @@ namespace tsom
 		m_planetParentEntity = stateData.world->CreateEntity();
 		m_planetParentEntity.emplace<Nz::NodeComponent>();
 
-		m_planet = std::make_shared<RoundCubePlanet>(*stateData.app, *stateData.blockLibrary, 0.5f, 0, 16.f, 9.81f);
+		m_planet = std::make_shared<RoundCubePlanet>(*stateData.app, *stateData.blockLibrary, 0.5f, 128.f, 0, 16.f, 9.81f);
 		for (std::size_t layerIndex = 0; layerIndex < m_planetEntities.size(); ++layerIndex)
 		{
 			if (!stateData.blockLibrary->IsValidLayer(layerIndex))
@@ -300,7 +300,7 @@ namespace tsom
 		}
 
 		Chunk* chunk = m_planet->GetChunk({0, 0, 0});
-		Nz::Vector3f chunkOffset = m_planet->GetChunkOffset({ 0, 0, 0 });
+		Nz::Vector3f chunkOffset = m_planet->GetChunkPosition({ 0, 0, 0 });
 
 #ifdef TSOM_DEV_TOOLS
 		if (stateData.imgui)

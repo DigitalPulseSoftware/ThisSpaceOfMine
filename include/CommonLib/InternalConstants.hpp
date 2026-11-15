@@ -16,6 +16,7 @@ namespace tsom::Constants
 {
 	// Chunk constants
 	constexpr std::size_t MaxChunkLayerCount = 4;
+	constexpr std::size_t MaxChunkLevelOfDetail = 4;
 
 	// Network constants
 	constexpr Nz::UInt32 NetworkChannelCount = 3;

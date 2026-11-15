@@ -40,7 +40,8 @@ namespace tsom
 			virtual std::size_t GetChunkCount() const = 0;
 			inline ChunkIndices GetChunkIndicesByBlockIndices(const BlockIndices& indices, Nz::Vector3ui* localIndices = nullptr) const;
 			inline ChunkIndices GetChunkIndicesByPosition(const Nz::Vector3f& position) const;
-			inline Nz::Vector3f GetChunkOffset(const ChunkIndices& indices) const;
+			inline const Nz::Vector3f& GetChunkOffset() const;
+			inline Nz::Vector3f GetChunkPosition(const ChunkIndices& indices) const;
 			inline float GetTileSize() const;
 
 			virtual void RemoveChunk(const ChunkIndices& indices) = 0;
@@ -60,6 +61,7 @@ namespace tsom
 
 		protected:
 			const BlockLibrary& m_blockLibrary;
+			Nz::Vector3f m_chunkOffset;
 			float m_tileSize;
 	};
 }

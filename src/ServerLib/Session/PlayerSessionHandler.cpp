@@ -327,7 +327,7 @@ namespace tsom
 
 		auto& chunkOwnerNode = entityOwner.get<Nz::NodeComponent>();
 
-		Nz::Vector3f chunkOffset = chunk->GetContainer().GetChunkOffset(chunk->GetIndices());
+		Nz::Vector3f chunkOffset = chunk->GetContainer().GetChunkPosition(chunk->GetIndices());
 
 		auto cornerPos = chunk->ComputeBlockCorners(blockIndices);
 		auto& corners = s_faceCorners[placeEntity.topFace];
@@ -859,7 +859,7 @@ namespace tsom
 
 		const ChunkContainer& chunkContainer = chunk->GetContainer();
 
-		Nz::Vector3f localOffset = chunkContainer.GetChunkOffset(chunk->GetIndices());
+		Nz::Vector3f localOffset = chunkContainer.GetChunkPosition(chunk->GetIndices());
 		localOffset += colliderOffset;
 
 		auto& chunkContainerNode = chunkContainerEntity.get<Nz::NodeComponent>();

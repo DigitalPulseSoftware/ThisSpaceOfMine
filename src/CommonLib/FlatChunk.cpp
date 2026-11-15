@@ -37,7 +37,7 @@ namespace tsom
 		auto collider = std::make_shared<Nz::CompoundCollider3D>(std::move(childColliders));
 		return { collider, nullptr };
 	}
-	
+
 	void FlatChunk::BuildMesh(std::size_t layerIndex, std::vector<Nz::UInt32>& indices, const Nz::Vector3f& gravityCenter, const Nz::FunctionRef<VertexAttributes(const Nz::Vector3ui& blockIndices, Direction direction)>& addFace) const
 	{
 		auto DrawFace = [&](BlockIndex blockContent, const Nz::Vector3ui& blockIndices, Direction direction, const Nz::Vector3f& blockCenter, const std::array<Nz::Vector3f, 4>& pos)
@@ -73,7 +73,7 @@ namespace tsom
 		};
 
 		Nz::EnumArray<Direction, const Chunk*> neighborChunks;
-		MultiChunkReadLock chunkLock;
+		MultiChunkReadLock<neighborChunks.size()> chunkLock;
 		for (auto&& [dir, chunk] : neighborChunks.iter_kv())
 		{
 			chunk = m_owner.GetChunk(m_indices + s_chunkDirOffset[dir]);

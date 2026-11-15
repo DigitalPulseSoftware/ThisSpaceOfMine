@@ -8,6 +8,7 @@
 #include <ClientLib/RenderConstants.hpp>
 #include <ClientLib/Rendering/AtmosphereScatteringPipelinePass.hpp>
 #include <ClientLib/Systems/AnimationSystem.hpp>
+#include <ClientLib/Systems/LevelOfDetailSystem.hpp>
 #include <ClientLib/Systems/NetworkMovementInterpolationSystem.hpp>
 #include <ClientLib/Systems/PhysicsInterpolationSystem.hpp>
 #include <ClientLib/Systems/TransformCopySystem.hpp>
@@ -340,6 +341,7 @@ namespace tsom
 	Nz::EnttWorld& GameAppComponent::SetupWorld()
 	{
 		auto& app = GetApp();
+		auto& gameConfig = app.GetComponent<GameConfigAppComponent>();
 
 		auto& ecsComponent = app.GetComponent<Nz::EntitySystemAppComponent>();
 		auto& world = ecsComponent.AddWorld<Nz::EnttWorld>();
@@ -348,6 +350,7 @@ namespace tsom
 		world.AddSystem<AnimationSystem>();
 		world.AddSystem<NetworkMovementInterpolationSystem>(Constants::TickDuration);
 		world.AddSystem<ChunkEntitiesSystem>();
+		world.AddSystem<LevelOfDetailSystem>(gameConfig.GetConfig());
 		world.AddSystem<TickSystem>();
 		world.AddSystem<TransformCopySystem>();
 		world.AddSystem<Nz::LifetimeSystem>();
