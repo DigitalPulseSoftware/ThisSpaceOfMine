@@ -39,6 +39,7 @@ namespace tsom
 			auto& inputData = m_inputs.emplace_back();
 			inputData.files[TextureType::BaseColor] = Nz::Utf8Path(fmt::format("{}/{}.png", textureInputDir, blockData.basePath));
 			inputData.files[TextureType::AmbientOcclusion] = Nz::Utf8Path(fmt::format("{}/{}_ao.png", textureInputDir, blockData.basePath));
+			inputData.files[TextureType::Emissive] = Nz::Utf8Path(fmt::format("{}/{}_emissive.png", textureInputDir, blockData.basePath));
 			inputData.files[TextureType::Height] = Nz::Utf8Path(fmt::format("{}/{}_height.png", textureInputDir, blockData.basePath));
 			inputData.files[TextureType::Metalness] = Nz::Utf8Path(fmt::format("{}/{}_metallic.png", textureInputDir, blockData.basePath));
 			inputData.files[TextureType::Normal] = Nz::Utf8Path(fmt::format("{}/{}_normal.png", textureInputDir, blockData.basePath));
@@ -54,6 +55,9 @@ namespace tsom
 
 			if (!inputData.files[TextureType::BaseColor].empty())
 				m_outputFiles.push_back(m_outputDir / Nz::Utf8Path(fmt::format("{}_color.dds", blockData.name)));
+
+			if (!inputData.files[TextureType::Emissive].empty())
+				m_outputFiles.push_back(m_outputDir / Nz::Utf8Path(fmt::format("{}_emissive.dds", blockData.name)));
 
 			if (!inputData.files[TextureType::Normal].empty())
 				m_outputFiles.push_back(m_outputDir / Nz::Utf8Path(fmt::format("{}_normal.dds", blockData.name)));
@@ -342,6 +346,53 @@ namespace tsom
 
 					std::filesystem::path targetPath = m_outputDir / Nz::Utf8Path(aoHeightFilename);
 					if (!cookedAOMap.SaveToFile(targetPath))
+					{
+						spdlog::error("failed to save file {}", Nz::PathToString(targetPath));
+						return;
+					}
+				}
+
+				
+				// Emissive
+				blockEntry.emissiveFallback = 0.0f;
+
+				if (!inputData.files[TextureType::Emissive].empty())
+				{
+					// BC4
+					std::shared_ptr<Nz::Image> emissiveMap = Nz::Image::LoadFromFile(inputData.files[TextureType::Emissive], Nz::ImageParams{ .loadFormat = Nz::PixelFormat::L8 });
+					if (!emissiveMap)
+					{
+						spdlog::error("failed to load {} emissive occlusion map", blockData.name);
+						return;
+					}
+
+					if (emissiveMap->GetSize() != Nz::Vector3ui32(m_textureSize, m_textureSize, 1))
+					{
+						spdlog::error("{} emissive occlusion map has an unexpected size", blockData.name);
+						return;
+					}
+
+					blockEntry.emissiveFallback = emissiveMap->ComputeAverageColor().r;
+
+					Nz::Image cookedEmissiveMap(Nz::ImageType::E2D, Nz::PixelFormat::R8, m_textureSize, m_textureSize);
+
+					const Nz::UInt8* emissivePixels = emissiveMap->GetConstPixels();
+					Nz::UInt8* cookedPixels = cookedEmissiveMap.GetPixels();
+					for (std::size_t y = 0; y < m_textureSize; ++y)
+					{
+						for (std::size_t x = 0; x < m_textureSize; ++x)
+							*cookedPixels++ = *emissivePixels++;
+					}
+
+					cookedEmissiveMap.GenerateMipmaps();
+
+					cookedEmissiveMap = Nz::ImageCompressor::R8ToBC4(cookedEmissiveMap);
+
+					std::string emissiveFilename = fmt::format("{}_emissive.dds", blockData.name);
+					blockEntry.emissiveTexture = { CookedBlockRegistry::TextureType::BC4, emissiveFilename };
+
+					std::filesystem::path targetPath = m_outputDir / Nz::Utf8Path(emissiveFilename);
+					if (!cookedEmissiveMap.SaveToFile(targetPath))
 					{
 						spdlog::error("failed to save file {}", Nz::PathToString(targetPath));
 						return;

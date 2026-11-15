@@ -43,6 +43,7 @@ namespace nlohmann
 	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(tsom::CookedBlockRegistry::BlockEntry,
 		ambientOcclusionFallback, ambientOcclusionHeightTexture,
 		baseColorFallback, baseColorTexture,
+		emissiveFallback, emissiveTexture,
 		metalnessFallback, normalMapTexture,
 		roughnessFallback, roughnessMetalnessTexture
 	)

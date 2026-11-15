@@ -28,6 +28,7 @@ namespace tsom
 			{
 				AmbientOcclusion,
 				BaseColor,
+				Emissive,
 				Height,
 				Metalness,
 				Normal,

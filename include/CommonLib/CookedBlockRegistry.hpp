@@ -61,9 +61,11 @@ namespace tsom
 				Nz::Color baseColorFallback;
 				Texture ambientOcclusionHeightTexture;
 				Texture baseColorTexture;
+				Texture emissiveTexture;
 				Texture normalMapTexture;
 				Texture roughnessMetalnessTexture;
 				float ambientOcclusionFallback;
+				float emissiveFallback;
 				float roughnessFallback;
 				float metalnessFallback;
 			};

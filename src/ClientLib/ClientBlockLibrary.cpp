@@ -20,6 +20,7 @@ namespace tsom
 		{
 			AmbientOcclusion_Height,
 			BaseColor,
+			Emissive,
 			Normal,
 			Roughness_Metalness,
 
@@ -32,6 +33,8 @@ namespace tsom
 			std::size_t baseColorFallback;
 			std::size_t ambientOcclusionHeightMapIndices;
 			std::size_t baseColorMapIndices;
+			std::size_t emissiveFallback;
+			std::size_t emissiveIndices;
 			std::size_t metalness;
 			std::size_t normalMapIndices;
 			std::size_t ambientOcclusion;
@@ -56,7 +59,9 @@ namespace tsom
 			bufferOffsets.normalMapIndices = bufferOffsets.fieldOffsets.AddField(nzsl::StructFieldType::Int2);
 			bufferOffsets.ambientOcclusionHeightMapIndices = bufferOffsets.fieldOffsets.AddField(nzsl::StructFieldType::Int2);
 			bufferOffsets.roughnessMetalnessMapIndices = bufferOffsets.fieldOffsets.AddField(nzsl::StructFieldType::Int2);
+			bufferOffsets.emissiveIndices = bufferOffsets.fieldOffsets.AddField(nzsl::StructFieldType::Int2);
 			bufferOffsets.ambientOcclusion = bufferOffsets.fieldOffsets.AddField(nzsl::StructFieldType::Float1);
+			bufferOffsets.emissiveFallback = bufferOffsets.fieldOffsets.AddField(nzsl::StructFieldType::Float1);
 			bufferOffsets.metalness = bufferOffsets.fieldOffsets.AddField(nzsl::StructFieldType::Float1);
 			bufferOffsets.roughness = bufferOffsets.fieldOffsets.AddField(nzsl::StructFieldType::Float1);
 
@@ -120,6 +125,7 @@ namespace tsom
 			auto& blockTexture = remainingBlockTextures.emplace_back();
 			blockTexture.textureData[TextureType::AmbientOcclusion_Height] = &cookedBlockData.ambientOcclusionHeightTexture;
 			blockTexture.textureData[TextureType::BaseColor] = &cookedBlockData.baseColorTexture;
+			blockTexture.textureData[TextureType::Emissive] = &cookedBlockData.emissiveTexture;
 			blockTexture.textureData[TextureType::Normal] = &cookedBlockData.normalMapTexture;
 			blockTexture.textureData[TextureType::Roughness_Metalness] = &cookedBlockData.roughnessMetalnessTexture;
 
@@ -127,9 +133,11 @@ namespace tsom
 			Nz::AccessByOffset<Nz::Color&>(blockDataPtr, s_blockBufferEntryOffsets.baseColorFallback) = cookedBlockData.baseColorFallback;
 			Nz::AccessByOffset<Nz::Vector2i32&>(blockDataPtr, s_blockBufferEntryOffsets.ambientOcclusionHeightMapIndices) = { -1, -1 };
 			Nz::AccessByOffset<Nz::Vector2i32&>(blockDataPtr, s_blockBufferEntryOffsets.baseColorMapIndices) = { -1, -1 };
+			Nz::AccessByOffset<Nz::Vector2i32&>(blockDataPtr, s_blockBufferEntryOffsets.emissiveIndices) = { -1, -1 };
 			Nz::AccessByOffset<Nz::Vector2i32&>(blockDataPtr, s_blockBufferEntryOffsets.normalMapIndices) = { -1, -1 };
 			Nz::AccessByOffset<Nz::Vector2i32&>(blockDataPtr, s_blockBufferEntryOffsets.roughnessMetalnessMapIndices) = { -1, -1 };
 			Nz::AccessByOffset<float&>(blockDataPtr, s_blockBufferEntryOffsets.ambientOcclusion) = cookedBlockData.ambientOcclusionFallback;
+			Nz::AccessByOffset<float&>(blockDataPtr, s_blockBufferEntryOffsets.emissiveFallback) = cookedBlockData.emissiveFallback;
 			Nz::AccessByOffset<float&>(blockDataPtr, s_blockBufferEntryOffsets.metalness) = cookedBlockData.metalnessFallback;
 			Nz::AccessByOffset<float&>(blockDataPtr, s_blockBufferEntryOffsets.roughness) = cookedBlockData.roughnessFallback;
 
@@ -169,6 +177,7 @@ namespace tsom
 		constexpr Nz::EnumArray<TextureType, std::size_t> textureSliceOffsets = {
 			s_blockBufferEntryOffsets.ambientOcclusionHeightMapIndices,
 			s_blockBufferEntryOffsets.baseColorMapIndices,
+			s_blockBufferEntryOffsets.emissiveIndices,
 			s_blockBufferEntryOffsets.normalMapIndices,
 			s_blockBufferEntryOffsets.roughnessMetalnessMapIndices
 		};
