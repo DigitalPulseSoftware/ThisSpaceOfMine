@@ -10,7 +10,8 @@ namespace tsom
 	m_currentEnvironmentId(Nz::MaxValue()),
 	m_lastInputIndex(0),
 	m_controlledCharacter(nullptr),
-	m_networkSession(networkSession)
+	m_networkSession(networkSession),
+	m_rebuildOrderedChunkList(false)
 	{
 		m_activeChunkUpdates = std::make_shared<std::size_t>(0);
 	}
@@ -129,6 +130,26 @@ namespace tsom
 	inline void SessionVisibilityHandler::UpdateLastInputIndex(InputIndex inputIndex)
 	{
 		m_lastInputIndex = inputIndex;
+	}
+
+	inline Packets::Helper::EnvironmentId SessionVisibilityHandler::GetRootEnvironmentId(Packets::Helper::EnvironmentId envId) const
+	{
+		while (auto* childEnvData = std::get_if<ChildEnvironmentData>(&m_environments[envId].envData))
+		{
+			EntityId entityId = Nz::Retrieve(m_entityIndices, childEnvData->owner);
+			envId = m_visibleEntities[entityId].envIndex;
+		}
+
+		return envId;
+	}
+
+	inline const Nz::Vector3i32& SessionVisibilityHandler::GetRootEnvironmentIndices(Packets::Helper::EnvironmentId envId) const
+	{
+		NazaraAssert(envId < m_environments.size());
+		auto* rootEnvData = std::get_if<RootEnvironmentData>(&m_environments[envId].envData);
+		NazaraAssert(rootEnvData);
+
+		return rootEnvData->indices;
 	}
 
 	inline std::size_t SessionVisibilityHandler::HandlerHasher::operator()(const entt::handle& handle) const

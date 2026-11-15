@@ -93,6 +93,9 @@ namespace tsom
 			void DispatchEntitiesUpdate(Nz::UInt16 tickIndex);
 			void DispatchEnvironments(Nz::UInt16 tickIndex);
 
+			inline Packets::Helper::EnvironmentId GetRootEnvironmentId(Packets::Helper::EnvironmentId) const;
+			inline const Nz::Vector3i32& GetRootEnvironmentIndices(Packets::Helper::EnvironmentId) const;
+
 			void HandleEntityCreation(std::vector<Packets::Helper::EntityData>& entities, entt::handle entity, CreateEntityData&& createEntityData);
 			void HandleEntityDestruction(entt::handle entity);
 
@@ -116,7 +119,7 @@ namespace tsom
 				NazaraSlot(Chunk, OnClear, onClearSlot);
 				NazaraSlot(Chunk, OnReset, onResetSlot);
 
-				entt::handle entityOwner;
+				entt::handle entityOwner; //< entt::handle because EntityId only exists after creating the entity
 				Chunk* chunk;
 				Packets::S_ChunkUpdate chunkUpdatePacket;
 			};
@@ -124,7 +127,8 @@ namespace tsom
 			struct ChunkWithPos
 			{
 				std::size_t chunkIndex;
-				Nz::Vector3f chunkCenter;
+				Nz::Vector3d chunkCenter;
+				EntityId ownerId;
 			};
 
 			struct EntityData
@@ -231,6 +235,7 @@ namespace tsom
 			InputIndex m_lastInputIndex;
 			CharacterController* m_controlledCharacter;
 			NetworkSession* m_networkSession;
+			bool m_rebuildOrderedChunkList;
 	};
 }
 

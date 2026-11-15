@@ -9,6 +9,7 @@
 #include <CommonLib/NetworkSession.hpp>
 #include <CommonLib/Components/ChunkContainerComponent.hpp>
 #include <CommonLib/Components/ClassInstanceComponent.hpp>
+#include <CommonLib/Utility/SpaceTransformations.hpp>
 #include <Nazara/Core/Components/NodeComponent.hpp>
 #include <NazaraUtils/Algorithm.hpp>
 #include <spdlog/spdlog.h>
@@ -113,6 +114,7 @@ namespace tsom
 			chunkData.chunkUpdatePacket.chunkId = Nz::SafeCast<ChunkId>(chunkIndex);
 			chunkData.entityOwner = entity;
 
+			m_rebuildOrderedChunkList = true;
 			return true;
 		}
 	}
@@ -416,6 +418,7 @@ namespace tsom
 
 			m_resetChunk.UnboundedReset(chunkIndex);
 			m_updatedChunk.UnboundedReset(chunkIndex);
+			m_rebuildOrderedChunkList = true;
 
 			Packets::S_ChunkDestroy chunkDestroyPacket;
 			chunkDestroyPacket.chunkId = Nz::SafeCast<ChunkId>(chunkIndex);
@@ -488,6 +491,7 @@ namespace tsom
 				std::unique_lock lock(m_chunkBitsetsMutex);
 				m_resetChunk.UnboundedSet(chunkIndex);
 				m_updatedChunk.UnboundedReset(chunkIndex); //< in case chunk was modified and then reset before being sent
+				m_rebuildOrderedChunkList = true;
 			});
 
 			visibleChunk.onResetSlot.Connect(visibleChunk.chunk->OnReset, [this, chunkIndex](Chunk*)
@@ -495,6 +499,7 @@ namespace tsom
 				std::unique_lock lock(m_chunkBitsetsMutex);
 				m_resetChunk.UnboundedSet(chunkIndex);
 				m_updatedChunk.UnboundedReset(chunkIndex); //< in case chunk was modified and then reset before being sent
+				m_rebuildOrderedChunkList = true;
 			});
 
 			// Register chunk to environment
@@ -519,35 +524,55 @@ namespace tsom
 
 			m_newlyVisibleChunk.UnboundedReset(chunkIndex);
 			m_resetChunk.UnboundedSet(chunkIndex);
+			m_rebuildOrderedChunkList = true;
 		}
 		m_newlyVisibleChunk.Clear();
 	}
 
 	void SessionVisibilityHandler::DispatchChunkReset(Nz::UInt16 tickIndex)
 	{
-		m_orderedChunkList.clear();
-		for (std::size_t chunkIndex : m_resetChunk.IterBits())
+		if (m_rebuildOrderedChunkList)
 		{
-			const Chunk* chunk = m_visibleChunks[chunkIndex].chunk;
-			Nz::Vector3f chunkPosition = chunk->GetContainer().GetChunkOffset(chunk->GetIndices());
-			m_orderedChunkList.push_back(ChunkWithPos{ chunkIndex, chunkPosition + Nz::Vector3f(chunk->GetSize()) * chunk->GetBlockSize() });
+			m_orderedChunkList.clear();
+			for (std::size_t chunkIndex : m_resetChunk.IterBits())
+			{
+				EntityId entityId = Nz::Retrieve(m_entityIndices, m_visibleChunks[chunkIndex].entityOwner);
+				const Nz::Vector3i32& rootIndices = GetRootEnvironmentIndices(GetRootEnvironmentId(m_visibleEntities[entityId].envIndex));
+
+				const Nz::NodeComponent& entityNode = m_visibleChunks[chunkIndex].entityOwner.get<const Nz::NodeComponent>();
+
+				const Chunk* chunk = m_visibleChunks[chunkIndex].chunk;
+				Nz::Vector3f chunkPosition = chunk->GetContainer().GetChunkPosition(chunk->GetIndices());
+				m_orderedChunkList.push_back(ChunkWithPos{
+					.chunkIndex = chunkIndex,
+					.chunkCenter = SpaceTransformations::ToGlobalCoordinates(rootIndices, entityNode.ToGlobalPosition(chunkPosition + Nz::Vector3f(chunk->GetSize()) * chunk->GetBlockSize())),
+					.ownerId = entityId
+				});
+			}
+
+			m_rebuildOrderedChunkList = false;
 		}
 
 		if (m_controlledEntity)
 		{
 			// Sort chunks based on distance to reference position (closers chunks get sent in priority)
 			Nz::Vector3f referencePosition = m_controlledEntity.get<Nz::NodeComponent>().GetGlobalPosition();
+			EntityId controlledEntityId = Nz::Retrieve(m_entityIndices, m_controlledEntity);
+			const Nz::Vector3i32& rootIndices = GetRootEnvironmentIndices(GetRootEnvironmentId(m_visibleEntities[controlledEntityId].envIndex));
+
+			Nz::Vector3d globalReferencePosition = SpaceTransformations::ToGlobalCoordinates(rootIndices, referencePosition);
 
 			std::sort(m_orderedChunkList.begin(), m_orderedChunkList.end(), [&](const ChunkWithPos& chunkA, const ChunkWithPos& chunkB)
 			{
-				return chunkA.chunkCenter.SquaredDistance(referencePosition) < chunkB.chunkCenter.SquaredDistance(referencePosition);
+				// Sort descending because we pop in reverse
+				return chunkA.chunkCenter.SquaredDistance(globalReferencePosition) > chunkB.chunkCenter.SquaredDistance(globalReferencePosition);
 			});
 		}
 
-		for (const ChunkWithPos& chunk : m_orderedChunkList)
+		while (!m_orderedChunkList.empty())
 		{
-			if (!IsDevVersion() && *m_activeChunkUpdates >= MaxConcurrentChunkUpdate)
-				return;
+			ChunkWithPos chunk = m_orderedChunkList.back();
+			m_orderedChunkList.pop_back();
 
 			ChunkData& visibleChunk = m_visibleChunks[chunk.chunkIndex];
 
@@ -556,7 +581,7 @@ namespace tsom
 
 			Packets::S_ChunkReset chunkResetPacket;
 			chunkResetPacket.chunkId = Nz::SafeCast<ChunkId>(chunk.chunkIndex);
-			chunkResetPacket.entityId = Nz::Retrieve(m_entityIndices, visibleChunk.entityOwner);
+			chunkResetPacket.entityId = chunk.ownerId;
 			chunkResetPacket.tickIndex = tickIndex;
 
 			if (visibleChunk.chunk->HasContent())
@@ -573,6 +598,10 @@ namespace tsom
 					assert(*chunkUpdateCount > 0);
 					(*chunkUpdateCount)--;
 				});
+
+				// Limit the number of concurrent chunks sent through the network (TODO: Limit by bandwidth instead of packet)
+				if (!IsDevVersion() && *m_activeChunkUpdates >= MaxConcurrentChunkUpdate)
+					return;
 			}
 			else
 			{
@@ -1018,6 +1047,7 @@ namespace tsom
 				m_newlyVisibleChunk.UnboundedReset(chunkIndex);
 				m_resetChunk.UnboundedReset(chunkIndex);
 				m_updatedChunk.UnboundedReset(chunkIndex);
+				m_rebuildOrderedChunkList = true;
 			}
 
 			m_chunkNetworkMaps.erase(it);
