@@ -73,7 +73,7 @@ jobs:
         key: ${{ matrix.platform.os }}-${{ matrix.platform.arch }}-${{ matrix.mode }}-${{ steps.dep_hash.outputs.hash }}-W${{ steps.cache_key.outputs.key }}${{ matrix.platform.cache_key }}
 
     - name: Configure xmake and install dependencies
-      run: xmake config --arch=${{ matrix.platform.arch }} --mode=${{ matrix.mode }} ${{ matrix.platform.config }} --yes --policies=package.precompiled:n
+      run: xmake config --arch=${{ matrix.platform.arch }} --mode=${{ matrix.mode }} ${{ matrix.platform.config }} --yes --policies=package.precompiled:n -vD
 
     # Save dependencies
     - name: Save cached xmake dependencies
