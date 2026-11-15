@@ -48,7 +48,7 @@ if SERVER then
 		-- TODO: Take distance into account
 		-- TODO: Raycast to detect obstacles
 
-		--print("panelToSunDir:", panelToSunDir)
+		local globalUp = environment:ToGlobalDirection(node:GetUp())
 
 		local powerFactor = math.max(globalUp:DotProduct(panelToSunDir), 0)
 
