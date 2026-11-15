@@ -36,20 +36,21 @@ classData:On("init", function (self)
 end)
 
 if SERVER then
-	local sunDir = Vec3(0.8528685, 0.49999997, 0.15038377)
+	-- For now, the sun is at the center of the stellar system
+	local sunPosition = Vec3(0.0, 0.0, 0.0)
 
 	classData:On("distribution", function (self)
 		local environment = self:GetEnvironment()
-
-		local correctedSunDir = sunDir
-		if environment:GetType() == EnvironmentType.Ship then
-			local exteriorEntity = environment:GetExteriorShipEntity()
-			local exteriorNode = exteriorEntity:GetComponent("node")
-			correctedSunDir = exteriorNode:GetRotation():GetConjugate() * correctedSunDir
-		end
-
+		
 		local node = self:GetComponent("node")
-		local powerFactor = math.max(node:GetUp():DotProduct(correctedSunDir), 0)
+		local globalPosition = environment:ToGlobalPosition(node:GetGlobalPosition())
+		local panelToSunDir, distance = Vec3.Normalize(sunPosition - globalPosition)
+		-- TODO: Take distance into account
+		-- TODO: Raycast to detect obstacles
+
+		--print("panelToSunDir:", panelToSunDir)
+
+		local powerFactor = math.max(globalUp:DotProduct(panelToSunDir), 0)
 
 		local distribution = self:GetComponent("distribution")
 		distribution:UpdateProductionValue(0, ElectricalQuantity(Distribution.ToTickUnit(math.floor(powerFactor * 100))))

@@ -326,6 +326,9 @@ namespace tsom
 	{
 		state.new_usertype<Nz::Node>("Node",
 			sol::no_constructor,
+			"GetGlobalPosition", LuaFunction(&Nz::Node::GetGlobalPosition),
+			"GetGlobalRotation", LuaFunction(&Nz::Node::GetGlobalRotation),
+			"GetGlobalScale", LuaFunction(&Nz::Node::GetGlobalScale),
 			"GetPosition", LuaFunction(&Nz::Node::GetPosition),
 			"GetRotation", LuaFunction(&Nz::Node::GetRotation),
 			"GetForward", LuaFunction(&Nz::Node::GetForward),

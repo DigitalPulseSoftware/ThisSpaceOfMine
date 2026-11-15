@@ -117,6 +117,16 @@ namespace tsom
 		}
 	}
 
+	Nz::Vector3d ServerSpaceEnvironment::ToGlobalDirection(const Nz::Vector3d& localDirection) const
+	{
+		return localDirection;
+	}
+
+	Nz::Vector3d ServerSpaceEnvironment::ToGlobalPosition(const Nz::Vector3d& localCoordinates) const
+	{
+		return SpaceTransformations::ToGlobalCoordinates(m_coordinates, localCoordinates);
+	}
+
 	ServerAtmosphere* ServerSpaceEnvironment::GetFallbackAtmosphereAtPosition(const Nz::Vector3f& /*position*/)
 	{
 		return nullptr;

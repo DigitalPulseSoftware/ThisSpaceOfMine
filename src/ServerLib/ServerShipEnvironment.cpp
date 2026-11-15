@@ -513,6 +513,24 @@ namespace tsom
 		});
 	}
 
+	Nz::Vector3d ServerShipEnvironment::ToGlobalDirection(const Nz::Vector3d& localDirection) const
+	{
+		if (!m_exteriorEnvironment || !m_exteriorEntity)
+			return localDirection;
+
+		auto& outsideNode = m_exteriorEntity.get<Nz::NodeComponent>();
+		return Nz::Quaterniond(outsideNode.GetGlobalRotation()) * localDirection;
+	}
+
+	Nz::Vector3d ServerShipEnvironment::ToGlobalPosition(const Nz::Vector3d& localPosition) const
+	{
+		if (!m_exteriorEnvironment || !m_exteriorEntity)
+			return localPosition;
+
+		auto& outsideNode = m_exteriorEntity.get<Nz::NodeComponent>();
+		return m_exteriorEnvironment->ToGlobalPosition(Nz::Quaterniond(outsideNode.GetGlobalRotation()) * localPosition + Nz::Vector3d(outsideNode.GetGlobalPosition()));
+	}
+
 	void ServerShipEnvironment::Update()
 	{
 		// Check and apply chunk areas update

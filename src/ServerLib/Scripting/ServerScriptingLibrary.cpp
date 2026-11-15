@@ -109,7 +109,8 @@ namespace tsom
 	{
 		state.new_enum("EnvironmentType",
 			"Planet", ServerEnvironmentType::Planet,
-			"Ship", ServerEnvironmentType::Ship
+			"Ship", ServerEnvironmentType::Ship,
+			"Space", ServerEnvironmentType::Space
 		);
 
 		state.new_usertype<ServerEnvironment>("Environment",
@@ -189,7 +190,10 @@ namespace tsom
 			}),
 			"GetType", LuaFunction(&ServerEnvironment::GetType),
 
-			"IsRoot", LuaFunction(&ServerEnvironment::IsRoot)
+			"IsRoot", LuaFunction(&ServerEnvironment::IsRoot),
+
+			"ToGlobalDirection", LuaFunction(&ServerEnvironment::ToGlobalDirection),
+			"ToGlobalPosition", LuaFunction(&ServerEnvironment::ToGlobalPosition)
 		);
 
 		state.new_usertype<ServerPlanetEnvironment>("PlanetEnvironment",

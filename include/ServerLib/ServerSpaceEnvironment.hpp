@@ -33,6 +33,9 @@ namespace tsom
 			void OnSave() override;
 			void OnTick(Nz::Time elapsedTime) override;
 
+			Nz::Vector3d ToGlobalDirection(const Nz::Vector3d& localDirection) const;
+			Nz::Vector3d ToGlobalPosition(const Nz::Vector3d& localPosition) const;
+
 			ServerSpaceEnvironment& operator=(const ServerSpaceEnvironment&) = delete;
 			ServerSpaceEnvironment& operator=(ServerSpaceEnvironment&&) = delete;
 

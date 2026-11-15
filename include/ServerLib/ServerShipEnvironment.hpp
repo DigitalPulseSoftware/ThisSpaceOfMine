@@ -57,6 +57,9 @@ namespace tsom
 
 			void OnSave() override;
 
+			Nz::Vector3d ToGlobalDirection(const Nz::Vector3d& localDirection) const;
+			Nz::Vector3d ToGlobalPosition(const Nz::Vector3d& localPosition) const;
+
 			void Update() override;
 
 			void UpdateExterior(ServerEnvironment* exteriorEnvironment, entt::handle exteriorEntity);

@@ -299,6 +299,16 @@ namespace tsom
 		UpdateEnvironmentSwitch();
 	}
 
+	Nz::Vector3d ServerPlanetEnvironment::ToGlobalDirection(const Nz::Vector3d& localDirection) const
+	{
+		return localDirection; //< TODO: Update when planets rotate
+	}
+
+	Nz::Vector3d ServerPlanetEnvironment::ToGlobalPosition(const Nz::Vector3d& localPosition) const
+	{
+		return m_planetPosition + localPosition; //< TODO: Update when planets rotate
+	}
+
 	void ServerPlanetEnvironment::Update()
 	{
 		UpdateChunkLoading();

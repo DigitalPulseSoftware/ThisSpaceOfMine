@@ -79,6 +79,10 @@ function Vec3.Distance(vec1, vec2)
     return (vec2 - vec1):GetLength()
 end
 
+function Vec3.Normalize(vec)
+    return vec:GetNormal()
+end
+
 setmetatable(Vec3, Vec3ClassMt)
 
 Vec3.Backward = Vec3(0, 0, 1)

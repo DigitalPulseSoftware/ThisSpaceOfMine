@@ -6,11 +6,16 @@
 
 namespace tsom::SpaceTransformations
 {
-	inline Nz::Vector3d ToGlobalCoordinates(const Nz::Vector3i32& cellCoordinates, const Nz::Vector3f& localCoordinates)
+	inline Nz::Vector3d ToGlobalCoordinates(const Nz::Vector3i32& cellCoordinates, const Nz::Vector3d& localCoordinates)
 	{
 		constexpr double SpaceCellSize_d = Constants::SpaceCellSize;
 
-		return Nz::Vector3d(cellCoordinates) * SpaceCellSize_d + Nz::Vector3d(localCoordinates);
+		return Nz::Vector3d(cellCoordinates) * SpaceCellSize_d + localCoordinates;
+	}
+
+	inline Nz::Vector3d ToGlobalCoordinates(const Nz::Vector3i32& cellCoordinates, const Nz::Vector3f& localCoordinates)
+	{
+		return ToGlobalCoordinates(cellCoordinates, Nz::Vector3d(localCoordinates));
 	}
 
 	inline std::pair<Nz::Vector3i32, Nz::Vector3f> ToLocalCoordinates(const Nz::Vector3d& globalCoords)

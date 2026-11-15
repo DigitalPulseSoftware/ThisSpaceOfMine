@@ -66,6 +66,10 @@ namespace tsom
 			virtual void OnTick(Nz::Time elapsedTime);
 
 			void RegisterPlayer(ServerPlayer* player, bool createEntities);
+
+			virtual Nz::Vector3d ToGlobalDirection(const Nz::Vector3d& localDirection) const = 0;
+			virtual Nz::Vector3d ToGlobalPosition(const Nz::Vector3d& localPosition) const = 0;
+
 			void UnregisterPlayer(ServerPlayer* player);
 
 			virtual void Update();
