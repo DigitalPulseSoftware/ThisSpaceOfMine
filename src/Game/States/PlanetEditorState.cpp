@@ -53,6 +53,18 @@ namespace tsom
 
 		LoadScripts();
 
+		m_sunLightEntity = CreateEntity();
+		{
+			m_sunLightEntity.emplace<Nz::NodeComponent>(Nz::Vector3f::Zero(), Nz::EulerAnglesf(-30.f, 80.f, 0.f));
+
+			auto& lightComponent = m_sunLightEntity.emplace<Nz::LightComponent>();
+			auto& dirLight = lightComponent.AddLight<Nz::DirectionalLight>(tsom::Constants::RenderMask3D);
+			dirLight.UpdateAmbientFactor(0.05f);
+			dirLight.EnableShadowCasting(true);
+			dirLight.UpdateShadowMapSize(4096);
+			dirLight.UpdateEnergy(5.f);
+		}
+
 		m_cameraEntity = CreateEntity();
 		{
 			auto& cameraNode = m_cameraEntity.emplace<Nz::NodeComponent>(Nz::Vector3f(0.f, 20.f, -75.f), m_cameraRotation);
@@ -70,18 +82,10 @@ namespace tsom
 			cameraComponent.UpdateRenderMask(tsom::Constants::RenderMask3D & ~tsom::Constants::RenderMaskLocalPlayer);
 			cameraComponent.UpdateZNear(0.1f);
 			cameraComponent.UpdateZFar(10000.f); //< when infinite zfar is enabled, zfar is used as a limit for directional lights
-		}
 
-		m_sunLightEntity = CreateEntity();
-		{
-			m_sunLightEntity.emplace<Nz::NodeComponent>(Nz::Vector3f::Zero(), Nz::EulerAnglesf(-30.f, 80.f, 0.f));
-
-			auto& lightComponent = m_sunLightEntity.emplace<Nz::LightComponent>();
-			auto& dirLight = lightComponent.AddLight<Nz::DirectionalLight>(tsom::Constants::RenderMask3D);
-			dirLight.UpdateAmbientFactor(0.05f);
-			dirLight.EnableShadowCasting(true);
-			dirLight.UpdateShadowMapSize(4096);
-			dirLight.UpdateEnergy(5.f);
+			auto& atmosphereScatteringCameraSettings = m_cameraEntity.get_or_emplace<AtmosphereScatteringCameraSettings>();
+			atmosphereScatteringCameraSettings.sunDir = m_sunLightEntity.get<Nz::NodeComponent>().GetBackward();
+			atmosphereScatteringCameraSettings.mieScattering = 0.9f;
 		}
 
 		m_skyboxEntity = CreateEntity();
