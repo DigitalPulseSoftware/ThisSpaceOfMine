@@ -57,6 +57,7 @@ namespace tsom
 				float metalness = 0.0f; //< Used if texture is not available
 				float permeability = 0.f;
 				float roughness = 1.0f; //< Used if texture is not available
+				float smoothness = 0.0f;
 			};
 
 			struct BlockData
@@ -67,11 +68,11 @@ namespace tsom
 				bool hasCollisions;
 				bool isDoubleSided;
 				bool isTransparent;
-				bool isSmooth;
 				float density;
 				float metalness = 0.0f; //< Used if texture is not available
 				float permeability;
 				float roughness = 1.0f; //< Used if texture is not available
+				float smoothness;
 			};
 
 			struct PhysicsLayer

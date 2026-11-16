@@ -44,7 +44,7 @@ namespace nlohmann
 
 	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(tsom::BlockLibrary::BlockInfo, \
 		layerName, basePath, hasCollisions, isDoubleSided, \
-		isSmooth, isTransparent, density, \
+		smoothness, isTransparent, density, \
 		metalness, permeability, roughness \
 	);
 
@@ -79,7 +79,7 @@ namespace tsom
 		blockData.hasCollisions = blockInfo.hasCollisions;
 		blockData.isDoubleSided = blockInfo.isDoubleSided;
 		blockData.isTransparent = blockInfo.isTransparent;
-		blockData.isSmooth = blockInfo.isSmooth;
+		blockData.smoothness = blockInfo.smoothness;
 		blockData.density = blockInfo.density;
 		blockData.metalness = blockInfo.metalness;
 		blockData.permeability = blockInfo.permeability;

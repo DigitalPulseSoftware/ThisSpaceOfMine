@@ -478,8 +478,8 @@ namespace tsom
 				Nz::Vector3f total = Nz::Vector3f::Zero();
 				unsigned int count = 0;
 
-				bool isSmooth = blockData.isSmooth;
-				if (isSmooth)
+				float minSmoothness = 1.0f;;
+				if (blockData.smoothness > 0.0f)
 				{
 					for (int z = 0; z < 12; ++z)
 					{
@@ -497,9 +497,13 @@ namespace tsom
 						const auto& edge1BlockData = blockLibrary.GetBlockData(edge1);
 						const auto& edge2BlockData = blockLibrary.GetBlockData(edge2);
 
-						if (!edge2BlockData.isSmooth)
+						minSmoothness = std::min({ minSmoothness, edge1BlockData.smoothness, edge2BlockData.smoothness });
+
+						if (minSmoothness < 0.0001f)
 						{
-							isSmooth = false;
+							// early exit
+							count = 0;
+							minSmoothness = 0.0f;
 							break;
 						}
 
@@ -514,11 +518,7 @@ namespace tsom
 							float edge1Density = edge1BlockData.density;
 							float edge2Density = edge2BlockData.density;
 
-							Nz::Vector3f midPoint;
-							if (edge1BlockData.isSmooth != edge2BlockData.isSmooth)
-								midPoint = edge1Pos; //< edge2BlockData.isSmooth cannot be false here
-							else
-								midPoint = (edge1Pos * edge1Density + edge2Pos * edge2Density) / (edge1Density + edge2Density);
+							Nz::Vector3f midPoint = (edge1Pos * edge1Density + edge2Pos * edge2Density) / (edge1Density + edge2Density);
 
 							total += midPoint;
 							count++;
@@ -526,18 +526,16 @@ namespace tsom
 					}
 				}
 
-				if (count == 0)
-					isSmooth = false;
+				Nz::Vector3f blockyOffset = Nz::Vector3f(s_voxelQuads[axis][vertIndex]);
+				blockyOffset = { blockyOffset.x, blockyOffset.z, blockyOffset.y };
 
-				if (isSmooth)
-					corners[boxCorners[vertIndex]] = blockOffset + m_blockSize * total / float(count) - Nz::Vector3f(m_blockSize * 0.5f);
-				else
+				if (count > 0)
 				{
-					Nz::Vector3f offset(s_voxelQuads[axis][vertIndex]);
-					offset = { offset.x, offset.z, offset.y };
-
-					corners[boxCorners[vertIndex]] = blockOffset + m_blockSize * offset;
+					Nz::Vector3f smoothOffset = total / float(count) - Nz::Vector3f(m_blockSize * 0.5f);
+					corners[boxCorners[vertIndex]] = blockOffset + m_blockSize * Nz::Lerp(blockyOffset, smoothOffset, minSmoothness);
 				}
+				else
+					corners[boxCorners[vertIndex]] = blockOffset + m_blockSize * blockyOffset;
 			}
 		}
 

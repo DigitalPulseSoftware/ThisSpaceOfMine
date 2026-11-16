@@ -14,7 +14,7 @@
     "blocks": {
         "empty": {
             "hasCollisions": false,
-            "isSmooth": true,
+            "smoothness": 1.0,
             "isTransparent": true,
             "permeability": 1.0
         },
@@ -28,7 +28,7 @@
         },
         "dirt": {
             "basePath": "blocks/dirt",
-            "isSmooth": true,
+            "smoothness": 1.0,
             "density": 2.0,
             "permeability": 0.1
         },
@@ -37,20 +37,21 @@
         },
         "snow": {
             "basePath": "blocks/snow",
-            "isSmooth": true,
+            "smoothness": 1.0,
             "permeability": 0.5
         },
         "stone": {
             "basePath": "blocks/cobblestone",
-            "isSmooth": true,
+            "smoothness": 1.0,
             "density": 4.0
         },
         "stone_mossy": {
             "basePath": "blocks/mossy_cobblestone",
-            "isSmooth": true
+            "smoothness": 1.0
         },
         "planks": {
-            "basePath": "blocks/planks"
+            "basePath": "blocks/planks",
+            "smoothness": 0.8
         },
         "stone_bricks": {
             "basePath": "blocks/stone_bricks"
@@ -60,34 +61,34 @@
         },
         "grass": {
             "basePath": "blocks/grass",
-            "isSmooth": true,
+            "smoothness": 1.0,
             "density": 2.0,
 			"permeability": 0.1
         },
         "glass": {
             "basePath": "blocks/glass",
             "isDoubleSided": true,
-            "isSmooth": true,
+            "smoothness": 1.0,
             "isTransparent": true
         },
         "water": {
             "layerName": "water",
             "basePath": "blocks/water",
             "isDoubleSided": true,
-            "isSmooth": true,
+            "smoothness": 1.0,
             "isTransparent": true
         },
         "bark": {
             "basePath": "blocks/bark",
-            "isSmooth": true
+            "smoothness": 1.0
         },
         "cliff_rocks": {
             "basePath": "blocks/cliff_rocks",
-            "isSmooth": true
+            "smoothness": 1.0
         },
         "rock": {
             "basePath": "blocks/rock",
-            "isSmooth": true
+            "smoothness": 1.0
         },
         "wood_floor": {
             "basePath": "blocks/wood_floor"
