@@ -22,7 +22,7 @@ namespace tsom
 		public:
 			inline ChunkContainer(const BlockLibrary& blockLibrary, float tileSize);
 			ChunkContainer(const ChunkContainer&) = delete;
-			ChunkContainer(ChunkContainer&&) noexcept = default;
+			ChunkContainer(ChunkContainer&&) = delete;
 			virtual ~ChunkContainer();
 
 			virtual Chunk& AddChunk(const ChunkIndices& indices, const Nz::FunctionRef<void(BlockIndex* blocks)>& initCallback = nullptr) = 0;
@@ -49,7 +49,7 @@ namespace tsom
 			void UpdateBlockInBoundingBox(const Nz::Boxf& box, std::string_view blockName);
 
 			ChunkContainer& operator=(const ChunkContainer&) = delete;
-			ChunkContainer& operator=(ChunkContainer&&) noexcept = default;
+			ChunkContainer& operator=(ChunkContainer&&) = delete;
 
 			static constexpr unsigned int ChunkSize = 32;
 

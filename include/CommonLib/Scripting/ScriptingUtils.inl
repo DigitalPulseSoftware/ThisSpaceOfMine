@@ -26,7 +26,7 @@ namespace tsom
 			template<typename F>
 			static auto Wrap(F&& func)
 			{
-				return LuaLambdaWrapper<decltype(&F::operator())>::template Wrap(std::forward<F>(func));
+				return LuaLambdaWrapper<decltype(&F::operator())>::Wrap(std::forward<F>(func));
 			}
 		};
 
