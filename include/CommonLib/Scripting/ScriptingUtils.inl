@@ -161,7 +161,7 @@ namespace tsom
 			template<typename F>
 			static auto Wrap(F&& funcPtr)
 			{
-				return LuaWrapper<T, Ret, Args...>::template Wrap(std::forward<F>(funcPtr));
+				return LuaWrapper<T, Ret, Args...>::Wrap(std::forward<F>(funcPtr));
 			}
 		};
 
