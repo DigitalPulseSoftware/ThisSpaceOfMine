@@ -230,12 +230,6 @@ namespace tsom
 		}
 		else
 		{
-			// Ensure the player knows about this entity (it can happen that an entity created in an environment instantly switches to a new environment, the "previous entity" is destroyed before being known)
-			// This should only happen if UpdateEntityEnvironment early returns
-			auto it = m_entityIndices.find(entity);
-			if (it == m_entityIndices.end())
-				return;
-
 			bool found = false;
 			for (EnvironmentCreationData& creationData : m_createdEnvironments)
 			{
