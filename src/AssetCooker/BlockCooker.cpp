@@ -354,12 +354,12 @@ namespace tsom
 
 				
 				// Emissive
-				blockEntry.emissiveFallback = 0.0f;
+				blockEntry.emissiveFallback = Nz::Color::Black();
 
 				if (!inputData.files[TextureType::Emissive].empty())
 				{
-					// BC4
-					std::shared_ptr<Nz::Image> emissiveMap = Nz::Image::LoadFromFile(inputData.files[TextureType::Emissive], Nz::ImageParams{ .loadFormat = Nz::PixelFormat::L8 });
+					// BC1
+					std::shared_ptr<Nz::Image> emissiveMap = Nz::Image::LoadFromFile(inputData.files[TextureType::Emissive], Nz::ImageParams{ .loadFormat = Nz::PixelFormat::RGBA8 });
 					if (!emissiveMap)
 					{
 						spdlog::error("failed to load {} emissive occlusion map", blockData.name);
@@ -372,27 +372,17 @@ namespace tsom
 						return;
 					}
 
-					blockEntry.emissiveFallback = emissiveMap->ComputeAverageColor().r;
+					blockEntry.emissiveFallback = emissiveMap->ComputeAverageColor();
 
-					Nz::Image cookedEmissiveMap(Nz::ImageType::E2D, Nz::PixelFormat::R8, m_textureSize, m_textureSize);
+					emissiveMap->GenerateMipmaps();
 
-					const Nz::UInt8* emissivePixels = emissiveMap->GetConstPixels();
-					Nz::UInt8* cookedPixels = cookedEmissiveMap.GetPixels();
-					for (std::size_t y = 0; y < m_textureSize; ++y)
-					{
-						for (std::size_t x = 0; x < m_textureSize; ++x)
-							*cookedPixels++ = *emissivePixels++;
-					}
-
-					cookedEmissiveMap.GenerateMipmaps();
-
-					cookedEmissiveMap = Nz::ImageCompressor::R8ToBC4(cookedEmissiveMap);
+					Nz::Image compressedEmissiveMap = Nz::ImageCompressor::RGBA8ToBC1(*emissiveMap);
 
 					std::string emissiveFilename = fmt::format("{}_emissive.dds", blockData.name);
-					blockEntry.emissiveTexture = { CookedBlockRegistry::TextureType::BC4, emissiveFilename };
+					blockEntry.emissiveTexture = { CookedBlockRegistry::TextureType::BC1, emissiveFilename };
 
 					std::filesystem::path targetPath = m_outputDir / Nz::Utf8Path(emissiveFilename);
-					if (!cookedEmissiveMap.SaveToFile(targetPath))
+					if (!compressedEmissiveMap.SaveToFile(targetPath))
 					{
 						spdlog::error("failed to save file {}", Nz::PathToString(targetPath));
 						return;

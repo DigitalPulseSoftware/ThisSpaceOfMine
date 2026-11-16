@@ -32,8 +32,8 @@ struct BlockData
 	roughnessMetalnessMapIndices: vec2[i32],
 	emissiveMapIndices: vec2[i32],
 	ambientOcclusion: f32,
-	emissiveFallback: f32,
 	metalness: f32,
+	emissiveFallback: vec3[f32],
 	roughness: f32
 }
 
@@ -318,10 +318,7 @@ fn ComputeLighting(color: vec4[f32], input: VertOut) -> vec4[f32]
 	}
 
 	if (blockData.emissiveMapIndices.x >= 0)
-	{
-		let texData = TriplanarSample(input.triplanarNormal, uvX, uvY, uvZ, blockData.emissiveMapIndices).xy;
-		emissive = texData.x;
-	}
+		emissive = TriplanarSample(input.triplanarNormal, uvX, uvY, uvZ, blockData.emissiveMapIndices).rgb;
 
 	let F0 = vec3[f32](0.04, 0.04, 0.04);
 	F0 = albedo * metallic + F0 * (1.0 - metallic);
@@ -379,7 +376,7 @@ fn ComputeLighting(color: vec4[f32], input: VertOut) -> vec4[f32]
 	}
 
 	let ambient = lightAmbient * albedo * ao;
-	return vec4[f32](ambient + lightRadiance + emissive * albedo, color.a);
+	return vec4[f32](ambient + lightRadiance + emissive, color.a);
 }
 
 [export, entry(frag), cond(!DepthPass)]

@@ -61,8 +61,8 @@ namespace tsom
 			bufferOffsets.roughnessMetalnessMapIndices = bufferOffsets.fieldOffsets.AddField(nzsl::StructFieldType::Int2);
 			bufferOffsets.emissiveIndices = bufferOffsets.fieldOffsets.AddField(nzsl::StructFieldType::Int2);
 			bufferOffsets.ambientOcclusion = bufferOffsets.fieldOffsets.AddField(nzsl::StructFieldType::Float1);
-			bufferOffsets.emissiveFallback = bufferOffsets.fieldOffsets.AddField(nzsl::StructFieldType::Float1);
 			bufferOffsets.metalness = bufferOffsets.fieldOffsets.AddField(nzsl::StructFieldType::Float1);
+			bufferOffsets.emissiveFallback = bufferOffsets.fieldOffsets.AddField(nzsl::StructFieldType::Float3);
 			bufferOffsets.roughness = bufferOffsets.fieldOffsets.AddField(nzsl::StructFieldType::Float1);
 
 			return bufferOffsets;
@@ -131,13 +131,13 @@ namespace tsom
 
 			Nz::UInt8* blockDataPtr = blockBufferPtr + blockIndex * s_blockBufferEntryOffsets.fieldOffsets.GetAlignedSize();
 			Nz::AccessByOffset<Nz::Color&>(blockDataPtr, s_blockBufferEntryOffsets.baseColorFallback) = cookedBlockData.baseColorFallback;
+			Nz::AccessByOffset<Nz::Color&>(blockDataPtr, s_blockBufferEntryOffsets.emissiveFallback) = cookedBlockData.emissiveFallback;
 			Nz::AccessByOffset<Nz::Vector2i32&>(blockDataPtr, s_blockBufferEntryOffsets.ambientOcclusionHeightMapIndices) = { -1, -1 };
 			Nz::AccessByOffset<Nz::Vector2i32&>(blockDataPtr, s_blockBufferEntryOffsets.baseColorMapIndices) = { -1, -1 };
 			Nz::AccessByOffset<Nz::Vector2i32&>(blockDataPtr, s_blockBufferEntryOffsets.emissiveIndices) = { -1, -1 };
 			Nz::AccessByOffset<Nz::Vector2i32&>(blockDataPtr, s_blockBufferEntryOffsets.normalMapIndices) = { -1, -1 };
 			Nz::AccessByOffset<Nz::Vector2i32&>(blockDataPtr, s_blockBufferEntryOffsets.roughnessMetalnessMapIndices) = { -1, -1 };
 			Nz::AccessByOffset<float&>(blockDataPtr, s_blockBufferEntryOffsets.ambientOcclusion) = cookedBlockData.ambientOcclusionFallback;
-			Nz::AccessByOffset<float&>(blockDataPtr, s_blockBufferEntryOffsets.emissiveFallback) = cookedBlockData.emissiveFallback;
 			Nz::AccessByOffset<float&>(blockDataPtr, s_blockBufferEntryOffsets.metalness) = cookedBlockData.metalnessFallback;
 			Nz::AccessByOffset<float&>(blockDataPtr, s_blockBufferEntryOffsets.roughness) = cookedBlockData.roughnessFallback;
 
