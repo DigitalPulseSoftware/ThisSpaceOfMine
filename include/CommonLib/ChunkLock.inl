@@ -152,9 +152,9 @@ namespace tsom
 	}
 
 	template<bool Write, std::size_t Max>
-	std::span<const Chunk> MultiChunkLock<Write, Max>::GetChunks() const
+	std::span<const Chunk*> MultiChunkLock<Write, Max>::GetChunks() const
 	{
-		return std::span(m_chunks.data(), m_chunks.size());
+		return std::span(std::as_const(m_chunks.data()), m_chunks.size());
 	}
 
 	template<bool Write, std::size_t Max>

@@ -57,7 +57,7 @@ namespace tsom
 			void AddChunk(ChunkType chunk);
 
 			std::span<ChunkType> GetChunks();
-			std::span<const Chunk> GetChunks() const;
+			std::span<const Chunk*> GetChunks() const;
 
 			void Lock();
 			void Unlock();
